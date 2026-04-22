@@ -27,10 +27,10 @@ except Exception:
     TkinterDnD = None
     HAS_DND = False
 
-APP_NAME = "ST PDF 結合"
-WINDOW_TITLE = "ST PDF（結合専用）"
-CONFIG_NAME = "st_pdf_merge_config.json"
-COPYRIGHT = "© 2026 ST Tools — Vibe-Coded by Yukihiko Kikuta"
+APP_NAME = "DakePDF結合"
+WINDOW_TITLE = "DakePDF結合"
+CONFIG_NAME = "dake_pdf_merge_config.json"
+COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
 
 BG = "#F6F7F9"
 CARD = "#FFFFFF"
@@ -78,11 +78,11 @@ FONT_NAME = detect_font_name()
 
 
 def icon_ico_path() -> str:
-    return os.path.join(app_dir(), "st_pdf_merge_only.ico")
+    return os.path.join(app_dir(), "app.ico")
 
 
 def icon_png_path() -> str:
-    return os.path.join(app_dir(), "s512_f_object_154_2bg.png")
+    return os.path.join(app_dir(), "icon.png")
 
 
 def apply_window_icon(window: tk.Misc):
@@ -96,7 +96,7 @@ def apply_window_icon(window: tk.Misc):
         png = icon_png_path()
         if os.path.exists(png):
             image = tk.PhotoImage(file=png)
-            window._st_icon_ref = image
+            window._app_icon_ref = image
             window.iconphoto(True, image)
             try:
                 window.wm_iconphoto(True, image)
@@ -110,7 +110,7 @@ def set_windows_app_id():
     if not sys.platform.startswith("win") or ctypes is None:
         return
     try:
-        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("STTools.STPDFMergeOnly")
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("Shimarisu.DakePDFMerge")
     except Exception:
         pass
 
@@ -329,7 +329,7 @@ class MergeFileCard(tk.Frame):
             button.configure(bg="#FFFFFF")
 
 
-class STPDFMergeApp:
+class DAKEPDFMergeApp:
     def __init__(self, root: tk.Tk):
         self.root = root
         self.root.title(WINDOW_TITLE)
@@ -376,7 +376,7 @@ class STPDFMergeApp:
 
         header = tk.Frame(shell, bg=BG)
         header.pack(fill="x", padx=26, pady=(18, 10))
-        tk.Label(header, text="ST PDF", font=(FONT_NAME, 20, "bold"), bg=BG, fg=TEXT).pack(side="left")
+        tk.Label(header, text="DAKE PDF Merge", font=(FONT_NAME, 20, "bold"), bg=BG, fg=TEXT).pack(side="left")
         tk.Label(header, text="結合専用 / 迷わず、止まらず、すぐ終わる", font=(FONT_NAME, 10), bg=BG, fg=SUBTEXT).pack(side="left", padx=(12, 0), pady=(6, 0))
 
         main = tk.Frame(shell, bg=BG)
@@ -662,7 +662,7 @@ class STPDFMergeApp:
         from datetime import datetime
         base = os.path.splitext(os.path.basename(self.files[0]))[0]
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-        return f"{base}_{ts}_{len(self.files)}files_st.pdf"
+        return f"{base}_{ts}_{len(self.files)}files_dake.pdf"
 
     def merge_files(self):
         if self.worker_running:
@@ -768,7 +768,7 @@ def main():
     set_windows_app_id()
     root = make_root()
     apply_window_icon(root)
-    app = STPDFMergeApp(root)
+    app = DAKEPDFMergeApp(root)
     root.mainloop()
 
 
