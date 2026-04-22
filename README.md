@@ -93,8 +93,8 @@ When in doubt:
 
 Planned apps include:
 
-DAKE PDF Merge
-DAKE Image to PDF
+- DAKE PDF Merge
+- DAKE Image to PDF
 
 More single-purpose tools may be added over time.
 
@@ -104,8 +104,8 @@ More single-purpose tools may be added over time.
 
 DAKE Series is part of the broader しまりす不動産 product concept.
 
-DAKE = single-purpose entry tools
-しまりす = broader integrated direction for the future
+- DAKE = single-purpose entry tools
+- しまりす = broader integrated direction for the future
 
 ---
 
