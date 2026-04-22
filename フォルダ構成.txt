@@ -1,0 +1,19 @@
+DAKE_series/
+
+├── 00_core/
+│   ├── philosophy.txt
+│   ├── design_rules.txt
+│   └── dev_rules.txt
+
+├── 01_apps/
+│   ├── DAKE_PDF_Merge/
+│   ├── DAKE_Image_to_PDF/
+│   └── （今後増やす）
+
+├── 02_assets/
+│   ├── icons/
+│   └── branding/
+
+├── 03_docs/
+│   ├── specs/
+│   └── release_notes/
