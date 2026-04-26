@@ -1,4 +1,0 @@
-pypdf
-PyMuPDF
-tkinterdnd2
-pyinstaller
