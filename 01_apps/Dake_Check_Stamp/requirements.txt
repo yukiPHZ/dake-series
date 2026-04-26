@@ -1,0 +1,4 @@
+PyMuPDF>=1.24
+Pillow>=10
+tkinterdnd2>=0.4.2
+pyinstaller>=6

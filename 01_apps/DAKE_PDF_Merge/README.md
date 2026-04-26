@@ -1,6 +1,6 @@
-# DAKE PDF Merge
+# DakePDF Merge
 
-既存の PDF 結合アプリをベースに、DAKE シリーズ向けの名前と構成へ整理したアプリです。
+DAKEシリーズ向けのPDF結合アプリです。追加したPDFを画面上で並べ替え、表示順どおりに1つのPDFへ結合します。
 
 ## ファイル構成
 
@@ -8,15 +8,13 @@
 - `requirements.txt`
 - `build.bat`
 - `README.md`
-- `app.ico`
-- `icon.png`
 
 ## アプリ情報
 
-- 日本語アプリ名: `DakePDF結合`
-- 英語表記: `DAKE PDF Merge`
+- 表示名: `PDF結合`
+- exe名: `DakePDF_Merge.exe`
 - 設定ファイル: `dake_pdf_merge_config.json`
-- 出力ファイル名末尾: `files_dake.pdf`
+- 共通アイコン: `..\..\02_assets\dake_icon.ico`
 
 ## 実行
 
@@ -30,8 +28,4 @@ python main.py
 build.bat
 ```
 
-## 依存関係
-
-```bat
-pip install -r requirements.txt
-```
+配布対象は `dist\DakePDF_Merge.exe` です。

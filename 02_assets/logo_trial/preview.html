@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DAKE common logo trial</title>
+  <style>
+    :root {
+      color: #1b1b1b;
+      background: #f4f4f4;
+      font-family: Arial, "Helvetica Neue", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 32px;
+    }
+
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin: 0 0 24px;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 24px;
+    }
+
+    .panel {
+      min-width: 0;
+      padding: 20px;
+      background: #ffffff;
+      border: 1px solid #d8d8d8;
+      border-radius: 8px;
+    }
+
+    .name {
+      margin: 0 0 16px;
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .sizes {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 18px;
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-height: 48px;
+    }
+
+    .row.large {
+      justify-content: center;
+      min-height: 276px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #e2e2e2;
+    }
+
+    .label {
+      width: 42px;
+      flex: 0 0 auto;
+      color: #555555;
+      font-size: 13px;
+    }
+
+    img {
+      display: block;
+      flex: 0 0 auto;
+      image-rendering: auto;
+    }
+
+    .s256 {
+      width: 256px;
+      height: 256px;
+    }
+
+    .s48 {
+      width: 48px;
+      height: 48px;
+    }
+
+    .s32 {
+      width: 32px;
+      height: 32px;
+    }
+
+    .s16 {
+      width: 16px;
+      height: 16px;
+    }
+
+    @media (max-width: 860px) {
+      body {
+        padding: 20px;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>DAKE common logo trial</h1>
+    <section class="grid" aria-label="logo previews">
+      <article class="panel">
+        <p class="name">A / thumbs-up</p>
+        <div class="sizes">
+          <div class="row large"><img class="s256" src="logo_A.svg" alt="logo A at 256px"></div>
+          <div class="row"><span class="label">48px</span><img class="s48" src="logo_A.svg" alt="logo A at 48px"></div>
+          <div class="row"><span class="label">32px</span><img class="s32" src="logo_A.svg" alt="logo A at 32px"></div>
+          <div class="row"><span class="label">16px</span><img class="s16" src="logo_A.svg" alt="logo A at 16px"></div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <p class="name">B / horn line</p>
+        <div class="sizes">
+          <div class="row large"><img class="s256" src="logo_B.svg" alt="logo B at 256px"></div>
+          <div class="row"><span class="label">48px</span><img class="s48" src="logo_B.svg" alt="logo B at 48px"></div>
+          <div class="row"><span class="label">32px</span><img class="s32" src="logo_B.svg" alt="logo B at 32px"></div>
+          <div class="row"><span class="label">16px</span><img class="s16" src="logo_B.svg" alt="logo B at 16px"></div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <p class="name">C / abstract approval</p>
+        <div class="sizes">
+          <div class="row large"><img class="s256" src="logo_C.svg" alt="logo C at 256px"></div>
+          <div class="row"><span class="label">48px</span><img class="s48" src="logo_C.svg" alt="logo C at 48px"></div>
+          <div class="row"><span class="label">32px</span><img class="s32" src="logo_C.svg" alt="logo C at 32px"></div>
+          <div class="row"><span class="label">16px</span><img class="s16" src="logo_C.svg" alt="logo C at 16px"></div>
+        </div>
+      </article>
+    </section>
+  </main>
+</body>
+</html>

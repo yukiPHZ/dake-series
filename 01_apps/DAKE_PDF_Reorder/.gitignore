@@ -1,0 +1,11 @@
+build/
+dist/
+*.spec
+*_config.json
+__pycache__/
+*.pyc
+.venv/
+.test_packages/
+.test_packages_local/
+.test_bin/
+_verify/
