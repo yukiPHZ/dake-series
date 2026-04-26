@@ -1,5 +1,25 @@
 # DAKE Series by しまりす不動産
 
+## ダウンロード
+
+最新版はこちら👇  
+https://github.com/yukiPHZ/dake-series/releases
+
+---
+
+## アプリ一覧
+
+### DakePDF Merge
+
+・PDFをまとめて結合  
+・ドラッグ＆ドロップ対応  
+・軽量・高速  
+
+👉 ダウンロード  
+https://github.com/yukiPHZ/dake-series/releases/tag/v1.0.0
+
+---
+
 Simple, fast, single-purpose desktop apps for real work.  
 Vibe-coded by Yukihiko Kikuta.
 
