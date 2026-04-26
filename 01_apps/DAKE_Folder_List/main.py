@@ -20,7 +20,6 @@ WINDOW_TITLE = "フォルダ一覧"
 COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
 
 UI_TEXT = {
-    "brand_series": "シンプルそれDAKEシリーズ",
     "main_title": "フォルダ構成を見る",
     "main_description": "フォルダを選ぶだけで、構成とファイル一覧を表示します。",
     "button_select_folder": "フォルダを選ぶ",
@@ -36,6 +35,7 @@ UI_TEXT = {
     "status_saved": "保存しました",
     "status_error": "エラーが発生しました",
     "footer_left": "シンプルそれDAKEシリーズ",
+    "footer_catchcopy": "止まらない、迷わない、すぐ終わる。",
     "footer_link_1": "戸建買取査定",
     "footer_link_2": "Instagram",
     "footer_separator": " ｜ ",
@@ -83,6 +83,8 @@ COLORS = {
     "accent_hover": "#2458BF",
     "button_sub_hover": "#F2F4F7",
     "text_bg": "#FBFCFE",
+    "selection_bg": "#EAF2FF",
+    "selection_border": "#7AA7FF",
     "disabled_bg": "#E8ECF3",
     "disabled_fg": "#98A2B3",
     "error": "#D92D20",
@@ -346,13 +348,12 @@ class FolderListApp:
         self.font_family = choose_font_family(self.root, FONT_CANDIDATES)
         self.text_font_family = choose_font_family(self.root, TEXT_FONT_CANDIDATES)
         self.fonts = {
-            "brand": (self.font_family, 9),
-            "title": (self.font_family, 22, "bold"),
-            "subtitle": (self.font_family, 10),
-            "button": (self.font_family, 10, "bold"),
-            "body": (self.font_family, 10),
+            "title": (self.font_family, 20, "bold"),
+            "subtitle": (self.font_family, 9),
+            "button": (self.font_family, 9),
+            "body": (self.font_family, 9),
             "small": (self.font_family, 9),
-            "tree": (self.text_font_family, 10),
+            "tree": (self.text_font_family, 9),
         }
 
         self.current_folder: Path | None = None
@@ -370,26 +371,18 @@ class FolderListApp:
 
     def _build_ui(self) -> None:
         outer = tk.Frame(self.root, bg=COLORS["base_bg"])
-        outer.pack(fill="both", expand=True, padx=24, pady=(22, 12))
+        outer.pack(fill="both", expand=True, padx=20, pady=(14, 10))
 
         self._build_header(outer)
-        self._build_action_card(outer)
+        self._build_action_bar(outer)
         self._build_text_card(outer)
         self._build_status(outer)
         self._build_footer(outer)
 
     def _build_header(self, parent: tk.Widget) -> None:
         header = tk.Frame(parent, bg=COLORS["base_bg"])
-        header.pack(fill="x")
+        header.pack(fill="x", pady=(0, 8))
 
-        tk.Label(
-            header,
-            text=UI_TEXT["brand_series"],
-            font=self.fonts["brand"],
-            fg=COLORS["accent"],
-            bg=COLORS["base_bg"],
-            anchor="w",
-        ).pack(anchor="w")
         tk.Label(
             header,
             text=UI_TEXT["main_title"],
@@ -397,7 +390,7 @@ class FolderListApp:
             fg=COLORS["text"],
             bg=COLORS["base_bg"],
             anchor="w",
-        ).pack(anchor="w", pady=(4, 0))
+        ).pack(side="left", anchor="w")
         tk.Label(
             header,
             text=UI_TEXT["main_description"],
@@ -405,7 +398,7 @@ class FolderListApp:
             fg=COLORS["sub_text"],
             bg=COLORS["base_bg"],
             anchor="w",
-        ).pack(anchor="w", pady=(6, 0))
+        ).pack(side="left", anchor="w", padx=(16, 0), pady=(5, 0))
 
     def _create_card(self, parent: tk.Widget, pady: tuple[int, int] | int) -> tk.Frame:
         card = tk.Frame(parent, bg=COLORS["card_bg"], highlightbackground=COLORS["border"], highlightthickness=1)
@@ -414,29 +407,33 @@ class FolderListApp:
         inner.pack(fill="both", expand=True, padx=18, pady=16)
         return inner
 
-    def _build_action_card(self, parent: tk.Widget) -> None:
-        card = self._create_card(parent, pady=(18, 12))
+    def _build_action_bar(self, parent: tk.Widget) -> None:
+        bar = tk.Frame(parent, bg=COLORS["card_bg"], highlightbackground=COLORS["border"], highlightthickness=1)
+        bar.pack(fill="x", pady=(0, 10))
 
-        button_row = tk.Frame(card, bg=COLORS["card_bg"])
-        button_row.pack(fill="x")
-        self.select_button = self._create_button(button_row, UI_TEXT["button_select_folder"], self.select_folder, True)
-        self.refresh_button = self._create_button(button_row, UI_TEXT["button_refresh"], self.refresh_folder, False)
-        self.copy_button = self._create_button(button_row, UI_TEXT["button_copy"], self.copy_listing, False)
-        self.save_button = self._create_button(button_row, UI_TEXT["button_save_txt"], self.save_listing, False)
+        row = tk.Frame(bar, bg=COLORS["card_bg"])
+        row.pack(fill="x", padx=12, pady=8)
+        row.grid_columnconfigure(4, weight=1)
 
-        self.select_button.pack(side="left")
-        self.refresh_button.pack(side="left", padx=(8, 0))
-        self.copy_button.pack(side="left", padx=(8, 0))
-        self.save_button.pack(side="left", padx=(8, 0))
+        self.select_button = self._create_button(row, UI_TEXT["button_select_folder"], self.select_folder, True)
+        self.refresh_button = self._create_button(row, UI_TEXT["button_refresh"], self.refresh_folder, False)
+        self.copy_button = self._create_button(row, UI_TEXT["button_copy"], self.copy_listing, False)
+        self.save_button = self._create_button(row, UI_TEXT["button_save_txt"], self.save_listing, False)
 
-        tk.Label(
-            card,
+        self.select_button.grid(row=0, column=0, sticky="w")
+        self.refresh_button.grid(row=0, column=1, sticky="w", padx=(10, 0))
+        self.copy_button.grid(row=0, column=2, sticky="w", padx=(10, 0))
+        self.save_button.grid(row=0, column=3, sticky="w", padx=(10, 0))
+
+        self.path_label = tk.Label(
+            row,
             textvariable=self.path_var,
             font=self.fonts["small"],
             fg=COLORS["sub_text"],
             bg=COLORS["card_bg"],
-            anchor="w",
-        ).pack(fill="x", pady=(12, 0))
+            anchor="e",
+        )
+        self.path_label.grid(row=0, column=4, sticky="ew", padx=(14, 0))
 
     def _create_button(self, parent: tk.Widget, label: str, command, primary: bool) -> tk.Button:
         normal_bg = COLORS["accent"] if primary else COLORS["card_bg"]
@@ -455,8 +452,8 @@ class FolderListApp:
             disabledforeground=COLORS["disabled_fg"],
             relief="flat",
             bd=0,
-            padx=16,
-            pady=9,
+            padx=14,
+            pady=7,
             cursor="hand2",
             highlightthickness=1,
             highlightbackground=COLORS["accent"] if primary else COLORS["border"],
@@ -492,10 +489,11 @@ class FolderListApp:
             fg=COLORS["text"],
             bg=COLORS["text_bg"],
             insertbackground=COLORS["text"],
-            selectbackground="#D8E6FF",
+            selectbackground=COLORS["selection_bg"],
+            selectborderwidth=1,
             relief="flat",
-            padx=14,
-            pady=12,
+            padx=12,
+            pady=10,
             state="disabled",
         )
         y_scroll = tk.Scrollbar(card, orient="vertical", command=self.text.yview)
@@ -515,18 +513,17 @@ class FolderListApp:
             bg=COLORS["base_bg"],
             anchor="w",
         )
-        status.pack(fill="x", pady=(10, 0))
+        status.pack(fill="x", pady=(7, 0))
 
     def _build_footer(self, parent: tk.Widget) -> None:
         footer = tk.Frame(parent, bg=COLORS["base_bg"])
-        footer.pack(fill="x", pady=(14, 0))
-        tk.Label(
-            footer,
-            text=UI_TEXT["footer_left"],
-            font=self.fonts["small"],
-            fg=COLORS["sub_text"],
-            bg=COLORS["base_bg"],
-        ).pack(side="left")
+        footer.pack(fill="x", pady=(10, 0))
+
+        left = tk.Frame(footer, bg=COLORS["base_bg"])
+        left.pack(side="left")
+        self._footer_label(left, UI_TEXT["footer_left"])
+        self._footer_label(left, UI_TEXT["footer_separator"])
+        self._footer_label(left, UI_TEXT["footer_catchcopy"])
 
         right = tk.Frame(footer, bg=COLORS["base_bg"])
         right.pack(side="right")
@@ -540,9 +537,11 @@ class FolderListApp:
         tk.Label(parent, text=text, font=self.fonts["small"], fg=COLORS["sub_text"], bg=COLORS["base_bg"]).pack(side="left")
 
     def _footer_link(self, parent: tk.Widget, text: str, url: str) -> None:
-        label = tk.Label(parent, text=text, font=self.fonts["small"], fg=COLORS["accent"], bg=COLORS["base_bg"], cursor="hand2")
+        label = tk.Label(parent, text=text, font=self.fonts["small"], fg=COLORS["sub_text"], bg=COLORS["base_bg"], cursor="hand2")
         label.pack(side="left")
         label.bind("<Button-1>", lambda _event: webbrowser.open(url))
+        label.bind("<Enter>", lambda _event: label.configure(fg=COLORS["text"]))
+        label.bind("<Leave>", lambda _event: label.configure(fg=COLORS["sub_text"]))
 
     def _set_text_content(self, content: str) -> None:
         self.text.configure(state="normal")

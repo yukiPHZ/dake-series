@@ -532,7 +532,7 @@ class WebEntryBuilderApp:
             fg=COLORS["warning"],
             bg=COLORS["card_bg"],
             anchor="w",
-        ).pack(fill="x", pady=(-8, 10))
+        ).pack(fill="x", pady=(0, 10))
         self._field(parent, UI_TEXT["label_exe_name"], self.exe_name_var, UI_TEXT["example_exe_name"])
 
         tk.Label(

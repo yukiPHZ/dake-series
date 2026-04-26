@@ -30,7 +30,7 @@ APP_NAME = "PDF→画像"
 APP_NAME_EN = "DakePDF to Images"
 WINDOW_TITLE = "PDF→画像"
 COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
-INTERNAL_FOLDER_NAME = "DAKE_PDF_to_Images"
+INTERNAL_FOLDER_NAME = "DAKE_PDF_ToImages"
 CONFIG_FILE_NAME = "dake_pdf_to_images_config.json"
 
 UI_TEXT = {

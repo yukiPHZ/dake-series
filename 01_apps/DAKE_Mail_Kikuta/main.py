@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
+import sys
 import webbrowser
 from pathlib import Path
 from tkinter import font as tkfont
@@ -13,8 +14,22 @@ APP_NAME = "Dake菊田メール"
 WINDOW_TITLE = "菊田にメール"
 COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
 
-KIKUTA_MAIL_ADDRESS = "ここに菊田のメールアドレスを入れる"
-UNSET_MAIL_ADDRESS = "ここに菊田のメールアドレスを入れる"
+KIKUTA_MAIL_ADDRESS = "kikuta@sakuratoshi.co.jp"
+
+FONT_FAMILY = "BIZ UDPGothic"
+FONT_SIZE = 10
+TITLE_FONT_SIZE = 18
+FOOTER_FONT_SIZE = 8
+FONT = (FONT_FAMILY, FONT_SIZE)
+FONT_BOLD = (FONT_FAMILY, FONT_SIZE, "bold")
+BASE_FONT = FONT
+TITLE_FONT = (FONT_FAMILY, TITLE_FONT_SIZE, "bold")
+DESCRIPTION_FONT = (FONT_FAMILY, FONT_SIZE)
+LABEL_FONT = FONT_BOLD
+INPUT_FONT = (FONT_FAMILY, FONT_SIZE)
+BUTTON_FONT = FONT_BOLD
+FOOTER_FONT = (FONT_FAMILY, FOOTER_FONT_SIZE)
+FONT_FALLBACKS = (FONT_FAMILY, "Yu Gothic UI", "Meiryo")
 
 UI_TEXT = {
     "brand_series": "シンプルそれDAKEシリーズ",
@@ -35,7 +50,15 @@ UI_TEXT = {
     "error_mail_open_failed": "既定のメールソフトを開けませんでした。",
     "footer_left": "シンプルそれDAKEシリーズ",
     "footer_subtitle": "止まらない、迷わない、すぐ終わる。",
+    "footer_estimate": "戸建買取査定",
+    "footer_instagram": "Instagram",
+    "footer_separator": " ｜ ",
     "footer_copyright": COPYRIGHT,
+}
+
+LINK_URLS = {
+    "footer_estimate": "https://sakurayk.notion.site/22ea54b5298d80928443ec7b4d20143d?pvs=74",
+    "footer_instagram": "https://www.instagram.com/kikuta.shimarisu_fudosan",
 }
 
 COLORS = {
@@ -50,16 +73,49 @@ COLORS = {
     "error": "#D92D20",
 }
 
-BASE_DIR = Path(__file__).resolve().parent
-ICON_PATH = (BASE_DIR / ".." / ".." / "02_assets" / "dake_icon.ico").resolve()
+def get_base_dir() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parent
+
+
+def get_project_root(base_dir: Path) -> Path:
+    for candidate in (base_dir, *base_dir.parents):
+        if candidate.name == "DAKE_series":
+            return candidate
+        if (candidate / "02_assets" / "dake_icon.ico").exists():
+            return candidate
+    return base_dir.parents[1] if len(base_dir.parents) >= 2 else base_dir
+
+
+APP_DIR = get_base_dir()
+PROJECT_ROOT = get_project_root(APP_DIR)
+ICON_PATH = PROJECT_ROOT / "02_assets" / "dake_icon.ico"
 
 
 def choose_font_family(root: tk.Tk) -> str:
     available = set(tkfont.families(root))
-    for family in ("BIZ UDPGothic", "Yu Gothic UI", "Meiryo"):
+    for family in FONT_FALLBACKS:
         if family in available:
             return family
-    return "TkDefaultFont"
+    return FONT_FAMILY
+
+
+def configure_app_font(root: tk.Tk) -> None:
+    global FONT_FAMILY, FONT, FONT_BOLD, BASE_FONT
+    global TITLE_FONT, DESCRIPTION_FONT, LABEL_FONT, INPUT_FONT, BUTTON_FONT, FOOTER_FONT
+
+    resolved_family = choose_font_family(root)
+    FONT_FAMILY = resolved_family
+    FONT = (resolved_family, FONT_SIZE)
+    FONT_BOLD = (resolved_family, FONT_SIZE, "bold")
+    BASE_FONT = FONT
+    TITLE_FONT = (resolved_family, TITLE_FONT_SIZE, "bold")
+    DESCRIPTION_FONT = (resolved_family, FONT_SIZE)
+    LABEL_FONT = FONT_BOLD
+    INPUT_FONT = (resolved_family, FONT_SIZE)
+    BUTTON_FONT = FONT_BOLD
+    FOOTER_FONT = (resolved_family, FOOTER_FONT_SIZE)
 
 
 def normalize_mail_body(body: str) -> str:
@@ -67,8 +123,7 @@ def normalize_mail_body(body: str) -> str:
 
 
 def is_address_configured(address: str) -> bool:
-    mail_address = address.strip()
-    return bool(mail_address) and mail_address != UNSET_MAIL_ADDRESS
+    return bool(address.strip())
 
 
 def build_mailto_url(address: str, subject: str, body: str) -> str:
@@ -83,19 +138,15 @@ class KikutaMailApp:
         self.root = root
         self.root.title(WINDOW_TITLE)
         self.root.configure(bg=COLORS["background"])
-        self.root.minsize(680, 560)
-        self.root.geometry("760x640")
+        self.root.minsize(900, 640)
+        self.root.geometry("900x640")
 
-        self.font_family = choose_font_family(root)
-        self.fonts = {
-            "title": (self.font_family, 22, "bold"),
-            "description": (self.font_family, 11),
-            "label": (self.font_family, 10, "bold"),
-            "input": (self.font_family, 11),
-            "button": (self.font_family, 11, "bold"),
-            "status": (self.font_family, 10),
-            "footer": (self.font_family, 9),
-        }
+        configure_app_font(root)
+        self.footer_link_hover_font = tkfont.Font(
+            family=FONT_FAMILY,
+            size=FOOTER_FONT_SIZE,
+            underline=True,
+        )
 
         self.status_var = tk.StringVar(value=UI_TEXT["status_idle"])
         self.subject_has_placeholder = True
@@ -109,8 +160,9 @@ class KikutaMailApp:
         if not ICON_PATH.exists():
             return
         try:
+            self.root.iconbitmap(str(ICON_PATH))
             self.root.iconbitmap(default=str(ICON_PATH))
-        except tk.TclError:
+        except Exception:
             return
 
     def _build_ui(self) -> None:
@@ -131,18 +183,18 @@ class KikutaMailApp:
             text=UI_TEXT["main_title"],
             bg=COLORS["background"],
             fg=COLORS["text"],
-            font=self.fonts["title"],
+            font=TITLE_FONT,
             anchor="w",
-        ).grid(row=0, column=0, sticky="ew")
+        ).grid(row=0, column=0, sticky="ew", pady=(0, 8))
 
         tk.Label(
             header,
             text=UI_TEXT["main_description"],
             bg=COLORS["background"],
             fg=COLORS["muted"],
-            font=self.fonts["description"],
+            font=DESCRIPTION_FONT,
             anchor="w",
-        ).grid(row=1, column=0, sticky="ew", pady=(7, 0))
+        ).grid(row=1, column=0, sticky="ew")
 
         card = tk.Frame(
             outer,
@@ -160,7 +212,7 @@ class KikutaMailApp:
             text=UI_TEXT["label_subject"],
             bg=COLORS["card"],
             fg=COLORS["text"],
-            font=self.fonts["label"],
+            font=LABEL_FONT,
             anchor="w",
         ).grid(row=0, column=0, sticky="ew", padx=28, pady=(26, 8))
 
@@ -169,7 +221,7 @@ class KikutaMailApp:
             bd=0,
             bg=COLORS["card"],
             fg=COLORS["muted"],
-            font=self.fonts["input"],
+            font=INPUT_FONT,
             highlightbackground=COLORS["border"],
             highlightcolor=COLORS["accent"],
             highlightthickness=1,
@@ -187,7 +239,7 @@ class KikutaMailApp:
             text=UI_TEXT["label_body"],
             bg=COLORS["card"],
             fg=COLORS["text"],
-            font=self.fonts["label"],
+            font=LABEL_FONT,
             anchor="w",
         ).grid(row=2, column=0, sticky="ew", padx=28, pady=(22, 8))
 
@@ -196,7 +248,7 @@ class KikutaMailApp:
             bd=0,
             bg=COLORS["card"],
             fg=COLORS["muted"],
-            font=self.fonts["input"],
+            font=INPUT_FONT,
             height=12,
             highlightbackground=COLORS["border"],
             highlightcolor=COLORS["accent"],
@@ -228,7 +280,7 @@ class KikutaMailApp:
             bd=0,
             command=self._create_mail,
             cursor="hand2",
-            font=self.fonts["button"],
+            font=BUTTON_FONT,
             padx=24,
             pady=11,
             relief="flat",
@@ -242,7 +294,7 @@ class KikutaMailApp:
             textvariable=self.status_var,
             bg=COLORS["card"],
             fg=COLORS["muted"],
-            font=self.fonts["status"],
+            font=BASE_FONT,
             anchor="e",
         )
         self.status_label.grid(row=0, column=1, sticky="ew", padx=(18, 0))
@@ -258,18 +310,59 @@ class KikutaMailApp:
             text=footer_left_text,
             bg=COLORS["background"],
             fg=COLORS["muted"],
-            font=self.fonts["footer"],
+            font=FOOTER_FONT,
             anchor="w",
         ).grid(row=0, column=0, sticky="ew")
 
+        footer_right = tk.Frame(footer, bg=COLORS["background"])
+        footer_right.grid(row=0, column=1, sticky="e")
+
+        self._build_footer_link(
+            footer_right,
+            0,
+            UI_TEXT["footer_estimate"],
+            LINK_URLS["footer_estimate"],
+        )
+        self._build_footer_text(footer_right, 1, UI_TEXT["footer_separator"])
+        self._build_footer_link(
+            footer_right,
+            2,
+            UI_TEXT["footer_instagram"],
+            LINK_URLS["footer_instagram"],
+        )
+        self._build_footer_text(footer_right, 3, UI_TEXT["footer_separator"])
+        self._build_footer_text(footer_right, 4, UI_TEXT["footer_copyright"])
+
+    def _build_footer_text(self, parent: tk.Widget, column: int, text: str) -> None:
         tk.Label(
-            footer,
-            text=UI_TEXT["footer_copyright"],
+            parent,
+            text=text,
             bg=COLORS["background"],
             fg=COLORS["muted"],
-            font=self.fonts["footer"],
+            font=FOOTER_FONT,
             anchor="e",
-        ).grid(row=0, column=1, sticky="ew")
+        ).grid(row=0, column=column, sticky="e")
+
+    def _build_footer_link(
+        self,
+        parent: tk.Widget,
+        column: int,
+        text: str,
+        url: str,
+    ) -> None:
+        label = tk.Label(
+            parent,
+            text=text,
+            bg=COLORS["background"],
+            fg=COLORS["muted"],
+            font=FOOTER_FONT,
+            anchor="e",
+            cursor="hand2",
+        )
+        label.grid(row=0, column=column, sticky="e")
+        label.bind("<Button-1>", lambda _event: self._open_footer_link(url))
+        label.bind("<Enter>", lambda _event: self._handle_footer_link_enter(label))
+        label.bind("<Leave>", lambda _event: self._handle_footer_link_leave(label))
 
     def _handle_subject_focus_in(self, _event: tk.Event) -> None:
         if self.subject_has_placeholder:
@@ -307,6 +400,18 @@ class KikutaMailApp:
 
     def _handle_button_leave(self, _event: tk.Event) -> None:
         self.create_button.configure(bg=COLORS["accent"])
+
+    def _handle_footer_link_enter(self, label: tk.Label) -> None:
+        label.configure(fg=COLORS["accent"], font=self.footer_link_hover_font)
+
+    def _handle_footer_link_leave(self, label: tk.Label) -> None:
+        label.configure(fg=COLORS["muted"], font=FOOTER_FONT)
+
+    def _open_footer_link(self, url: str) -> None:
+        try:
+            webbrowser.open(url)
+        except Exception:
+            return
 
     def _refresh_ready_status(self) -> None:
         if self.subject_has_placeholder and self.body_has_placeholder:

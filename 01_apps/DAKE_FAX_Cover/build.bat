@@ -9,7 +9,7 @@ pyinstaller ^
 --noconsole ^
 --clean ^
 --icon=..\..\02_assets\dake_icon.ico ^
---name DakeDocument_Cover ^
+--name DakeFAX_Cover ^
 main.py
 
 pause

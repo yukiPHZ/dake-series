@@ -36,17 +36,19 @@ except Exception as exc:
     REPORTLAB_IMPORT_ERROR = exc
 
 
-APP_NAME = "Dake書類送付状"
-WINDOW_TITLE = "書類送付状"
+APP_NAME = "DakeFAX送付状"
+WINDOW_TITLE = "FAX送付状"
 COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
 
 UI_TEXT = {
     "brand_series": "シンプルそれDAKEシリーズ",
-    "main_title": "書類送付状を作る",
-    "main_description": "相手方と送付内容を入力して、A4縦のPDFを作成します。",
-    "section_recipient": "宛先",
-    "section_items": "送付内容",
-    "section_sender": "作成者情報",
+    "main_title": "FAX送付状を作る",
+    "main_description": "送信先と内容を入力して、A4縦のFAX送付状PDFを作成します。",
+    "section_recipient": "送信先",
+    "section_fax_info": "FAX情報",
+    "section_items": "送信内容",
+    "section_message": "メッセージ",
+    "section_sender": "送信者情報",
     "section_save": "保存先",
     "label_date": "日付",
     "label_company": "会社名",
@@ -54,26 +56,28 @@ UI_TEXT = {
     "label_position": "役職",
     "label_name": "氏名",
     "label_honorific": "敬称",
+    "label_fax_number": "FAX番号",
+    "label_tel": "電話番号",
+    "label_subject": "件名",
+    "label_total_pages": "送信枚数",
+    "label_send_date": "送信日",
     "label_zip": "郵便番号",
     "label_address": "住所",
-    "label_tel": "電話番号",
-    "label_fax": "FAX",
     "label_email": "メールアドレス",
-    "label_document_name": "書類名",
-    "label_copies": "部数",
+    "label_item_name": "送付書類名",
+    "label_item_pages": "枚数",
     "label_note": "備考",
     "button_add_row": "行を追加",
     "button_select_folder": "保存先を選ぶ",
-    "button_create_pdf": "PDFを作成",
+    "button_create_pdf": "FAX送付状PDFを作成",
     "status_idle": "入力してください",
     "status_ready": "準備完了",
     "status_processing": "PDF作成中",
-    "status_complete": "PDFを作成しました",
-    "status_error": "エラーが発生しました",
+    "status_complete": "FAX送付状PDFを作成しました",
+    "status_error": "入力内容を確認してください",
     "message_complete_title": "完了",
-    "message_complete_body": "書類送付状PDFを作成しました。",
-    "message_error_title": "エラー",
-    "message_required_body": "宛先または送付内容を確認してください。",
+    "message_complete_body": "FAX送付状PDFを作成しました。",
+    "message_error_title": "確認してください",
     "message_busy_title": "処理中",
     "message_busy_body": "PDF作成が終わるまでお待ちください。",
     "message_open_folder_body": "OK後に保存先フォルダを開きます。",
@@ -84,27 +88,35 @@ UI_TEXT = {
     "footer_copyright": COPYRIGHT,
     "honorific_company": "御中",
     "honorific_person": "様",
+    "default_message": "下記のとおりFAXを送信いたします。ご確認のほどよろしくお願いいたします。",
     "date_format": "{year}年{month}月{day}日",
-    "date_placeholder": "例：2026年4月26日",
+    "date_placeholder": "例：2026年4月27日",
     "folder_dialog_title": "保存先フォルダを選択",
-    "error_required_recipient": "宛先の会社名または氏名を入力してください。",
-    "error_required_documents": "送付内容の書類名を1行以上入力してください。",
-    "error_date_format": "日付は「2026年4月26日」の形式で入力してください。",
+    "error_required_recipient": "送信先の会社名または氏名を入力してください。",
+    "error_required_items": "送信内容の送付書類名を1行以上入力してください。",
+    "error_required_sender": "送信者の氏名を入力してください。",
+    "error_date_format": "日付は「2026年4月27日」の形式で入力してください。",
+    "error_send_date_format": "送信日は「2026年4月27日」の形式で入力してください。",
     "error_save_folder": "保存先フォルダが見つかりません。保存先を確認してください。",
     "error_reportlab_missing": "PDF作成に必要な reportlab が見つかりません。reportlab をインストールしてから実行してください。",
     "error_file_locked": "同名のPDFが開かれている可能性があります。PDFを閉じてからもう一度お試しください。",
     "error_pdf_failed": "PDF作成に失敗しました。入力内容と保存先を確認してください。",
-    "filename_title": "書類送付状",
-    "filename_recipient_fallback": "宛先",
-    "documents_row_template": "{number}",
-    "pdf_title": "書類送付状",
-    "pdf_body": "下記の書類を送付いたします。ご査収のほどよろしくお願いいたします。",
-    "pdf_table_document_name": "書類名",
-    "pdf_table_copies": "部数",
+    "filename_title": "FAX送付状",
+    "filename_recipient_fallback": "送信先",
+    "items_row_template": "{number}",
+    "pdf_title": "FAX送付状",
+    "pdf_recipient_heading": "送信先",
+    "pdf_sender_heading": "送信者",
+    "pdf_fax_info_heading": "FAX情報",
+    "pdf_subject": "件名",
+    "pdf_total_pages": "送信枚数",
+    "pdf_send_date": "送信日",
+    "pdf_table_item_name": "送付書類名",
+    "pdf_table_pages": "枚数",
     "pdf_table_note": "備考",
-    "pdf_sender_tel": "TEL",
-    "pdf_sender_fax": "FAX",
-    "pdf_sender_email": "E-mail",
+    "pdf_tel": "TEL",
+    "pdf_fax": "FAX",
+    "pdf_email": "E-mail",
     "pdf_postal_mark": "〒",
     "pdf_closing": "以上",
     "empty_value": "",
@@ -131,26 +143,29 @@ LINK_URLS = {
     "footer_link_2": "https://www.instagram.com/kikuta.shimarisu_fudosan",
 }
 
-CONFIG_NAME = "document_cover_config.json"
-WINDOW_APP_ID = "Dake.DocumentCover"
-INITIAL_DOCUMENT_ROWS = 3
+CONFIG_NAME = "fax_cover_config.json"
+WINDOW_APP_ID = "Dake.FAXCover"
+INITIAL_ITEM_ROWS = 3
 DATE_SEPARATED_PATTERN = re.compile(r"^\s*(\d{4})\D+(\d{1,2})\D+(\d{1,2})\D*\s*$")
 DATE_DIGIT_PATTERN = re.compile(r"^\s*(\d{4})(\d{2})(\d{2})\s*$")
 FILENAME_UNSAFE_PATTERN = re.compile(r'[\\/:*?"<>|]+')
 
 
 @dataclass(frozen=True)
-class DocumentRow:
+class FaxItemRow:
     name: str
-    copies: str
+    pages: str
     note: str
 
 
 @dataclass(frozen=True)
-class CoverData:
+class FaxCoverData:
     output_date: date
+    send_date: date
     recipient: dict[str, str]
-    documents: list[DocumentRow]
+    fax_info: dict[str, str]
+    items: list[FaxItemRow]
+    message: str
     sender: dict[str, str]
     save_folder: Path
 
@@ -191,16 +206,16 @@ def format_japanese_date(value: date) -> str:
     return UI_TEXT["date_format"].format(year=value.year, month=value.month, day=value.day)
 
 
-def parse_date_input(value: str) -> date:
+def parse_date_input(value: str, error_text: str) -> date:
     text = value.strip()
     match = DATE_SEPARATED_PATTERN.match(text) or DATE_DIGIT_PATTERN.match(text)
     if not match:
-        raise ValueError(UI_TEXT["error_date_format"])
+        raise ValueError(error_text)
     year, month, day = (int(part) for part in match.groups())
     try:
         return date(year, month, day)
     except ValueError as exc:
-        raise ValueError(UI_TEXT["error_date_format"]) from exc
+        raise ValueError(error_text) from exc
 
 
 def sanitize_filename_part(value: str) -> str:
@@ -244,20 +259,6 @@ def set_windows_app_id() -> None:
         pass
 
 
-def find_icon_path() -> Path | None:
-    base = app_dir()
-    candidates = [
-        base / ".." / ".." / "02_assets" / "dake_icon.ico",
-        base / ".." / ".." / ".." / "02_assets" / "dake_icon.ico",
-        Path(__file__).resolve().parent / ".." / ".." / "02_assets" / "dake_icon.ico",
-    ]
-    for candidate in candidates:
-        resolved = candidate.resolve()
-        if resolved.exists():
-            return resolved
-    return None
-
-
 def register_pdf_fonts() -> tuple[str, str]:
     if not REPORTLAB_AVAILABLE or pdfmetrics is None or UnicodeCIDFont is None:
         raise RuntimeError(UI_TEXT["error_reportlab_missing"])
@@ -289,7 +290,7 @@ def wrap_pdf_text(text: str, max_width: float, font_name: str, font_size: int) -
 
 
 def draw_wrapped(
-    pdf: object,
+    canvas: object,
     text: str,
     x: float,
     y: float,
@@ -302,15 +303,32 @@ def draw_wrapped(
     lines = wrap_pdf_text(text, max_width, font_name, font_size)
     if max_lines is not None:
         lines = lines[:max_lines]
-    pdf.setFont(font_name, font_size)
+    canvas.setFont(font_name, font_size)
     for line in lines:
-        pdf.drawString(x, y, line)
+        canvas.drawString(x, y, line)
         y -= leading
     return y
 
 
+def draw_label_value(
+    canvas: object,
+    label: str,
+    value: str,
+    x: float,
+    y: float,
+    label_width: float,
+    max_width: float,
+    font_name: str,
+    label_font: str,
+    font_size: int = 9,
+) -> float:
+    canvas.setFont(label_font, font_size)
+    canvas.drawString(x, y, label)
+    return draw_wrapped(canvas, value, x + label_width, y, max_width - label_width, font_name, font_size, 12, max_lines=2)
+
+
 def draw_table_cell(
-    pdf: object,
+    canvas: object,
     text: str,
     x: float,
     y: float,
@@ -322,22 +340,22 @@ def draw_table_cell(
 ) -> None:
     lines = wrap_pdf_text(text, width - 8, font_name, font_size)[:2]
     start_y = y + height - 12
-    pdf.setFont(font_name, font_size)
+    canvas.setFont(font_name, font_size)
     for line in lines:
         if align_center:
-            pdf.drawCentredString(x + width / 2, start_y, line)
+            canvas.drawCentredString(x + width / 2, start_y, line)
         else:
-            pdf.drawString(x + 4, start_y, line)
-        start_y -= 10
+            canvas.drawString(x + 4, start_y, line)
+        start_y -= 11
 
 
 def build_recipient_lines(recipient: dict[str, str]) -> list[str]:
+    lines: list[str] = []
     company = recipient["company"]
     department = recipient["department"]
     position = recipient["position"]
     name = recipient["name"]
     honorific = recipient["honorific"]
-    lines: list[str] = []
     if company:
         lines.append(company if (department or position or name) else f"{company} {honorific}")
     if department:
@@ -348,6 +366,10 @@ def build_recipient_lines(recipient: dict[str, str]) -> list[str]:
         lines.append(f"{position} {honorific}")
     elif name:
         lines.append(f"{name} {honorific}")
+    if recipient["fax"]:
+        lines.append(f"{UI_TEXT['pdf_fax']} {recipient['fax']}")
+    if recipient["tel"]:
+        lines.append(f"{UI_TEXT['pdf_tel']} {recipient['tel']}")
     return lines
 
 
@@ -356,23 +378,20 @@ def build_sender_lines(sender: dict[str, str]) -> list[str]:
     for key in ("company", "department", "name"):
         if sender[key]:
             lines.append(sender[key])
-    if sender["zip"]:
-        lines.append(f"{UI_TEXT['pdf_postal_mark']} {sender['zip']}")
+    if sender["postal_code"]:
+        lines.append(f"{UI_TEXT['pdf_postal_mark']} {sender['postal_code']}")
     if sender["address"]:
         lines.append(sender["address"])
-    contact_parts = []
     if sender["tel"]:
-        contact_parts.append(f"{UI_TEXT['pdf_sender_tel']} {sender['tel']}")
+        lines.append(f"{UI_TEXT['pdf_tel']} {sender['tel']}")
     if sender["fax"]:
-        contact_parts.append(f"{UI_TEXT['pdf_sender_fax']} {sender['fax']}")
-    if contact_parts:
-        lines.append(UI_TEXT["footer_separator"].join(contact_parts))
+        lines.append(f"{UI_TEXT['pdf_fax']} {sender['fax']}")
     if sender["email"]:
-        lines.append(f"{UI_TEXT['pdf_sender_email']} {sender['email']}")
+        lines.append(f"{UI_TEXT['pdf_email']} {sender['email']}")
     return lines
 
 
-def create_pdf(data: CoverData) -> Path:
+def create_pdf(data: FaxCoverData) -> Path:
     if not REPORTLAB_AVAILABLE or A4 is None or pdf_canvas is None or pdf_colors is None:
         detail = f" ({REPORTLAB_IMPORT_ERROR})" if REPORTLAB_IMPORT_ERROR else ""
         raise RuntimeError(UI_TEXT["error_reportlab_missing"] + detail)
@@ -385,92 +404,114 @@ def create_pdf(data: CoverData) -> Path:
 
     width, height = A4
     margin_x = 22 * mm
-    top_y = height - 24 * mm
-    table_width = width - margin_x * 2
-    col_widths = [78 * mm, 22 * mm, table_width - 100 * mm]
-    row_height = 25 * mm / 2
+    top_y = height - 22 * mm
+    canvas = pdf_canvas.Canvas(str(output_path), pagesize=A4)
+    canvas.setTitle(UI_TEXT["pdf_title"])
+    canvas.setLineWidth(0.9)
+    canvas.setStrokeColor(pdf_colors.black)
+    canvas.setFillColor(pdf_colors.black)
 
-    try:
-        pdf = pdf_canvas.Canvas(str(output_path), pagesize=A4)
-        pdf.setTitle(UI_TEXT["pdf_title"])
-        pdf.setAuthor(APP_NAME)
-        pdf.setFillColor(pdf_colors.HexColor(COLORS["text"]))
+    canvas.setFont(gothic, 10)
+    canvas.drawRightString(width - margin_x, top_y, format_japanese_date(data.output_date))
 
-        pdf.setFont(gothic, 10)
-        pdf.drawRightString(width - margin_x, top_y, format_japanese_date(data.output_date))
+    title_y = top_y - 36
+    canvas.setFont(mincho, 22)
+    canvas.drawCentredString(width / 2, title_y, UI_TEXT["pdf_title"])
+    canvas.line(margin_x, title_y - 12, width - margin_x, title_y - 12)
 
-        recipient_y = top_y - 34
-        for line in build_recipient_lines(data.recipient):
-            recipient_y = draw_wrapped(pdf, line, margin_x, recipient_y, 72 * mm, gothic, 11, 16, max_lines=2)
+    block_top = title_y - 42
+    left_x = margin_x
+    right_x = width / 2 + 8 * mm
+    block_width = width / 2 - margin_x - 8 * mm
 
-        sender_x = width - margin_x - 70 * mm
-        sender_y = top_y - 34
-        for line in build_sender_lines(data.sender):
-            sender_y = draw_wrapped(pdf, line, sender_x, sender_y, 70 * mm, gothic, 9, 13, max_lines=2)
+    canvas.setFont(gothic, 10)
+    canvas.drawString(left_x, block_top, UI_TEXT["pdf_recipient_heading"])
+    canvas.drawString(right_x, block_top, UI_TEXT["pdf_sender_heading"])
+    canvas.line(left_x, block_top - 4, left_x + block_width, block_top - 4)
+    canvas.line(right_x, block_top - 4, right_x + block_width, block_top - 4)
 
-        title_y = top_y - 132
-        pdf.setFont(mincho, 21)
-        pdf.drawCentredString(width / 2, title_y, UI_TEXT["pdf_title"])
+    y_left = block_top - 20
+    for line in build_recipient_lines(data.recipient):
+        font_size = 11 if line.startswith(UI_TEXT["pdf_fax"]) else 9
+        y_left = draw_wrapped(canvas, line, left_x, y_left, block_width, gothic, font_size, 13, max_lines=2)
 
-        body_y = title_y - 42
-        pdf.setFont(gothic, 11)
-        pdf.drawString(margin_x, body_y, UI_TEXT["pdf_body"])
+    y_right = block_top - 20
+    for line in build_sender_lines(data.sender):
+        y_right = draw_wrapped(canvas, line, right_x, y_right, block_width, gothic, 9, 12, max_lines=2)
 
-        table_x = margin_x
-        table_top = body_y - 38
-        headers = [
-            UI_TEXT["pdf_table_document_name"],
-            UI_TEXT["pdf_table_copies"],
-            UI_TEXT["pdf_table_note"],
-        ]
+    fax_info_top = min(y_left, y_right) - 16
+    info_height = 50
+    canvas.rect(margin_x, fax_info_top - info_height, width - margin_x * 2, info_height, stroke=1, fill=0)
+    canvas.setFont(gothic, 10)
+    canvas.drawString(margin_x + 8, fax_info_top - 16, UI_TEXT["pdf_fax_info_heading"])
+    info_x = margin_x + 74
+    info_y = fax_info_top - 16
+    draw_label_value(canvas, UI_TEXT["pdf_subject"], data.fax_info["subject"], info_x, info_y, 48, 270, gothic, gothic, 10)
+    draw_label_value(canvas, UI_TEXT["pdf_total_pages"], data.fax_info["total_pages"], info_x, info_y - 18, 48, 170, gothic, gothic, 10)
+    draw_label_value(
+        canvas,
+        UI_TEXT["pdf_send_date"],
+        format_japanese_date(data.send_date),
+        info_x + 210,
+        info_y - 18,
+        48,
+        190,
+        gothic,
+        gothic,
+        10,
+    )
 
-        pdf.setLineWidth(0.7)
-        pdf.setStrokeColor(pdf_colors.HexColor(COLORS["border"]))
-        pdf.setFillColor(pdf_colors.HexColor(COLORS["table_header"]))
-        pdf.rect(table_x, table_top - row_height, table_width, row_height, stroke=1, fill=1)
+    message_y = fax_info_top - info_height - 28
+    message = data.message.strip() or UI_TEXT["default_message"]
+    message_y = draw_wrapped(canvas, message, margin_x, message_y, width - margin_x * 2, gothic, 10, 15, max_lines=3)
 
+    table_x = margin_x
+    table_top = message_y - 18
+    col_widths = [270, 70, width - margin_x * 2 - 340]
+    row_height = 29
+    headers = [
+        UI_TEXT["pdf_table_item_name"],
+        UI_TEXT["pdf_table_pages"],
+        UI_TEXT["pdf_table_note"],
+    ]
+    table_width = sum(col_widths)
+
+    canvas.setLineWidth(0.8)
+    canvas.setFillColor(pdf_colors.HexColor(COLORS["table_header"]))
+    canvas.rect(table_x, table_top - row_height, table_width, row_height, stroke=1, fill=1)
+    canvas.setFillColor(pdf_colors.black)
+    current_x = table_x
+    for index, header in enumerate(headers):
+        canvas.line(current_x, table_top, current_x, table_top - row_height)
+        draw_table_cell(canvas, header, current_x, table_top - row_height, col_widths[index], row_height, gothic, 10, True)
+        current_x += col_widths[index]
+    canvas.line(current_x, table_top, current_x, table_top - row_height)
+
+    row_y = table_top - row_height
+    for item in data.items:
+        row_y -= row_height
+        canvas.rect(table_x, row_y, table_width, row_height, stroke=1, fill=0)
         current_x = table_x
-        pdf.setFillColor(pdf_colors.HexColor(COLORS["text"]))
-        for index, header in enumerate(headers):
-            pdf.line(current_x, table_top, current_x, table_top - row_height)
-            draw_table_cell(pdf, header, current_x, table_top - row_height, col_widths[index], row_height, gothic, 10, True)
+        values = [item.name, item.pages, item.note]
+        for index, value in enumerate(values):
+            canvas.line(current_x, row_y + row_height, current_x, row_y)
+            draw_table_cell(canvas, value, current_x, row_y, col_widths[index], row_height, gothic, 10, index == 1)
             current_x += col_widths[index]
-        pdf.line(current_x, table_top, current_x, table_top - row_height)
+        canvas.line(current_x, row_y + row_height, current_x, row_y)
 
-        row_y = table_top - row_height
-        for document in data.documents:
-            row_y -= row_height
-            pdf.setFillColor(pdf_colors.white)
-            pdf.rect(table_x, row_y, table_width, row_height, stroke=1, fill=1)
-            pdf.setFillColor(pdf_colors.HexColor(COLORS["text"]))
-            current_x = table_x
-            values = [document.name, document.copies, document.note]
-            for index, value in enumerate(values):
-                pdf.line(current_x, row_y + row_height, current_x, row_y)
-                draw_table_cell(pdf, value, current_x, row_y, col_widths[index], row_height, gothic, 10, index == 1)
-                current_x += col_widths[index]
-            pdf.line(current_x, row_y + row_height, current_x, row_y)
-
-        closing_y = max(row_y - 30, 40 * mm)
-        pdf.setFont(gothic, 10)
-        pdf.drawRightString(width - margin_x, closing_y, UI_TEXT["pdf_closing"])
-
-        pdf.showPage()
-        pdf.save()
-    except PermissionError as exc:
-        raise PermissionError(UI_TEXT["error_file_locked"]) from exc
-    except OSError as exc:
-        raise OSError(UI_TEXT["error_pdf_failed"]) from exc
-
+    canvas.setFont(gothic, 10)
+    canvas.drawRightString(width - margin_x, max(42 * mm, row_y - 28), UI_TEXT["pdf_closing"])
+    canvas.showPage()
+    canvas.save()
     return output_path
 
 
-class DocumentCoverApp:
+class FaxCoverApp:
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
         self.root.title(WINDOW_TITLE)
         self.root.configure(bg=COLORS["background"])
-        self.root.minsize(1080, 720)
+        self.root.minsize(980, 760)
 
         self.config = load_config()
         self.font_family = self.choose_font_family()
@@ -485,29 +526,37 @@ class DocumentCoverApp:
             "footer": (self.font_family, 9),
         }
 
-        self.date_var = tk.StringVar(value=format_japanese_date(date.today()))
+        today = format_japanese_date(date.today())
+        self.date_var = tk.StringVar(value=today)
         self.recipient_vars = {
             "company": tk.StringVar(),
             "department": tk.StringVar(),
             "position": tk.StringVar(),
             "name": tk.StringVar(),
-            "honorific": tk.StringVar(value=UI_TEXT["honorific_company"]),
+            "honorific": tk.StringVar(value=self.config.get("last_honorific") or UI_TEXT["honorific_company"]),
+            "fax": tk.StringVar(),
+            "tel": tk.StringVar(),
+        }
+        self.fax_info_vars = {
+            "subject": tk.StringVar(),
+            "total_pages": tk.StringVar(),
+            "send_date": tk.StringVar(value=today),
         }
         self.sender_vars = {
             "company": tk.StringVar(),
             "department": tk.StringVar(),
             "name": tk.StringVar(),
-            "zip": tk.StringVar(),
+            "postal_code": tk.StringVar(),
             "address": tk.StringVar(),
             "tel": tk.StringVar(),
             "fax": tk.StringVar(),
             "email": tk.StringVar(),
         }
-        self.document_rows: list[dict[str, tk.StringVar]] = []
-        self.items_card: tk.Frame | None = None
-        self.add_row_button: tk.Button | None = None
+        self.item_rows: list[dict[str, tk.StringVar]] = []
         self.save_folder_var = tk.StringVar(value=self.initial_save_folder())
         self.status_var = tk.StringVar(value=UI_TEXT["status_idle"])
+        self.message_text: tk.Text | None = None
+        self.items_frame: tk.Frame | None = None
         self.create_button: tk.Button | None = None
         self.status_label: tk.Label | None = None
         self.is_processing = False
@@ -516,11 +565,10 @@ class DocumentCoverApp:
         self.configure_style()
         self.apply_window_icon()
         self.build_ui()
-        self.root.protocol("WM_DELETE_WINDOW", self.handle_close)
 
     def choose_font_family(self) -> str:
         available = set(tkfont.families(self.root))
-        for candidate in ("BIZ UDPGothic", "BIZ UDPゴシック", "Yu Gothic UI", "Meiryo"):
+        for candidate in ("BIZ UDPGothic", "Yu Gothic UI", "Meiryo"):
             if candidate in available:
                 return candidate
         return "TkDefaultFont"
@@ -542,8 +590,8 @@ class DocumentCoverApp:
         )
 
     def apply_window_icon(self) -> None:
-        icon_path = find_icon_path()
-        if icon_path is None:
+        icon_path = (Path(__file__).resolve().parent / ".." / ".." / "02_assets" / "dake_icon.ico").resolve()
+        if not icon_path.exists():
             return
         try:
             self.root.iconbitmap(str(icon_path))
@@ -552,7 +600,7 @@ class DocumentCoverApp:
 
     def initial_save_folder(self) -> str:
         saved = self.config.get("last_save_folder")
-        if isinstance(saved, str) and Path(saved).exists():
+        if saved and Path(saved).exists():
             return str(Path(saved))
         return str(default_downloads())
 
@@ -567,12 +615,12 @@ class DocumentCoverApp:
 
     def build_ui(self) -> None:
         outer = tk.Frame(self.root, bg=COLORS["background"])
-        outer.pack(fill="both", expand=True, padx=26, pady=20)
+        outer.pack(fill="both", expand=True, padx=24, pady=18)
         outer.grid_columnconfigure(0, weight=1)
         outer.grid_rowconfigure(1, weight=1)
 
         header = tk.Frame(outer, bg=COLORS["background"])
-        header.grid(row=0, column=0, sticky="ew", pady=(0, 16))
+        header.grid(row=0, column=0, sticky="ew", pady=(0, 14))
         tk.Label(
             header,
             text=UI_TEXT["main_title"],
@@ -590,22 +638,45 @@ class DocumentCoverApp:
 
         content = tk.Frame(outer, bg=COLORS["background"])
         content.grid(row=1, column=0, sticky="nsew")
-        for column in range(3):
-            content.grid_columnconfigure(column, weight=1, uniform="content")
+        content.grid_columnconfigure(0, weight=1, uniform="content")
+        content.grid_columnconfigure(1, weight=1, uniform="content")
         content.grid_rowconfigure(0, weight=1)
 
-        recipient_column = tk.Frame(content, bg=COLORS["background"])
-        items_column = tk.Frame(content, bg=COLORS["background"])
-        sender_column = tk.Frame(content, bg=COLORS["background"])
-        recipient_column.grid(row=0, column=0, sticky="nsew", padx=(0, 9))
-        items_column.grid(row=0, column=1, sticky="nsew", padx=9)
-        sender_column.grid(row=0, column=2, sticky="nsew", padx=(9, 0))
+        left = tk.Frame(content, bg=COLORS["background"])
+        right = tk.Frame(content, bg=COLORS["background"])
+        left.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
+        right.grid(row=0, column=1, sticky="nsew", padx=(10, 0))
 
-        self.build_recipient_card(recipient_column)
-        self.build_items_card(items_column)
-        self.build_sender_card(sender_column)
+        self.build_recipient_card(left)
+        self.build_fax_info_card(left)
+        self.build_items_card(left)
+        self.build_message_card(left)
+        self.build_sender_card(right)
+        self.build_save_card(right)
 
-        self.build_bottom_area(outer)
+        bottom = tk.Frame(outer, bg=COLORS["background"])
+        bottom.grid(row=2, column=0, sticky="ew", pady=(14, 0))
+        bottom.grid_columnconfigure(0, weight=1)
+        bottom.grid_columnconfigure(1, weight=0)
+
+        self.status_label = tk.Label(
+            bottom,
+            textvariable=self.status_var,
+            font=self.fonts["small"],
+            fg=COLORS["muted"],
+            bg=COLORS["background"],
+        )
+        self.status_label.grid(row=0, column=0, sticky="w")
+
+        footer = tk.Frame(bottom, bg=COLORS["background"])
+        footer.grid(row=0, column=1, sticky="e")
+        self.add_footer_label(footer, UI_TEXT["footer_left"])
+        self.add_footer_label(footer, UI_TEXT["footer_separator"])
+        self.add_footer_link(footer, "footer_link_1")
+        self.add_footer_label(footer, UI_TEXT["footer_separator"])
+        self.add_footer_link(footer, "footer_link_2")
+        self.add_footer_label(footer, UI_TEXT["footer_separator"])
+        self.add_footer_label(footer, UI_TEXT["footer_copyright"])
 
     def card(self, parent: tk.Widget, title: str) -> tk.Frame:
         frame = tk.Frame(
@@ -615,16 +686,16 @@ class DocumentCoverApp:
             highlightthickness=1,
             bd=0,
         )
-        frame.pack(fill="x", pady=(0, 14))
+        frame.pack(fill="x", pady=(0, 12))
         inner = tk.Frame(frame, bg=COLORS["card"])
-        inner.pack(fill="both", expand=True, padx=18, pady=16)
+        inner.pack(fill="both", expand=True, padx=16, pady=14)
         tk.Label(
             inner,
             text=title,
             font=self.fonts["section"],
             fg=COLORS["text"],
             bg=COLORS["card"],
-        ).grid(row=0, column=0, columnspan=4, sticky="w", pady=(0, 12))
+        ).grid(row=0, column=0, columnspan=4, sticky="w", pady=(0, 10))
         inner.grid_columnconfigure(1, weight=1)
         inner.grid_columnconfigure(3, weight=1)
         return inner
@@ -654,16 +725,22 @@ class DocumentCoverApp:
             font=self.fonts["body"],
         )
         honorific_box.grid(row=6, column=1, sticky="w", pady=(5, 5))
+        self.add_labeled_entry(card, 7, 0, UI_TEXT["label_fax_number"], self.recipient_vars["fax"])
+        self.add_labeled_entry(card, 8, 0, UI_TEXT["label_tel"], self.recipient_vars["tel"])
+
+    def build_fax_info_card(self, parent: tk.Widget) -> None:
+        card = self.card(parent, UI_TEXT["section_fax_info"])
+        self.add_labeled_entry(card, 1, 0, UI_TEXT["label_subject"], self.fax_info_vars["subject"])
+        self.add_labeled_entry(card, 2, 0, UI_TEXT["label_total_pages"], self.fax_info_vars["total_pages"])
+        self.add_labeled_entry(card, 3, 0, UI_TEXT["label_send_date"], self.fax_info_vars["send_date"])
 
     def build_items_card(self, parent: tk.Widget) -> None:
         card = self.card(parent, UI_TEXT["section_items"])
-        self.items_card = card
         headers = [
-            UI_TEXT["label_document_name"],
-            UI_TEXT["label_copies"],
+            UI_TEXT["label_item_name"],
+            UI_TEXT["label_item_pages"],
             UI_TEXT["label_note"],
         ]
-        widths = [18, 6, 18]
         for column, header in enumerate(headers):
             tk.Label(
                 card,
@@ -672,13 +749,13 @@ class DocumentCoverApp:
                 fg=COLORS["muted"],
                 bg=COLORS["card"],
             ).grid(row=1, column=column + 1, sticky="w", padx=(0, 8), pady=(0, 6))
-        for _ in range(INITIAL_DOCUMENT_ROWS):
-            self.add_document_row()
-
-        self.add_row_button = tk.Button(
+        self.items_frame = card
+        for _ in range(INITIAL_ITEM_ROWS):
+            self.add_item_row()
+        add_button = tk.Button(
             card,
             text=UI_TEXT["button_add_row"],
-            command=self.add_document_row_from_ui,
+            command=self.add_item_row,
             font=self.fonts["body"],
             fg=COLORS["text"],
             bg=COLORS["card"],
@@ -688,12 +765,49 @@ class DocumentCoverApp:
             bd=1,
             highlightthickness=0,
             padx=12,
-            pady=6,
+            pady=5,
             cursor="hand2",
         )
-        self.place_add_row_button()
-        for column, weight in ((1, 3), (2, 1), (3, 3)):
-            card.grid_columnconfigure(column, weight=weight)
+        add_button.grid(row=99, column=1, sticky="w", pady=(8, 0))
+        card.grid_columnconfigure(1, weight=3)
+        card.grid_columnconfigure(2, weight=1)
+        card.grid_columnconfigure(3, weight=3)
+
+    def add_item_row(self) -> None:
+        if self.items_frame is None:
+            return
+        row_vars = {"name": tk.StringVar(), "pages": tk.StringVar(), "note": tk.StringVar()}
+        self.item_rows.append(row_vars)
+        row_number = len(self.item_rows)
+        row_index = row_number + 1
+        tk.Label(
+            self.items_frame,
+            text=UI_TEXT["items_row_template"].format(number=row_number),
+            font=self.fonts["small"],
+            fg=COLORS["muted"],
+            bg=COLORS["card"],
+        ).grid(row=row_index, column=0, sticky="e", padx=(0, 8), pady=4)
+        for column, key in enumerate(("name", "pages", "note")):
+            entry = self.make_entry(self.items_frame, row_vars[key], width=(20 if column != 1 else 7))
+            entry.grid(row=row_index, column=column + 1, sticky="ew", padx=(0, 8), pady=4)
+
+    def build_message_card(self, parent: tk.Widget) -> None:
+        card = self.card(parent, UI_TEXT["section_message"])
+        self.message_text = tk.Text(
+            card,
+            height=3,
+            wrap="word",
+            font=self.fonts["body"],
+            fg=COLORS["text"],
+            bg="#FFFFFF",
+            relief="solid",
+            bd=1,
+            highlightthickness=1,
+            highlightbackground=COLORS["border"],
+            highlightcolor=COLORS["accent"],
+        )
+        self.message_text.grid(row=1, column=0, columnspan=4, sticky="ew")
+        self.message_text.insert("1.0", UI_TEXT["default_message"])
 
     def build_sender_card(self, parent: tk.Widget) -> None:
         card = self.card(parent, UI_TEXT["section_sender"])
@@ -701,44 +815,23 @@ class DocumentCoverApp:
             ("company", "label_company"),
             ("department", "label_department"),
             ("name", "label_name"),
-            ("zip", "label_zip"),
+            ("postal_code", "label_zip"),
             ("address", "label_address"),
             ("tel", "label_tel"),
-            ("fax", "label_fax"),
+            ("fax", "label_fax_number"),
             ("email", "label_email"),
         ]
         for row_index, (key, label_key) in enumerate(fields, start=1):
             self.add_labeled_entry(card, row_index, 0, UI_TEXT[label_key], self.sender_vars[key])
 
-    def build_bottom_area(self, outer: tk.Frame) -> None:
-        bottom = tk.Frame(outer, bg=COLORS["background"])
-        bottom.grid(row=2, column=0, sticky="ew", pady=(12, 0))
-        bottom.grid_columnconfigure(0, weight=1)
-
-        save_card = tk.Frame(
-            bottom,
-            bg=COLORS["card"],
-            highlightbackground=COLORS["border"],
-            highlightthickness=1,
-            bd=0,
-        )
-        save_card.grid(row=0, column=0, sticky="ew", pady=(0, 12))
-        save_card.grid_columnconfigure(1, weight=1)
-
-        tk.Label(
-            save_card,
-            text=UI_TEXT["section_save"],
-            font=self.fonts["label"],
-            fg=COLORS["text"],
-            bg=COLORS["card"],
-        ).grid(row=0, column=0, sticky="w", padx=(16, 10), pady=14)
-
-        folder_entry = self.make_entry(save_card, self.save_folder_var)
+    def build_save_card(self, parent: tk.Widget) -> None:
+        card = self.card(parent, UI_TEXT["section_save"])
+        folder_entry = self.make_entry(card, self.save_folder_var)
         folder_entry.configure(state="readonly")
-        folder_entry.grid(row=0, column=1, sticky="ew", pady=14)
+        folder_entry.grid(row=1, column=0, columnspan=3, sticky="ew", pady=(0, 10))
 
         select_button = tk.Button(
-            save_card,
+            card,
             text=UI_TEXT["button_select_folder"],
             command=self.select_save_folder,
             font=self.fonts["body"],
@@ -753,10 +846,10 @@ class DocumentCoverApp:
             pady=7,
             cursor="hand2",
         )
-        select_button.grid(row=0, column=2, padx=12, pady=14)
+        select_button.grid(row=2, column=0, sticky="w")
 
         self.create_button = tk.Button(
-            save_card,
+            card,
             text=UI_TEXT["button_create_pdf"],
             command=self.handle_create_pdf,
             font=self.fonts["button"],
@@ -768,34 +861,14 @@ class DocumentCoverApp:
             relief="flat",
             bd=0,
             highlightthickness=0,
-            padx=24,
-            pady=9,
+            padx=22,
+            pady=10,
             cursor="hand2",
         )
-        self.create_button.grid(row=0, column=3, padx=(0, 16), pady=14)
-
-        lower = tk.Frame(bottom, bg=COLORS["background"])
-        lower.grid(row=1, column=0, sticky="ew")
-        lower.grid_columnconfigure(0, weight=1)
-
-        self.status_label = tk.Label(
-            lower,
-            textvariable=self.status_var,
-            font=self.fonts["small"],
-            fg=COLORS["muted"],
-            bg=COLORS["background"],
-        )
-        self.status_label.grid(row=0, column=0, sticky="w")
-
-        footer = tk.Frame(lower, bg=COLORS["background"])
-        footer.grid(row=0, column=1, sticky="e")
-        self.add_footer_label(footer, UI_TEXT["footer_left"])
-        self.add_footer_label(footer, UI_TEXT["footer_separator"])
-        self.add_footer_link(footer, "footer_link_1")
-        self.add_footer_label(footer, UI_TEXT["footer_separator"])
-        self.add_footer_link(footer, "footer_link_2")
-        self.add_footer_label(footer, UI_TEXT["footer_separator"])
-        self.add_footer_label(footer, UI_TEXT["footer_copyright"])
+        self.create_button.grid(row=2, column=2, sticky="e")
+        card.grid_columnconfigure(0, weight=1)
+        card.grid_columnconfigure(1, weight=0)
+        card.grid_columnconfigure(2, weight=0)
 
     def add_labeled_entry(
         self,
@@ -833,39 +906,6 @@ class DocumentCoverApp:
             width=width,
         )
 
-    def add_document_row(self) -> None:
-        if self.items_card is None:
-            return
-        index = len(self.document_rows) + 1
-        row_vars = {
-            "name": tk.StringVar(),
-            "copies": tk.StringVar(),
-            "note": tk.StringVar(),
-        }
-        self.document_rows.append(row_vars)
-        tk.Label(
-            self.items_card,
-            text=UI_TEXT["documents_row_template"].format(number=index),
-            font=self.fonts["small"],
-            fg=COLORS["muted"],
-            bg=COLORS["card"],
-        ).grid(row=index + 1, column=0, sticky="e", padx=(0, 8), pady=4)
-        widths = {"name": 18, "copies": 6, "note": 18}
-        for column, key in enumerate(("name", "copies", "note"), start=1):
-            entry = self.make_entry(self.items_card, row_vars[key], width=widths[key])
-            entry.grid(row=index + 1, column=column, sticky="ew", padx=(0, 8), pady=4)
-        self.place_add_row_button()
-
-    def add_document_row_from_ui(self) -> None:
-        self.add_document_row()
-        self.set_status("status_ready")
-
-    def place_add_row_button(self) -> None:
-        if self.add_row_button is None:
-            return
-        self.add_row_button.grid_forget()
-        self.add_row_button.grid(row=len(self.document_rows) + 2, column=1, sticky="w", pady=(10, 0))
-
     def add_footer_label(self, parent: tk.Widget, text: str) -> None:
         tk.Label(
             parent,
@@ -896,7 +936,6 @@ class DocumentCoverApp:
             return
         self.save_folder_var.set(selected)
         self.save_current_config()
-        self.set_status("status_ready")
 
     def set_processing(self, processing: bool) -> None:
         self.is_processing = processing
@@ -913,39 +952,47 @@ class DocumentCoverApp:
         if self.status_label is not None:
             self.status_label.configure(fg=COLORS["error"] if is_error else COLORS["muted"])
 
-    def collect_documents(self) -> list[DocumentRow]:
-        rows: list[DocumentRow] = []
-        for row_vars in self.document_rows:
-            document = DocumentRow(
+    def collect_items(self) -> list[FaxItemRow]:
+        rows: list[FaxItemRow] = []
+        for row_vars in self.item_rows:
+            item = FaxItemRow(
                 name=row_vars["name"].get().strip(),
-                copies=row_vars["copies"].get().strip(),
+                pages=row_vars["pages"].get().strip(),
                 note=row_vars["note"].get().strip(),
             )
-            if document.name:
-                rows.append(document)
+            if item.name:
+                rows.append(item)
         return rows
 
-    def collect_data(self) -> CoverData:
-        output_date = parse_date_input(self.date_var.get())
+    def collect_data(self) -> FaxCoverData:
+        output_date = parse_date_input(self.date_var.get(), UI_TEXT["error_date_format"])
+        send_date = parse_date_input(self.fax_info_vars["send_date"].get(), UI_TEXT["error_send_date_format"])
         recipient = {key: variable.get().strip() for key, variable in self.recipient_vars.items()}
+        fax_info = {key: variable.get().strip() for key, variable in self.fax_info_vars.items()}
         sender = {key: variable.get().strip() for key, variable in self.sender_vars.items()}
-        documents = self.collect_documents()
+        items = self.collect_items()
         save_folder = Path(self.save_folder_var.get()).expanduser()
+        message = self.message_text.get("1.0", "end").strip() if self.message_text is not None else UI_TEXT["default_message"]
 
         errors = []
         if not (recipient["company"] or recipient["name"]):
             errors.append(UI_TEXT["error_required_recipient"])
-        if not documents:
-            errors.append(UI_TEXT["error_required_documents"])
+        if not items:
+            errors.append(UI_TEXT["error_required_items"])
+        if not sender["name"]:
+            errors.append(UI_TEXT["error_required_sender"])
         if not save_folder.exists() or not save_folder.is_dir():
             errors.append(UI_TEXT["error_save_folder"])
         if errors:
             raise ValueError("\n".join(errors))
 
-        return CoverData(
+        return FaxCoverData(
             output_date=output_date,
+            send_date=send_date,
             recipient=recipient,
-            documents=documents,
+            fax_info=fax_info,
+            items=items,
+            message=message,
             sender=sender,
             save_folder=save_folder,
         )
@@ -955,6 +1002,7 @@ class DocumentCoverApp:
             {
                 "sender": {key: variable.get().strip() for key, variable in self.sender_vars.items()},
                 "last_save_folder": self.save_folder_var.get(),
+                "last_honorific": self.recipient_vars["honorific"].get(),
             }
         )
 
@@ -964,47 +1012,42 @@ class DocumentCoverApp:
             return
         try:
             data = self.collect_data()
+            self.save_current_config()
         except Exception as exc:
             self.set_status("status_error", is_error=True)
-            messagebox.showerror(UI_TEXT["message_error_title"], str(exc) or UI_TEXT["message_required_body"])
+            messagebox.showerror(UI_TEXT["message_error_title"], str(exc))
             return
-
-        self.save_current_config()
         self.set_processing(True)
         self.set_status("status_processing")
-        worker = threading.Thread(target=self.create_pdf_worker, args=(data,), daemon=True)
-        worker.start()
+        threading.Thread(target=self.create_pdf_worker, args=(data,), daemon=True).start()
 
-    def create_pdf_worker(self, data: CoverData) -> None:
+    def create_pdf_worker(self, data: FaxCoverData) -> None:
         try:
             output_path = create_pdf(data)
+        except PermissionError:
+            self.root.after(0, self.handle_pdf_error, UI_TEXT["error_file_locked"])
         except Exception as exc:
-            self.root.after(0, lambda error=exc: self.finish_create_pdf(None, error))
-            return
-        self.root.after(0, lambda path=output_path: self.finish_create_pdf(path, None))
+            self.root.after(0, self.handle_pdf_error, str(exc) or UI_TEXT["error_pdf_failed"])
+        else:
+            self.root.after(0, self.handle_pdf_success, output_path)
 
-    def finish_create_pdf(self, output_path: Path | None, error: Exception | None) -> None:
+    def handle_pdf_error(self, message: str) -> None:
+        self.set_status("status_error", is_error=True)
         self.set_processing(False)
-        if error is not None:
-            self.set_status("status_error", is_error=True)
-            messagebox.showerror(UI_TEXT["message_error_title"], str(error) or UI_TEXT["error_pdf_failed"])
-            return
+        messagebox.showerror(UI_TEXT["message_error_title"], message)
 
+    def handle_pdf_success(self, output_path: Path) -> None:
         self.set_status("status_complete")
+        self.set_processing(False)
         message = f"{UI_TEXT['message_complete_body']}\n{UI_TEXT['message_open_folder_body']}"
         messagebox.showinfo(UI_TEXT["message_complete_title"], message)
-        if output_path is not None:
-            open_folder(output_path.parent)
-
-    def handle_close(self) -> None:
-        self.save_current_config()
-        self.root.destroy()
+        open_folder(output_path.parent)
 
 
 def main() -> None:
     set_windows_app_id()
     root = tk.Tk()
-    DocumentCoverApp(root)
+    FaxCoverApp(root)
     root.mainloop()
 
 
