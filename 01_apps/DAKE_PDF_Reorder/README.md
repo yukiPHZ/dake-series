@@ -40,3 +40,12 @@ build.bat
 - 元PDFは上書きしません。
 - 出力先に同名ファイルがある場合は、上書き確認を表示します。
 - 保護されたPDFや破損したPDFは処理できない場合があります。
+
+## DAKE共通仕様レビュー結果
+
+- フォントは BIZ UDPGothic を最優先にし、Yu Gothic UI / Meiryo をフォールバックにしています。
+- ヘッダーはアプリ名を重複表示せず、機能タイトルと短い説明文だけにしています。
+- フッターは「シンプルそれDAKEシリーズ / 止まらない、迷わない、すぐ終わる。」と、戸建買取査定 / Instagram / コピーライトの2ブロック構成です。
+- UI文言は APP_NAME、WINDOW_TITLE、COPYRIGHT、UI_TEXT に集約しています。
+- `build.bat` は共通アイコン `..\..\02_assets\dake_icon.ico` を指定します。
+- 2026-05-06 時点で `build.bat` による exe 生成と `dist\DakePDF_Reorder.exe` の起動確認を実施済みです。

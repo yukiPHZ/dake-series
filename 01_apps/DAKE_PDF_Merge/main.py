@@ -54,56 +54,103 @@ FOOTER_TEXT = "#AAB2BD"
 FONT_CANDIDATES = ["BIZ UDPGothic", "Yu Gothic UI", "Meiryo"]
 
 UI_TEXT = {
-    "status_reordered": "並び順を変更しました",
+    "main_title": "PDFを結合する",
+    "main_description": "複数のPDFを追加して、そのまま1つにまとめます。",
+    "button_add": "PDFを追加",
+    "button_select_folder": "保存先を選ぶ",
+    "button_refresh": "リフレッシュ",
+    "button_cancel": "キャンセル",
+    "button_execute": "結合して保存",
+    "button_move_up": "↑",
+    "button_move_down": "↓",
+    "button_delete": "削除",
     "drag_hint": "ドラッグして順番を入れ替えできます",
+    "label_save_folder": "保存先",
+    "label_page_count_unknown": "ページ数を読み込み中",
+    "label_page_suffix": "ページ",
+    "label_loading_thumbnail": "サムネイル\n読み込み中",
+    "empty_title": "PDFを追加してください",
+    "empty_title_drop": "PDFをドロップしてください",
+    "empty_subtitle": "ドラッグ＆ドロップ または クリックして追加",
+    "status_loading": "読み込み中",
+    "status_processing": "処理中",
+    "status_saving": "保存中",
+    "status_ready": "準備完了",
+    "status_idle": "未選択",
+    "status_canceling": "キャンセル中",
+    "status_canceled": "キャンセル完了",
+    "status_complete": "保存完了",
+    "status_error": "エラー",
+    "status_reordered": "並び順を変更しました",
+    "count_added": "{count}件追加済み",
+    "detail_ready": "結合して保存できます",
+    "detail_none": "PDFを追加してください",
+    "detail_processing": "PDFを順番どおりに処理しています",
+    "detail_saving": "保存ファイルを書き出しています",
+    "detail_save_done": "保存フォルダを開きます",
+    "detail_cancel": "",
+    "detail_error": "処理中に問題が発生しました",
+    "detail_file_error": "PDFの処理中に問題が発生しました",
+    "msg_refresh_blocked": "処理中はリフレッシュできません",
+    "msg_no_files": "PDFを追加してください",
+    "msg_save_folder_error_title": "保存先エラー",
+    "msg_save_folder_error": "保存先フォルダを準備できませんでした。",
+    "msg_save_done": "結合して保存が完了しました",
+    "filetype_pdf": "PDFファイル",
+    "footer_left": "シンプルそれDAKEシリーズ / 止まらない、迷わない、すぐ終わる。",
+    "footer_link_1": "戸建買取査定",
+    "footer_link_2": "Instagram",
+    "footer_separator": " ｜ ",
+    "footer_copyright": COPYRIGHT,
 }
 
-MAIN_TITLE = "PDFを結合する"
-MAIN_SUBTITLE = "複数のPDFを追加して、そのまま1つにまとめます。"
-FOOTER_SERIES_TEXT = "シンプルそれDAKEシリーズ"
-FOOTER_SERIES_COPY = " / 止まらない、迷わない、すぐ終わる。"
+MAIN_TITLE = UI_TEXT["main_title"]
+MAIN_SUBTITLE = UI_TEXT["main_description"]
 
-BUTTON_ADD = "PDFを追加"
-BUTTON_FOLDER = "保存先を選ぶ"
-BUTTON_REFRESH = "リフレッシュ"
-BUTTON_CANCEL = "キャンセル"
-BUTTON_MERGE = "結合して保存"
+BUTTON_ADD = UI_TEXT["button_add"]
+BUTTON_FOLDER = UI_TEXT["button_select_folder"]
+BUTTON_REFRESH = UI_TEXT["button_refresh"]
+BUTTON_CANCEL = UI_TEXT["button_cancel"]
+BUTTON_MERGE = UI_TEXT["button_execute"]
+BUTTON_MOVE_UP = UI_TEXT["button_move_up"]
+BUTTON_MOVE_DOWN = UI_TEXT["button_move_down"]
+BUTTON_DELETE = UI_TEXT["button_delete"]
 
 ROW2_GUIDE = UI_TEXT["drag_hint"]
 
-LABEL_SAVE_FOLDER = "保存先"
-LABEL_PAGE_COUNT_UNKNOWN = "ページ数を読み込み中"
-LABEL_PAGE_SUFFIX = "ページ"
-LABEL_LOADING_THUMBNAIL = "サムネイル\n読み込み中"
+LABEL_SAVE_FOLDER = UI_TEXT["label_save_folder"]
+LABEL_PAGE_COUNT_UNKNOWN = UI_TEXT["label_page_count_unknown"]
+LABEL_PAGE_SUFFIX = UI_TEXT["label_page_suffix"]
+LABEL_LOADING_THUMBNAIL = UI_TEXT["label_loading_thumbnail"]
 
-EMPTY_TITLE_DEFAULT = "PDFを追加してください"
-EMPTY_TITLE_DROP = "PDFをドロップしてください"
-EMPTY_SUBTITLE = "ドラッグ＆ドロップ または クリックして追加"
+EMPTY_TITLE_DEFAULT = UI_TEXT["empty_title"]
+EMPTY_TITLE_DROP = UI_TEXT["empty_title_drop"]
+EMPTY_SUBTITLE = UI_TEXT["empty_subtitle"]
 
-STATUS_LOADING = "読み込み中"
-STATUS_PROCESSING = "処理中"
-STATUS_SAVING = "保存中"
-STATUS_READY = "準備完了"
-STATUS_NONE = "未選択"
-STATUS_CANCELING = "キャンセル中"
-STATUS_CANCELED = "キャンセル完了"
-STATUS_SAVE_DONE = "保存完了"
-STATUS_ERROR = "エラー"
+STATUS_LOADING = UI_TEXT["status_loading"]
+STATUS_PROCESSING = UI_TEXT["status_processing"]
+STATUS_SAVING = UI_TEXT["status_saving"]
+STATUS_READY = UI_TEXT["status_ready"]
+STATUS_NONE = UI_TEXT["status_idle"]
+STATUS_CANCELING = UI_TEXT["status_canceling"]
+STATUS_CANCELED = UI_TEXT["status_canceled"]
+STATUS_SAVE_DONE = UI_TEXT["status_complete"]
+STATUS_ERROR = UI_TEXT["status_error"]
 
-DETAIL_READY = "結合して保存できます"
-DETAIL_NONE = "PDFを追加してください"
-DETAIL_PROCESSING = "PDFを順番どおりに処理しています"
-DETAIL_SAVING = "保存ファイルを書き出しています"
-DETAIL_SAVE_DONE = "保存フォルダを開きます"
-DETAIL_CANCEL = ""
-DETAIL_ERROR = "処理中に問題が発生しました"
-DETAIL_FILE_ERROR = "PDFの処理中に問題が発生しました"
+DETAIL_READY = UI_TEXT["detail_ready"]
+DETAIL_NONE = UI_TEXT["detail_none"]
+DETAIL_PROCESSING = UI_TEXT["detail_processing"]
+DETAIL_SAVING = UI_TEXT["detail_saving"]
+DETAIL_SAVE_DONE = UI_TEXT["detail_save_done"]
+DETAIL_CANCEL = UI_TEXT["detail_cancel"]
+DETAIL_ERROR = UI_TEXT["detail_error"]
+DETAIL_FILE_ERROR = UI_TEXT["detail_file_error"]
 
-MSG_REFRESH_BLOCKED = "処理中はリフレッシュできません"
-MSG_NO_FILES = "PDFを追加してください"
-MSG_SAVE_FOLDER_ERROR_TITLE = "保存先エラー"
-MSG_SAVE_FOLDER_ERROR = "保存先フォルダを準備できませんでした。"
-MSG_SAVE_DONE = "結合して保存が完了しました"
+MSG_REFRESH_BLOCKED = UI_TEXT["msg_refresh_blocked"]
+MSG_NO_FILES = UI_TEXT["msg_no_files"]
+MSG_SAVE_FOLDER_ERROR_TITLE = UI_TEXT["msg_save_folder_error_title"]
+MSG_SAVE_FOLDER_ERROR = UI_TEXT["msg_save_folder_error"]
+MSG_SAVE_DONE = UI_TEXT["msg_save_done"]
 
 
 def app_dir() -> str:
@@ -351,9 +398,9 @@ class MergeFileCard(tk.Frame):
         btns.pack(side="right")
 
         actions = [
-            ("↑", lambda: self.app.move_file(self.index, -1)),
-            ("↓", lambda: self.app.move_file(self.index, 1)),
-            ("削除", lambda: self.app.remove_file(self.index)),
+            (BUTTON_MOVE_UP, lambda: self.app.move_file(self.index, -1)),
+            (BUTTON_MOVE_DOWN, lambda: self.app.move_file(self.index, 1)),
+            (BUTTON_DELETE, lambda: self.app.remove_file(self.index)),
         ]
         for label, cmd in actions:
             button = tk.Label(
@@ -669,7 +716,7 @@ class DAKEPDFMergeApp:
 
         tk.Label(
             footer_left,
-            text=f"{FOOTER_SERIES_TEXT}{FOOTER_SERIES_COPY}",
+            text=UI_TEXT["footer_left"],
             font=(FONT_NAME, 9),
             bg=BG,
             fg=SUBTEXT,
@@ -677,7 +724,7 @@ class DAKEPDFMergeApp:
 
         footer_assessment = tk.Label(
             footer_right,
-            text="戸建買取査定",
+            text=UI_TEXT["footer_link_1"],
             font=(FONT_NAME, 9),
             bg=BG,
             fg=SUBTEXT,
@@ -690,7 +737,7 @@ class DAKEPDFMergeApp:
 
         tk.Label(
             footer_right,
-            text=" ｜ ",
+            text=UI_TEXT["footer_separator"],
             font=(FONT_NAME, 9),
             bg=BG,
             fg=SUBTEXT,
@@ -698,7 +745,7 @@ class DAKEPDFMergeApp:
 
         footer_instagram = tk.Label(
             footer_right,
-            text="Instagram",
+            text=UI_TEXT["footer_link_2"],
             font=(FONT_NAME, 9),
             bg=BG,
             fg=SUBTEXT,
@@ -711,7 +758,7 @@ class DAKEPDFMergeApp:
 
         tk.Label(
             footer_right,
-            text=f" ｜ {COPYRIGHT}",
+            text=f"{UI_TEXT['footer_separator']}{UI_TEXT['footer_copyright']}",
             font=(FONT_NAME, 9),
             bg=BG,
             fg=SUBTEXT,
@@ -937,7 +984,7 @@ class DAKEPDFMergeApp:
     def add_files(self):
         if self.worker_running:
             return
-        paths = filedialog.askopenfilenames(filetypes=[("PDFファイル", "*.pdf")])
+        paths = filedialog.askopenfilenames(filetypes=[(UI_TEXT["filetype_pdf"], "*.pdf")])
         self.add_pdf_paths(paths)
 
     def add_pdf_paths(self, paths):
@@ -1183,7 +1230,7 @@ class DAKEPDFMergeApp:
     def refresh_status(self):
         count = len(self.files)
         if count:
-            self.set_top_status(f"{count}件追加済み")
+            self.set_top_status(UI_TEXT["count_added"].format(count=count))
         else:
             self.set_top_status("")
         self.folder_short_label.configure(text=f"{LABEL_SAVE_FOLDER}: {shorten_path(self.save_folder)}")

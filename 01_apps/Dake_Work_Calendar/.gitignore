@@ -1,1 +1,6 @@
-build/ dist/ *.spec *_config.json __pycache__/ *.pyc
+build/
+dist/
+*.spec
+*_config.json
+__pycache__/
+*.pyc

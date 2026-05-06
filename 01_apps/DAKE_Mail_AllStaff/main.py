@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 import json
+import queue
 import sys
+import threading
 import webbrowser
 from pathlib import Path
 from urllib.parse import quote
@@ -17,17 +19,18 @@ COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
 
 UI_TEXT = {
     "main_title": "全社員宛メールを開く",
-    "main_description": "宛先とCCを入力した状態で、既定のメーラーを起動します。送信はされません。",
+    "main_description": "宛先とCC入りで既定メーラーを開きます。送信はされません。",
     "button_open_mail": "メールを開く",
     "status_display": "状態：{status}",
     "status_ready": "準備完了",
+    "status_opening": "メーラー起動中",
     "status_opened": "メーラーを起動しました",
     "status_config_created": "設定ファイルを作成しました。宛先を確認してください。",
     "status_config_invalid": "設定ファイルを読み込めませんでした。内容を確認してください。",
     "status_config_write_failed": "設定ファイルを作成できませんでした。保存場所を確認してください。",
     "status_open_failed": "メーラーを起動できませんでした。既定のメールアプリを確認してください。",
     "error_no_to": "宛先が未設定です。設定ファイルを確認してください。",
-    "footer_left": "シンプルそれDAKEシリーズ",
+    "footer_left": "シンプルそれDAKEシリーズ ｜ 止まらない、迷わない、すぐ終わる。",
     "footer_link_1": "戸建買取査定",
     "footer_link_2": "Instagram",
     "footer_separator": " ｜ ",
@@ -58,6 +61,8 @@ DEFAULT_CONFIG = {
 }
 ICON_RELATIVE_PATH = Path("..") / ".." / "02_assets" / "dake_icon.ico"
 MAILTO_SAFE_CHARS = ",@._+-"
+QUEUE_POLL_INTERVAL_MS = 100
+STATUS_DOT_INTERVAL_MS = 350
 
 
 def choose_font_family(root: tk.Tk) -> str:
@@ -132,7 +137,7 @@ class AllStaffMailApp:
         self.root = root
         self.root.title(WINDOW_TITLE)
         self.root.configure(bg=COLORS["background"])
-        self.root.minsize(560, 390)
+        self.root.minsize(620, 410)
         self.root.resizable(False, False)
 
         self.font_family = choose_font_family(root)
@@ -144,6 +149,10 @@ class AllStaffMailApp:
             "footer": (self.font_family, 9),
         }
         self.status_var = tk.StringVar()
+        self.event_queue: queue.Queue[dict[str, object]] = queue.Queue()
+        self.opening_mail = False
+        self.status_animation_job: str | None = None
+        self.status_animation_phase = 0
 
         self.apply_window_icon()
         self.build_ui()
@@ -151,6 +160,7 @@ class AllStaffMailApp:
         _config, status_key = load_or_create_config()
         self.set_status(status_key or "status_ready")
         self.center_window()
+        self.root.after(QUEUE_POLL_INTERVAL_MS, self.poll_queue)
 
     def apply_window_icon(self) -> None:
         base_dir = get_application_directory()
@@ -263,14 +273,14 @@ class AllStaffMailApp:
             parent,
             text=UI_TEXT[text_key],
             font=self.fonts["footer"],
-            fg=COLORS["accent"],
+            fg=COLORS["muted"],
             bg=COLORS["background"],
             cursor="hand2",
         )
         label.pack(side="left")
         label.bind("<Button-1>", lambda _event, key=text_key: webbrowser.open_new_tab(LINK_URLS[key]))
         label.bind("<Enter>", lambda _event: label.configure(fg=COLORS["accent_hover"]))
-        label.bind("<Leave>", lambda _event: label.configure(fg=COLORS["accent"]))
+        label.bind("<Leave>", lambda _event: label.configure(fg=COLORS["muted"]))
 
     def create_footer_text(self, parent: tk.Widget, text_key: str) -> None:
         tk.Label(
@@ -297,7 +307,50 @@ class AllStaffMailApp:
         color = COLORS["error"] if is_error else COLORS["muted"]
         self.status_label.configure(fg=color)
 
+    def set_status_text(self, status_text: str, is_error: bool = False) -> None:
+        self.status_var.set(UI_TEXT["status_display"].format(status=status_text))
+        color = COLORS["error"] if is_error else COLORS["muted"]
+        self.status_label.configure(fg=color)
+
+    def start_status_animation(self) -> None:
+        self.stop_status_animation()
+        self.status_animation_phase = 0
+        self.animate_status()
+
+    def animate_status(self) -> None:
+        dot_count = (self.status_animation_phase % 3) + 1
+        self.set_status_text(f"{UI_TEXT['status_opening']}{'.' * dot_count}")
+        self.status_animation_phase += 1
+        self.status_animation_job = self.root.after(STATUS_DOT_INTERVAL_MS, self.animate_status)
+
+    def stop_status_animation(self) -> None:
+        if self.status_animation_job is None:
+            return
+        try:
+            self.root.after_cancel(self.status_animation_job)
+        except tk.TclError:
+            pass
+        self.status_animation_job = None
+
+    def poll_queue(self) -> None:
+        try:
+            while True:
+                event = self.event_queue.get_nowait()
+                self.handle_queue_event(event)
+        except queue.Empty:
+            pass
+
+        if self.root.winfo_exists():
+            self.root.after(QUEUE_POLL_INTERVAL_MS, self.poll_queue)
+
+    def handle_queue_event(self, event: dict[str, object]) -> None:
+        if event.get("type") == "mail_open_result":
+            self.finish_open_mail(bool(event.get("opened")))
+
     def open_mail(self) -> None:
+        if self.opening_mail:
+            return
+
         config, config_status = load_or_create_config()
 
         if config_status == "status_config_created":
@@ -317,10 +370,29 @@ class AllStaffMailApp:
 
         mailto_url = build_mailto_url(to_address, cc_address)
 
+        self.opening_mail = True
+        self.open_button.configure(state=tk.DISABLED)
+        self.start_status_animation()
+
+        worker = threading.Thread(
+            target=self.open_mail_worker,
+            args=(mailto_url,),
+            daemon=True,
+        )
+        worker.start()
+
+    def open_mail_worker(self, mailto_url: str) -> None:
         try:
             opened = webbrowser.open(mailto_url, new=1)
         except Exception:
             opened = False
+
+        self.event_queue.put({"type": "mail_open_result", "opened": opened})
+
+    def finish_open_mail(self, opened: bool) -> None:
+        self.stop_status_animation()
+        self.opening_mail = False
+        self.open_button.configure(state=tk.NORMAL)
 
         if opened:
             self.set_status("status_opened")
@@ -329,7 +401,10 @@ class AllStaffMailApp:
         self.set_status("status_open_failed", is_error=True)
 
     def run(self) -> None:
-        self.root.mainloop()
+        try:
+            self.root.mainloop()
+        finally:
+            self.stop_status_animation()
 
 
 def main() -> None:

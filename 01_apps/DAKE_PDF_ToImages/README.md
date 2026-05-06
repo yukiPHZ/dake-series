@@ -56,3 +56,15 @@ PDF を追加して保存先を選ぶだけで、各 PDF をページ単位の�
 - `tkinterdnd2` が利用できる環境ではドラッグ＆ドロップを有効にします
 - exe のアイコンは PyInstaller の `--icon` で共通 ico を使用します
 - 開発時のウィンドウアイコンは `main.py` で共通 ico を安全に適用します
+
+## DAKE共通仕様確認
+
+- 確認日: 2026-05-06
+- 表示名: `PDF→画像`
+- exe名: `DakePDF_to_Images.exe`
+- フォント: `BIZ UDPGothic` を最優先、`Yu Gothic UI` / `Meiryo` にフォールバック
+- ヘッダー: 画面内にアプリ名を重複表示せず、機能タイトルと短い説明文で構成
+- フッター: DAKE共通文言を `UI_TEXT` 管理し、広幅時は左右配置、狭幅時は中央寄せ2段構成
+- アイコン: `..\..\02_assets\dake_icon.ico` の共通アイコンのみ参照
+- ビルド確認: `build.bat` で `dist\DakePDF_to_Images.exe` を生成
+- 起動確認: 生成後の exe が起動することを確認

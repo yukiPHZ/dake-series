@@ -73,6 +73,11 @@ UI_TEXT = {
     "status_idle": "入力してください",
     "status_ready": "準備完了",
     "status_processing": "PDF作成中",
+    "status_processing_base": "PDF作成中",
+    "status_processing_dots": ["PDF作成中.", "PDF作成中..", "PDF作成中..."],
+    "status_phrase_1": "Simple",
+    "status_phrase_2": "Simple, fast",
+    "status_phrase_3": "Simple, fast, for real work.",
     "status_complete": "FAX送付状PDFを作成しました",
     "status_error": "入力内容を確認してください",
     "message_complete_title": "完了",
@@ -81,7 +86,7 @@ UI_TEXT = {
     "message_busy_title": "処理中",
     "message_busy_body": "PDF作成が終わるまでお待ちください。",
     "message_open_folder_body": "OK後に保存先フォルダを開きます。",
-    "footer_left": "シンプルそれDAKEシリーズ",
+    "footer_left": "シンプルそれDAKEシリーズ / 止まらない、迷わない、すぐ終わる。",
     "footer_link_1": "戸建買取査定",
     "footer_link_2": "Instagram",
     "footer_separator": " ｜ ",
@@ -516,7 +521,7 @@ class FaxCoverApp:
         self.config = load_config()
         self.font_family = self.choose_font_family()
         self.fonts = {
-            "title": (self.font_family, 22, "bold"),
+            "title": (self.font_family, 21, "bold"),
             "description": (self.font_family, 11),
             "section": (self.font_family, 13, "bold"),
             "label": (self.font_family, 10, "bold"),
@@ -525,6 +530,7 @@ class FaxCoverApp:
             "button": (self.font_family, 11, "bold"),
             "footer": (self.font_family, 9),
         }
+        self.root.option_add("*Font", self.fonts["body"])
 
         today = format_japanese_date(date.today())
         self.date_var = tk.StringVar(value=today)
@@ -559,12 +565,19 @@ class FaxCoverApp:
         self.items_frame: tk.Frame | None = None
         self.create_button: tk.Button | None = None
         self.status_label: tk.Label | None = None
+        self.footer_container: tk.Frame | None = None
+        self.footer_left_block: tk.Frame | None = None
+        self.footer_right_block: tk.Frame | None = None
+        self.footer_mode: str | None = None
+        self.status_animation_after_id: str | None = None
+        self.status_animation_index = 0
         self.is_processing = False
 
         self.load_sender_config()
         self.configure_style()
         self.apply_window_icon()
         self.build_ui()
+        self.root.bind("<Configure>", self.handle_root_configure)
 
     def choose_font_family(self) -> str:
         available = set(tkfont.families(self.root))
@@ -621,20 +634,21 @@ class FaxCoverApp:
 
         header = tk.Frame(outer, bg=COLORS["background"])
         header.grid(row=0, column=0, sticky="ew", pady=(0, 14))
+        header.grid_columnconfigure(1, weight=1)
         tk.Label(
             header,
             text=UI_TEXT["main_title"],
             font=self.fonts["title"],
             fg=COLORS["text"],
             bg=COLORS["background"],
-        ).pack(anchor="w")
+        ).grid(row=0, column=0, sticky="w")
         tk.Label(
             header,
             text=UI_TEXT["main_description"],
             font=self.fonts["description"],
             fg=COLORS["muted"],
             bg=COLORS["background"],
-        ).pack(anchor="w", pady=(5, 0))
+        ).grid(row=0, column=1, sticky="w", padx=(18, 0), pady=(5, 0))
 
         content = tk.Frame(outer, bg=COLORS["background"])
         content.grid(row=1, column=0, sticky="nsew")
@@ -654,13 +668,12 @@ class FaxCoverApp:
         self.build_sender_card(right)
         self.build_save_card(right)
 
-        bottom = tk.Frame(outer, bg=COLORS["background"])
-        bottom.grid(row=2, column=0, sticky="ew", pady=(14, 0))
-        bottom.grid_columnconfigure(0, weight=1)
-        bottom.grid_columnconfigure(1, weight=0)
+        status_row = tk.Frame(outer, bg=COLORS["background"])
+        status_row.grid(row=2, column=0, sticky="ew", pady=(10, 4))
+        status_row.grid_columnconfigure(0, weight=1)
 
         self.status_label = tk.Label(
-            bottom,
+            status_row,
             textvariable=self.status_var,
             font=self.fonts["small"],
             fg=COLORS["muted"],
@@ -668,15 +681,18 @@ class FaxCoverApp:
         )
         self.status_label.grid(row=0, column=0, sticky="w")
 
-        footer = tk.Frame(bottom, bg=COLORS["background"])
-        footer.grid(row=0, column=1, sticky="e")
-        self.add_footer_label(footer, UI_TEXT["footer_left"])
-        self.add_footer_label(footer, UI_TEXT["footer_separator"])
-        self.add_footer_link(footer, "footer_link_1")
-        self.add_footer_label(footer, UI_TEXT["footer_separator"])
-        self.add_footer_link(footer, "footer_link_2")
-        self.add_footer_label(footer, UI_TEXT["footer_separator"])
-        self.add_footer_label(footer, UI_TEXT["footer_copyright"])
+        self.footer_container = tk.Frame(outer, bg=COLORS["background"])
+        self.footer_container.grid(row=3, column=0, sticky="ew")
+        self.footer_container.grid_columnconfigure(0, weight=1)
+        self.footer_left_block = tk.Frame(self.footer_container, bg=COLORS["background"])
+        self.footer_right_block = tk.Frame(self.footer_container, bg=COLORS["background"])
+        self.add_footer_label(self.footer_left_block, UI_TEXT["footer_left"])
+        self.add_footer_link(self.footer_right_block, "footer_link_1")
+        self.add_footer_label(self.footer_right_block, UI_TEXT["footer_separator"])
+        self.add_footer_link(self.footer_right_block, "footer_link_2")
+        self.add_footer_label(self.footer_right_block, UI_TEXT["footer_separator"])
+        self.add_footer_label(self.footer_right_block, UI_TEXT["footer_copyright"])
+        self.update_footer_layout(self.root.winfo_width())
 
     def card(self, parent: tk.Widget, title: str) -> tk.Frame:
         frame = tk.Frame(
@@ -920,12 +936,34 @@ class FaxCoverApp:
             parent,
             text=UI_TEXT[key],
             font=self.fonts["footer"],
-            fg=COLORS["accent"],
+            fg=COLORS["muted"],
             bg=COLORS["background"],
             cursor="hand2",
         )
         label.pack(side="left")
         label.bind("<Button-1>", lambda _event, url=LINK_URLS[key]: webbrowser.open(url))
+        label.bind("<Enter>", lambda _event, widget=label: widget.configure(fg=COLORS["accent"]))
+        label.bind("<Leave>", lambda _event, widget=label: widget.configure(fg=COLORS["muted"]))
+
+    def handle_root_configure(self, event: tk.Event) -> None:
+        if event.widget is self.root:
+            self.update_footer_layout(event.width)
+
+    def update_footer_layout(self, width: int) -> None:
+        if self.footer_container is None or self.footer_left_block is None or self.footer_right_block is None:
+            return
+        mode = "wide" if width >= 900 else "narrow"
+        if mode == self.footer_mode:
+            return
+        self.footer_mode = mode
+        self.footer_left_block.pack_forget()
+        self.footer_right_block.pack_forget()
+        if mode == "wide":
+            self.footer_left_block.pack(side="left", anchor="w")
+            self.footer_right_block.pack(side="right", anchor="e")
+        else:
+            self.footer_left_block.pack(side="top", anchor="center")
+            self.footer_right_block.pack(side="top", anchor="center", pady=(3, 0))
 
     def select_save_folder(self) -> None:
         selected = filedialog.askdirectory(
@@ -943,14 +981,47 @@ class FaxCoverApp:
             return
         if processing:
             self.create_button.configure(state="disabled", bg=COLORS["disabled_bg"])
+            self.start_status_animation()
         else:
             self.create_button.configure(state="normal", bg=COLORS["accent"])
+            self.stop_status_animation()
         self.root.update_idletasks()
 
     def set_status(self, key: str, is_error: bool = False) -> None:
         self.status_var.set(UI_TEXT[key])
         if self.status_label is not None:
             self.status_label.configure(fg=COLORS["error"] if is_error else COLORS["muted"])
+
+    def start_status_animation(self) -> None:
+        self.stop_status_animation()
+        self.status_animation_index = 0
+        self.animate_status()
+
+    def stop_status_animation(self) -> None:
+        if self.status_animation_after_id is not None:
+            try:
+                self.root.after_cancel(self.status_animation_after_id)
+            except tk.TclError:
+                pass
+            self.status_animation_after_id = None
+
+    def animate_status(self) -> None:
+        if not self.is_processing:
+            self.status_animation_after_id = None
+            return
+        sequence = list(UI_TEXT["status_processing_dots"])
+        phrase_sequence = [
+            UI_TEXT["status_phrase_1"],
+            UI_TEXT["status_phrase_2"],
+            UI_TEXT["status_phrase_3"],
+        ]
+        if self.status_animation_index >= 5 and self.status_animation_index % 8 in (5, 6, 7):
+            text = phrase_sequence[(self.status_animation_index - 5) % len(phrase_sequence)]
+        else:
+            text = sequence[self.status_animation_index % len(sequence)]
+        self.status_var.set(text)
+        self.status_animation_index += 1
+        self.status_animation_after_id = self.root.after(420, self.animate_status)
 
     def collect_items(self) -> list[FaxItemRow]:
         rows: list[FaxItemRow] = []

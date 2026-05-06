@@ -10,10 +10,11 @@ import tempfile
 import threading
 import time
 import tkinter as tk
+import webbrowser
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from tkinter import filedialog, font as tkfont, messagebox, ttk
+from tkinter import filedialog, font as tkfont, ttk
 
 try:
     import fitz  # PyMuPDF
@@ -80,11 +81,19 @@ UI_TEXT = {
     "page_count_unknown": "-",
     "page_count_format": "{count}",
     "modified_unknown": "-",
+    "text_empty": "",
     "footer_left": "シンプルそれDAKEシリーズ",
+    "footer_tagline": "止まらない、迷わない、すぐ終わる。",
+    "footer_tagline_separator": " / ",
     "footer_link_1": "戸建買取査定",
     "footer_link_2": "Instagram",
     "footer_separator": " ｜ ",
     "footer_copyright": COPYRIGHT,
+}
+
+LINK_URLS = {
+    "footer_link_1": "https://sakurayk.notion.site/22ea54b5298d80928443ec7b4d20143d?pvs=74",
+    "footer_link_2": "https://instagram.com/kikuta.shimarisu_fudosan",
 }
 
 THEME = {
@@ -105,6 +114,7 @@ THEME = {
 FONT_CANDIDATES = ("BIZ UDPGothic", "Yu Gothic UI", "Meiryo")
 WINDOW_SIZE = "1120x760"
 WINDOW_MIN_SIZE = (900, 620)
+FOOTER_BREAKPOINT = 900
 APP_USER_MODEL_ID = "Shimarisu.DakePDFViewer"
 ZOOM_MIN = 0.5
 ZOOM_MAX = 3.0
@@ -262,6 +272,7 @@ class DakePdfViewerApp:
         self.photo_image: object | None = None
         self.render_token = 0
         self.render_after_id: str | None = None
+        self.footer_narrow: bool | None = None
         self.result_queue: queue.Queue[tuple[str, object]] = queue.Queue()
 
         self.root.title(WINDOW_TITLE)
@@ -390,7 +401,7 @@ class DakePdfViewerApp:
         self.search_var = tk.StringVar()
         self.search_entry = ttk.Entry(self.search_frame, textvariable=self.search_var, font=(self.font_family, 11))
         self.search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        self.search_status = ttk.Label(self.search_frame, text="", style="MutedCard.TLabel")
+        self.search_status = ttk.Label(self.search_frame, text=UI_TEXT["text_empty"], style="MutedCard.TLabel")
         self.search_status.pack(side=tk.LEFT, padx=(10, 0))
 
         viewer_shell = ttk.Frame(self.right_frame, style="Card.TFrame")
@@ -411,31 +422,109 @@ class DakePdfViewerApp:
         viewer_shell.rowconfigure(0, weight=1)
         viewer_shell.columnconfigure(0, weight=1)
 
-        footer = ttk.Frame(outer, style="TFrame")
-        footer.pack(fill=tk.X, pady=(8, 0))
+        bottom = ttk.Frame(outer, style="TFrame")
+        bottom.pack(fill=tk.X, pady=(8, 0))
         self.status_var = tk.StringVar(value=UI_TEXT["status_idle"])
         self.status_label = ttk.Label(
-            footer,
+            bottom,
             textvariable=self.status_var,
             style="Muted.TLabel",
             font=(self.font_family, 9),
         )
-        self.status_label.pack(side=tk.LEFT)
-        footer_text = (
-            UI_TEXT["footer_left"]
-            + UI_TEXT["footer_separator"]
-            + UI_TEXT["footer_link_1"]
-            + UI_TEXT["footer_separator"]
-            + UI_TEXT["footer_link_2"]
-            + UI_TEXT["footer_separator"]
-            + UI_TEXT["footer_copyright"]
+        self.status_label.pack(anchor=tk.W)
+
+        self.footer_container = ttk.Frame(bottom, style="TFrame")
+        self.footer_container.pack(fill=tk.X, pady=(5, 0))
+        self.footer_left_frame = ttk.Frame(self.footer_container, style="TFrame")
+        self.footer_right_frame = ttk.Frame(self.footer_container, style="TFrame")
+
+        footer_left_text = (
+            UI_TEXT["footer_left"] + UI_TEXT["footer_tagline_separator"] + UI_TEXT["footer_tagline"]
         )
-        ttk.Label(
-            footer,
-            text=footer_text,
+        self.footer_left_label = ttk.Label(
+            self.footer_left_frame,
+            text=footer_left_text,
             style="Muted.TLabel",
             font=(self.font_family, 9),
-        ).pack(side=tk.RIGHT)
+        )
+        self.footer_left_label.pack()
+
+        self.footer_link_1 = self.create_footer_link(
+            self.footer_right_frame,
+            UI_TEXT["footer_link_1"],
+            LINK_URLS["footer_link_1"],
+        )
+        self.footer_separator_1 = ttk.Label(
+            self.footer_right_frame,
+            text=UI_TEXT["footer_separator"],
+            style="Muted.TLabel",
+            font=(self.font_family, 9),
+        )
+        self.footer_link_2 = self.create_footer_link(
+            self.footer_right_frame,
+            UI_TEXT["footer_link_2"],
+            LINK_URLS["footer_link_2"],
+        )
+        self.footer_separator_2 = ttk.Label(
+            self.footer_right_frame,
+            text=UI_TEXT["footer_separator"],
+            style="Muted.TLabel",
+            font=(self.font_family, 9),
+        )
+        self.footer_copyright = ttk.Label(
+            self.footer_right_frame,
+            text=UI_TEXT["footer_copyright"],
+            style="Muted.TLabel",
+            font=(self.font_family, 9),
+        )
+        for widget in (
+            self.footer_link_1,
+            self.footer_separator_1,
+            self.footer_link_2,
+            self.footer_separator_2,
+            self.footer_copyright,
+        ):
+            widget.pack(side=tk.LEFT)
+        self.footer_container.bind("<Configure>", self.on_footer_configure)
+        self.apply_footer_layout(narrow=False)
+
+    def create_footer_link(self, parent: tk.Misc, label: str, url: str) -> tk.Label:
+        link = tk.Label(
+            parent,
+            text=label,
+            bg=THEME["background"],
+            fg=THEME["muted"],
+            font=(self.font_family, 9),
+            cursor="hand2",
+        )
+        link.bind("<Button-1>", lambda _event, target=url: self.open_footer_link(target))
+        link.bind("<Enter>", lambda _event, widget=link: widget.configure(fg=THEME["accent"]))
+        link.bind("<Leave>", lambda _event, widget=link: widget.configure(fg=THEME["muted"]))
+        return link
+
+    def open_footer_link(self, url: str) -> None:
+        try:
+            webbrowser.open(url, new=2)
+        except Exception:
+            pass
+
+    def on_footer_configure(self, event: tk.Event) -> None:
+        self.apply_footer_layout(narrow=getattr(event, "width", 0) < FOOTER_BREAKPOINT)
+
+    def apply_footer_layout(self, narrow: bool) -> None:
+        if self.footer_narrow == narrow:
+            return
+        self.footer_narrow = narrow
+        self.footer_left_frame.pack_forget()
+        self.footer_right_frame.pack_forget()
+        if narrow:
+            self.footer_left_frame.pack(anchor=tk.CENTER)
+            self.footer_right_frame.pack(anchor=tk.CENTER, pady=(2, 0))
+            self.footer_left_label.configure(anchor=tk.CENTER)
+        else:
+            self.footer_left_frame.pack(side=tk.LEFT, fill=tk.X, expand=True, anchor=tk.W)
+            self.footer_right_frame.pack(side=tk.RIGHT, anchor=tk.E)
+            self.footer_left_label.configure(anchor=tk.W)
 
     def bind_events(self) -> None:
         self.tree.bind("<<TreeviewSelect>>", self.on_tree_select)
@@ -511,7 +600,7 @@ class DakePdfViewerApp:
     def select_pdf_files(self) -> None:
         files = filedialog.askopenfilenames(
             title=UI_TEXT["dialog_pdf_title"],
-            filetypes=[(UI_TEXT["dialog_pdf_filter"], "*.pdf"), ("PDF", "*.PDF")],
+            filetypes=[(UI_TEXT["dialog_pdf_filter"], "*.pdf *.PDF")],
         )
         if files:
             self.add_pdf_paths([Path(file) for file in files], replace=False)
@@ -927,7 +1016,7 @@ class DakePdfViewerApp:
         if self.search_visible:
             self.search_frame.pack_forget()
         self.search_visible = False
-        self.search_status.configure(text="")
+        self.search_status.configure(text=UI_TEXT["text_empty"])
         self.canvas.focus_set()
 
     def on_escape(self, event: tk.Event | None = None) -> str:

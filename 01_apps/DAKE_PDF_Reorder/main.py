@@ -70,6 +70,7 @@ UI_TEXT = {
     "status_saving": "保存中",
     "status_complete": "保存完了",
     "status_error": "エラー",
+    "status_busy_dots": [".", "..", "..."],
     "status_drop_ready": "PDFを1ファイル追加してください。",
     "status_loading_detail": "PDFを読み込んでいます。",
     "status_rendering_detail": "{count}ページを読み込みました。サムネイルを準備しています。",
@@ -110,9 +111,10 @@ UI_TEXT = {
     "message_unknown_error": "原因を特定できませんでした。",
     "message_detail": "詳細: {detail}",
     "output_suffix": "_reordered",
-    "footer_series": "シンプルそれDAKEシリーズ",
-    "footer_assessment": "戸建買取査定",
-    "footer_instagram": "Instagram",
+    "footer_left": "シンプルそれDAKEシリーズ / 止まらない、迷わない、すぐ終わる。",
+    "footer_link_1": "戸建買取査定",
+    "footer_link_2": "Instagram",
+    "footer_separator": " ｜ ",
     "footer_copyright": COPYRIGHT,
 }
 
@@ -139,7 +141,7 @@ LINKS = {
 }
 
 WINDOW_SIZE = "980x740"
-WINDOW_MIN_SIZE = (900, 660)
+WINDOW_MIN_SIZE = (760, 660)
 CANVAS_PAD_X = 18
 CANVAS_PAD_Y = 18
 CARD_WIDTH = 154
@@ -308,6 +310,8 @@ class PdfReorderApp:
         self.detail_var = tk.StringVar(value=UI_TEXT["status_drop_ready"])
         self.file_var = tk.StringVar(value=UI_TEXT["file_label_none"])
         self.folder_var = tk.StringVar(value=UI_TEXT["save_folder_label"].format(path=shorten_path(self.output_dir)))
+        self.busy_status_key: str | None = None
+        self.busy_dot_index = 0
 
         self.setup_styles()
         self.build_ui()
@@ -315,6 +319,7 @@ class PdfReorderApp:
         self.update_buttons()
         self.render_pages()
         self.root.after(POLL_INTERVAL_MS, self.poll_queue)
+        self.root.after(420, self.animate_busy_status)
 
     def pick_font_family(self) -> str:
         try:
@@ -494,39 +499,42 @@ class PdfReorderApp:
         )
         self.save_button.grid(row=0, column=3, sticky="e")
 
-        footer = tk.Frame(self.root, bg=THEME["background"])
-        footer.grid(row=3, column=0, sticky="ew", padx=24, pady=(0, 18))
-        footer.grid_columnconfigure(1, weight=1)
+        self.footer = tk.Frame(self.root, bg=THEME["background"])
+        self.footer.grid(row=3, column=0, sticky="ew", padx=24, pady=(0, 18))
+        self.footer.grid_columnconfigure(0, weight=1)
+        self.footer.grid_columnconfigure(1, weight=1)
 
-        footer_left = tk.Label(
-            footer,
-            text=UI_TEXT["footer_series"],
+        self.footer_left_label = tk.Label(
+            self.footer,
+            text=UI_TEXT["footer_left"],
             bg=THEME["background"],
             fg=THEME["muted"],
             font=(self.font_family, 8),
             anchor="w",
         )
-        footer_left.grid(row=0, column=0, sticky="w")
+        self.footer_left_label.grid(row=0, column=0, sticky="w")
 
-        footer_right = tk.Frame(footer, bg=THEME["background"])
-        footer_right.grid(row=0, column=1, sticky="e")
+        self.footer_right = tk.Frame(self.footer, bg=THEME["background"])
+        self.footer_right.grid(row=0, column=1, sticky="e")
 
-        self.make_footer_link(footer_right, UI_TEXT["footer_assessment"], LINKS["assessment"]).pack(side="left")
+        self.make_footer_link(self.footer_right, UI_TEXT["footer_link_1"], LINKS["assessment"]).pack(side="left")
         tk.Label(
-            footer_right,
-            text="  /  ",
+            self.footer_right,
+            text=UI_TEXT["footer_separator"],
             bg=THEME["background"],
             fg=THEME["muted"],
             font=(self.font_family, 8),
         ).pack(side="left")
-        self.make_footer_link(footer_right, UI_TEXT["footer_instagram"], LINKS["instagram"]).pack(side="left")
+        self.make_footer_link(self.footer_right, UI_TEXT["footer_link_2"], LINKS["instagram"]).pack(side="left")
         tk.Label(
-            footer_right,
-            text=f"  /  {UI_TEXT['footer_copyright']}",
+            self.footer_right,
+            text=f"{UI_TEXT['footer_separator']}{UI_TEXT['footer_copyright']}",
             bg=THEME["background"],
             fg=THEME["muted"],
             font=(self.font_family, 8),
         ).pack(side="left")
+        self.root.bind("<Configure>", self.on_root_configure, add="+")
+        self.layout_footer(self.root.winfo_width())
 
     def make_button(self, parent: tk.Misc, text: str, command: Any, variant: str) -> tk.Button:
         is_primary = variant == "primary"
@@ -558,12 +566,32 @@ class PdfReorderApp:
             parent,
             text=text,
             bg=THEME["background"],
-            fg=THEME["accent"],
-            font=(self.font_family, 8, "underline"),
+            fg=THEME["muted"],
+            font=(self.font_family, 8),
             cursor="hand2",
         )
         label.bind("<Button-1>", lambda _event: open_url(url))
+        label.bind("<Enter>", lambda _event: label.configure(fg=THEME["accent"], font=(self.font_family, 8, "underline")))
+        label.bind("<Leave>", lambda _event: label.configure(fg=THEME["muted"], font=(self.font_family, 8)))
         return label
+
+    def on_root_configure(self, event: tk.Event) -> None:
+        if event.widget == self.root:
+            self.layout_footer(event.width)
+
+    def layout_footer(self, width: int) -> None:
+        if width < 860:
+            self.footer.grid_columnconfigure(0, weight=1)
+            self.footer.grid_columnconfigure(1, weight=1)
+            self.footer_left_label.grid_configure(row=0, column=0, columnspan=2, sticky="")
+            self.footer_right.grid_configure(row=1, column=0, columnspan=2, sticky="", pady=(4, 0))
+            self.footer_left_label.configure(anchor="center")
+        else:
+            self.footer.grid_columnconfigure(0, weight=1)
+            self.footer.grid_columnconfigure(1, weight=1)
+            self.footer_left_label.grid_configure(row=0, column=0, columnspan=1, sticky="w")
+            self.footer_right.grid_configure(row=0, column=1, columnspan=1, sticky="e", pady=0)
+            self.footer_left_label.configure(anchor="w")
 
     def setup_drop_target(self) -> None:
         if not DND_ENABLED or DND_FILES is None:
@@ -576,6 +604,8 @@ class PdfReorderApp:
                 pass
 
     def set_status(self, status_key: str, detail: str | None = None) -> None:
+        self.busy_status_key = status_key if status_key in {"status_loading", "status_rendering", "status_saving"} else None
+        self.busy_dot_index = 0
         self.status_var.set(UI_TEXT[status_key])
         if detail is not None:
             self.detail_var.set(detail)
@@ -589,6 +619,13 @@ class PdfReorderApp:
             self.status_badge.configure(bg="#FDECEC", fg=THEME["danger"])
         else:
             self.status_badge.configure(bg=THEME["soft"], fg=THEME["muted"])
+
+    def animate_busy_status(self) -> None:
+        if self.busy_status_key is not None and self.is_busy:
+            dots = UI_TEXT["status_busy_dots"]
+            self.status_var.set(f"{UI_TEXT[self.busy_status_key]}{dots[self.busy_dot_index % len(dots)]}")
+            self.busy_dot_index += 1
+        self.root.after(420, self.animate_busy_status)
 
     def update_buttons(self) -> None:
         normal = "normal"

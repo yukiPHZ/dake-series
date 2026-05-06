@@ -17,6 +17,10 @@ if errorlevel 1 (
     set "PYTHON_CMD=py -3"
 )
 
+set "ICON_PATH=..\..\02_assets\dake_icon.ico"
+set "ICON_OPTION="
+if exist "%ICON_PATH%" set "ICON_OPTION=--icon=%ICON_PATH%"
+
 set "DND_OPTION="
 %PYTHON_CMD% -c "import tkinterdnd2" >nul 2>&1
 if %errorlevel%==0 set "DND_OPTION=--collect-data=tkinterdnd2"
@@ -25,7 +29,7 @@ if %errorlevel%==0 set "DND_OPTION=--collect-data=tkinterdnd2"
 --onefile ^
 --noconsole ^
 --clean ^
---icon=..\..\02_assets\dake_icon.ico ^
+%ICON_OPTION% ^
 %DND_OPTION% ^
 --name DakePDF_Compress ^
 main.py

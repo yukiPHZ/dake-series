@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import os
+import queue
 import re
 import subprocess
 import sys
+import threading
 import webbrowser
 from dataclasses import dataclass
 from pathlib import Path
@@ -29,24 +31,24 @@ except Exception:
 
 APP_NAME = "DakePDFファイル名整理"
 WINDOW_TITLE = "DakePDFファイル名整理"
-COPYRIGHT = "© 2026 しまリス不動産 - Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
 
 UI_TEXT = {
     "main_title": "PDFのファイル名を整える",
-    "main_description": "PDFをドロップして、書類種別と相手名を指定します。",
+    "main_description": "PDFを追加して、書類種別と相手名を指定します。",
     "drop_title": "PDFをここにドロップ",
     "drop_subtitle": "複数PDFもまとめて追加できます。",
     "drop_subtitle_no_dnd": "ドラッグ操作が使えない環境では、PDFを選択してください。",
     "label_pdf_list": "選択中PDF",
     "label_doc_type": "書類種別",
     "label_person_name": "相手名",
-    "person_name_placeholder": "例：山田",
     "button_select_pdf": "PDFを選択",
     "button_execute": "ファイル名を整える",
     "button_clear": "クリア",
     "status_idle": "PDFを追加してください。",
     "status_ready": "{count}件のPDFを整理できます。",
-    "status_processing": "処理中...",
+    "status_processing": "処理中",
+    "status_processing_dots": ["処理中.", "処理中..", "処理中..."],
     "status_complete": "ファイル名の整理が完了しました。",
     "status_error": "確認が必要です。",
     "error_no_pdf": "PDFがまだ選択されていません。PDFを追加してから実行してください。",
@@ -63,10 +65,10 @@ UI_TEXT = {
     "filetype_pdf": "PDFファイル",
     "filetype_all": "すべてのファイル",
     "list_empty": "PDFが追加されていません。",
-    "footer_left": "シンプルそれDAKEシリーズ",
-    "footer_link_1": "戸建買取相談所",
+    "footer_left": "シンプルそれDAKEシリーズ / 止まらない、迷わない、すぐ終わる。",
+    "footer_link_1": "戸建買取査定",
     "footer_link_2": "Instagram",
-    "footer_separator": " ・ ",
+    "footer_separator": " ｜ ",
     "footer_copyright": COPYRIGHT,
     "doc_types": [
         "売買契約書",
@@ -105,7 +107,10 @@ LINK_URLS = {
 COMMON_ICON_RELATIVE = Path("..") / ".." / "02_assets" / "dake_icon.ico"
 WINDOW_WIDTH = 820
 WINDOW_HEIGHT = 620
+FOOTER_COMPACT_WIDTH = 760
 MAX_SEQUENCE_NUMBER = 9999
+QUEUE_POLL_INTERVAL_MS = 80
+STATUS_DOT_INTERVAL_MS = 420
 FONT_CANDIDATES = ["BIZ UDPGothic", "Yu Gothic UI", "Meiryo"]
 INVALID_CHAR_TRANSLATION = str.maketrans(
     {
@@ -126,6 +131,12 @@ INVALID_CHAR_TRANSLATION = str.maketrans(
 class RenameResult:
     old_path: Path
     new_path: Path
+
+
+@dataclass(frozen=True)
+class WorkerMessage:
+    kind: str
+    payload: object | None = None
 
 
 class RenameError(Exception):
@@ -306,15 +317,24 @@ class PdfRenameApp:
         self.font_family = choose_font_family(root)
         self.pdf_paths: list[Path] = []
         self.drop_widgets: list[tk.Widget] = []
+        self.worker_queue: queue.Queue[WorkerMessage] = queue.Queue()
+        self.worker_thread: threading.Thread | None = None
+        self.is_processing = False
+        self.status_dot_index = 0
+        self.status_dot_after_id: str | None = None
+
         self.status_var = tk.StringVar(value=UI_TEXT["status_idle"])
         self.doc_type_var = tk.StringVar(value=UI_TEXT["doc_types"][0])
         self.person_name_var = tk.StringVar()
-        self.empty_list_var = tk.StringVar(value=UI_TEXT["list_empty"])
         self.execute_button: tk.Button | None = None
         self.drop_area: tk.Frame | None = None
         self.drop_title_label: tk.Label | None = None
         self.drop_subtitle_label: tk.Label | None = None
         self.listbox: tk.Listbox | None = None
+        self.footer_container: tk.Frame | None = None
+        self.footer_left_block: tk.Frame | None = None
+        self.footer_right_block: tk.Frame | None = None
+        self.footer_mode: str | None = None
 
         self._setup_root()
         self._setup_styles()
@@ -326,7 +346,7 @@ class PdfRenameApp:
         set_windows_app_id()
         self.root.title(WINDOW_TITLE)
         self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")
-        self.root.minsize(720, 560)
+        self.root.minsize(700, 560)
         self.root.configure(bg=COLORS["base_bg"])
         self.root.option_add("*Font", (self.font_family, 10))
         apply_window_icon(self.root)
@@ -362,6 +382,7 @@ class PdfRenameApp:
     def _build_header(self, parent: tk.Frame) -> None:
         header = tk.Frame(parent, bg=COLORS["base_bg"])
         header.grid(row=0, column=0, sticky="ew", pady=(0, 18))
+        header.grid_columnconfigure(0, weight=1)
 
         title = tk.Label(
             header,
@@ -369,8 +390,9 @@ class PdfRenameApp:
             bg=COLORS["base_bg"],
             fg=COLORS["text"],
             font=(self.font_family, 22, "bold"),
+            anchor="w",
         )
-        title.pack(anchor="w")
+        title.grid(row=0, column=0, sticky="w")
 
         description = tk.Label(
             header,
@@ -378,8 +400,9 @@ class PdfRenameApp:
             bg=COLORS["base_bg"],
             fg=COLORS["muted"],
             font=(self.font_family, 10),
+            anchor="w",
         )
-        description.pack(anchor="w", pady=(6, 0))
+        description.grid(row=1, column=0, sticky="w", pady=(6, 0))
 
     def _build_card(self, parent: tk.Frame) -> None:
         shell = tk.Frame(parent, bg=COLORS["border"])
@@ -572,11 +595,16 @@ class PdfRenameApp:
         status.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(14, 0))
 
     def _build_footer(self, parent: tk.Frame) -> None:
-        footer = tk.Frame(parent, bg=COLORS["base_bg"])
-        footer.grid(row=2, column=0, sticky="ew", pady=(16, 0))
+        self.footer_container = tk.Frame(parent, bg=COLORS["base_bg"])
+        self.footer_container.grid(row=2, column=0, sticky="ew", pady=(16, 0))
+        self.footer_container.grid_columnconfigure(0, weight=1)
+        self.footer_container.grid_columnconfigure(1, weight=1)
+
+        self.footer_left_block = tk.Frame(self.footer_container, bg=COLORS["base_bg"])
+        self.footer_right_block = tk.Frame(self.footer_container, bg=COLORS["base_bg"])
 
         left = tk.Label(
-            footer,
+            self.footer_left_block,
             text=UI_TEXT["footer_left"],
             bg=COLORS["base_bg"],
             fg=COLORS["muted"],
@@ -584,38 +612,32 @@ class PdfRenameApp:
         )
         left.pack(side="left")
 
-        separator_1 = tk.Label(
-            footer,
-            text=UI_TEXT["footer_separator"],
-            bg=COLORS["base_bg"],
-            fg=COLORS["muted"],
-            font=(self.font_family, 8),
-        )
-        separator_1.pack(side="left")
-
-        link_1 = self._create_footer_link(footer, "footer_link_1")
+        link_1 = self._create_footer_link(self.footer_right_block, "footer_link_1")
         link_1.pack(side="left")
-
-        separator_2 = tk.Label(
-            footer,
-            text=UI_TEXT["footer_separator"],
-            bg=COLORS["base_bg"],
-            fg=COLORS["muted"],
-            font=(self.font_family, 8),
-        )
-        separator_2.pack(side="left")
-
-        link_2 = self._create_footer_link(footer, "footer_link_2")
+        self._create_footer_separator(self.footer_right_block).pack(side="left")
+        link_2 = self._create_footer_link(self.footer_right_block, "footer_link_2")
         link_2.pack(side="left")
-
+        self._create_footer_separator(self.footer_right_block).pack(side="left")
         copyright_label = tk.Label(
-            footer,
+            self.footer_right_block,
             text=UI_TEXT["footer_copyright"],
             bg=COLORS["base_bg"],
             fg=COLORS["muted"],
             font=(self.font_family, 8),
         )
-        copyright_label.pack(side="right")
+        copyright_label.pack(side="left")
+
+        self.root.bind("<Configure>", self._on_root_configure)
+        self._layout_footer(WINDOW_WIDTH)
+
+    def _create_footer_separator(self, parent: tk.Widget) -> tk.Label:
+        return tk.Label(
+            parent,
+            text=UI_TEXT["footer_separator"],
+            bg=COLORS["base_bg"],
+            fg=COLORS["muted"],
+            font=(self.font_family, 8),
+        )
 
     def _create_primary_button(self, parent: tk.Widget, text: str, command) -> tk.Button:
         return tk.Button(
@@ -657,14 +679,49 @@ class PdfRenameApp:
             parent,
             text=UI_TEXT[key],
             bg=COLORS["base_bg"],
-            fg=COLORS["accent"],
-            font=(self.font_family, 8, "underline"),
+            fg=COLORS["muted"],
+            font=(self.font_family, 8),
             cursor="hand2",
         )
         link.bind("<Button-1>", lambda _event, link_key=key: open_web_link(link_key))
+        link.bind("<Enter>", lambda _event, widget=link: self._set_link_hover(widget, True))
+        link.bind("<Leave>", lambda _event, widget=link: self._set_link_hover(widget, False))
         return link
 
+    def _set_link_hover(self, widget: tk.Label, is_hover: bool) -> None:
+        if is_hover:
+            widget.configure(fg=COLORS["accent"], font=(self.font_family, 8, "underline"))
+        else:
+            widget.configure(fg=COLORS["muted"], font=(self.font_family, 8))
+
+    def _on_root_configure(self, event) -> None:
+        if event.widget is self.root:
+            self._layout_footer(event.width)
+
+    def _layout_footer(self, width: int) -> None:
+        if self.footer_container is None:
+            return
+        if self.footer_left_block is None or self.footer_right_block is None:
+            return
+
+        mode = "compact" if width < FOOTER_COMPACT_WIDTH else "wide"
+        if mode == self.footer_mode:
+            return
+        self.footer_mode = mode
+
+        self.footer_left_block.grid_forget()
+        self.footer_right_block.grid_forget()
+
+        if mode == "wide":
+            self.footer_left_block.grid(row=0, column=0, sticky="w")
+            self.footer_right_block.grid(row=0, column=1, sticky="e")
+        else:
+            self.footer_left_block.grid(row=0, column=0, columnspan=2, sticky="")
+            self.footer_right_block.grid(row=1, column=0, columnspan=2, sticky="", pady=(4, 0))
+
     def _select_pdf_files(self, _event=None) -> None:
+        if self.is_processing:
+            return
         selected = filedialog.askopenfilenames(
             parent=self.root,
             title=UI_TEXT["file_dialog_title"],
@@ -677,7 +734,8 @@ class PdfRenameApp:
             self._add_files([Path(value) for value in selected])
 
     def _on_drop_enter(self, _event=None):
-        self._set_drop_active(True)
+        if not self.is_processing:
+            self._set_drop_active(True)
         return "copy"
 
     def _on_drop_leave(self, _event=None):
@@ -686,6 +744,8 @@ class PdfRenameApp:
 
     def _on_drop(self, event):
         self._set_drop_active(False)
+        if self.is_processing:
+            return "copy"
         try:
             raw_paths = self.root.tk.splitlist(event.data)
         except Exception:
@@ -731,6 +791,8 @@ class PdfRenameApp:
         self._update_action_state()
 
     def _clear_files(self, _event=None) -> None:
+        if self.is_processing:
+            return
         self.pdf_paths.clear()
         self._refresh_list()
         self._update_status()
@@ -740,6 +802,8 @@ class PdfRenameApp:
         self._update_action_state()
 
     def _execute_rename(self) -> None:
+        if self.is_processing:
+            return
         if not self.pdf_paths:
             self._show_error(UI_TEXT["error_no_pdf"])
             return
@@ -751,16 +815,41 @@ class PdfRenameApp:
 
         doc_type = self.doc_type_var.get().strip() or UI_TEXT["doc_types"][0]
         self._set_processing(True)
-        self.root.after(80, lambda: self._run_rename(doc_type, person_name))
+        self.worker_thread = threading.Thread(
+            target=self._rename_worker,
+            args=(list(self.pdf_paths), doc_type, person_name),
+            daemon=True,
+        )
+        self.worker_thread.start()
+        self.root.after(QUEUE_POLL_INTERVAL_MS, self._poll_worker_queue)
 
-    def _run_rename(self, doc_type: str, person_name: str) -> None:
+    def _rename_worker(self, paths: list[Path], doc_type: str, person_name: str) -> None:
         try:
-            results = rename_pdf_files(list(self.pdf_paths), doc_type, person_name)
+            results = rename_pdf_files(paths, doc_type, person_name)
+            self.worker_queue.put(WorkerMessage("complete", results))
         except RenameError as exc:
-            self._set_processing(False)
-            self._show_error(self._message_for_error(exc.code))
+            self.worker_queue.put(WorkerMessage("error", exc.code))
+
+    def _poll_worker_queue(self) -> None:
+        try:
+            message = self.worker_queue.get_nowait()
+        except queue.Empty:
+            if self.is_processing:
+                self.root.after(QUEUE_POLL_INTERVAL_MS, self._poll_worker_queue)
             return
 
+        if message.kind == "complete":
+            results = message.payload
+            if isinstance(results, list):
+                self._handle_complete(results)
+            return
+
+        if message.kind == "error":
+            self._set_processing(False)
+            code = str(message.payload or "rename_failed")
+            self._show_error(self._message_for_error(code))
+
+    def _handle_complete(self, results: list[RenameResult]) -> None:
         self.pdf_paths = [result.new_path for result in results]
         self._refresh_list()
         self._set_processing(False)
@@ -790,8 +879,10 @@ class PdfRenameApp:
         self._update_action_state()
 
     def _set_processing(self, is_processing: bool) -> None:
+        self.is_processing = is_processing
         if is_processing:
             self.status_var.set(UI_TEXT["status_processing"])
+            self._start_status_dots()
             if self.execute_button is not None:
                 self.execute_button.configure(
                     state="disabled",
@@ -801,8 +892,32 @@ class PdfRenameApp:
             self.root.update_idletasks()
             return
 
+        self._stop_status_dots()
         self._update_action_state()
         self._update_status()
+
+    def _start_status_dots(self) -> None:
+        self.status_dot_index = 0
+        self._update_status_dots()
+
+    def _update_status_dots(self) -> None:
+        if not self.is_processing:
+            return
+        dots = UI_TEXT["status_processing_dots"]
+        self.status_var.set(dots[self.status_dot_index])
+        self.status_dot_index = (self.status_dot_index + 1) % len(dots)
+        self.status_dot_after_id = self.root.after(
+            STATUS_DOT_INTERVAL_MS,
+            self._update_status_dots,
+        )
+
+    def _stop_status_dots(self) -> None:
+        if self.status_dot_after_id is not None:
+            try:
+                self.root.after_cancel(self.status_dot_after_id)
+            except Exception:
+                pass
+            self.status_dot_after_id = None
 
     def _update_status(self) -> None:
         count = len(self.pdf_paths)
@@ -814,7 +929,11 @@ class PdfRenameApp:
     def _update_action_state(self) -> None:
         if self.execute_button is None:
             return
-        is_ready = bool(self.pdf_paths) and bool(normalize_person_name(self.person_name_var.get()))
+        is_ready = (
+            not self.is_processing
+            and bool(self.pdf_paths)
+            and bool(normalize_person_name(self.person_name_var.get()))
+        )
         if is_ready:
             self.execute_button.configure(
                 state="normal",

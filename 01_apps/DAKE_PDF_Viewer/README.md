@@ -48,3 +48,16 @@ PyInstallerで `DakePDF_Viewer.exe` を作成します。
 ## アイコン
 
 DAKEシリーズ共通アイコン `..\..\02_assets\dake_icon.ico` を使用します。個別アイコンは作成しません。
+
+## DAKE共通仕様レビュー結果
+
+2026-05-06 にDAKE共通仕様へ合わせて横断レビューしました。
+
+- フォントは BIZ UDPGothic を最優先、Yu Gothic UI / Meiryo をフォールバックにしています。
+- ヘッダーはアプリ名を重複表示せず、「PDFを見る」と短い説明文に整理しています。
+- フッターは「シンプルそれDAKEシリーズ / 止まらない、迷わない、すぐ終わる。」と、戸建買取査定 / Instagram / Copyright の2ブロック構成です。
+- フッターリンクは「戸建買取査定」「Instagram」のみクリック可能です。
+- UI文言は `APP_NAME` / `WINDOW_TITLE` / `COPYRIGHT` / `UI_TEXT` に集約しています。
+- 共通アイコン `..\..\02_assets\dake_icon.ico` を Tkinter 起動時と PyInstaller ビルド時に参照します。
+- `build.bat` による `DakePDF_Viewer.exe` のビルドを確認しました。
+- `dist\DakePDF_Viewer.exe` の起動確認を実施しました。

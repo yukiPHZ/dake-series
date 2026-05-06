@@ -363,11 +363,13 @@ class FolderListApp:
         self.status_var = tk.StringVar(value=UI_TEXT["status_idle"])
         self.path_var = tk.StringVar(value=UI_TEXT["path_label_empty"])
         self.buttons: list[tk.Button] = []
+        self.footer_mode = ""
 
         self._build_ui()
         self._set_empty_text()
         self._sync_buttons()
         self.root.after(80, self._process_scan_queue)
+        self.root.bind("<Configure>", self._handle_resize)
 
     def _build_ui(self) -> None:
         outer = tk.Frame(self.root, bg=COLORS["base_bg"])
@@ -516,22 +518,53 @@ class FolderListApp:
         status.pack(fill="x", pady=(7, 0))
 
     def _build_footer(self, parent: tk.Widget) -> None:
-        footer = tk.Frame(parent, bg=COLORS["base_bg"])
-        footer.pack(fill="x", pady=(10, 0))
+        self.footer = tk.Frame(parent, bg=COLORS["base_bg"])
+        self.footer.pack(fill="x", pady=(10, 0))
+        self._render_footer("wide")
 
-        left = tk.Frame(footer, bg=COLORS["base_bg"])
-        left.pack(side="left")
-        self._footer_label(left, UI_TEXT["footer_left"])
-        self._footer_label(left, UI_TEXT["footer_separator"])
-        self._footer_label(left, UI_TEXT["footer_catchcopy"])
+    def _handle_resize(self, event) -> None:
+        if event.widget is not self.root:
+            return
+        mode = "wide" if event.width >= 900 else "narrow"
+        if mode != self.footer_mode:
+            self._render_footer(mode)
 
-        right = tk.Frame(footer, bg=COLORS["base_bg"])
-        right.pack(side="right")
-        self._footer_link(right, UI_TEXT["footer_link_1"], LINK_URLS["footer_link_1"])
-        self._footer_label(right, UI_TEXT["footer_separator"])
-        self._footer_link(right, UI_TEXT["footer_link_2"], LINK_URLS["footer_link_2"])
-        self._footer_label(right, UI_TEXT["footer_separator"])
-        self._footer_label(right, UI_TEXT["footer_copyright"])
+    def _render_footer(self, mode: str) -> None:
+        if not hasattr(self, "footer"):
+            return
+        self.footer_mode = mode
+        for child in self.footer.winfo_children():
+            child.destroy()
+
+        if mode == "wide":
+            left = tk.Frame(self.footer, bg=COLORS["base_bg"])
+            left.pack(side="left")
+            self._footer_thought_line(left)
+
+            right = tk.Frame(self.footer, bg=COLORS["base_bg"])
+            right.pack(side="right")
+            self._footer_link_line(right)
+            return
+
+        thought = tk.Frame(self.footer, bg=COLORS["base_bg"])
+        thought.pack(anchor="center")
+        self._footer_thought_line(thought)
+
+        links = tk.Frame(self.footer, bg=COLORS["base_bg"])
+        links.pack(anchor="center", pady=(4, 0))
+        self._footer_link_line(links)
+
+    def _footer_thought_line(self, parent: tk.Widget) -> None:
+        self._footer_label(parent, UI_TEXT["footer_left"])
+        self._footer_label(parent, UI_TEXT["footer_separator"])
+        self._footer_label(parent, UI_TEXT["footer_catchcopy"])
+
+    def _footer_link_line(self, parent: tk.Widget) -> None:
+        self._footer_link(parent, UI_TEXT["footer_link_1"], LINK_URLS["footer_link_1"])
+        self._footer_label(parent, UI_TEXT["footer_separator"])
+        self._footer_link(parent, UI_TEXT["footer_link_2"], LINK_URLS["footer_link_2"])
+        self._footer_label(parent, UI_TEXT["footer_separator"])
+        self._footer_label(parent, UI_TEXT["footer_copyright"])
 
     def _footer_label(self, parent: tk.Widget, text: str) -> None:
         tk.Label(parent, text=text, font=self.fonts["small"], fg=COLORS["sub_text"], bg=COLORS["base_bg"]).pack(side="left")
@@ -540,7 +573,7 @@ class FolderListApp:
         label = tk.Label(parent, text=text, font=self.fonts["small"], fg=COLORS["sub_text"], bg=COLORS["base_bg"], cursor="hand2")
         label.pack(side="left")
         label.bind("<Button-1>", lambda _event: webbrowser.open(url))
-        label.bind("<Enter>", lambda _event: label.configure(fg=COLORS["text"]))
+        label.bind("<Enter>", lambda _event: label.configure(fg=COLORS["accent"]))
         label.bind("<Leave>", lambda _event: label.configure(fg=COLORS["sub_text"]))
 
     def _set_text_content(self, content: str) -> None:

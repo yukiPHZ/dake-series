@@ -43,3 +43,9 @@ build.bat
 ```
 
 ビルドに成功すると、`dist/DakeFolder_List.exe` が作成されます。
+
+## 修正・確認履歴
+
+- 2026-05-06: DAKE共通仕様に合わせて、ヘッダー、フッター、フォント、UI_TEXT、共通アイコン、build.bat、.gitignore を確認しました。
+- フッターは広幅時に左右2ブロック、狭幅時に中央寄せ2段構成へ切り替わるように調整しています。
+- `build.bat` によるEXE化と、`dist/DakeFolder_List.exe` の起動確認を実施済みです。

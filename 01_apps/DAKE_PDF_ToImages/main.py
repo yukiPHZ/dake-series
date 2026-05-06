@@ -261,6 +261,7 @@ class App:
         self._build_ui()
         self._apply_icon()
         self._bind_drop_targets()
+        self.root.bind("<Configure>", self._handle_resize)
         self._update_output_info()
         self._update_items([])
         self._update_status("status_idle", UI_TEXT["status_detail_idle"])
@@ -541,71 +542,82 @@ class App:
         self.progress = ttk.Progressbar(status_card, mode="determinate", style="Dake.Horizontal.TProgressbar")
         self.progress.pack(fill="x", padx=16, pady=(0, 14))
 
-        footer = tk.Frame(container, bg=THEME["background"])
-        footer.pack(fill="x", pady=(14, 0))
+        self._build_footer(container)
 
-        footer_left = tk.Frame(footer, bg=THEME["background"])
-        footer_left.pack(side="left", fill="x", expand=True)
-        tk.Label(
-            footer_left,
-            text=UI_TEXT["footer_left"],
-            bg=THEME["background"],
-            fg=THEME["text"],
-            font=(self.font_family, 9, "bold"),
-            anchor="w",
-        ).pack(anchor="w")
-        tk.Label(
-            footer_left,
-            text=UI_TEXT["footer_subtitle"],
+    def _build_footer(self, parent: tk.Widget) -> None:
+        self.footer = tk.Frame(parent, bg=THEME["background"])
+        self.footer.pack(fill="x", pady=(14, 0))
+        self.footer_mode = None
+
+        self.footer_left = tk.Frame(self.footer, bg=THEME["background"])
+        self.footer_right = tk.Frame(self.footer, bg=THEME["background"])
+
+        thought_text = f"{UI_TEXT['footer_left']}{UI_TEXT['footer_separator']}{UI_TEXT['footer_subtitle']}"
+        self.footer_thought = tk.Label(
+            self.footer_left,
+            text=thought_text,
             bg=THEME["background"],
             fg=THEME["muted"],
             font=(self.font_family, 9),
             anchor="w",
-        ).pack(anchor="w", pady=(4, 0))
+        )
+        self.footer_thought.pack(side="left")
 
-        footer_right = tk.Frame(footer, bg=THEME["background"])
-        footer_right.pack(side="right")
-        link1 = tk.Label(
-            footer_right,
-            text=UI_TEXT["footer_link_1"],
-            bg=THEME["background"],
-            fg=THEME["accent"],
-            font=(self.font_family, 9, "underline"),
-            cursor="hand2",
-        )
-        link1.pack(side="left")
-        link1.bind("<Button-1>", lambda _event: webbrowser.open(LINKS["assessment"], new=2))
+        self.footer_link_1 = self._make_footer_link(self.footer_right, UI_TEXT["footer_link_1"], LINKS["assessment"])
+        self.footer_link_1.pack(side="left")
+        self._make_footer_separator(self.footer_right).pack(side="left")
+        self.footer_link_2 = self._make_footer_link(self.footer_right, UI_TEXT["footer_link_2"], LINKS["instagram"])
+        self.footer_link_2.pack(side="left")
+        self._make_footer_separator(self.footer_right).pack(side="left")
         tk.Label(
-            footer_right,
-            text=UI_TEXT["footer_separator"],
-            bg=THEME["background"],
-            fg=THEME["muted"],
-            font=(self.font_family, 9),
-        ).pack(side="left")
-        link2 = tk.Label(
-            footer_right,
-            text=UI_TEXT["footer_link_2"],
-            bg=THEME["background"],
-            fg=THEME["accent"],
-            font=(self.font_family, 9, "underline"),
-            cursor="hand2",
-        )
-        link2.pack(side="left")
-        link2.bind("<Button-1>", lambda _event: webbrowser.open(LINKS["instagram"], new=2))
-        tk.Label(
-            footer_right,
-            text=UI_TEXT["footer_separator"],
-            bg=THEME["background"],
-            fg=THEME["muted"],
-            font=(self.font_family, 9),
-        ).pack(side="left")
-        tk.Label(
-            footer_right,
+            self.footer_right,
             text=UI_TEXT["footer_copyright"],
             bg=THEME["background"],
             fg=THEME["muted"],
             font=(self.font_family, 9),
         ).pack(side="left")
+        self._set_footer_mode("wide")
+
+    def _make_footer_link(self, parent: tk.Widget, text: str, url: str) -> tk.Label:
+        label = tk.Label(
+            parent,
+            text=text,
+            bg=THEME["background"],
+            fg=THEME["muted"],
+            font=(self.font_family, 9),
+            cursor="hand2",
+        )
+        label.bind("<Button-1>", lambda _event: webbrowser.open(url, new=2))
+        label.bind("<Enter>", lambda _event, item=label: item.configure(fg=THEME["accent"]))
+        label.bind("<Leave>", lambda _event, item=label: item.configure(fg=THEME["muted"]))
+        return label
+
+    def _make_footer_separator(self, parent: tk.Widget) -> tk.Label:
+        return tk.Label(
+            parent,
+            text=UI_TEXT["footer_separator"],
+            bg=THEME["background"],
+            fg=THEME["muted"],
+            font=(self.font_family, 9),
+        )
+
+    def _set_footer_mode(self, mode: str) -> None:
+        if self.footer_mode == mode:
+            return
+        self.footer_mode = mode
+        self.footer_left.pack_forget()
+        self.footer_right.pack_forget()
+        if mode == "narrow":
+            self.footer_left.pack(anchor="center")
+            self.footer_right.pack(anchor="center", pady=(4, 0))
+        else:
+            self.footer_left.pack(side="left", fill="x", expand=True)
+            self.footer_right.pack(side="right")
+
+    def _handle_resize(self, event) -> None:
+        if event.widget != self.root:
+            return
+        self._set_footer_mode("narrow" if event.width < 900 else "wide")
 
     def _apply_icon(self) -> None:
         try:

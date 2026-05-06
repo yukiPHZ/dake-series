@@ -576,10 +576,12 @@ class PriceApportionmentApp:
             parent,
             text=text,
             font=self.fonts["small"],
-            fg=COLORS["accent"],
+            fg=COLORS["muted"],
             bg=COLORS["background"],
             cursor="hand2",
         )
+        label.bind("<Enter>", lambda event, widget=label: widget.configure(fg=COLORS["accent"]))
+        label.bind("<Leave>", lambda event, widget=label: widget.configure(fg=COLORS["muted"]))
         label.bind("<Button-1>", lambda event: webbrowser.open_new_tab(url))
         return label
 

@@ -29,3 +29,15 @@ build.bat
 ```
 
 配布対象は `dist\DakePDF_Merge.exe` です。
+
+## 確認記録
+
+2026-05-06:
+
+- DAKE共通仕様に合わせて、UI文言を `UI_TEXT` 管理へ整理しました。
+- フォントは `BIZ UDPGothic` を最優先、`Yu Gothic UI` / `Meiryo` をフォールバックにしています。
+- ヘッダーは画面内アプリ名を出さず、機能タイトルと短い説明に整理しています。
+- フッターは左にシリーズ文言、右に `戸建買取査定` / `Instagram` / コピーライトを配置しています。
+- 共通アイコン `..\..\02_assets\dake_icon.ico` を使用しています。
+- `build.bat` によるビルド成功を確認しました。
+- `dist\DakePDF_Merge.exe` の起動を確認しました。

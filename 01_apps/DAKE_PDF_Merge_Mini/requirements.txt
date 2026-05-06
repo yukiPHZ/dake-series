@@ -1,0 +1,3 @@
+pypdf
+PyMuPDF
+tkinterdnd2

@@ -1,0 +1,4 @@
+Pillow>=10.4.0
+pillow-heif>=0.18.0
+tkinterdnd2>=0.4.2
+pyinstaller>=6.11.1

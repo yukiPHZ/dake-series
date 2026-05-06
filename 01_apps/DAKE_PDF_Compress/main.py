@@ -7,6 +7,7 @@ import shutil
 import sys
 import tempfile
 import threading
+import time
 import webbrowser
 from dataclasses import dataclass
 from pathlib import Path
@@ -36,6 +37,7 @@ COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
 
 UI_TEXT = {
     "brand_series": "シンプルそれDAKEシリーズ",
+    "header_subtitle": "止まらない、迷わない、すぐ終わる。",
     "main_title": "PDFを圧縮する",
     "main_description": "PDFを追加して、ファイルサイズを軽くします。",
     "drop_title": "PDFをドロップしてください",
@@ -47,7 +49,12 @@ UI_TEXT = {
     "button_clear": "クリア",
     "status_idle": "PDF未選択",
     "status_ready": "圧縮できます",
+    "status_processing_base": "圧縮中",
     "status_processing": "圧縮中...",
+    "status_processing_dots": ["圧縮中.", "圧縮中..", "圧縮中..."],
+    "status_phrase_1": "Simple",
+    "status_phrase_2": "Simple, fast",
+    "status_phrase_3": "Simple, fast, for real work.",
     "status_complete": "圧縮が完了しました",
     "status_error": "エラー",
     "status_low_reduction": "圧縮効果は小さめです",
@@ -116,6 +123,9 @@ WINDOW_SIZE = "860x620"
 WINDOW_MIN_SIZE = (780, 560)
 QUEUE_POLL_INTERVAL_MS = 80
 LOW_REDUCTION_THRESHOLD = 1.0
+FOOTER_NARROW_WIDTH = 900
+STATUS_ANIMATION_INTERVAL_MS = 450
+STATUS_PHRASE_DELAY_SECONDS = 1.6
 
 
 class CompressError(Exception):
@@ -381,6 +391,10 @@ class DakePdfCompressApp:
         self.selected_pdf: Path | None = None
         self.is_processing = False
         self.event_queue: queue.Queue[tuple[str, Any]] = queue.Queue()
+        self.status_animation_after_id: str | None = None
+        self.status_animation_index = 0
+        self.status_animation_started_at = 0.0
+        self.footer_mode: str | None = None
 
         self.status_var = tk.StringVar(value=UI_TEXT["status_idle"])
         self.drop_title_var = tk.StringVar(value=UI_TEXT["drop_title"])
@@ -397,6 +411,7 @@ class DakePdfCompressApp:
         self.build_ui()
         self.setup_drop_targets()
         self.root.after(QUEUE_POLL_INTERVAL_MS, self.poll_queue)
+        self.root.bind("<Configure>", self.handle_root_configure)
 
     def setup_style(self) -> None:
         style = ttk.Style(self.root)
@@ -430,17 +445,10 @@ class DakePdfCompressApp:
         header.pack(fill=tk.X)
         self.make_label(
             header,
-            text=UI_TEXT["brand_series"],
-            bg=COLORS["base_bg"],
-            fg=COLORS["muted"],
-            font=(self.font_family, 9),
-        ).pack(anchor=tk.W)
-        self.make_label(
-            header,
             text=UI_TEXT["main_title"],
             bg=COLORS["base_bg"],
-            font=(self.font_family, 24, "bold"),
-        ).pack(anchor=tk.W, pady=(6, 0))
+            font=(self.font_family, 22, "bold"),
+        ).pack(anchor=tk.W)
         self.make_label(
             header,
             text=UI_TEXT["main_description"],
@@ -585,39 +593,7 @@ class DakePdfCompressApp:
 
         self.footer = tk.Frame(self.container, bg=COLORS["base_bg"])
         self.footer.pack(fill=tk.X)
-        self.make_label(
-            self.footer,
-            text=UI_TEXT["footer_left"],
-            bg=COLORS["base_bg"],
-            fg=COLORS["muted"],
-            font=(self.font_family, 9),
-        ).pack(side=tk.LEFT)
-
-        footer_right = tk.Frame(self.footer, bg=COLORS["base_bg"])
-        footer_right.pack(side=tk.RIGHT)
-        self.add_footer_link(footer_right, "footer_link_1")
-        self.make_label(
-            footer_right,
-            text=UI_TEXT["footer_separator"],
-            bg=COLORS["base_bg"],
-            fg=COLORS["muted"],
-            font=(self.font_family, 9),
-        ).pack(side=tk.LEFT)
-        self.add_footer_link(footer_right, "footer_link_2")
-        self.make_label(
-            footer_right,
-            text=UI_TEXT["footer_separator"],
-            bg=COLORS["base_bg"],
-            fg=COLORS["muted"],
-            font=(self.font_family, 9),
-        ).pack(side=tk.LEFT)
-        self.make_label(
-            footer_right,
-            text=UI_TEXT["footer_copyright"],
-            bg=COLORS["base_bg"],
-            fg=COLORS["muted"],
-            font=(self.font_family, 9),
-        ).pack(side=tk.LEFT)
+        self.update_footer_layout()
 
         self.update_action_state()
 
@@ -646,17 +622,76 @@ class DakePdfCompressApp:
             justify=tk.LEFT,
         ).pack(anchor=tk.W, pady=(4, 0))
 
+    def footer_thought_text(self) -> str:
+        return f"{UI_TEXT['footer_left']}{UI_TEXT['footer_separator']}{UI_TEXT['header_subtitle']}"
+
+    def clear_footer(self) -> None:
+        for child in self.footer.winfo_children():
+            child.destroy()
+
+    def add_footer_text(self, parent: tk.Frame, text: str) -> tk.Label:
+        label = self.make_label(
+            parent,
+            text=text,
+            bg=COLORS["base_bg"],
+            fg=COLORS["muted"],
+            font=(self.font_family, 9),
+        )
+        label.pack(side=tk.LEFT)
+        return label
+
     def add_footer_link(self, parent: tk.Frame, key: str) -> None:
         label = self.make_label(
             parent,
             text=UI_TEXT[key],
             bg=COLORS["base_bg"],
             fg=COLORS["muted"],
-            font=(self.font_family, 9, "underline"),
+            font=(self.font_family, 9),
             cursor="hand2",
         )
         label.pack(side=tk.LEFT)
         label.bind("<Button-1>", lambda _event, url=LINK_URLS[key]: webbrowser.open(url))
+        label.bind("<Enter>", lambda _event, widget=label: widget.configure(fg=COLORS["accent"]))
+        label.bind("<Leave>", lambda _event, widget=label: widget.configure(fg=COLORS["muted"]))
+
+    def add_footer_link_line(self, parent: tk.Frame) -> None:
+        self.add_footer_link(parent, "footer_link_1")
+        self.add_footer_text(parent, UI_TEXT["footer_separator"])
+        self.add_footer_link(parent, "footer_link_2")
+        self.add_footer_text(parent, UI_TEXT["footer_separator"])
+        self.add_footer_text(parent, UI_TEXT["footer_copyright"])
+
+    def update_footer_layout(self, width: int | None = None) -> None:
+        if width is None:
+            width = self.root.winfo_width()
+        mode = "narrow" if width < FOOTER_NARROW_WIDTH else "wide"
+        if mode == self.footer_mode:
+            return
+
+        self.footer_mode = mode
+        self.clear_footer()
+
+        if mode == "wide":
+            left = tk.Frame(self.footer, bg=COLORS["base_bg"])
+            left.pack(side=tk.LEFT)
+            self.add_footer_text(left, self.footer_thought_text())
+
+            right = tk.Frame(self.footer, bg=COLORS["base_bg"])
+            right.pack(side=tk.RIGHT)
+            self.add_footer_link_line(right)
+            return
+
+        thought_line = tk.Frame(self.footer, bg=COLORS["base_bg"])
+        thought_line.pack(anchor=tk.CENTER)
+        self.add_footer_text(thought_line, self.footer_thought_text())
+
+        link_line = tk.Frame(self.footer, bg=COLORS["base_bg"])
+        link_line.pack(anchor=tk.CENTER, pady=(4, 0))
+        self.add_footer_link_line(link_line)
+
+    def handle_root_configure(self, event: tk.Event) -> None:
+        if event.widget == self.root:
+            self.update_footer_layout(event.width)
 
     def setup_drop_targets(self) -> None:
         if not DND_ENABLED or DND_FILES is None:
@@ -750,6 +785,7 @@ class DakePdfCompressApp:
         self.is_processing = True
         self.notice_var.set("")
         self.set_status("status_processing", "processing")
+        self.start_status_animation()
         self.update_action_state()
         self.progress.start(10)
 
@@ -784,6 +820,7 @@ class DakePdfCompressApp:
     def handle_success(self, result: PdfResult) -> None:
         self.is_processing = False
         self.progress.stop()
+        self.stop_status_animation()
         self.compressed_size_var.set(format_bytes(result.compressed_size))
         self.reduction_rate_var.set(f"{result.reduction_rate:.1f}%")
         self.save_name_var.set(truncate_middle(result.output_path.name, 58))
@@ -805,6 +842,7 @@ class DakePdfCompressApp:
     def handle_worker_error(self, exc: CompressError) -> None:
         self.is_processing = False
         self.progress.stop()
+        self.stop_status_animation()
         self.set_status("status_error", "error")
         self.update_action_state()
         self.show_error(exc.message_key, exc.detail)
@@ -838,6 +876,41 @@ class DakePdfCompressApp:
         }
         bg, fg = palette.get(state, palette["idle"])
         self.status_badge.configure(bg=bg, fg=fg)
+
+    def start_status_animation(self) -> None:
+        self.stop_status_animation()
+        self.status_animation_started_at = time.monotonic()
+        self.status_animation_index = 0
+        self.animate_processing_status()
+
+    def stop_status_animation(self) -> None:
+        if self.status_animation_after_id is not None:
+            try:
+                self.root.after_cancel(self.status_animation_after_id)
+            except Exception:
+                pass
+            self.status_animation_after_id = None
+
+    def animate_processing_status(self) -> None:
+        if not self.is_processing:
+            return
+
+        elapsed = time.monotonic() - self.status_animation_started_at
+        sequence = list(UI_TEXT["status_processing_dots"])
+        if elapsed >= STATUS_PHRASE_DELAY_SECONDS:
+            sequence.extend(
+                [
+                    UI_TEXT["status_phrase_1"],
+                    UI_TEXT["status_phrase_2"],
+                    UI_TEXT["status_phrase_3"],
+                ]
+            )
+        self.status_var.set(sequence[self.status_animation_index % len(sequence)])
+        self.status_animation_index += 1
+        self.status_animation_after_id = self.root.after(
+            STATUS_ANIMATION_INTERVAL_MS,
+            self.animate_processing_status,
+        )
 
     def update_action_state(self) -> None:
         has_pdf = self.selected_pdf is not None

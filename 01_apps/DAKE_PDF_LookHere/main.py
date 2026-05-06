@@ -7,6 +7,7 @@ import math
 import os
 import subprocess
 import sys
+import webbrowser
 import tkinter as tk
 from dataclasses import dataclass
 from pathlib import Path
@@ -28,13 +29,13 @@ except Exception:
 
 
 APP_NAME = "DakePDFここ見て"
-WINDOW_TITLE = "DakePDFここ見て"
+WINDOW_TITLE = "PDFここ見て"
 COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
 
 UI_TEXT = {
     "brand_series": "シンプルそれDAKEシリーズ",
     "main_title": "PDFにここ見てを付ける",
-    "main_description": "PDFに丸と矢印だけを付けて、確認箇所を伝えます。",
+    "main_description": "丸と矢印だけで確認箇所を伝えます。",
     "button_open": "PDFを開く",
     "button_circle": "○ 丸",
     "button_arrow": "→ 矢印",
@@ -70,6 +71,7 @@ UI_TEXT = {
     "message_unknown_error": "原因を特定できませんでした。",
     "save_suffix": "_ここ見て",
     "footer_left": "シンプルそれDAKEシリーズ",
+    "footer_tagline": "止まらない、迷わない、すぐ終わる。",
     "footer_link_1": "戸建買取査定",
     "footer_link_2": "Instagram",
     "footer_separator": " ｜ ",
@@ -107,6 +109,12 @@ DISPLAY_LINE_WIDTH = 3
 CLICK_CIRCLE_RADIUS = 18.0
 ARROW_HEAD_ANGLE = math.radians(28)
 APP_USER_MODEL_ID = "Shimarisu.DakePDFLookHere"
+FOOTER_BREAKPOINT = 960
+
+LINKS = {
+    "assessment": "https://sakurayk.notion.site/22ea54b5298d80928443ec7b4d20143d?pvs=74",
+    "instagram": "https://instagram.com/kikuta.shimarisu_fudosan",
+}
 
 
 @dataclass
@@ -289,29 +297,26 @@ class LookHereApp:
         header.columnconfigure(0, weight=1)
 
         title_block = tk.Frame(header, bg=THEME["background"])
-        title_block.grid(row=0, column=0, sticky="w")
+        title_block.grid(row=0, column=0, sticky="ew")
+        title_block.columnconfigure(0, weight=0)
+        title_block.columnconfigure(1, weight=1)
 
-        tk.Label(
-            title_block,
-            text=UI_TEXT["brand_series"],
-            font=self.small_font,
-            fg=THEME["accent"],
-            bg=THEME["background"],
-        ).pack(anchor="w")
-        tk.Label(
+        self.header_title = tk.Label(
             title_block,
             text=UI_TEXT["main_title"],
             font=self.title_font,
             fg=THEME["text"],
             bg=THEME["background"],
-        ).pack(anchor="w", pady=(2, 0))
-        tk.Label(
+        )
+        self.header_title.grid(row=0, column=0, sticky="w")
+        self.header_description = tk.Label(
             title_block,
             text=UI_TEXT["main_description"],
             font=self.subtitle_font,
             fg=THEME["muted"],
             bg=THEME["background"],
-        ).pack(anchor="w", pady=(4, 0))
+        )
+        self.header_description.grid(row=0, column=1, sticky="w", padx=(14, 0), pady=(4, 0))
 
         toolbar = tk.Frame(header, bg=THEME["card"], highlightthickness=1, highlightbackground=THEME["border"])
         toolbar.grid(row=1, column=0, sticky="ew", pady=(14, 0))
@@ -378,10 +383,14 @@ class LookHereApp:
 
         footer = tk.Frame(self.root, bg=THEME["background"])
         footer.grid(row=2, column=0, sticky="ew", padx=22, pady=(0, 14))
-        footer.columnconfigure(1, weight=1)
+        footer.columnconfigure(0, weight=1)
+
+        self.status_row = tk.Frame(footer, bg=THEME["background"])
+        self.status_row.grid(row=0, column=0, sticky="ew")
+        self.status_row.columnconfigure(1, weight=1)
 
         self.status_badge = tk.Label(
-            footer,
+            self.status_row,
             text="",
             font=self.status_font,
             fg=THEME["muted"],
@@ -391,7 +400,7 @@ class LookHereApp:
         )
         self.status_badge.grid(row=0, column=0, sticky="w")
         self.status_detail = tk.Label(
-            footer,
+            self.status_row,
             text="",
             font=self.small_font,
             fg=THEME["muted"],
@@ -399,22 +408,89 @@ class LookHereApp:
         )
         self.status_detail.grid(row=0, column=1, sticky="w", padx=(10, 0))
 
-        footer_text = (
-            UI_TEXT["footer_left"]
-            + UI_TEXT["footer_separator"]
-            + UI_TEXT["footer_link_1"]
-            + UI_TEXT["footer_separator"]
-            + UI_TEXT["footer_link_2"]
-            + UI_TEXT["footer_separator"]
-            + UI_TEXT["footer_copyright"]
-        )
-        tk.Label(
-            footer,
-            text=footer_text,
+        self.footer_container = tk.Frame(footer, bg=THEME["background"])
+        self.footer_container.grid(row=1, column=0, sticky="ew", pady=(8, 0))
+        self.footer_container.columnconfigure(0, weight=1)
+        self.footer_container.columnconfigure(1, weight=1)
+
+        self.footer_left_line = tk.Frame(self.footer_container, bg=THEME["background"])
+        self.footer_left_text = tk.Label(
+            self.footer_left_line,
+            text=UI_TEXT["footer_left"] + UI_TEXT["footer_separator"] + UI_TEXT["footer_tagline"],
             font=self.small_font,
             fg=THEME["muted"],
             bg=THEME["background"],
-        ).grid(row=0, column=2, sticky="e")
+        )
+        self.footer_left_text.pack(side="left")
+
+        self.footer_right_line = tk.Frame(self.footer_container, bg=THEME["background"])
+        self.footer_link_1 = self._make_footer_link(
+            self.footer_right_line,
+            UI_TEXT["footer_link_1"],
+            LINKS["assessment"],
+        )
+        self.footer_link_1.pack(side="left")
+        self._make_footer_separator(self.footer_right_line).pack(side="left")
+        self.footer_link_2 = self._make_footer_link(
+            self.footer_right_line,
+            UI_TEXT["footer_link_2"],
+            LINKS["instagram"],
+        )
+        self.footer_link_2.pack(side="left")
+        self._make_footer_separator(self.footer_right_line).pack(side="left")
+        tk.Label(
+            self.footer_right_line,
+            text=UI_TEXT["footer_copyright"],
+            font=self.small_font,
+            fg=THEME["muted"],
+            bg=THEME["background"],
+        ).pack(side="left")
+        self.root.after(80, lambda: self._layout_footer(self.root.winfo_width()))
+
+    def _make_footer_separator(self, parent: tk.Misc) -> tk.Label:
+        return tk.Label(
+            parent,
+            text=UI_TEXT["footer_separator"],
+            font=self.small_font,
+            fg=THEME["muted"],
+            bg=THEME["background"],
+        )
+
+    def _make_footer_link(self, parent: tk.Misc, text: str, url: str) -> tk.Label:
+        label = tk.Label(
+            parent,
+            text=text,
+            font=self.small_font,
+            fg=THEME["muted"],
+            bg=THEME["background"],
+            cursor="hand2",
+        )
+        label.bind("<Button-1>", lambda _event: self._open_footer_link(url))
+        label.bind("<Enter>", lambda _event: label.configure(fg=THEME["accent"]))
+        label.bind("<Leave>", lambda _event: label.configure(fg=THEME["muted"]))
+        return label
+
+    def _open_footer_link(self, url: str) -> None:
+        try:
+            webbrowser.open(url)
+        except Exception:
+            pass
+
+    def _layout_footer(self, width: int) -> None:
+        if not hasattr(self, "footer_left_line"):
+            return
+        self.footer_left_line.grid_forget()
+        self.footer_right_line.grid_forget()
+        if width >= FOOTER_BREAKPOINT:
+            self.footer_container.columnconfigure(0, weight=1)
+            self.footer_container.columnconfigure(1, weight=1)
+            self.footer_left_line.grid(row=0, column=0, sticky="w")
+            self.footer_right_line.grid(row=0, column=1, sticky="e")
+        else:
+            self.footer_container.columnconfigure(0, weight=1)
+            self.footer_container.columnconfigure(1, weight=0)
+            self.footer_left_line.grid(row=0, column=0, sticky="")
+            self.footer_right_line.grid(row=1, column=0, sticky="", pady=(4, 0))
 
     def _make_button(
         self,
@@ -450,6 +526,7 @@ class LookHereApp:
         self.canvas.bind("<Control-Button-4>", lambda event: self._zoom_at_mouse(1))
         self.canvas.bind("<Control-Button-5>", lambda event: self._zoom_at_mouse(-1))
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
+        self.root.bind("<Configure>", self._on_root_configure, add="+")
 
         if DND_ENABLED and DND_FILES is not None and hasattr(self.root, "drop_target_register"):
             try:
@@ -457,6 +534,10 @@ class LookHereApp:
                 self.root.dnd_bind("<<Drop>>", self._on_drop)
             except Exception:
                 pass
+
+    def _on_root_configure(self, event: tk.Event) -> None:
+        if event.widget is self.root:
+            self._layout_footer(event.width)
 
     def _on_drop(self, event: object) -> None:
         data = getattr(event, "data", "")

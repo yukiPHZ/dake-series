@@ -39,8 +39,17 @@ pip install pymupdf pyinstaller
 build.bat
 ```
 
-`dist\DakePDF_LookHere.exe` が作成されます。
+`dist/DakePDF_LookHere.exe` が作成されます。
 
 ## DAKEシリーズ共通思想
 
 単機能、軽量、爆速、迷わない。多機能化せず、現場で仕事が止まらないことを優先します。
+
+## 2026-05-06 DAKE共通仕様レビュー
+
+- UI_TEXTの文字化けを修正し、日本語UI文言を上部の `UI_TEXT` に集約しました。
+- ヘッダーを「機能タイトル + 短い機能説明」に整理し、画面内のアプリ名重複表示を避けました。
+- フッターをDAKE共通仕様に合わせ、狭幅時は中央寄せ2段構成へ切り替えるようにしました。
+- 共通アイコン `../../02_assets/dake_icon.ico` の参照を維持しました。
+- `build.bat` による exe 再ビルドに成功しました。
+- `dist/DakePDF_LookHere.exe` は短時間起動確認で正常に起動しました。

@@ -1,7 +1,9 @@
+# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 import os
 import tkinter as tk
+import webbrowser
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from tkinter import font as tkfont
@@ -44,10 +46,19 @@ UI_TEXT = {
     "error_negative": "{field}は0以上の数値を入力してください",
     "disclaimer": "入力値に基づく参考計算です。税務上の適正性を保証するものではありません。最終判断は税理士等の専門家に確認してください。",
     "footer_left": "シンプルそれDAKEシリーズ",
+    "footer_subtitle": "止まらない、迷わない、すぐ終わる。",
+    "footer_link_1": "戸建買取査定",
+    "footer_link_2": "Instagram",
+    "footer_separator": " ｜ ",
     "footer_copyright": COPYRIGHT,
     "unit_yen": "円",
     "unit_percent": "%",
     "value_placeholder": "—",
+}
+
+LINK_URLS = {
+    "footer_link_1": "https://sakurayk.notion.site/22ea54b5298d80928443ec7b4d20143d?pvs=74",
+    "footer_link_2": "https://www.instagram.com/kikuta.shimarisu_fudosan",
 }
 
 BG_COLOR = "#F6F7F9"
@@ -172,9 +183,10 @@ class FixedTaxApp(tk.Tk):
         super().__init__()
         self.pending_refresh: Optional[str] = None
         self.font_family = choose_font_family(self)
+        self.configure_base_fonts()
 
         self.title(WINDOW_TITLE)
-        self.geometry("470x680")
+        self.geometry("540x720")
         self.resizable(False, False)
         self.configure(bg=BG_COLOR)
 
@@ -204,6 +216,13 @@ class FixedTaxApp(tk.Tk):
         self.build_ui()
         self.bind_live_updates()
         self.update_city_toggle_text()
+
+    def configure_base_fonts(self) -> None:
+        for font_name in ("TkDefaultFont", "TkTextFont", "TkMenuFont", "TkHeadingFont"):
+            try:
+                tkfont.nametofont(font_name).configure(family=self.font_family)
+            except tk.TclError:
+                continue
 
     def configure_styles(self) -> None:
         self.style.theme_use("clam")
@@ -278,6 +297,7 @@ class FixedTaxApp(tk.Tk):
             darkcolor=BORDER_COLOR,
             padding=(10, 7),
             relief="solid",
+            font=(self.font_family, 10),
         )
         self.style.map(
             "App.TEntry",
@@ -326,6 +346,12 @@ class FixedTaxApp(tk.Tk):
             background=BG_COLOR,
             foreground=MUTED_COLOR,
             font=(self.font_family, 9),
+        )
+        self.style.configure(
+            "FooterSmall.TLabel",
+            background=BG_COLOR,
+            foreground=MUTED_COLOR,
+            font=(self.font_family, 8),
         )
         self.style.configure("Card.TSeparator", background=BORDER_COLOR)
 
@@ -479,17 +505,50 @@ class FixedTaxApp(tk.Tk):
         ).grid(row=7, column=0, columnspan=2, sticky="w")
 
     def build_footer(self, parent: ttk.Frame) -> None:
-        footer = ttk.Frame(parent, style="App.TFrame", padding=(0, 14, 0, 0))
+        footer = ttk.Frame(parent, style="App.TFrame", padding=(0, 12, 0, 0))
         footer.pack(fill="x")
 
-        ttk.Label(footer, text=UI_TEXT["footer_left"], style="Footer.TLabel").pack(anchor="w")
-        ttk.Label(
-            footer,
-            text=UI_TEXT["footer_copyright"],
-            style="Footer.TLabel",
-            wraplength=410,
-            justify="left",
-        ).pack(anchor="w", pady=(2, 0))
+        thought_row = tk.Frame(footer, bg=BG_COLOR)
+        thought_row.pack(anchor="center")
+
+        self.add_footer_text(thought_row, UI_TEXT["footer_left"], font_size=8)
+        self.add_footer_text(thought_row, UI_TEXT["footer_separator"], font_size=8)
+        self.add_footer_text(thought_row, UI_TEXT["footer_subtitle"], font_size=8)
+
+        link_row = tk.Frame(footer, bg=BG_COLOR)
+        link_row.pack(anchor="center", pady=(4, 0))
+
+        self.add_footer_link(link_row, "footer_link_1")
+        self.add_footer_text(link_row, UI_TEXT["footer_separator"], font_size=8)
+        self.add_footer_link(link_row, "footer_link_2")
+        self.add_footer_text(link_row, UI_TEXT["footer_separator"], font_size=8)
+        self.add_footer_text(link_row, UI_TEXT["footer_copyright"], font_size=8)
+
+    def add_footer_text(self, parent: tk.Widget, text: str, *, font_size: int) -> None:
+        label = tk.Label(
+            parent,
+            text=text,
+            bg=BG_COLOR,
+            fg=MUTED_COLOR,
+            font=(self.font_family, font_size),
+        )
+        label.pack(side="left")
+
+    def add_footer_link(self, parent: tk.Widget, key: str) -> None:
+        normal_font = tkfont.Font(family=self.font_family, size=8)
+        hover_font = tkfont.Font(family=self.font_family, size=8, underline=True)
+        label = tk.Label(
+            parent,
+            text=UI_TEXT[key],
+            bg=BG_COLOR,
+            fg=MUTED_COLOR,
+            font=normal_font,
+            cursor="hand2",
+        )
+        label.pack(side="left")
+        label.bind("<Button-1>", lambda _event: webbrowser.open(LINK_URLS[key], new=2))
+        label.bind("<Enter>", lambda _event: label.configure(fg=ACCENT_COLOR, font=hover_font))
+        label.bind("<Leave>", lambda _event: label.configure(fg=MUTED_COLOR, font=normal_font))
 
     def add_entry_row(
         self,
