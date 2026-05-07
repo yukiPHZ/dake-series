@@ -38,3 +38,31 @@ build.bat
 
 シンプルそれDAKEシリーズ  
 © 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta
+
+## DAKE_META
+
+```json
+{
+  "app_key": "dake_year_age",
+  "display_name": "Dake築年数",
+  "launcher_title": "築年数",
+  "launcher_description": "西暦・和暦から築年数を確認します。",
+  "site_title": "Dake築年数",
+  "site_description": "築年を入力するだけで、現在年基準の築年数を西暦・和暦どちらからでも確認できるWindows向けアプリです。",
+  "update_summary": "READMEメタ情報とRelease本文を整備。スクリーンショットをassets/screenshot.webpに作成。",
+  "folder_name": "DAKE_Year_Age",
+  "exe_name": "DakeYear_Age.exe",
+  "release_url": "",
+  "screenshot_path": "assets/screenshot.webp",
+  "status": "available",
+  "show_in_launcher": true,
+  "show_on_site": true
+}
+```
+
+## RELEASE_BODY
+
+- 築年数確認アプリ
+- 西暦・和暦入力に対応
+- 入力すると即時計算
+- Windows向けexe

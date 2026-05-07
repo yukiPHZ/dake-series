@@ -1,0 +1,123 @@
+# DAKE_APP_TEMPLATE
+
+新規DAKEアプリ作成時の基本テンプレです。
+
+## フォルダ構成
+
+```text
+01_apps/
+  DAKE_Category_Function/
+    main.py
+    build.bat
+    README.md
+    release_body.md
+    requirements.txt        # 必要な場合のみ
+    .gitignore
+    assets/
+      screenshot.webp       # Release/サイト用スクリーンショット
+```
+
+## main.py基本要素
+
+必ず検討する定義:
+
+```python
+APP_NAME = "Dakeアプリ名"
+WINDOW_TITLE = "短いウインドウタイトル"
+COPYRIGHT = "© 2026 しまりす不動産 / Vibe-Coded by Yukihiko Kikuta"
+
+UI_TEXT = {
+    "main_title": "何をするか",
+    "main_description": "短い説明",
+    "button_execute": "実行",
+    "status_idle": "待機中",
+    "status_processing": "処理中",
+    "status_complete": "完了しました",
+    "status_error": "処理できませんでした",
+    "footer_left": "シンプルそれDAKEシリーズ",
+    "footer_subtitle": "止まらない、迷わない、すぐ終わる。",
+    "footer_link_1": "戸建買取査定",
+    "footer_link_2": "Instagram",
+    "footer_copyright": COPYRIGHT,
+}
+```
+
+## build.bat基本要素
+
+- `cd /d "%~dp0"` でアプリフォルダへ移動する。
+- `build/`、`dist/`、`*.spec` を整理する。
+- PyInstallerで `--onefile`、`--noconsole`、`--clean` を使う。
+- `--icon=..\..\02_assets\dake_icon.ico` を使う。
+- `--name` はREADMEの `exe_name` と合わせる。
+
+## README.md基本構成
+
+````markdown
+# Dakeアプリ名
+
+アプリの目的を1〜2文で説明します。
+
+## 使い方
+
+1. 入力または追加します。
+2. 実行します。
+3. 結果を確認します。
+
+## DAKE_META
+
+```json
+{
+  "app_key": "dake_app_key",
+  "display_name": "Dakeアプリ名",
+  "launcher_title": "短い名前",
+  "launcher_description": "ランチャー用の短い説明。",
+  "site_title": "Dakeアプリ名",
+  "site_description": "サイト掲載用の説明。",
+  "update_summary": "初回作成。",
+  "folder_name": "DAKE_Category_Function",
+  "exe_name": "DakeApp_Name.exe",
+  "release_url": "",
+  "screenshot_path": "assets/screenshot.webp",
+  "status": "available",
+  "show_in_launcher": true,
+  "show_on_site": true
+}
+```
+
+## RELEASE_BODY
+
+- 何のアプリか
+- 主な操作
+- 主な出力
+- Windows向けexe
+````
+
+## .gitignore基本
+
+```gitignore
+__pycache__/
+*.pyc
+build/
+dist/
+*.spec
+*.exe
+*_config.json
+```
+
+## assets
+
+- `assets/` はアプリフォルダ直下に置く。
+- `assets/screenshot.webp` は起動直後のアプリウインドウを保存する。
+- 画像を引き延ばさない。
+
+## 新規作成時の流れ
+
+1. フォルダを作る。
+2. `main.py` に単機能UIを実装する。
+3. `build.bat` を作る。
+4. READMEに `DAKE_META` と `RELEASE_BODY` を書く。
+5. buildする。
+6. 起動確認する。
+7. `release_body.md` を生成する。
+8. `assets/screenshot.webp` を作る。
+9. Reviewチェックリストを見る。

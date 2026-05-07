@@ -30,13 +30,17 @@ if not defined PYTHON_EXE (
 if not defined PYTHON_EXE goto :python_missing
 if not exist "%ENTRY_FILE%" goto :entry_missing
 
+if exist build rmdir /s /q build
+if exist dist rmdir /s /q dist
+for %%F in (*.spec) do del /q "%%~fF"
+
 call :run %PYTHON_EXE% %PYTHON_ARGS% -m pip install --upgrade pip
 if errorlevel 1 goto :fail
 
 call :run %PYTHON_EXE% %PYTHON_ARGS% -m pip install -r requirements.txt
 if errorlevel 1 goto :fail
 
-call :run %PYTHON_EXE% %PYTHON_ARGS% -m PyInstaller --noconfirm --clean --onefile --windowed --name=DakePDF_Split_Select --icon=..\..\02_assets\dake_icon.ico --hidden-import=tkinterdnd2 --collect-all=tkinterdnd2 --hidden-import=fitz --collect-all=fitz "%ENTRY_FILE%"
+call :run %PYTHON_EXE% %PYTHON_ARGS% -m PyInstaller --noconfirm --clean --onefile --windowed --noconsole --name=DakePDF_Split_Select --icon=..\..\02_assets\dake_icon.ico --hidden-import=tkinterdnd2 --collect-all=tkinterdnd2 --hidden-import=fitz --collect-all=fitz "%ENTRY_FILE%"
 if errorlevel 1 goto :fail
 
 if not exist "%OUTPUT_EXE%" goto :output_missing

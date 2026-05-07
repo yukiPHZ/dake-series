@@ -30,3 +30,31 @@ HEIC / HEIF は初期版では非対応です。
 
 - アプリ内の個別アイコンは持たず、共通アイコン `../../02_assets/dake_icon.ico` を参照します
 - アイコン反映が古い場合は `build` / `dist` / `*.spec` を削除してから再ビルドしてください
+
+## DAKE_META
+
+```json
+{
+  "app_key": "dake_image_resize",
+  "display_name": "Dake画像リサイズ",
+  "launcher_title": "画像リサイズ",
+  "launcher_description": "スマホ写真を長辺1600px上限のJPEGに整えます。",
+  "site_title": "Dake画像リサイズ",
+  "site_description": "スマホ写真などの画像を長辺1600px上限のJPEGへ軽量化できるWindows向けアプリです。",
+  "update_summary": "READMEメタ情報とRelease本文を整備。スクリーンショットをassets/screenshot.webpに作成。",
+  "folder_name": "DAKE_Image_Resize",
+  "exe_name": "Dake_Image_Resize.exe",
+  "release_url": "",
+  "screenshot_path": "assets/screenshot.webp",
+  "status": "available",
+  "show_in_launcher": true,
+  "show_on_site": true
+}
+```
+
+## RELEASE_BODY
+
+- 画像リサイズアプリ
+- 長辺1600px上限で軽量化
+- JPEG出力に対応
+- Windows向けexe

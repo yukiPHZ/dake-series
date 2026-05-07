@@ -75,3 +75,31 @@ build.bat
 - ショートカット操作では、その時点で前面にあるウインドウを即保存します。
 - 横幅が1200px未満の画像は、原則として拡大しません。
 - `Ctrl + Shift + 1` が他アプリで使われている場合は、ボタンから保存してください。
+
+## DAKE_META
+
+```json
+{
+  "app_key": "dake_screen_webp",
+  "display_name": "DakeScreen_WebP",
+  "launcher_title": "スクショ→WebP",
+  "launcher_description": "選んだウインドウをWebPで保存します。",
+  "site_title": "DakeScreen_WebP",
+  "site_description": "現在アクティブなウインドウだけを撮影し、横幅1200px以内のWebPとして保存できるWindows向けアプリです。",
+  "update_summary": "READMEメタ情報とRelease本文を整備。スクリーンショットをassets/screenshot.webpに作成。",
+  "folder_name": "DAKE_Screen_WebP",
+  "exe_name": "DakeScreen_WebP.exe",
+  "release_url": "",
+  "screenshot_path": "assets/screenshot.webp",
+  "status": "available",
+  "show_in_launcher": true,
+  "show_on_site": true
+}
+```
+
+## RELEASE_BODY
+
+- ウインドウスクショWebP保存アプリ
+- 横幅1200px以内で保存
+- ショートカット操作に対応
+- Windows向けexe

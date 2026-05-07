@@ -64,3 +64,31 @@ build.bat
 このアプリは「全社員メールを開くだけ」のDAKEシリーズ単機能アプリです。
 
 送信、自動化、本文テンプレート、件名テンプレート、履歴保存、宛先パターン切替、アドレス帳機能は実装していません。
+
+## DAKE_META
+
+```json
+{
+  "app_key": "dake_mail_allstaff",
+  "display_name": "Dake全社員メール起動",
+  "launcher_title": "全社員メール",
+  "launcher_description": "宛先とCC入りの全社員宛メール作成画面を開きます。",
+  "site_title": "Dake全社員メール起動",
+  "site_description": "全社員宛メールの新規作成画面を、TOとCCが入った状態で既定メーラーに開くWindows向けアプリです。",
+  "update_summary": "READMEメタ情報とRelease本文を整備。スクリーンショットをassets/screenshot.webpに作成。",
+  "folder_name": "DAKE_Mail_AllStaff",
+  "exe_name": "Dake_AllStaff_Mail.exe",
+  "release_url": "",
+  "screenshot_path": "assets/screenshot.webp",
+  "status": "available",
+  "show_in_launcher": true,
+  "show_on_site": true
+}
+```
+
+## RELEASE_BODY
+
+- 全社員メール起動アプリ
+- TO・CC入力済みでメーラーを起動
+- 送信は手動確認
+- Windows向けexe

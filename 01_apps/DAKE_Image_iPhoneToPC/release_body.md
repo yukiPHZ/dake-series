@@ -1,0 +1,4 @@
+- iPhone写真受信アプリ
+- QRコード読み取りで接続
+- 同じWi-Fi上でPCへ保存
+- Windows向けexe

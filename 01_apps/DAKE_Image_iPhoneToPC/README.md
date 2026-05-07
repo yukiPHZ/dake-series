@@ -34,3 +34,31 @@ PC側で受信画面を起動し、iPhoneのカメラでQRコードを読み取�
 
 DAKEシリーズは、単機能・軽量・高速・安定を優先した「シンプルそれDAKEシリーズ」です。
 このアプリは、iPhone写真をPCへ送ることだけに絞っています。
+
+## DAKE_META
+
+```json
+{
+  "app_key": "dake_image_iphonetopc",
+  "display_name": "Dake画像iPhoneToPC",
+  "launcher_title": "iPhone画像受信",
+  "launcher_description": "QRコード経由でiPhone写真をPCへ送ります。",
+  "site_title": "Dake画像iPhoneToPC",
+  "site_description": "PC画面のQRコードをiPhoneで読み取り、同じWi-Fi上で写真をWindows PCへ送れるアプリです。",
+  "update_summary": "READMEメタ情報とRelease本文を整備。スクリーンショットをassets/screenshot.webpに作成。",
+  "folder_name": "DAKE_Image_iPhoneToPC",
+  "exe_name": "DakeImage_iPhoneToPC.exe",
+  "release_url": "",
+  "screenshot_path": "assets/screenshot.webp",
+  "status": "available",
+  "show_in_launcher": true,
+  "show_on_site": true
+}
+```
+
+## RELEASE_BODY
+
+- iPhone写真受信アプリ
+- QRコード読み取りで接続
+- 同じWi-Fi上でPCへ保存
+- Windows向けexe

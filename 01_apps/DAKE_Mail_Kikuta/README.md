@@ -25,3 +25,31 @@
 ## DAKEシリーズ
 
 単機能、軽量、迷わない、現場で止まらないことを優先したDAKEシリーズのアプリです。
+
+## DAKE_META
+
+```json
+{
+  "app_key": "dake_mail_kikuta",
+  "display_name": "Dake菊田メール",
+  "launcher_title": "菊田メール",
+  "launcher_description": "菊田宛のメール作成画面を開きます。",
+  "site_title": "Dake菊田メール",
+  "site_description": "件名と本文を入力して、菊田宛の新規メール作成画面を既定メーラーで開くWindows向けアプリです。",
+  "update_summary": "READMEメタ情報とRelease本文を整備。スクリーンショットをassets/screenshot.webpに作成。",
+  "folder_name": "DAKE_Mail_Kikuta",
+  "exe_name": "DakeKikuta_Mail.exe",
+  "release_url": "",
+  "screenshot_path": "assets/screenshot.webp",
+  "status": "available",
+  "show_in_launcher": true,
+  "show_on_site": true
+}
+```
+
+## RELEASE_BODY
+
+- 菊田宛メール起動アプリ
+- 件名・本文入力に対応
+- 既定メーラーで作成画面を開く
+- Windows向けexe

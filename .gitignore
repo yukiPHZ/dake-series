@@ -13,3 +13,6 @@ dist/
 # OS
 Thumbs.db
 desktop.ini
+
+# Local app config
+*_config.json

@@ -33,6 +33,7 @@ UI_TEXT = {
     "error_format": "年の形式を確認してください",
     "error_future": "未来の年は築年数を計算できません",
     "error_era": "対応している元号は 令和 / 平成 / 昭和 です",
+    "era_first_year": "元",
     "footer_line1": "シンプルそれDAKEシリーズ",
     "footer_link_assessment": "戸建買取査定",
     "footer_link_instagram": "Instagram",
@@ -180,7 +181,7 @@ def parse_era_year(text: str) -> ParsedBuildYear:
         raise YearInputError("error_era")
 
     era_number_text = match.group(2)
-    era_number = 1 if era_number_text == "元" else int(era_number_text)
+    era_number = 1 if era_number_text == UI_TEXT["era_first_year"] else int(era_number_text)
     if era_number < 1:
         raise YearInputError("error_format")
 
@@ -218,7 +219,7 @@ def format_japanese_era(western_year: int, preferred_era: str | None = None) -> 
         raise YearInputError("error_format")
 
     era_number = western_year - era.start_year + 1
-    number_text = "元" if era_number == 1 else str(era_number)
+    number_text = UI_TEXT["era_first_year"] if era_number == 1 else str(era_number)
     return f"{era.name}{number_text}年"
 
 

@@ -1,0 +1,4 @@
+- FAX送付状PDF作成アプリ
+- 送信先・FAX情報・送信内容に対応
+- A4縦PDF出力
+- Windows向けexe

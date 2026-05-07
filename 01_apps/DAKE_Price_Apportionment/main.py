@@ -38,7 +38,6 @@ UI_TEXT = {
     "button_calculate": "計算する",
     "button_reset": "リセット",
     "button_copy_result": "結果をコピー",
-    "button_copy_contract": "売契用にコピー",
     "button_open_print": "印刷用を開く",
     "status_display": "状態: {value}",
     "status_idle": "未計算",
@@ -67,45 +66,20 @@ UI_TEXT = {
         "最終的な判断は税理士等の専門家にご確認ください。"
     ),
     "copy_result_template": (
-        "土地価格：{land_price}\n"
-        "建物価格（税込）：{building_price_gross}\n"
-        "建物価格（税抜）：{building_price_net}\n"
-        "うち消費税額：{building_tax}"
-    ),
-    "copy_contract_template": (
-        "売買代金総額 金{sale_price}\n"
-        "内訳：\n"
-        "土地価格 金{land_price}\n"
-        "建物価格 金{building_price_gross}\n"
-        "うち消費税額 金{building_tax}"
-    ),
-    "copy_contract_template_without_tax": (
-        "売買代金総額 金{sale_price}\n"
-        "内訳：\n"
-        "土地価格 金{land_price}\n"
-        "建物価格 金{building_price_gross}"
+        "{heading}\n"
+        "{land_ratio_label}\t{land_ratio}\n"
+        "{building_ratio_label}\t{building_ratio}\n"
+        "{land_price_label}\t{land_price}\n"
+        "{building_price_gross_label}\t{building_price_gross}\n"
+        "{building_price_net_label}\t{building_price_net}\n"
+        "{building_tax_label}\t{building_tax}"
     ),
     "footer_series": "シンプルそれDAKEシリーズ / 止まらない、迷わない、すぐ終わる。",
     "footer_estimate": "戸建買取査定",
     "footer_instagram": "Instagram",
     "footer_separator": " ｜ ",
     "footer_copyright": COPYRIGHT,
-    "print_title": "不動産売買価格 按分計算書",
-    "print_created_at": "作成日",
-    "print_input_values": "入力値",
-    "print_reference_results": "参考計算結果",
-    "print_contract_text": "売契転記用文面",
-    "print_disclaimer": "免責事項",
-    "print_handwrite_confirm": "【確認欄】",
-    "print_handwrite_checker": "確認者：",
-    "print_handwrite_date": "確認日：",
-    "print_handwrite_memo": "【メモ欄】",
-    "print_handwrite_check": "【検算欄】",
-    "print_tax_calculation": "消費税計算",
-    "print_tax_calculation_on": "する",
-    "print_tax_calculation_off": "しない",
-    "print_contract_total": "売買代金総額",
-    "print_contract_breakdown": "内訳",
+    "print_title": "参考計算結果",
 }
 
 LINK_TARGETS = {
@@ -373,7 +347,7 @@ class PriceApportionmentApp:
         row += 1
         button_row = tk.Frame(content, bg=COLORS["card"])
         button_row.grid(row=row, column=0, columnspan=4, sticky="ew", pady=(18, 0))
-        for index in range(5):
+        for index in range(4):
             button_row.grid_columnconfigure(index, weight=1)
 
         calculate_button = self._create_button(
@@ -398,21 +372,14 @@ class PriceApportionmentApp:
         )
         copy_result_button.grid(row=0, column=2, sticky="ew", padx=8)
 
-        copy_contract_button = self._create_button(
-            button_row,
-            UI_TEXT["button_copy_contract"],
-            self._copy_contract_text,
-        )
-        copy_contract_button.grid(row=0, column=3, sticky="ew", padx=8)
-
         print_button = self._create_button(
             button_row,
             UI_TEXT["button_open_print"],
             self._open_print_html,
         )
-        print_button.grid(row=0, column=4, sticky="ew", padx=(8, 0))
+        print_button.grid(row=0, column=3, sticky="ew", padx=(8, 0))
 
-        self.action_buttons = [copy_result_button, copy_contract_button, print_button]
+        self.action_buttons = [copy_result_button, print_button]
         self._toggle_action_buttons(False)
 
     def _build_result_section(self, parent: tk.Frame) -> None:
@@ -732,20 +699,7 @@ class PriceApportionmentApp:
             self.error_var.set(UI_TEXT["error_copy_unavailable"])
             self._set_status("status_input_error")
             return
-        payload = UI_TEXT["copy_result_template"].format(
-            land_price=self._format_currency(self.last_result.land_price),
-            building_price_gross=self._format_currency(self.last_result.building_price_gross),
-            building_price_net=self._format_optional_currency(self.last_result.building_price_net),
-            building_tax=self._format_optional_currency(self.last_result.building_tax),
-        )
-        self._copy_to_clipboard(payload)
-
-    def _copy_contract_text(self) -> None:
-        if self.last_result is None:
-            self.error_var.set(UI_TEXT["error_copy_unavailable"])
-            self._set_status("status_input_error")
-            return
-        payload = self._build_contract_copy_text(self.last_result)
+        payload = self._build_result_copy_text(self.last_result)
         self._copy_to_clipboard(payload)
 
     def _copy_to_clipboard(self, payload: str) -> None:
@@ -779,31 +733,7 @@ class PriceApportionmentApp:
         return output_directory
 
     def _build_print_html(self, result: CalculationResult) -> str:
-        created_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        disclaimer_html = html.escape(UI_TEXT["disclaimer_text"]).replace("\n", "<br>")
-        contract_text = html.escape(self._build_contract_copy_text(result)).replace("\n", "<br>")
-        tax_state = (
-            UI_TEXT["print_tax_calculation_on"]
-            if result.tax_enabled
-            else UI_TEXT["print_tax_calculation_off"]
-        )
-        input_rows = [
-            (UI_TEXT["label_sale_price"], self._format_currency(result.sale_price)),
-            (UI_TEXT["label_land_evaluation"], self._format_currency(result.land_evaluation)),
-            (UI_TEXT["label_building_evaluation"], self._format_currency(result.building_evaluation)),
-            (UI_TEXT["label_tax_rate"], self._format_tax_rate(result.tax_rate)),
-            (UI_TEXT["print_tax_calculation"], tax_state),
-        ]
-        result_rows = [
-            (UI_TEXT["result_land_ratio"], self._format_ratio(result.land_ratio)),
-            (UI_TEXT["result_building_ratio"], self._format_ratio(result.building_ratio)),
-            (UI_TEXT["result_land_price"], self._format_currency(result.land_price)),
-            (UI_TEXT["result_building_price_gross"], self._format_currency(result.building_price_gross)),
-            (UI_TEXT["result_building_price_net"], self._format_optional_currency(result.building_price_net)),
-            (UI_TEXT["result_building_tax"], self._format_optional_currency(result.building_tax)),
-        ]
-        input_table = self._build_print_table_rows(input_rows)
-        result_table = self._build_print_table_rows(result_rows)
+        result_table = self._build_print_table_rows(self._build_result_rows(result))
         return f"""<!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -830,7 +760,6 @@ class PriceApportionmentApp:
     }}
 
     h1,
-    h2,
     p {{
       margin: 0;
       font-weight: 400;
@@ -841,17 +770,8 @@ class PriceApportionmentApp:
       margin-bottom: 10px;
     }}
 
-    h2 {{
-      font-size: 14px;
-      margin-bottom: 8px;
-    }}
-
     .page {{
       width: 100%;
-    }}
-
-    .section {{
-      margin-top: 18px;
     }}
 
     table {{
@@ -867,31 +787,6 @@ class PriceApportionmentApp:
       text-align: left;
       vertical-align: top;
       font-weight: 400;
-    }}
-
-    .plain-block {{
-      border: 1px solid #000000;
-      padding: 10px;
-      white-space: pre-line;
-      min-height: 88px;
-    }}
-
-    .line {{
-      border-bottom: 1px solid #000000;
-      min-height: 28px;
-      margin-top: 8px;
-    }}
-
-    .memo-box {{
-      border: 1px solid #000000;
-      min-height: 120px;
-      margin-top: 8px;
-    }}
-
-    .check-box {{
-      border: 1px solid #000000;
-      min-height: 120px;
-      margin-top: 8px;
     }}
 
     @media print {{
@@ -911,53 +806,11 @@ class PriceApportionmentApp:
 <body>
   <main class="page">
     <h1>{html.escape(UI_TEXT["print_title"])}</h1>
-    <p>{html.escape(UI_TEXT["print_created_at"])}: {html.escape(created_at)}</p>
-
-    <section class="section">
-      <h2>{html.escape(UI_TEXT["print_input_values"])}</h2>
-      <table>
-        <tbody>
-          {input_table}
-        </tbody>
-      </table>
-    </section>
-
-    <section class="section">
-      <h2>{html.escape(UI_TEXT["print_reference_results"])}</h2>
-      <table>
-        <tbody>
-          {result_table}
-        </tbody>
-      </table>
-    </section>
-
-    <section class="section">
-      <h2>{html.escape(UI_TEXT["print_contract_text"])}</h2>
-      <div class="plain-block">{contract_text}</div>
-    </section>
-
-    <section class="section">
-      <h2>{html.escape(UI_TEXT["print_handwrite_confirm"])}</h2>
-      <p>{html.escape(UI_TEXT["print_handwrite_checker"])}</p>
-      <div class="line"></div>
-      <p>{html.escape(UI_TEXT["print_handwrite_date"])}</p>
-      <div class="line"></div>
-    </section>
-
-    <section class="section">
-      <h2>{html.escape(UI_TEXT["print_handwrite_memo"])}</h2>
-      <div class="memo-box"></div>
-    </section>
-
-    <section class="section">
-      <h2>{html.escape(UI_TEXT["print_handwrite_check"])}</h2>
-      <div class="check-box"></div>
-    </section>
-
-    <section class="section">
-      <h2>{html.escape(UI_TEXT["print_disclaimer"])}</h2>
-      <p>{disclaimer_html}</p>
-    </section>
+    <table>
+      <tbody>
+        {result_table}
+      </tbody>
+    </table>
   </main>
 </body>
 </html>
@@ -974,19 +827,33 @@ class PriceApportionmentApp:
             )
         return "".join(html_rows)
 
-    def _build_contract_copy_text(self, result: CalculationResult) -> str:
-        if result.tax_enabled and result.building_tax is not None:
-            return UI_TEXT["copy_contract_template"].format(
-                sale_price=self._format_number(result.sale_price),
-                land_price=self._format_number(result.land_price),
-                building_price_gross=self._format_number(result.building_price_gross),
-                building_tax=self._format_number(result.building_tax),
-            )
-        return UI_TEXT["copy_contract_template_without_tax"].format(
-            sale_price=self._format_number(result.sale_price),
-            land_price=self._format_number(result.land_price),
-            building_price_gross=self._format_number(result.building_price_gross),
+    def _build_result_copy_text(self, result: CalculationResult) -> str:
+        rows = self._build_result_rows(result)
+        return UI_TEXT["copy_result_template"].format(
+            heading=UI_TEXT["print_title"],
+            land_ratio_label=rows[0][0],
+            land_ratio=rows[0][1],
+            building_ratio_label=rows[1][0],
+            building_ratio=rows[1][1],
+            land_price_label=rows[2][0],
+            land_price=rows[2][1],
+            building_price_gross_label=rows[3][0],
+            building_price_gross=rows[3][1],
+            building_price_net_label=rows[4][0],
+            building_price_net=rows[4][1],
+            building_tax_label=rows[5][0],
+            building_tax=rows[5][1],
         )
+
+    def _build_result_rows(self, result: CalculationResult) -> list[tuple[str, str]]:
+        return [
+            (UI_TEXT["result_land_ratio"], self._format_ratio(result.land_ratio)),
+            (UI_TEXT["result_building_ratio"], self._format_ratio(result.building_ratio)),
+            (UI_TEXT["result_land_price"], self._format_currency(result.land_price)),
+            (UI_TEXT["result_building_price_gross"], self._format_currency(result.building_price_gross)),
+            (UI_TEXT["result_building_price_net"], self._format_optional_currency(result.building_price_net)),
+            (UI_TEXT["result_building_tax"], self._format_optional_currency(result.building_tax)),
+        ]
 
     def _parse_integer(self, raw_value: str, field_name: str) -> int:
         normalized = raw_value.replace(",", "").strip()

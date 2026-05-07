@@ -49,3 +49,31 @@ build.bat
 - 2026-05-06: DAKE共通仕様に合わせて、ヘッダー、フッター、フォント、UI_TEXT、共通アイコン、build.bat、.gitignore を確認しました。
 - フッターは広幅時に左右2ブロック、狭幅時に中央寄せ2段構成へ切り替わるように調整しています。
 - `build.bat` によるEXE化と、`dist/DakeFolder_List.exe` の起動確認を実施済みです。
+
+## DAKE_META
+
+```json
+{
+  "app_key": "dake_folder_list",
+  "display_name": "Dakeフォルダ一覧",
+  "launcher_title": "フォルダ一覧",
+  "launcher_description": "フォルダ構成とファイル一覧を表示・コピー・保存します。",
+  "site_title": "Dakeフォルダ一覧",
+  "site_description": "指定フォルダの構成、ファイル名、拡張子、サイズ、更新日時を一覧化できるWindows向けアプリです。",
+  "update_summary": "READMEメタ情報とRelease本文を整備。スクリーンショットをassets/screenshot.webpに作成。",
+  "folder_name": "DAKE_Folder_List",
+  "exe_name": "DakeFolder_List.exe",
+  "release_url": "",
+  "screenshot_path": "assets/screenshot.webp",
+  "status": "available",
+  "show_in_launcher": true,
+  "show_on_site": true
+}
+```
+
+## RELEASE_BODY
+
+- フォルダ一覧作成アプリ
+- フォルダ構成とファイル情報を表示
+- コピー・txt保存に対応
+- Windows向けexe

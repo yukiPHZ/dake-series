@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import sys
 import tkinter as tk
 import webbrowser
 from dataclasses import dataclass
@@ -32,12 +33,16 @@ UI_TEXT = {
     "toggle_on": "ON",
     "toggle_off": "OFF",
     "result_fixed_tax": "固定資産税",
+    "result_fixed_tax_monthly": "固定資産税 月額相当",
     "result_city_tax": "都市計画税",
+    "result_city_tax_monthly": "都市計画税 月額相当",
     "result_total_tax": "合計年税額",
     "result_monthly_tax": "月額目安",
     "status_idle": "入力してください",
     "status_ready": "概算を表示しています",
     "status_error": "入力内容を確認してください",
+    "status_copied": "計算結果をコピーしました",
+    "status_copy_unavailable": "コピーできる計算結果がありません",
     "error_required_land": "土地評価額を入力してください",
     "error_required_building": "建物評価額を入力してください",
     "error_required_fixed_rate": "固定資産税率を入力してください",
@@ -51,6 +56,18 @@ UI_TEXT = {
     "footer_link_2": "Instagram",
     "footer_separator": " ｜ ",
     "footer_copyright": COPYRIGHT,
+    "button_copy_result": "計算結果をコピー",
+    "copy_result_title": "固定資産税・都市計画税 概算結果",
+    "copy_section_input": "【入力内容】",
+    "copy_section_result": "【計算結果】",
+    "copy_land_value": "土地評価額",
+    "copy_building_value": "建物評価額",
+    "copy_residential_type": "住宅用地区分",
+    "copy_city_tax_enabled": "都市計画税",
+    "copy_on": "ON",
+    "copy_off": "OFF",
+    "copy_colon": "：",
+    "copy_label_separator": "　",
     "unit_yen": "円",
     "unit_percent": "%",
     "value_placeholder": "—",
@@ -67,24 +84,25 @@ TEXT_COLOR = "#1E2430"
 MUTED_COLOR = "#667085"
 BORDER_COLOR = "#E6EAF0"
 ACCENT_COLOR = "#2F6FED"
+FOCUS_COLOR = "#7AA7FF"
 ERROR_COLOR = "#D92D20"
 
 DECIMAL_ONE = Decimal("1")
 DECIMAL_TWELVE = Decimal("12")
 DECIMAL_HUNDRED = Decimal("100")
+COMMON_ICON_RELATIVE = os.path.join("..", "..", "02_assets", "dake_icon.ico")
 ICON_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
-    "..",
-    "..",
-    "02_assets",
-    "dake_icon.ico",
+    COMMON_ICON_RELATIVE,
 )
 
 
 @dataclass
 class TaxBreakdown:
     fixed_tax: int
+    fixed_tax_monthly: int
     city_tax: int
+    city_tax_monthly: int
     total_tax: int
     monthly_tax: int
 
@@ -164,13 +182,17 @@ def calculate_tax_breakdown(
         (land_city_base + building_value) * city_rate if city_tax_enabled else Decimal("0")
     )
     total_tax_raw = fixed_tax_raw + city_tax_raw
-    monthly_tax_raw = total_tax_raw / DECIMAL_TWELVE
+    fixed_tax = round_yen(fixed_tax_raw)
+    city_tax = round_yen(city_tax_raw)
+    total_tax = round_yen(total_tax_raw)
 
     return TaxBreakdown(
-        fixed_tax=round_yen(fixed_tax_raw),
-        city_tax=round_yen(city_tax_raw),
-        total_tax=round_yen(total_tax_raw),
-        monthly_tax=round_yen(monthly_tax_raw),
+        fixed_tax=fixed_tax,
+        fixed_tax_monthly=round_yen(Decimal(fixed_tax) / DECIMAL_TWELVE),
+        city_tax=city_tax,
+        city_tax_monthly=round_yen(Decimal(city_tax) / DECIMAL_TWELVE),
+        total_tax=total_tax,
+        monthly_tax=round_yen(Decimal(total_tax) / DECIMAL_TWELVE),
     )
 
 
@@ -178,22 +200,35 @@ def format_yen(value: int) -> str:
     return f"{value:,}{UI_TEXT['unit_yen']}"
 
 
+def get_common_icon_candidates() -> list[str]:
+    app_dir = os.path.dirname(os.path.abspath(__file__))
+    candidates = [os.path.normpath(os.path.join(app_dir, COMMON_ICON_RELATIVE))]
+
+    if getattr(sys, "frozen", False):
+        exe_dir = os.path.dirname(os.path.abspath(sys.executable))
+        frozen_app_dir = os.path.dirname(exe_dir) if os.path.basename(exe_dir).lower() == "dist" else exe_dir
+        candidates.append(os.path.normpath(os.path.join(frozen_app_dir, COMMON_ICON_RELATIVE)))
+
+    candidates.append(os.path.normpath(os.path.abspath(COMMON_ICON_RELATIVE)))
+    return list(dict.fromkeys(candidates))
+
+
 class FixedTaxApp(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.pending_refresh: Optional[str] = None
+        self.copy_status_reset_job: Optional[str] = None
+        self.last_result: Optional[TaxBreakdown] = None
         self.font_family = choose_font_family(self)
         self.configure_base_fonts()
 
         self.title(WINDOW_TITLE)
-        self.geometry("540x720")
+        self.geometry("660x760")
+        self.minsize(640, 740)
         self.resizable(False, False)
         self.configure(bg=BG_COLOR)
 
-        try:
-            self.iconbitmap(ICON_PATH)
-        except Exception:
-            pass
+        self.apply_window_icon()
 
         self.land_value_var = tk.StringVar()
         self.building_value_var = tk.StringVar()
@@ -206,7 +241,9 @@ class FixedTaxApp(tk.Tk):
 
         self.result_vars = {
             "fixed_tax": tk.StringVar(value=UI_TEXT["value_placeholder"]),
+            "fixed_tax_monthly": tk.StringVar(value=UI_TEXT["value_placeholder"]),
             "city_tax": tk.StringVar(value=UI_TEXT["value_placeholder"]),
+            "city_tax_monthly": tk.StringVar(value=UI_TEXT["value_placeholder"]),
             "total_tax": tk.StringVar(value=UI_TEXT["value_placeholder"]),
             "monthly_tax": tk.StringVar(value=UI_TEXT["value_placeholder"]),
         }
@@ -222,6 +259,16 @@ class FixedTaxApp(tk.Tk):
             try:
                 tkfont.nametofont(font_name).configure(family=self.font_family)
             except tk.TclError:
+                continue
+
+    def apply_window_icon(self) -> None:
+        for icon_path in get_common_icon_candidates():
+            if not os.path.exists(icon_path):
+                continue
+            try:
+                self.iconbitmap(icon_path)
+                return
+            except Exception:
                 continue
 
     def configure_styles(self) -> None:
@@ -274,7 +321,19 @@ class FixedTaxApp(tk.Tk):
             "ResultValue.TLabel",
             background=CARD_COLOR,
             foreground=TEXT_COLOR,
-            font=(self.font_family, 15, "bold"),
+            font=(self.font_family, 13, "bold"),
+        )
+        self.style.configure(
+            "MonthlyName.TLabel",
+            background=CARD_COLOR,
+            foreground=MUTED_COLOR,
+            font=(self.font_family, 10),
+        )
+        self.style.configure(
+            "MonthlyValue.TLabel",
+            background=CARD_COLOR,
+            foreground=MUTED_COLOR,
+            font=(self.font_family, 12, "bold"),
         )
         self.style.configure(
             "TotalName.TLabel",
@@ -286,7 +345,7 @@ class FixedTaxApp(tk.Tk):
             "TotalValue.TLabel",
             background=CARD_COLOR,
             foreground=ACCENT_COLOR,
-            font=(self.font_family, 16, "bold"),
+            font=(self.font_family, 15, "bold"),
         )
         self.style.configure(
             "App.TEntry",
@@ -295,15 +354,15 @@ class FixedTaxApp(tk.Tk):
             bordercolor=BORDER_COLOR,
             lightcolor=BORDER_COLOR,
             darkcolor=BORDER_COLOR,
-            padding=(10, 7),
+            padding=(10, 6),
             relief="solid",
             font=(self.font_family, 10),
         )
         self.style.map(
             "App.TEntry",
-            bordercolor=[("focus", ACCENT_COLOR)],
-            lightcolor=[("focus", ACCENT_COLOR)],
-            darkcolor=[("focus", ACCENT_COLOR)],
+            bordercolor=[("focus", FOCUS_COLOR)],
+            lightcolor=[("focus", FOCUS_COLOR)],
+            darkcolor=[("focus", FOCUS_COLOR)],
         )
         self.style.configure(
             "App.TRadiobutton",
@@ -316,6 +375,21 @@ class FixedTaxApp(tk.Tk):
             background=CARD_COLOR,
             foreground=TEXT_COLOR,
             font=(self.font_family, 10, "bold"),
+        )
+        self.style.configure(
+            "Copy.TButton",
+            background=CARD_COLOR,
+            foreground=ACCENT_COLOR,
+            bordercolor=BORDER_COLOR,
+            lightcolor=CARD_COLOR,
+            darkcolor=CARD_COLOR,
+            font=(self.font_family, 10, "bold"),
+            padding=(12, 6),
+        )
+        self.style.map(
+            "Copy.TButton",
+            background=[("active", "#EAF2FF")],
+            foreground=[("active", ACCENT_COLOR)],
         )
         self.style.configure(
             "StatusIdle.TLabel",
@@ -339,7 +413,7 @@ class FixedTaxApp(tk.Tk):
             "Disclaimer.TLabel",
             background=CARD_COLOR,
             foreground=MUTED_COLOR,
-            font=(self.font_family, 9),
+            font=(self.font_family, 7),
         )
         self.style.configure(
             "Footer.TLabel",
@@ -356,7 +430,7 @@ class FixedTaxApp(tk.Tk):
         self.style.configure("Card.TSeparator", background=BORDER_COLOR)
 
     def build_ui(self) -> None:
-        container = ttk.Frame(self, style="App.TFrame", padding=18)
+        container = ttk.Frame(self, style="App.TFrame", padding=(18, 14, 18, 10))
         container.pack(fill="both", expand=True)
 
         self.build_header_card(container)
@@ -365,47 +439,49 @@ class FixedTaxApp(tk.Tk):
         self.build_footer(container)
 
     def build_header_card(self, parent: ttk.Frame) -> None:
-        card = ttk.Frame(parent, style="Card.TFrame", padding=18)
-        card.pack(fill="x", pady=(0, 14))
+        card = ttk.Frame(parent, style="Card.TFrame", padding=(16, 12))
+        card.pack(fill="x", pady=(0, 10))
 
         ttk.Label(card, text=UI_TEXT["main_title"], style="Title.TLabel").pack(anchor="w")
         ttk.Label(
             card,
             text=UI_TEXT["main_description"],
             style="Body.TLabel",
-            wraplength=390,
+            wraplength=580,
             justify="left",
-        ).pack(anchor="w", pady=(8, 0))
+        ).pack(anchor="w", pady=(5, 0))
 
     def build_input_card(self, parent: ttk.Frame) -> None:
-        card = ttk.Frame(parent, style="Card.TFrame", padding=18)
-        card.pack(fill="x", pady=(0, 14))
+        card = ttk.Frame(parent, style="Card.TFrame", padding=(16, 12))
+        card.pack(fill="x", pady=(0, 10))
         card.columnconfigure(1, weight=1)
 
         ttk.Label(card, text=UI_TEXT["section_input"], style="Section.TLabel").grid(
             row=0, column=0, columnspan=3, sticky="w"
         )
 
-        self.add_entry_row(
+        self.land_entry = self.add_entry_row(
             card,
             row=1,
             label_text=UI_TEXT["label_land_value"],
             text_variable=self.land_value_var,
             unit_text=UI_TEXT["unit_yen"],
         )
-        self.add_entry_row(
+        self.building_entry = self.add_entry_row(
             card,
             row=2,
             label_text=UI_TEXT["label_building_value"],
             text_variable=self.building_value_var,
             unit_text=UI_TEXT["unit_yen"],
         )
+        self.land_entry.bind("<FocusOut>", lambda _event: self.format_amount_input(self.land_value_var))
+        self.building_entry.bind("<FocusOut>", lambda _event: self.format_amount_input(self.building_value_var))
 
         ttk.Label(card, text=UI_TEXT["label_residential_type"], style="Field.TLabel").grid(
-            row=3, column=0, sticky="nw", pady=(16, 0)
+            row=3, column=0, sticky="nw", pady=(12, 0)
         )
         radio_group = ttk.Frame(card, style="Card.TFrame")
-        radio_group.grid(row=3, column=1, columnspan=2, sticky="w", pady=(16, 0))
+        radio_group.grid(row=3, column=1, columnspan=2, sticky="w", pady=(12, 0))
         radio_items = [
             ("none", UI_TEXT["radio_none"]),
             ("small", UI_TEXT["radio_small"]),
@@ -418,17 +494,17 @@ class FixedTaxApp(tk.Tk):
                 value=value,
                 variable=self.residential_type_var,
                 style="App.TRadiobutton",
-            ).grid(row=index, column=0, sticky="w", pady=(0 if index == 0 else 6, 0))
+            ).grid(row=0, column=index, sticky="w", padx=(0 if index == 0 else 16, 0))
 
         ttk.Label(card, text=UI_TEXT["label_city_tax_enabled"], style="Field.TLabel").grid(
-            row=4, column=0, sticky="w", pady=(16, 0)
+            row=4, column=0, sticky="w", pady=(12, 0)
         )
         ttk.Checkbutton(
             card,
             textvariable=self.city_toggle_var,
             variable=self.city_tax_enabled_var,
             style="App.TCheckbutton",
-        ).grid(row=4, column=1, columnspan=2, sticky="w", pady=(16, 0))
+        ).grid(row=4, column=1, columnspan=2, sticky="w", pady=(12, 0))
 
         self.add_entry_row(
             card,
@@ -446,19 +522,19 @@ class FixedTaxApp(tk.Tk):
         )
 
         ttk.Label(card, text=UI_TEXT["label_status"], style="Field.TLabel").grid(
-            row=7, column=0, sticky="w", pady=(18, 0)
+            row=7, column=0, sticky="w", pady=(12, 0)
         )
         self.status_label = ttk.Label(
             card,
             textvariable=self.status_var,
             style="StatusIdle.TLabel",
-            wraplength=300,
+            wraplength=450,
             justify="left",
         )
-        self.status_label.grid(row=7, column=1, columnspan=2, sticky="w", pady=(18, 0))
+        self.status_label.grid(row=7, column=1, columnspan=2, sticky="w", pady=(12, 0))
 
     def build_result_card(self, parent: ttk.Frame) -> None:
-        card = ttk.Frame(parent, style="Card.TFrame", padding=18)
+        card = ttk.Frame(parent, style="Card.TFrame", padding=(16, 12))
         card.pack(fill="x")
         card.columnconfigure(1, weight=1)
 
@@ -468,44 +544,56 @@ class FixedTaxApp(tk.Tk):
 
         rows = [
             ("result_fixed_tax", "fixed_tax", "ResultName.TLabel", "ResultValue.TLabel"),
+            ("result_fixed_tax_monthly", "fixed_tax_monthly", "MonthlyName.TLabel", "MonthlyValue.TLabel"),
             ("result_city_tax", "city_tax", "ResultName.TLabel", "ResultValue.TLabel"),
+            ("result_city_tax_monthly", "city_tax_monthly", "MonthlyName.TLabel", "MonthlyValue.TLabel"),
             ("result_total_tax", "total_tax", "TotalName.TLabel", "TotalValue.TLabel"),
             ("result_monthly_tax", "monthly_tax", "ResultName.TLabel", "ResultValue.TLabel"),
         ]
 
-        for row_index, (label_key, value_key, name_style, value_style) in enumerate(rows, start=1):
-            if row_index == 3:
+        content_row = 1
+        for index, (label_key, value_key, name_style, value_style) in enumerate(rows):
+            if index in (2, 4):
                 ttk.Separator(card, style="Card.TSeparator").grid(
-                    row=row_index, column=0, columnspan=2, sticky="ew", pady=(6, 10)
+                    row=content_row, column=0, columnspan=2, sticky="ew", pady=(4, 8)
                 )
-                content_row = row_index + 1
-            else:
-                content_row = row_index if row_index < 3 else row_index + 1
+                content_row += 1
+            row_pady = (0, 7) if value_key in ("fixed_tax", "city_tax") else (0, 6)
 
             ttk.Label(card, text=UI_TEXT[label_key], style=name_style).grid(
-                row=content_row, column=0, sticky="w", pady=(0, 10)
+                row=content_row, column=0, sticky="w", pady=row_pady
             )
             ttk.Label(
                 card,
                 textvariable=self.result_vars[value_key],
                 style=value_style,
                 anchor="e",
-                width=15,
-            ).grid(row=content_row, column=1, sticky="e", pady=(0, 10))
+                width=16,
+            ).grid(row=content_row, column=1, sticky="e", pady=row_pady)
+            content_row += 1
+
+        ttk.Button(
+            card,
+            text=UI_TEXT["button_copy_result"],
+            style="Copy.TButton",
+            command=self.copy_result,
+        ).grid(row=content_row, column=0, columnspan=2, sticky="ew", pady=(2, 8))
+        content_row += 1
 
         ttk.Separator(card, style="Card.TSeparator").grid(
-            row=6, column=0, columnspan=2, sticky="ew", pady=(4, 12)
+            row=content_row, column=0, columnspan=2, sticky="ew", pady=(0, 8)
         )
+        content_row += 1
         ttk.Label(
             card,
             text=UI_TEXT["disclaimer"],
             style="Disclaimer.TLabel",
-            wraplength=390,
+            wraplength=580,
             justify="left",
-        ).grid(row=7, column=0, columnspan=2, sticky="w")
+        ).grid(row=content_row, column=0, columnspan=2, sticky="w")
 
     def build_footer(self, parent: ttk.Frame) -> None:
-        footer = ttk.Frame(parent, style="App.TFrame", padding=(0, 12, 0, 0))
+        footer = ttk.Frame(parent, style="App.TFrame", padding=(0, 8, 0, 0))
         footer.pack(fill="x")
 
         thought_row = tk.Frame(footer, bg=BG_COLOR)
@@ -516,7 +604,7 @@ class FixedTaxApp(tk.Tk):
         self.add_footer_text(thought_row, UI_TEXT["footer_subtitle"], font_size=8)
 
         link_row = tk.Frame(footer, bg=BG_COLOR)
-        link_row.pack(anchor="center", pady=(4, 0))
+        link_row.pack(anchor="center", pady=(3, 0))
 
         self.add_footer_link(link_row, "footer_link_1")
         self.add_footer_text(link_row, UI_TEXT["footer_separator"], font_size=8)
@@ -558,21 +646,23 @@ class FixedTaxApp(tk.Tk):
         label_text: str,
         text_variable: tk.StringVar,
         unit_text: str,
-    ) -> None:
-        pady = (16, 0) if row > 1 else (16, 0)
+    ) -> ttk.Entry:
+        pady = (10, 0)
         ttk.Label(parent, text=label_text, style="Field.TLabel").grid(
             row=row, column=0, sticky="w", pady=pady
         )
-        ttk.Entry(
+        entry = ttk.Entry(
             parent,
             textvariable=text_variable,
             justify="right",
             width=24,
             style="App.TEntry",
-        ).grid(row=row, column=1, sticky="ew", pady=pady, padx=(0, 8))
+        )
+        entry.grid(row=row, column=1, sticky="ew", pady=pady, padx=(0, 8))
         ttk.Label(parent, text=unit_text, style="Unit.TLabel").grid(
             row=row, column=2, sticky="w", pady=pady
         )
+        return entry
 
     def bind_live_updates(self) -> None:
         variables = [
@@ -587,6 +677,7 @@ class FixedTaxApp(tk.Tk):
             variable.trace_add("write", self.schedule_refresh)
 
     def schedule_refresh(self, *_args: object) -> None:
+        self.cancel_copy_status_reset()
         self.update_city_toggle_text()
         if self.pending_refresh is not None:
             self.after_cancel(self.pending_refresh)
@@ -611,11 +702,122 @@ class FixedTaxApp(tk.Tk):
             self.set_status(UI_TEXT["status_error"], "error")
             return
 
+        self.last_result = result
         self.result_vars["fixed_tax"].set(format_yen(result.fixed_tax))
+        self.result_vars["fixed_tax_monthly"].set(format_yen(result.fixed_tax_monthly))
         self.result_vars["city_tax"].set(format_yen(result.city_tax))
+        self.result_vars["city_tax_monthly"].set(format_yen(result.city_tax_monthly))
         self.result_vars["total_tax"].set(format_yen(result.total_tax))
         self.result_vars["monthly_tax"].set(format_yen(result.monthly_tax))
         self.set_status(UI_TEXT["status_ready"], "ready")
+
+    def format_amount_input(self, variable: tk.StringVar) -> None:
+        cleaned = normalize_numeric_text(variable.get())
+        if not cleaned:
+            return
+
+        try:
+            value = Decimal(cleaned)
+        except InvalidOperation:
+            return
+
+        if value < 0 or not value.is_finite():
+            return
+
+        text_value = format(value, "f")
+        if "." not in text_value:
+            variable.set(f"{int(value):,}")
+            return
+
+        integer_part, decimal_part = text_value.split(".", 1)
+        formatted_integer = f"{int(integer_part):,}"
+        decimal_part = decimal_part.rstrip("0")
+        variable.set(f"{formatted_integer}.{decimal_part}" if decimal_part else formatted_integer)
+
+    def format_decimal_text(self, value: Decimal) -> str:
+        text_value = format(value.normalize(), "f")
+        if "." not in text_value:
+            return text_value
+        return text_value.rstrip("0").rstrip(".")
+
+    def format_decimal_yen(self, value: Decimal) -> str:
+        text_value = format(value, "f")
+        if "." not in text_value:
+            return f"{int(value):,}{UI_TEXT['unit_yen']}"
+
+        integer_part, decimal_part = text_value.split(".", 1)
+        formatted_integer = f"{int(integer_part):,}"
+        decimal_part = decimal_part.rstrip("0")
+        amount = f"{formatted_integer}.{decimal_part}" if decimal_part else formatted_integer
+        return f"{amount}{UI_TEXT['unit_yen']}"
+
+    def get_residential_type_text(self) -> str:
+        labels = {
+            "none": UI_TEXT["radio_none"],
+            "small": UI_TEXT["radio_small"],
+            "general": UI_TEXT["radio_general"],
+        }
+        return labels.get(self.residential_type_var.get(), UI_TEXT["radio_none"])
+
+    def copy_result(self) -> None:
+        if self.last_result is None or any(
+            variable.get() == UI_TEXT["value_placeholder"] for variable in self.result_vars.values()
+        ):
+            self.cancel_copy_status_reset()
+            self.set_status(UI_TEXT["status_copy_unavailable"], "error")
+            return
+
+        try:
+            values = self.collect_inputs()
+        except InputValidationError:
+            self.cancel_copy_status_reset()
+            self.set_status(UI_TEXT["status_copy_unavailable"], "error")
+            return
+
+        self.cancel_copy_status_reset()
+        colon = UI_TEXT["copy_colon"]
+        result = self.last_result
+        lines = [
+            UI_TEXT["copy_result_title"],
+            "",
+            UI_TEXT["copy_section_input"],
+            f"{UI_TEXT['copy_land_value']}{colon}{self.format_decimal_yen(values['land_value'])}",
+            f"{UI_TEXT['copy_building_value']}{colon}{self.format_decimal_yen(values['building_value'])}",
+            f"{UI_TEXT['copy_residential_type']}{colon}{self.get_residential_type_text()}",
+            f"{UI_TEXT['copy_city_tax_enabled']}{colon}{UI_TEXT['copy_on'] if values['city_tax_enabled'] else UI_TEXT['copy_off']}",
+            f"{UI_TEXT['label_fixed_rate']}{colon}{self.format_decimal_text(values['fixed_rate_percent'])}{UI_TEXT['unit_percent']}",
+            f"{UI_TEXT['label_city_rate']}{colon}{self.format_decimal_text(values['city_rate_percent'])}{UI_TEXT['unit_percent']}",
+            "",
+            UI_TEXT["copy_section_result"],
+            f"{UI_TEXT['result_fixed_tax']}{colon}{format_yen(result.fixed_tax)}",
+            f"{UI_TEXT['result_fixed_tax_monthly']}{colon}{format_yen(result.fixed_tax_monthly)}",
+            f"{UI_TEXT['result_city_tax']}{colon}{format_yen(result.city_tax)}",
+            f"{UI_TEXT['result_city_tax_monthly']}{colon}{format_yen(result.city_tax_monthly)}",
+            f"{UI_TEXT['result_total_tax']}{colon}{format_yen(result.total_tax)}",
+            f"{UI_TEXT['result_monthly_tax']}{colon}{format_yen(result.monthly_tax)}",
+        ]
+        self.clipboard_clear()
+        self.clipboard_append("\n".join(lines))
+        self.set_status(UI_TEXT["status_copied"], "ready")
+        self.copy_status_reset_job = self.after(800, self.restore_ready_status_after_copy)
+
+    def cancel_copy_status_reset(self) -> None:
+        if self.copy_status_reset_job is None:
+            return
+        try:
+            self.after_cancel(self.copy_status_reset_job)
+        except tk.TclError:
+            pass
+        self.copy_status_reset_job = None
+
+    def restore_ready_status_after_copy(self) -> None:
+        self.copy_status_reset_job = None
+        try:
+            self.collect_inputs()
+        except InputValidationError:
+            return
+        if self.last_result is not None:
+            self.set_status(UI_TEXT["status_ready"], "ready")
 
     def collect_inputs(self) -> Dict[str, Any]:
         land_value = parse_non_negative_decimal(
@@ -649,6 +851,7 @@ class FixedTaxApp(tk.Tk):
         }
 
     def clear_results(self) -> None:
+        self.last_result = None
         for variable in self.result_vars.values():
             variable.set(UI_TEXT["value_placeholder"])
 

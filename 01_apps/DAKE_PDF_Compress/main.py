@@ -119,8 +119,8 @@ LINK_URLS = {
 FONT_CANDIDATES = ["BIZ UDPGothic", "Yu Gothic UI", "Meiryo"]
 COMMON_ICON_RELATIVE = Path("..") / ".." / "02_assets" / "dake_icon.ico"
 COMMON_ICON_FILENAME = "dake_icon.ico"
-WINDOW_SIZE = "860x620"
-WINDOW_MIN_SIZE = (780, 560)
+WINDOW_SIZE = "860x740"
+WINDOW_MIN_SIZE = (760, 720)
 QUEUE_POLL_INTERVAL_MS = 80
 LOW_REDUCTION_THRESHOLD = 1.0
 FOOTER_NARROW_WIDTH = 900
@@ -157,12 +157,32 @@ def app_dir() -> Path:
 
 
 def resource_icon_path() -> Path:
+    candidates: list[Path] = []
     if getattr(sys, "frozen", False):
         bundled = Path(getattr(sys, "_MEIPASS", app_dir())) / COMMON_ICON_FILENAME
-        if bundled.exists():
-            return bundled
-        return (Path(sys.executable).resolve().parent / COMMON_ICON_RELATIVE).resolve()
-    return (Path(__file__).resolve().parent / COMMON_ICON_RELATIVE).resolve()
+        exe_path = Path(sys.executable).resolve()
+        candidates.extend(
+            [
+                bundled,
+                (exe_path.parent / COMMON_ICON_RELATIVE).resolve(),
+                (exe_path.parents[3] / "02_assets" / COMMON_ICON_FILENAME).resolve()
+                if len(exe_path.parents) > 3
+                else bundled,
+            ]
+        )
+    else:
+        source_path = Path(__file__).resolve()
+        candidates.extend(
+            [
+                (source_path.parents[2] / "02_assets" / COMMON_ICON_FILENAME).resolve(),
+                (source_path.parent / COMMON_ICON_RELATIVE).resolve(),
+            ]
+        )
+
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return candidates[-1]
 
 
 def apply_window_icon(window: tk.Misc) -> None:

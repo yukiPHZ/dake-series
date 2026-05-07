@@ -24,11 +24,10 @@ COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
 
 UI_TEXT = {
     "display_name": "工程カレンダー",
-    "main_title": "工程カレンダーを作る",
-    "main_description": "現場名・期間・工程から、A4横のPDFを作成します。",
+    "main_title": "期間カレンダーを作る",
+    "main_description": "指定した期間の日付枠だけを、A4縦のPDFに並べます。",
     "section_site": "現場情報",
     "section_period": "期間と保存先",
-    "section_events": "工程入力",
     "label_site_name": "現場名",
     "label_branch_name": "支店名",
     "label_staff_name": "担当者名",
@@ -36,8 +35,6 @@ UI_TEXT = {
     "label_start_date": "開始日",
     "label_end_date": "終了日",
     "label_save_folder": "保存先",
-    "label_event_date": "日付",
-    "label_event_content": "内容",
     "date_hint": "例：2025/11/29",
     "button_select_folder": "選択",
     "button_execute": "PDF作成",
@@ -52,12 +49,10 @@ UI_TEXT = {
     "dialog_select_save_dir": "保存先フォルダを選択",
     "dialog_error_title": "入力エラー",
     "dialog_saved_title": "保存完了",
-    "dialog_saved_message": "工程カレンダーPDFを保存しました。\n\n{path}",
+    "dialog_saved_message": "期間カレンダーPDFを保存しました。\n\n{path}",
     "error_start_date": "開始日を正しく入力してください。",
     "error_end_date": "終了日を正しく入力してください。",
     "error_date_order": "終了日は開始日以降の日付にしてください。",
-    "error_event_date": "工程「{content}」の日付を正しく入力してください。",
-    "error_event_range": "工程「{content}」の日付は開始日〜終了日の範囲内で入力してください。",
     "error_save_folder": "保存先フォルダを選択してください。",
     "error_reportlab_missing": "PDF生成に必要な reportlab が見つかりません。reportlab をインストールしてください。",
     "footer_left": "シンプルそれDAKEシリーズ ｜ 止まらない、迷わない、すぐ終わる。",
@@ -65,32 +60,20 @@ UI_TEXT = {
     "footer_link_2": "Instagram",
     "footer_separator": " ｜ ",
     "footer_copyright": COPYRIGHT,
-    "event_items": [
-        {"key": "handover", "label": "引渡し日"},
-        {"key": "water_removal", "label": "水道設備の撤去"},
-        {"key": "kitchen", "label": "キッチン設置"},
-        {"key": "unit_bath", "label": "ユニットバス設置"},
-        {"key": "carpenter", "label": "大工工事"},
-        {"key": "wallpaper", "label": "クロス工事"},
-        {"key": "cleaning", "label": "ハウスクリーニング"},
-        {"key": "completion", "label": "完工"},
-    ],
     "pdf_site_placeholder": "現場名未入力",
-    "pdf_title_template": "{site} 工程カレンダー",
-    "pdf_date_template": "{year}年{month}月{day}日",
-    "pdf_month_template": "{year}年{month}月",
-    "pdf_month_range_template": "{start_year}年{start_month}月〜{end_year}年{end_month}月",
+    "pdf_title_template": "{site}",
+    "pdf_date_template": "{month}/{day}",
+    "pdf_date_with_weekday_template": "{month}/{day}（{weekday}）",
+    "pdf_full_date_template": "{year}年{month}月{day}日",
     "pdf_range_separator": "〜",
     "pdf_field_separator": "：",
     "pdf_target_period": "対象期間",
-    "pdf_target_month": "対象年月",
-    "pdf_page_range": "表示範囲",
-    "pdf_staff": "担当",
-    "pdf_day_names": ["日", "月", "火", "水", "木", "金", "土"],
-    "pdf_event_prefix": "・",
-    "pdf_completion_comment": "完工は、{date}です。\nいつもありがとうございます。引き続きよろしくお願いします！",
+    "pdf_day_count": "日数",
+    "pdf_day_count_template": "{count}日",
     "pdf_contact_template": "さくら都市{branch} 担当：{staff} {phone}",
-    "pdf_page_suffix": "{current}/{total}ページ",
+    "pdf_weekday_names": ["月", "火", "水", "木", "金", "土", "日"],
+    "pdf_weekday_headers": ["日", "月", "火", "水", "木", "金", "土"],
+    "pdf_completion_label": "完工",
     "holiday_names": {
         "new_year": "元日",
         "coming_age": "成人の日",
@@ -119,9 +102,10 @@ COMMON_ICON_RELATIVE = Path("..") / ".." / "02_assets" / "dake_icon.ico"
 COMMON_ICON_FILENAME = "dake_icon.ico"
 FONT_CANDIDATES = ("BIZ UDPGothic", "Yu Gothic UI", "Meiryo")
 DATE_FORMATS = ("%Y/%m/%d", "%Y-%m-%d", "%Y.%m.%d", "%Y%m%d")
-MAX_WEEKS_PER_PAGE = 6
 FOOTER_BREAKPOINT = 900
 HEADER_BREAKPOINT = 920
+DAYS_PER_ROW = 7
+MAX_ROWS_PER_PAGE = 7
 
 LINK_TARGETS = {
     "link_1": "https://sakurayk.notion.site/22ea54b5298d80928443ec7b4d20143d?pvs=74",
@@ -139,27 +123,19 @@ COLORS = {
     "accent_disabled": "#A8B8D8",
     "entry": "#FFFFFF",
     "footer": "#667085",
-    "error": "#D92D20",
 }
 
 PDF_COLORS = {
     "text": "#1E2430",
     "muted": "#8A94A6",
-    "border": "#CDD5DF",
-    "header_bg": "#EEF4FF",
-    "subtle_bg": "#F8FAFC",
-    "sunday_bg": "#FFF5F5",
-    "saturday_bg": "#F4F8FF",
-    "holiday": "#C43B3B",
+    "border": "#D8DEE8",
+    "subtle_bg": "#FAFBFC",
+    "weekend_bg": "#F9FBFF",
+    "holiday_bg": "#FFF8F8",
+    "holiday": "#B94040",
     "saturday": "#2559A8",
+    "accent": "#2F6FED",
 }
-
-
-@dataclass(frozen=True)
-class CalendarEvent:
-    key: str
-    event_date: date
-    content: str
 
 
 @dataclass(frozen=True)
@@ -171,8 +147,6 @@ class PdfRequest:
     start_date: date
     end_date: date
     save_folder: str
-    events: tuple[CalendarEvent, ...]
-    completion_date: date | None
 
 
 def app_dir() -> Path:
@@ -279,19 +253,13 @@ def parse_date_text(value: str) -> date | None:
     return None
 
 
-def format_date_jp(value: date) -> str:
-    return UI_TEXT["pdf_date_template"].format(year=value.year, month=value.month, day=value.day)
+def format_full_date(value: date) -> str:
+    return UI_TEXT["pdf_full_date_template"].format(year=value.year, month=value.month, day=value.day)
 
 
-def format_month_range(start: date, end: date) -> str:
-    if start.year == end.year and start.month == end.month:
-        return UI_TEXT["pdf_month_template"].format(year=start.year, month=start.month)
-    return UI_TEXT["pdf_month_range_template"].format(
-        start_year=start.year,
-        start_month=start.month,
-        end_year=end.year,
-        end_month=end.month,
-    )
+def format_cell_date(value: date) -> str:
+    weekday = UI_TEXT["pdf_weekday_names"][value.weekday()]
+    return UI_TEXT["pdf_date_with_weekday_template"].format(month=value.month, day=value.day, weekday=weekday)
 
 
 def sanitize_filename(value: str) -> str:
@@ -306,6 +274,11 @@ def color_hex(hex_value: str):
     return colors.HexColor(hex_value)
 
 
+def iter_period_days(start: date, end: date) -> list[date]:
+    count = (end - start).days + 1
+    return [start + timedelta(days=index) for index in range(count)]
+
+
 def sunday_on_or_before(value: date) -> date:
     return value - timedelta(days=(value.weekday() + 1) % 7)
 
@@ -314,14 +287,17 @@ def saturday_on_or_after(value: date) -> date:
     return value + timedelta(days=(5 - value.weekday()) % 7)
 
 
-def iter_calendar_weeks(start: date, end: date) -> list[list[date]]:
-    first_day = sunday_on_or_before(start)
-    last_day = saturday_on_or_after(end)
-    weeks: list[list[date]] = []
-    current = first_day
-    while current <= last_day:
-        weeks.append([current + timedelta(days=i) for i in range(7)])
-        current += timedelta(days=7)
+def iter_period_weeks(start: date, end: date) -> list[list[date | None]]:
+    weeks: list[list[date | None]] = []
+    current = sunday_on_or_before(start)
+    last = saturday_on_or_after(end)
+    while current <= last:
+        week: list[date | None] = []
+        for offset in range(DAYS_PER_ROW):
+            day = current + timedelta(days=offset)
+            week.append(day if start <= day <= end else None)
+        weeks.append(week)
+        current += timedelta(days=DAYS_PER_ROW)
     return weeks
 
 
@@ -432,63 +408,16 @@ def japanese_holidays(years: set[int]) -> dict[date, str]:
         return fallback_japanese_holidays(years)
 
 
-def register_pdf_fonts() -> tuple[str, str]:
+def register_pdf_fonts() -> str:
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.cidfonts import UnicodeCIDFont
 
-    regular = "HeiseiKakuGo-W5"
-    serif = "HeiseiMin-W3"
-    for font_name in (regular, serif):
-        try:
-            pdfmetrics.registerFont(UnicodeCIDFont(font_name))
-        except Exception:
-            pass
-    return regular, serif
-
-
-def wrap_text_to_width(text: str, font_name: str, font_size: float, max_width: float) -> list[str]:
-    from reportlab.pdfbase import pdfmetrics
-
-    lines: list[str] = []
-    paragraphs = text.splitlines() or [""]
-    for paragraph in paragraphs:
-        current = ""
-        for char in paragraph:
-            candidate = current + char
-            if pdfmetrics.stringWidth(candidate, font_name, font_size) <= max_width:
-                current = candidate
-            else:
-                if current:
-                    lines.append(current)
-                current = char
-        lines.append(current)
-    return lines
-
-
-def draw_wrapped_text(
-    canvas,
-    text: str,
-    x: float,
-    y: float,
-    max_width: float,
-    font_name: str,
-    font_size: float,
-    leading: float,
-    max_lines: int | None = None,
-    fill: str = PDF_COLORS["text"],
-) -> float:
-    lines = wrap_text_to_width(text, font_name, font_size, max_width)
-    if max_lines is not None and len(lines) > max_lines:
-        lines = lines[:max_lines]
-        if lines:
-            lines[-1] = lines[-1].rstrip(" .") + "..."
-    canvas.setFont(font_name, font_size)
-    canvas.setFillColor(color_hex(fill))
-    current_y = y
-    for line in lines:
-        canvas.drawString(x, current_y, line)
-        current_y -= leading
-    return current_y
+    font_name = "HeiseiKakuGo-W5"
+    try:
+        pdfmetrics.registerFont(UnicodeCIDFont(font_name))
+    except Exception:
+        pass
+    return font_name
 
 
 def make_output_path(request: PdfRequest) -> Path:
@@ -505,83 +434,56 @@ def make_output_path(request: PdfRequest) -> Path:
 
 def generate_pdf(request: PdfRequest) -> Path:
     try:
-        from reportlab.lib.pagesizes import A4, landscape
+        from reportlab.lib.pagesizes import A4
         from reportlab.pdfgen import canvas
     except Exception as exc:
         raise RuntimeError(UI_TEXT["error_reportlab_missing"]) from exc
 
     output_path = make_output_path(request)
-    page_width, page_height = landscape(A4)
-    pdf = canvas.Canvas(str(output_path), pagesize=(page_width, page_height))
-    font_name, serif_font = register_pdf_fonts()
+    page_width, page_height = A4
+    pdf = canvas.Canvas(str(output_path), pagesize=A4)
+    font_name = register_pdf_fonts()
 
-    weeks = iter_calendar_weeks(request.start_date, request.end_date)
-    chunks = [weeks[i : i + MAX_WEEKS_PER_PAGE] for i in range(0, len(weeks), MAX_WEEKS_PER_PAGE)]
-    events_by_date: dict[date, list[CalendarEvent]] = {}
-    for event in request.events:
-        events_by_date.setdefault(event.event_date, []).append(event)
+    days = iter_period_days(request.start_date, request.end_date)
+    weeks = iter_period_weeks(request.start_date, request.end_date)
+    chunks = [weeks[i : i + MAX_ROWS_PER_PAGE] for i in range(0, len(weeks), MAX_ROWS_PER_PAGE)]
+    holiday_map = japanese_holidays({day.year for day in days})
 
-    all_years: set[int] = set()
-    for week in weeks:
-        for day in week:
-            all_years.add(day.year)
-    holiday_map = japanese_holidays(all_years)
-
-    margin_x = 28
-    header_y = page_height - 34
-    calendar_top = page_height - 120
+    margin_x = 44
+    header_y = page_height - 44
+    grid_top = page_height - 136
     day_header_h = 22
-    grid_bottom = 118
-    calendar_width = page_width - margin_x * 2
-    cell_w = calendar_width / 7
+    grid_bottom = 112
+    grid_width = page_width - margin_x * 2
+    cell_w = grid_width / DAYS_PER_ROW
+    cell_h = (grid_top - day_header_h - grid_bottom) / MAX_ROWS_PER_PAGE
 
     site = request.site_name.strip() or UI_TEXT["pdf_site_placeholder"]
     title = UI_TEXT["pdf_title_template"].format(site=site)
-    period_text = (
-        f"{format_date_jp(request.start_date)}"
-        f"{UI_TEXT['pdf_range_separator']}"
-        f"{format_date_jp(request.end_date)}"
-    )
-    month_text = format_month_range(request.start_date, request.end_date)
+    period_text = f"{format_full_date(request.start_date)}{UI_TEXT['pdf_range_separator']}{format_full_date(request.end_date)}"
+    day_count_text = UI_TEXT["pdf_day_count_template"].format(count=len(days))
     contact_text = UI_TEXT["pdf_contact_template"].format(
         branch=request.branch_name.strip(),
         staff=request.staff_name.strip(),
         phone=request.phone.strip(),
     ).strip()
 
-    for page_index, chunk in enumerate(chunks, start=1):
-        row_count = len(chunk)
-        grid_top = calendar_top - day_header_h
-        row_h = (grid_top - grid_bottom) / row_count
-
+    for _page_index, chunk in enumerate(chunks, start=1):
+        pdf.setFont(font_name, 17)
         pdf.setFillColor(color_hex(PDF_COLORS["text"]))
-        pdf.setFont(font_name, 18)
         pdf.drawString(margin_x, header_y, title)
 
-        page_suffix = UI_TEXT["pdf_page_suffix"].format(current=page_index, total=len(chunks))
-        pdf.setFont(font_name, 8.8)
-        pdf.setFillColor(color_hex(PDF_COLORS["muted"]))
-        pdf.drawRightString(page_width - margin_x, header_y + 2, page_suffix)
-
-        info_y = header_y - 22
         separator = UI_TEXT["pdf_field_separator"]
-        pdf.setFont(font_name, 9.2)
+        info_y = header_y - 25
+        pdf.setFont(font_name, 9.5)
         pdf.setFillColor(color_hex(PDF_COLORS["text"]))
         pdf.drawString(margin_x, info_y, f"{UI_TEXT['pdf_target_period']}{separator}{period_text}")
-        pdf.drawString(margin_x + 270, info_y, f"{UI_TEXT['pdf_target_month']}{separator}{month_text}")
-        pdf.drawRightString(page_width - margin_x, info_y, f"{UI_TEXT['pdf_staff']}{separator}{request.staff_name.strip()}")
+        pdf.drawRightString(page_width - margin_x, info_y, f"{UI_TEXT['pdf_day_count']}{separator}{day_count_text}")
 
-        range_start = chunk[0][0]
-        range_end = chunk[-1][-1]
-        range_text = f"{format_date_jp(range_start)}{UI_TEXT['pdf_range_separator']}{format_date_jp(range_end)}"
-        pdf.setFont(font_name, 8.4)
-        pdf.setFillColor(color_hex(PDF_COLORS["muted"]))
-        pdf.drawString(margin_x, info_y - 16, f"{UI_TEXT['pdf_page_range']}{separator}{range_text}")
-
-        for col, day_name in enumerate(UI_TEXT["pdf_day_names"]):
+        for col, header in enumerate(UI_TEXT["pdf_weekday_headers"]):
             x = margin_x + col * cell_w
-            y = calendar_top - day_header_h
-            pdf.setFillColor(color_hex(PDF_COLORS["header_bg"]))
+            y = grid_top - day_header_h
+            pdf.setFillColor(color_hex("#FFFFFF"))
             pdf.rect(x, y, cell_w, day_header_h, stroke=0, fill=1)
             pdf.setStrokeColor(color_hex(PDF_COLORS["border"]))
             pdf.rect(x, y, cell_w, day_header_h, stroke=1, fill=0)
@@ -591,96 +493,67 @@ def generate_pdf(request: PdfRequest) -> Path:
                 pdf.setFillColor(color_hex(PDF_COLORS["saturday"]))
             else:
                 pdf.setFillColor(color_hex(PDF_COLORS["text"]))
-            pdf.setFont(font_name, 9.5)
-            pdf.drawCentredString(x + cell_w / 2, y + 7, day_name)
+            pdf.setFont(font_name, 9.2)
+            pdf.drawCentredString(x + cell_w / 2, y + 7, header)
 
         for row, week in enumerate(chunk):
             for col, day in enumerate(week):
                 x = margin_x + col * cell_w
-                y = grid_top - (row + 1) * row_h
-                in_range = request.start_date <= day <= request.end_date
-                holiday_name = holiday_map.get(day)
+                y = grid_top - day_header_h - (row + 1) * cell_h
+                if day is None:
+                    pdf.setFillColor(color_hex(PDF_COLORS["subtle_bg"]))
+                    pdf.rect(x, y, cell_w, cell_h, stroke=0, fill=1)
+                    pdf.setStrokeColor(color_hex(PDF_COLORS["border"]))
+                    pdf.rect(x, y, cell_w, cell_h, stroke=1, fill=0)
+                    continue
 
-                if not in_range:
-                    fill = PDF_COLORS["subtle_bg"]
-                elif holiday_name or col == 0:
-                    fill = PDF_COLORS["sunday_bg"]
-                elif col == 6:
-                    fill = PDF_COLORS["saturday_bg"]
+                holiday_name = holiday_map.get(day)
+                is_saturday = day.weekday() == 5
+                is_sunday = day.weekday() == 6
+
+                if holiday_name or is_sunday:
+                    fill = PDF_COLORS["holiday_bg"]
+                elif is_saturday:
+                    fill = PDF_COLORS["weekend_bg"]
                 else:
                     fill = "#FFFFFF"
 
                 pdf.setFillColor(color_hex(fill))
-                pdf.rect(x, y, cell_w, row_h, stroke=0, fill=1)
+                pdf.rect(x, y, cell_w, cell_h, stroke=0, fill=1)
                 pdf.setStrokeColor(color_hex(PDF_COLORS["border"]))
-                pdf.rect(x, y, cell_w, row_h, stroke=1, fill=0)
+                pdf.rect(x, y, cell_w, cell_h, stroke=1, fill=0)
 
-                if not in_range:
-                    date_color = PDF_COLORS["muted"]
-                elif holiday_name or col == 0:
+                date_color = PDF_COLORS["text"]
+                if holiday_name or is_sunday:
                     date_color = PDF_COLORS["holiday"]
-                elif col == 6:
+                elif is_saturday:
                     date_color = PDF_COLORS["saturday"]
-                else:
-                    date_color = PDF_COLORS["text"]
 
-                date_label = str(day.day)
-                if day.day == 1 or (row == 0 and col == 0):
-                    date_label = f"{day.month}/{day.day}"
-                pdf.setFont(font_name, 9.5)
                 pdf.setFillColor(color_hex(date_color))
-                pdf.drawString(x + 6, y + row_h - 13, date_label)
+                pdf.setFont(font_name, 10.5)
+                text_y = y + cell_h - 17
+                pdf.drawString(x + 7, text_y, format_cell_date(day))
 
-                text_y = y + row_h - 25
+                text_y -= 15
                 if holiday_name:
-                    pdf.setFont(font_name, 6.8)
+                    pdf.setFont(font_name, 7.2)
                     pdf.setFillColor(color_hex(PDF_COLORS["holiday"]))
-                    holiday_lines = wrap_text_to_width(holiday_name, font_name, 6.8, cell_w - 12)
-                    for line in holiday_lines[:2]:
-                        pdf.drawString(x + 6, text_y, line)
-                        text_y -= 8
+                    pdf.drawString(x + 7, text_y, holiday_name)
+                    text_y -= 14
 
-                day_events = events_by_date.get(day, [])
-                if day_events:
-                    max_lines = max(1, int((text_y - y - 5) // 8))
-                    event_font_size = 8.4
-                    event_leading = 9.2
-                    event_lines: list[str] = []
-                    for font_size in (8.4, 7.5, 6.7, 6.1):
-                        event_lines = []
-                        for event in day_events:
-                            label = UI_TEXT["pdf_event_prefix"] + event.content
-                            event_lines.extend(wrap_text_to_width(label, font_name, font_size, cell_w - 12))
-                        if len(event_lines) <= max_lines or font_size <= 6.1:
-                            event_font_size = font_size
-                            event_leading = font_size + 1.2
-                            break
-
-                    if len(event_lines) > max_lines:
-                        event_lines = event_lines[:max_lines]
-                        event_lines[-1] = event_lines[-1].rstrip(" .") + "..."
-
-                    pdf.setFont(font_name, event_font_size)
-                    pdf.setFillColor(color_hex(PDF_COLORS["text"] if in_range else PDF_COLORS["muted"]))
-                    current_y = text_y
-                    for line in event_lines:
-                        if current_y < y + 6:
-                            break
-                        pdf.drawString(x + 6, current_y, line)
-                        current_y -= event_leading
-
-        if request.completion_date is not None:
-            comment_text = UI_TEXT["pdf_completion_comment"].format(date=format_date_jp(request.completion_date))
-            draw_wrapped_text(pdf, comment_text, margin_x, 90, 500, serif_font, 10.2, 13)
+                if day == request.end_date:
+                    pdf.setFont(font_name, 9.5)
+                    pdf.setFillColor(color_hex(PDF_COLORS["accent"]))
+                    pdf.drawString(x + 7, text_y, UI_TEXT["pdf_completion_label"])
 
         pdf.setStrokeColor(color_hex(PDF_COLORS["border"]))
-        pdf.line(margin_x, 58, page_width - margin_x, 58)
-        pdf.setFont(font_name, 10.2)
+        pdf.line(margin_x, 84, page_width - margin_x, 84)
+        pdf.setFont(font_name, 9.4)
         pdf.setFillColor(color_hex(PDF_COLORS["text"]))
-        pdf.drawRightString(page_width - margin_x, 39, contact_text)
-        pdf.setFont(font_name, 7.6)
+        pdf.drawRightString(page_width - margin_x, 65, contact_text)
+        pdf.setFont(font_name, 7.4)
         pdf.setFillColor(color_hex(PDF_COLORS["muted"]))
-        pdf.drawString(margin_x, 39, UI_TEXT["footer_left"])
+        pdf.drawString(margin_x, 49, UI_TEXT["footer_left"])
         pdf.showPage()
 
     pdf.save()
@@ -692,7 +565,7 @@ class WorkCalendarApp:
         self.root = root
         self.root.title(WINDOW_TITLE)
         self.root.configure(bg=COLORS["background"])
-        self.root.minsize(900, 720)
+        self.root.minsize(820, 560)
         apply_window_icon(self.root)
 
         self.config_data = load_config()
@@ -702,7 +575,7 @@ class WorkCalendarApp:
         self.staff_name_var = tk.StringVar(value=self.config_data.get("staff_name", ""))
         self.phone_var = tk.StringVar(value=self.config_data.get("phone", ""))
         self.start_date_var = tk.StringVar(value=today.strftime("%Y/%m/%d"))
-        self.end_date_var = tk.StringVar(value=(today + timedelta(days=30)).strftime("%Y/%m/%d"))
+        self.end_date_var = tk.StringVar(value=(today + timedelta(days=45)).strftime("%Y/%m/%d"))
         self.save_folder_var = tk.StringVar(value=self.config_data.get("save_folder", default_save_folder()))
         self.status_var = tk.StringVar(value=UI_TEXT["status_ready"])
 
@@ -717,7 +590,6 @@ class WorkCalendarApp:
             "footer": (self.font_family, 8),
         }
 
-        self.event_rows: list[dict[str, object]] = []
         self.result_queue: queue.Queue[tuple[str, object]] = queue.Queue()
         self.is_processing = False
         self.processing_started_at = 0.0
@@ -740,21 +612,26 @@ class WorkCalendarApp:
         outer = tk.Frame(self.root, bg=COLORS["background"])
         outer.pack(fill="both", expand=True, padx=22, pady=(18, 0))
 
-        canvas = tk.Canvas(outer, bg=COLORS["background"], highlightthickness=0)
-        scrollbar = ttk.Scrollbar(outer, orient="vertical", command=canvas.yview)
-        self.content = tk.Frame(canvas, bg=COLORS["background"])
-        window_id = canvas.create_window((0, 0), window=self.content, anchor="nw")
+        self.canvas = tk.Canvas(outer, bg=COLORS["background"], highlightthickness=0)
+        scrollbar = ttk.Scrollbar(outer, orient="vertical", command=self.canvas.yview)
+        self.content = tk.Frame(self.canvas, bg=COLORS["background"])
+        window_id = self.canvas.create_window((0, 0), window=self.content, anchor="nw")
 
         def update_scrollregion(_event=None) -> None:
-            canvas.configure(scrollregion=canvas.bbox("all"))
+            self.canvas.configure(scrollregion=self.canvas.bbox("all"))
 
         def update_width(event) -> None:
-            canvas.itemconfigure(window_id, width=event.width)
+            self.canvas.itemconfigure(window_id, width=event.width)
+
+        def on_mousewheel(event) -> None:
+            self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
         self.content.bind("<Configure>", update_scrollregion)
-        canvas.bind("<Configure>", update_width)
-        canvas.configure(yscrollcommand=scrollbar.set)
-        canvas.pack(side="left", fill="both", expand=True)
+        self.canvas.bind("<Configure>", update_width)
+        self.canvas.bind("<Enter>", lambda _event: self.canvas.bind_all("<MouseWheel>", on_mousewheel))
+        self.canvas.bind("<Leave>", lambda _event: self.canvas.unbind_all("<MouseWheel>"))
+        self.canvas.configure(yscrollcommand=scrollbar.set)
+        self.canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
 
         self.build_header()
@@ -850,59 +727,6 @@ class WorkCalendarApp:
             padx=(10, 0),
             pady=6,
         )
-
-        event_panel = self.panel(self.content, UI_TEXT["section_events"])
-        event_panel.columnconfigure(0, weight=0)
-        event_panel.columnconfigure(1, weight=0)
-        event_panel.columnconfigure(2, weight=1)
-        tk.Label(
-            event_panel,
-            text=UI_TEXT["label_event_date"],
-            font=self.fonts["small"],
-            fg=COLORS["muted"],
-            bg=COLORS["panel"],
-        ).grid(row=0, column=1, sticky="w", padx=(10, 8), pady=(0, 4))
-        tk.Label(
-            event_panel,
-            text=UI_TEXT["label_event_content"],
-            font=self.fonts["small"],
-            fg=COLORS["muted"],
-            bg=COLORS["panel"],
-        ).grid(row=0, column=2, sticky="w", padx=(8, 0), pady=(0, 4))
-
-        for index, item in enumerate(UI_TEXT["event_items"], start=1):
-            label_text = str(item["label"])
-            date_var = tk.StringVar()
-            content_var = tk.StringVar(value=label_text)
-            tk.Label(
-                event_panel,
-                text=label_text,
-                font=self.fonts["body"],
-                fg=COLORS["text"],
-                bg=COLORS["panel"],
-                anchor="w",
-                width=18,
-            ).grid(row=index, column=0, sticky="w", pady=4)
-            tk.Entry(
-                event_panel,
-                textvariable=date_var,
-                font=self.fonts["body"],
-                fg=COLORS["text"],
-                bg=COLORS["entry"],
-                relief="solid",
-                bd=1,
-                width=14,
-            ).grid(row=index, column=1, sticky="w", padx=(10, 8), pady=4)
-            tk.Entry(
-                event_panel,
-                textvariable=content_var,
-                font=self.fonts["body"],
-                fg=COLORS["text"],
-                bg=COLORS["entry"],
-                relief="solid",
-                bd=1,
-            ).grid(row=index, column=2, sticky="ew", padx=(8, 0), pady=4)
-            self.event_rows.append({"key": item["key"], "date_var": date_var, "content_var": content_var})
 
     def build_actions(self) -> None:
         action_panel = tk.Frame(self.content, bg=COLORS["background"])
@@ -1067,38 +891,6 @@ class WorkCalendarApp:
             messagebox.showerror(UI_TEXT["dialog_error_title"], UI_TEXT["error_save_folder"])
             return None
 
-        events: list[CalendarEvent] = []
-        completion_date: date | None = None
-        for row in self.event_rows:
-            key = str(row["key"])
-            date_var = row["date_var"]
-            content_var = row["content_var"]
-            assert isinstance(date_var, tk.StringVar)
-            assert isinstance(content_var, tk.StringVar)
-            raw_date = date_var.get().strip()
-            content = content_var.get().strip()
-            if not raw_date:
-                continue
-            event_date = parse_date_text(raw_date)
-            if event_date is None:
-                messagebox.showerror(
-                    UI_TEXT["dialog_error_title"],
-                    UI_TEXT["error_event_date"].format(content=content),
-                )
-                return None
-            if not (start <= event_date <= end):
-                messagebox.showerror(
-                    UI_TEXT["dialog_error_title"],
-                    UI_TEXT["error_event_range"].format(content=content),
-                )
-                return None
-            if not content:
-                default_label = next(str(item["label"]) for item in UI_TEXT["event_items"] if item["key"] == key)
-                content = default_label
-            events.append(CalendarEvent(key=key, event_date=event_date, content=content))
-            if key == "completion":
-                completion_date = event_date
-
         return PdfRequest(
             site_name=self.site_name_var.get().strip(),
             branch_name=self.branch_name_var.get().strip(),
@@ -1107,8 +899,6 @@ class WorkCalendarApp:
             start_date=start,
             end_date=end,
             save_folder=save_folder,
-            events=tuple(events),
-            completion_date=completion_date,
         )
 
     def on_create_pdf(self) -> None:

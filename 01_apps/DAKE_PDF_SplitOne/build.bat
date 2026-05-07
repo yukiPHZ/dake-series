@@ -4,6 +4,7 @@ setlocal
 
 if exist build rmdir /s /q build
 if exist dist rmdir /s /q dist
+for %%F in (*.spec) do del /q "%%~fF"
 
 set "PYTHON_CMD="
 
@@ -37,6 +38,7 @@ if exist ".vendor" (
   --clean ^
   --onefile ^
   --windowed ^
+  --noconsole ^
   --name=DakePDF_Split_One ^
   --icon=..\..\02_assets\dake_icon.ico ^
   --collect-all tkinterdnd2 ^

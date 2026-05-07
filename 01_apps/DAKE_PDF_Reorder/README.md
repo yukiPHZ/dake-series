@@ -49,3 +49,38 @@ build.bat
 - UI文言は APP_NAME、WINDOW_TITLE、COPYRIGHT、UI_TEXT に集約しています。
 - `build.bat` は共通アイコン `..\..\02_assets\dake_icon.ico` を指定します。
 - 2026-05-06 時点で `build.bat` による exe 生成と `dist\DakePDF_Reorder.exe` の起動確認を実施済みです。
+
+## 2026-05-06 追加修正
+
+- 空状態エリアをクリックしてPDFを追加できるようにしました。
+- サムネイルカードのドラッグ位置を座標で判定し、ページ順と内部 `page_order` が同期するようにしました。
+- 保存時は `page_order` の順番でPDFを書き出します。
+- 空状態文言を「ドラッグ＆ドロップ または クリックして追加」に調整しました。
+
+## DAKE_META
+
+```json
+{
+  "app_key": "dake_pdf_reorder",
+  "display_name": "DakePDFページ並べ替え",
+  "launcher_title": "PDF並べ替え",
+  "launcher_description": "PDFページ順をドラッグで並べ替えます。",
+  "site_title": "DakePDFページ並べ替え",
+  "site_description": "PDFのページサムネイルをドラッグ＆ドロップで並べ替え、別名PDFとして保存できるWindows向けアプリです。",
+  "update_summary": "READMEメタ情報とRelease本文を整備。スクリーンショットをassets/screenshot.webpに作成。",
+  "folder_name": "DAKE_PDF_Reorder",
+  "exe_name": "DakePDF_Reorder.exe",
+  "release_url": "",
+  "screenshot_path": "assets/screenshot.webp",
+  "status": "available",
+  "show_in_launcher": true,
+  "show_on_site": true
+}
+```
+
+## RELEASE_BODY
+
+- PDFページ並べ替えアプリ
+- サムネイルのドラッグ操作に対応
+- 別名PDFとして保存
+- Windows向けexe

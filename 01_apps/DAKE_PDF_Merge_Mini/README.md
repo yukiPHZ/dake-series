@@ -55,3 +55,31 @@ PDFを最大5ファイルまで選択し、表示順に1つのPDFへ結合する
 - `*_config.json`
 - `__pycache__/`
 - `*.pyc`
+
+## DAKE_META
+
+```json
+{
+  "app_key": "dake_pdf_merge_mini",
+  "display_name": "DakePDF結合mini",
+  "launcher_title": "PDF結合mini",
+  "launcher_description": "最大5ファイルまでのPDFを並べ替えて結合します。",
+  "site_title": "DakePDF結合mini",
+  "site_description": "PDFを最大5ファイルまで選択し、表示順に1つのPDFへ結合できるWindows向けminiアプリです。",
+  "update_summary": "READMEメタ情報とRelease本文を整備。スクリーンショットをassets/screenshot.webpに作成。",
+  "folder_name": "DAKE_PDF_Merge_Mini",
+  "exe_name": "DakePDF_Merge_Mini.exe",
+  "release_url": "",
+  "screenshot_path": "assets/screenshot.webp",
+  "status": "available",
+  "show_in_launcher": true,
+  "show_on_site": true
+}
+```
+
+## RELEASE_BODY
+
+- PDF結合miniアプリ
+- 最大5ファイルまで対応
+- サムネイル並べ替え対応
+- Windows向けexe

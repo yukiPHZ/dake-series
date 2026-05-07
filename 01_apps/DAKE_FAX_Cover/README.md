@@ -68,3 +68,44 @@ build.bat
 - 共通アイコン `..\..\02_assets\dake_icon.ico` をTkinter起動時とPyInstallerビルド時に参照します。
 - `build.bat` によるビルド成功を確認しました。
 - `dist\DakeFAX_Cover.exe` が起動後すぐ終了しないことを確認しました。
+
+## メッセージ欄・PDF品質改善
+
+2026-05-07 にメッセージ欄とPDF出力品質を改善しました。
+
+- メッセージ欄を5行表示、折り返し、縦スクロール、内側余白付きの複数行入力にしました。
+- 初期メッセージを2行の定型文に変更しました。
+- PDF出力時にメッセージの改行が反映されることを確認しました。
+- PDFフォントは `BIZ-UDGothic` を優先して登録し、見つからない場合は日本語対応フォントへフォールバックします。
+- FAX番号、件名、送信枚数、送信日の視認性を上げました。
+- 白黒FAXでも読めるよう、表罫線と情報ブロックの線を薄すぎない設定にしました。
+- 複数行メッセージと空欄メッセージのPDF生成を確認しました。
+- `build.bat` によるexe再生成と `dist\DakeFAX_Cover.exe` の起動確認を行いました。
+
+## DAKE_META
+
+```json
+{
+  "app_key": "dake_fax_cover",
+  "display_name": "DakeFAX送付状",
+  "launcher_title": "FAX送付状",
+  "launcher_description": "送信先と内容を入力してA4縦のFAX送付状PDFを作成します。",
+  "site_title": "DakeFAX送付状",
+  "site_description": "送信先、FAX情報、送信内容、送信者情報を入力して、FAX送付状PDFを作成できるWindows向けアプリです。",
+  "update_summary": "READMEメタ情報とRelease本文を整備。スクリーンショットをassets/screenshot.webpに作成。",
+  "folder_name": "DAKE_FAX_Cover",
+  "exe_name": "DakeFAX_Cover.exe",
+  "release_url": "",
+  "screenshot_path": "assets/screenshot.webp",
+  "status": "available",
+  "show_in_launcher": true,
+  "show_on_site": true
+}
+```
+
+## RELEASE_BODY
+
+- FAX送付状PDF作成アプリ
+- 送信先・FAX情報・送信内容に対応
+- A4縦PDF出力
+- Windows向けexe

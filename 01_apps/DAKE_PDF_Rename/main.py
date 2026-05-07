@@ -34,31 +34,32 @@ WINDOW_TITLE = "DakePDFファイル名整理"
 COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
 
 UI_TEXT = {
-    "main_title": "PDFのファイル名を整える",
-    "main_description": "PDFを追加して、書類種別と相手名を指定します。",
+    "main_title": "PDFのファイル名に足す",
+    "main_description": "PDF名の前か後ろに、指定したテキストを追加します。",
     "drop_title": "PDFをここにドロップ",
     "drop_subtitle": "複数PDFもまとめて追加できます。",
     "drop_subtitle_no_dnd": "ドラッグ操作が使えない環境では、PDFを選択してください。",
     "label_pdf_list": "選択中PDF",
-    "label_doc_type": "書類種別",
-    "label_person_name": "相手名",
+    "label_add_position": "追加位置",
+    "label_add_text": "追加するテキスト",
+    "add_text_description": "既存ファイル名の前か後ろに追加します。",
     "button_select_pdf": "PDFを選択",
-    "button_execute": "ファイル名を整える",
+    "button_execute": "ファイル名に足す",
     "button_clear": "クリア",
     "status_idle": "PDFを追加してください。",
-    "status_ready": "{count}件のPDFを整理できます。",
+    "status_ready": "{count}件のPDFに追加できます。",
     "status_processing": "処理中",
     "status_processing_dots": ["処理中.", "処理中..", "処理中..."],
-    "status_complete": "ファイル名の整理が完了しました。",
+    "status_complete": "ファイル名を変更しました。",
     "status_error": "確認が必要です。",
     "error_no_pdf": "PDFがまだ選択されていません。PDFを追加してから実行してください。",
-    "error_no_name": "相手名を入力してください。",
+    "error_no_text": "追加するテキストを入力してください。",
     "error_invalid_file": "PDF以外のファイルが含まれています。PDFファイルだけを追加してください。",
     "error_missing_file": "選択したPDFが見つかりません。ファイルの場所を確認してください。",
     "error_file_busy": "PDFが開かれている可能性があります。閉じてからもう一度お試しください。",
     "error_name_generation": "同名ファイルを避けた名前を作成できませんでした。",
     "error_rename_failed": "ファイル名の変更ができませんでした。ファイルの状態を確認してください。",
-    "complete_message": "{count}件のPDFファイル名を整えました。",
+    "complete_message": "{count}件のPDFファイル名を変更しました。",
     "dialog_complete_title": "完了",
     "dialog_error_title": "確認",
     "file_dialog_title": "PDFを選択",
@@ -70,17 +71,9 @@ UI_TEXT = {
     "footer_link_2": "Instagram",
     "footer_separator": " ｜ ",
     "footer_copyright": COPYRIGHT,
-    "doc_types": [
-        "売買契約書",
-        "重要事項説明書",
-        "付帯設備表",
-        "告知書",
-        "領収書手付金",
-        "領収書残代金",
-        "媒介契約書",
-        "仲介手数料約定書",
-        "覚書",
-    ],
+    "position_prefix": "先頭に追加",
+    "position_suffix": "末尾に追加",
+    "add_positions": ["先頭に追加", "末尾に追加"],
 }
 
 COLORS = {
@@ -234,18 +227,15 @@ def sanitize_filename_part(value: str) -> str:
     return compacted.strip().strip(". ")
 
 
-def normalize_person_name(value: str) -> str:
-    cleaned = sanitize_filename_part(value)
-    if not cleaned:
-        return ""
-    without_suffix = cleaned.rstrip("様")
-    return f"{without_suffix}様" if without_suffix else "様"
+def normalize_add_text(value: str) -> str:
+    return sanitize_filename_part(value)
 
 
-def build_target_stem(doc_type: str, person_name: str) -> str:
-    safe_doc_type = sanitize_filename_part(doc_type)
-    safe_person_name = sanitize_filename_part(person_name)
-    return f"{safe_doc_type}_{safe_person_name}"
+def build_target_stem(source_path: Path, add_position: str, add_text: str) -> str:
+    base_name = source_path.stem
+    if add_position == UI_TEXT["position_prefix"]:
+        return f"{add_text}_{base_name}"
+    return f"{base_name}_{add_text}"
 
 
 def find_unique_target(source_path: Path, stem: str, reserved: set[str]) -> Path:
@@ -265,13 +255,13 @@ def find_unique_target(source_path: Path, stem: str, reserved: set[str]) -> Path
     raise RenameError("name_generation")
 
 
-def rename_pdf_files(paths: list[Path], doc_type: str, person_name: str) -> list[RenameResult]:
+def rename_pdf_files(paths: list[Path], add_position: str, add_text: str) -> list[RenameResult]:
     if not paths:
         raise RenameError("no_pdf")
 
-    stem = build_target_stem(doc_type, person_name)
-    if not stem:
-        raise RenameError("name_generation")
+    safe_add_text = normalize_add_text(add_text)
+    if not safe_add_text:
+        raise RenameError("no_text")
 
     reserved: set[str] = set()
     plan: list[tuple[Path, Path]] = []
@@ -281,6 +271,7 @@ def rename_pdf_files(paths: list[Path], doc_type: str, person_name: str) -> list
             raise RenameError("missing_file")
         if source_path.suffix.lower() != ".pdf":
             raise RenameError("invalid_file")
+        stem = build_target_stem(source_path, add_position, safe_add_text)
         target_path = find_unique_target(source_path, stem, reserved)
         reserved.add(normalize_path_key(target_path))
         plan.append((source_path, target_path))
@@ -324,8 +315,8 @@ class PdfRenameApp:
         self.status_dot_after_id: str | None = None
 
         self.status_var = tk.StringVar(value=UI_TEXT["status_idle"])
-        self.doc_type_var = tk.StringVar(value=UI_TEXT["doc_types"][0])
-        self.person_name_var = tk.StringVar()
+        self.add_position_var = tk.StringVar(value=UI_TEXT["position_suffix"])
+        self.add_text_var = tk.StringVar()
         self.execute_button: tk.Button | None = None
         self.drop_area: tk.Frame | None = None
         self.drop_title_label: tk.Label | None = None
@@ -511,37 +502,37 @@ class PdfRenameApp:
         form.grid(row=2, column=0, sticky="ew", pady=(18, 0))
         form.grid_columnconfigure(1, weight=1)
 
-        doc_label = tk.Label(
+        position_label = tk.Label(
             form,
-            text=UI_TEXT["label_doc_type"],
+            text=UI_TEXT["label_add_position"],
             bg=COLORS["card_bg"],
             fg=COLORS["text"],
             font=(self.font_family, 10, "bold"),
         )
-        doc_label.grid(row=0, column=0, sticky="w", padx=(0, 14), pady=(0, 12))
+        position_label.grid(row=0, column=0, sticky="w", padx=(0, 14), pady=(0, 12))
 
-        doc_combo = ttk.Combobox(
+        position_combo = ttk.Combobox(
             form,
-            textvariable=self.doc_type_var,
-            values=UI_TEXT["doc_types"],
+            textvariable=self.add_position_var,
+            values=UI_TEXT["add_positions"],
             state="readonly",
             style="Dake.TCombobox",
             width=28,
         )
-        doc_combo.grid(row=0, column=1, sticky="ew", pady=(0, 12))
+        position_combo.grid(row=0, column=1, sticky="ew", pady=(0, 12))
 
-        name_label = tk.Label(
+        text_label = tk.Label(
             form,
-            text=UI_TEXT["label_person_name"],
+            text=UI_TEXT["label_add_text"],
             bg=COLORS["card_bg"],
             fg=COLORS["text"],
             font=(self.font_family, 10, "bold"),
         )
-        name_label.grid(row=1, column=0, sticky="w", padx=(0, 14))
+        text_label.grid(row=1, column=0, sticky="w", padx=(0, 14))
 
-        name_entry = tk.Entry(
+        text_entry = tk.Entry(
             form,
-            textvariable=self.person_name_var,
+            textvariable=self.add_text_var,
             bg=COLORS["card_bg"],
             fg=COLORS["text"],
             relief="solid",
@@ -552,8 +543,17 @@ class PdfRenameApp:
             insertbackground=COLORS["text"],
             font=(self.font_family, 11),
         )
-        name_entry.grid(row=1, column=1, sticky="ew", ipady=7)
-        name_entry.bind("<KeyRelease>", self._on_name_change)
+        text_entry.grid(row=1, column=1, sticky="ew", ipady=7)
+        text_entry.bind("<KeyRelease>", self._on_text_change)
+
+        text_description = tk.Label(
+            form,
+            text=UI_TEXT["add_text_description"],
+            bg=COLORS["card_bg"],
+            fg=COLORS["muted"],
+            font=(self.font_family, 9),
+        )
+        text_description.grid(row=2, column=1, sticky="w", pady=(6, 0))
 
     def _build_actions(self, parent: tk.Frame) -> None:
         actions = tk.Frame(parent, bg=COLORS["card_bg"])
@@ -798,7 +798,7 @@ class PdfRenameApp:
         self._update_status()
         self._update_action_state()
 
-    def _on_name_change(self, _event=None) -> None:
+    def _on_text_change(self, _event=None) -> None:
         self._update_action_state()
 
     def _execute_rename(self) -> None:
@@ -808,24 +808,24 @@ class PdfRenameApp:
             self._show_error(UI_TEXT["error_no_pdf"])
             return
 
-        person_name = normalize_person_name(self.person_name_var.get())
-        if not person_name:
-            self._show_error(UI_TEXT["error_no_name"])
+        add_text = normalize_add_text(self.add_text_var.get())
+        if not add_text:
+            self._show_error(UI_TEXT["error_no_text"])
             return
 
-        doc_type = self.doc_type_var.get().strip() or UI_TEXT["doc_types"][0]
+        add_position = self.add_position_var.get().strip() or UI_TEXT["position_suffix"]
         self._set_processing(True)
         self.worker_thread = threading.Thread(
             target=self._rename_worker,
-            args=(list(self.pdf_paths), doc_type, person_name),
+            args=(list(self.pdf_paths), add_position, add_text),
             daemon=True,
         )
         self.worker_thread.start()
         self.root.after(QUEUE_POLL_INTERVAL_MS, self._poll_worker_queue)
 
-    def _rename_worker(self, paths: list[Path], doc_type: str, person_name: str) -> None:
+    def _rename_worker(self, paths: list[Path], add_position: str, add_text: str) -> None:
         try:
-            results = rename_pdf_files(paths, doc_type, person_name)
+            results = rename_pdf_files(paths, add_position, add_text)
             self.worker_queue.put(WorkerMessage("complete", results))
         except RenameError as exc:
             self.worker_queue.put(WorkerMessage("error", exc.code))
@@ -865,6 +865,7 @@ class PdfRenameApp:
     def _message_for_error(self, code: str) -> str:
         mapping = {
             "no_pdf": "error_no_pdf",
+            "no_text": "error_no_text",
             "invalid_file": "error_invalid_file",
             "missing_file": "error_missing_file",
             "file_busy": "error_file_busy",
@@ -932,7 +933,7 @@ class PdfRenameApp:
         is_ready = (
             not self.is_processing
             and bool(self.pdf_paths)
-            and bool(normalize_person_name(self.person_name_var.get()))
+            and bool(normalize_add_text(self.add_text_var.get()))
         )
         if is_ready:
             self.execute_button.configure(

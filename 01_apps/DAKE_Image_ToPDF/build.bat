@@ -44,6 +44,7 @@ if exist dist (
     goto :error
   )
 )
+for %%F in (*.spec) do del /q "%%~fF"
 
 echo.
 echo ========================================
@@ -74,6 +75,7 @@ echo ========================================
   --clean ^
   --onefile ^
   --windowed ^
+  --noconsole ^
   --name=DakeImageToPDF ^
   --icon=..\..\02_assets\dake_icon.ico ^
   --hidden-import tkinterdnd2 ^

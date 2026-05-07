@@ -52,8 +52,38 @@ build.bat
 - フッターは DAKE共通仕様に合わせ、広幅時は左右2ブロック、狭幅時は中央寄せ2段構成に切り替えます。
 - 共通アイコンは `..\..\02_assets\dake_icon.ico` を参照し、存在しない場合も起動時に落ちないようにしています。
 - 圧縮処理は別スレッドで実行し、処理中ステータスとプログレス表示でUIが固まって見えないようにしています。
+- 初期ウインドウサイズを `860x740`、最小サイズを `760x720` に調整し、起動直後からフッターが見えるようにしています。
 
 ## 起動確認結果
 
 - 2026-05-06: ソース構文確認、圧縮関数の単体確認、重複ファイル名回避、PyInstallerビルドを確認しました。
 - 2026-05-06: `dist\DakePDF_Compress.exe` の短時間起動確認を行い、プロセス起動後に停止できることを確認しました。
+- 2026-05-06: 共通アイコン参照、初期ウインドウサイズ、最小高さの設定を再確認しました。
+
+## DAKE_META
+
+```json
+{
+  "app_key": "dake_pdf_compress",
+  "display_name": "DakePDF圧縮",
+  "launcher_title": "PDF圧縮",
+  "launcher_description": "PDFを追加してファイルサイズを軽くします。",
+  "site_title": "DakePDF圧縮",
+  "site_description": "PDFを1つ追加し、ファイルサイズを軽くした別名PDFとして保存できるWindows向けアプリです。",
+  "update_summary": "READMEメタ情報とRelease本文を整備。スクリーンショットをassets/screenshot.webpに作成。",
+  "folder_name": "DAKE_PDF_Compress",
+  "exe_name": "DakePDF_Compress.exe",
+  "release_url": "",
+  "screenshot_path": "assets/screenshot.webp",
+  "status": "available",
+  "show_in_launcher": true,
+  "show_on_site": true
+}
+```
+
+## RELEASE_BODY
+
+- PDF圧縮アプリ
+- ドラッグ＆ドロップ対応
+- 保存名の自動連番に対応
+- Windows向けexe

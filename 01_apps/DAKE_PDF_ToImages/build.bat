@@ -91,6 +91,7 @@ echo [INFO] Building exe with PyInstaller...
   --noconfirm ^
   --clean ^
   --windowed ^
+  --noconsole ^
   --onefile ^
   --name=DakePDF_to_Images ^
   --icon=..\..\02_assets\dake_icon.ico ^

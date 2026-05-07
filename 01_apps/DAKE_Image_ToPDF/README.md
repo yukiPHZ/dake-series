@@ -53,3 +53,31 @@ build.bat
 - `README.md`
 - `app.ico`
 - `icon.png`
+
+## DAKE_META
+
+```json
+{
+  "app_key": "dake_image_topdf",
+  "display_name": "DakeImageToPDF",
+  "launcher_title": "画像→PDF",
+  "launcher_description": "画像1枚をA4のPDFに変換します。",
+  "site_title": "DakeImageToPDF",
+  "site_description": "画像を1枚追加するだけで、A4縦または横のPDFへ変換できるWindows向けアプリです。",
+  "update_summary": "READMEメタ情報とRelease本文を整備。スクリーンショットをassets/screenshot.webpに作成。",
+  "folder_name": "DAKE_Image_ToPDF",
+  "exe_name": "DakeImageToPDF.exe",
+  "release_url": "",
+  "screenshot_path": "assets/screenshot.webp",
+  "status": "available",
+  "show_in_launcher": true,
+  "show_on_site": true
+}
+```
+
+## RELEASE_BODY
+
+- 画像→PDF変換アプリ
+- ドラッグ＆ドロップ対応
+- A4縦横の自動判定
+- Windows向けexe

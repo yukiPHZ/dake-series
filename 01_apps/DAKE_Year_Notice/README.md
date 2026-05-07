@@ -40,3 +40,31 @@ build.bat
 ## DAKEシリーズ
 
 シンプルそれDAKEシリーズの単機能アプリです。入力不要、設定不要、起動してすぐ確認できることを優先しています。
+
+## DAKE_META
+
+```json
+{
+  "app_key": "dake_year_notice",
+  "display_name": "Dake今年の注意点",
+  "launcher_title": "今年の注意点",
+  "launcher_description": "閏年と固定資産税評価替え年を確認します。",
+  "site_title": "Dake今年の注意点",
+  "site_description": "今年が閏年か、固定資産税の評価替え年か、次回評価替え年はいつかを確認できるWindows向けアプリです。",
+  "update_summary": "READMEメタ情報とRelease本文を整備。スクリーンショットをassets/screenshot.webpに作成。",
+  "folder_name": "DAKE_Year_Notice",
+  "exe_name": "DakeYear_Notice.exe",
+  "release_url": "",
+  "screenshot_path": "assets/screenshot.webp",
+  "status": "available",
+  "show_in_launcher": true,
+  "show_on_site": true
+}
+```
+
+## RELEASE_BODY
+
+- 今年の注意点確認アプリ
+- 閏年判定に対応
+- 固定資産税評価替え年を表示
+- Windows向けexe

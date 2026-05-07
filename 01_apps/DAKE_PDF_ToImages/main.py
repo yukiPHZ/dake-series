@@ -129,8 +129,8 @@ STATUS_COLORS = {
     "status_error": (THEME["error_bg"], THEME["error"]),
 }
 
-WINDOW_SIZE = "940x760"
-WINDOW_MIN_SIZE = (860, 680)
+WINDOW_SIZE = "1020x800"
+WINDOW_MIN_SIZE = (940, 720)
 RENDER_SCALE = 2.0
 POLL_INTERVAL_MS = 80
 
@@ -308,7 +308,7 @@ class App:
         style.configure(
             "Dake.Treeview",
             font=(self.font_family, 10),
-            rowheight=34,
+            rowheight=32,
             background=THEME["card"],
             fieldbackground=THEME["card"],
             foreground=THEME["text"],
@@ -354,7 +354,7 @@ class App:
             text=UI_TEXT["main_title"],
             bg=THEME["background"],
             fg=THEME["text"],
-            font=(self.font_family, 22, "bold"),
+            font=(self.font_family, 20, "bold"),
             anchor="w",
         ).pack(fill="x")
         tk.Label(
@@ -462,13 +462,14 @@ class App:
         actions = tk.Frame(container, bg=THEME["background"])
         actions.pack(fill="x", pady=(14, 0))
 
-        self.add_button = ttk.Button(actions, text=UI_TEXT["button_add"], style="Secondary.TButton", command=self.choose_pdfs)
+        self.add_button = ttk.Button(actions, text=UI_TEXT["button_add"], style="Secondary.TButton", command=self.choose_pdfs, width=18)
         self.add_button.pack(side="left", padx=(0, 10))
         self.select_folder_button = ttk.Button(
             actions,
             text=UI_TEXT["button_select_folder"],
             style="Secondary.TButton",
             command=self.choose_output_dir,
+            width=18,
         )
         self.select_folder_button.pack(side="left", padx=(0, 10))
         self.refresh_button = ttk.Button(
@@ -476,6 +477,7 @@ class App:
             text=UI_TEXT["button_refresh"],
             style="Secondary.TButton",
             command=self.refresh_items,
+            width=18,
         )
         self.refresh_button.pack(side="left", padx=(0, 10))
         self.execute_button = ttk.Button(
@@ -483,6 +485,7 @@ class App:
             text=UI_TEXT["button_execute"],
             style="Primary.TButton",
             command=self.start_conversion,
+            width=24,
         )
         self.execute_button.pack(side="right")
 
@@ -496,7 +499,7 @@ class App:
             font=(self.font_family, 10),
             anchor="w",
             justify="left",
-            wraplength=860,
+            wraplength=940,
         )
         self.output_path_label.pack(fill="x")
         self.output_hint_label = tk.Label(
@@ -617,12 +620,10 @@ class App:
     def _handle_resize(self, event) -> None:
         if event.widget != self.root:
             return
-        self._set_footer_mode("narrow" if event.width < 900 else "wide")
+        self._set_footer_mode("narrow" if event.width < 960 else "wide")
 
     def _apply_icon(self) -> None:
         try:
-            if getattr(sys, "frozen", False):
-                return
             icon_path = get_common_icon_path().resolve()
             if icon_path.exists():
                 self.root.iconbitmap(str(icon_path))

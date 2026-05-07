@@ -54,3 +54,31 @@ build.bat
 ビルドが成功すると `dist\DakePDF_Split_One.exe` が生成されます。
 
 `python` や `py` がPATHにない場合は、先に `set PYTHON_EXE=C:\Path\To\python.exe` を指定してから `build.bat` を実行できます。
+
+## DAKE_META
+
+```json
+{
+  "app_key": "dake_pdf_splitone",
+  "display_name": "DakePDF分割One",
+  "launcher_title": "PDF分割One",
+  "launcher_description": "PDFを全ページ1枚ずつに自動分割します。",
+  "site_title": "DakePDF分割One",
+  "site_description": "PDFを1ファイル追加すると、全ページを1枚ずつのPDFへ自動分割できるWindows向けアプリです。",
+  "update_summary": "READMEメタ情報とRelease本文を整備。スクリーンショットをassets/screenshot.webpに作成。",
+  "folder_name": "DAKE_PDF_SplitOne",
+  "exe_name": "DakePDF_Split_One.exe",
+  "release_url": "",
+  "screenshot_path": "assets/screenshot.webp",
+  "status": "available",
+  "show_in_launcher": true,
+  "show_on_site": true
+}
+```
+
+## RELEASE_BODY
+
+- PDF全ページ分割アプリ
+- 1ページずつ自動保存
+- ドラッグ＆ドロップ対応
+- Windows向けexe

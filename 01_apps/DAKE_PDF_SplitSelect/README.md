@@ -52,3 +52,31 @@ build.bat
 - UI 文言は `main.py` の `APP_NAME` `WINDOW_TITLE` `COPYRIGHT` `UI_TEXT` で管理しています。
 - フッターリンク URL は `main.py` の `FOOTER_URLS` で管理しています。
 - exe 名は `DakePDF_Split_Select`、表示名は `PDFページ選択保存` として分離しています。
+
+## DAKE_META
+
+```json
+{
+  "app_key": "dake_pdf_splitselect",
+  "display_name": "DakePDF分割Select",
+  "launcher_title": "PDF分割Select",
+  "launcher_description": "PDFから必要ページだけを選んで保存します。",
+  "site_title": "DakePDF分割Select",
+  "site_description": "PDFの必要ページだけをサムネイルや範囲入力で選び、1つのPDFとして保存できるWindows向けアプリです。",
+  "update_summary": "READMEメタ情報とRelease本文を整備。スクリーンショットをassets/screenshot.webpに作成。",
+  "folder_name": "DAKE_PDF_SplitSelect",
+  "exe_name": "DakePDF_Split_Select.exe",
+  "release_url": "",
+  "screenshot_path": "assets/screenshot.webp",
+  "status": "available",
+  "show_in_launcher": true,
+  "show_on_site": true
+}
+```
+
+## RELEASE_BODY
+
+- PDFページ選択保存アプリ
+- サムネイル選択に対応
+- 範囲入力にも対応
+- Windows向けexe

@@ -33,3 +33,31 @@ build.bat
 ```
 
 生成物は`dist\DakePDF_Crop.exe`です。
+
+## DAKE_META
+
+```json
+{
+  "app_key": "dake_pdf_crop",
+  "display_name": "DakePDFトリミング",
+  "launcher_title": "PDFトリミング",
+  "launcher_description": "PDFをドラッグ指定した範囲でトリミングします。",
+  "site_title": "DakePDFトリミング",
+  "site_description": "PDFプレビュー上で残したい範囲をドラッグし、トリミング済みPDFとして保存できるWindows向けアプリです。",
+  "update_summary": "READMEメタ情報とRelease本文を整備。スクリーンショットをassets/screenshot.webpに作成。",
+  "folder_name": "DAKE_PDF_Crop",
+  "exe_name": "DakePDF_Crop.exe",
+  "release_url": "",
+  "screenshot_path": "assets/screenshot.webp",
+  "status": "available",
+  "show_in_launcher": true,
+  "show_on_site": true
+}
+```
+
+## RELEASE_BODY
+
+- PDFトリミングアプリ
+- ドラッグ範囲指定に対応
+- 別名PDFとして保存
+- Windows向けexe

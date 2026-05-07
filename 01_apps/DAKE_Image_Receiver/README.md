@@ -22,3 +22,31 @@
 ## アイコン
 
 DAKE共通アイコン `..\..\02_assets\dake_icon.ico` を使用します。アプリ個別アイコンは作成しません。
+
+## DAKE_META
+
+```json
+{
+  "app_key": "dake_image_receiver",
+  "display_name": "DakeImage_Receiver",
+  "launcher_title": "スマホ画像受信",
+  "launcher_description": "スマホから画像をこのPCへ送ります。",
+  "site_title": "DakeImage_Receiver",
+  "site_description": "PCに表示したQRコードをスマホで読み取り、画像をWindows PCへ送るための受信アプリです。",
+  "update_summary": "READMEメタ情報とRelease本文を整備。スクリーンショットをassets/screenshot.webpに作成。",
+  "folder_name": "DAKE_Image_Receiver",
+  "exe_name": "DakeImage_Receiver.exe",
+  "release_url": "",
+  "screenshot_path": "assets/screenshot.webp",
+  "status": "available",
+  "show_in_launcher": true,
+  "show_on_site": true
+}
+```
+
+## RELEASE_BODY
+
+- スマホ画像受信アプリ
+- QRコード接続に対応
+- 画像をPC側へ保存
+- Windows向けexe

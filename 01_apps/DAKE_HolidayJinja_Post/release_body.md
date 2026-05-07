@@ -1,0 +1,4 @@
+- holiday-jinja投稿作成アプリ
+- 写真・本文・場所の入力に対応
+- 投稿データをPC上で整理
+- Windows向けexe

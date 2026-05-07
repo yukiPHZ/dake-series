@@ -81,3 +81,31 @@ DAKE 共通アイコン `C:\Users\yukiz\devlop\DAKE_series\02_assets\dake_icon.i
 
 削除、編集、投稿一覧管理、タイトル編集、タグ編集、SEO 編集はありません。
 ユーザーの仕事は、本文を書くことだけです。
+
+## DAKE_META
+
+```json
+{
+  "app_key": "dake_yukizblog_post",
+  "display_name": "YUKIZ BLOG 投稿DAKE",
+  "launcher_title": "YUKIZ BLOG投稿",
+  "launcher_description": "YUKIZ BLOG用の投稿HTMLとJSONを反映します。",
+  "site_title": "YUKIZ BLOG 投稿DAKE",
+  "site_description": "本文を書いて置くだけで、YUKIZ BLOG側のHTMLとJSONへ投稿を反映できるWindows向けアプリです。",
+  "update_summary": "READMEメタ情報とRelease本文を整備。スクリーンショットをassets/screenshot.webpに作成。",
+  "folder_name": "DAKE_YukizBlog_Post",
+  "exe_name": "Dake_YukizBlog_Post.exe",
+  "release_url": "",
+  "screenshot_path": "assets/screenshot.webp",
+  "status": "available",
+  "show_in_launcher": true,
+  "show_on_site": true
+}
+```
+
+## RELEASE_BODY
+
+- YUKIZ BLOG投稿アプリ
+- 本文入力だけの投稿導線
+- HTML・JSON反映に対応
+- Windows向けexe

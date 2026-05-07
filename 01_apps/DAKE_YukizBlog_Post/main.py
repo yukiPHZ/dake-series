@@ -21,15 +21,32 @@ except Exception:  # CustomTkinter is not needed for CLI maintenance commands.
 
 
 APP_NAME = "YUKIZ BLOG 投稿DAKE"
+WINDOW_TITLE = "YUKIZ BLOG 投稿DAKE"
+COPYRIGHT = "© 2026 しまりす不動産 / Vibe-Coded by Yukihiko Kikuta"
 DEFAULT_SITE_PATH = Path("C:/Users/yukiz/devlop/yukizblog-site")
 DEFAULT_BASE_URL = os.environ.get("YUKIZBLOG_BASE_URL", "https://yukizblog.com/")
 TOKYO = dt.timezone(dt.timedelta(hours=9), "JST")
 
-STATUS_READY = ""
-STATUS_PREVIEW = "置く前に、少し見る。"
-STATUS_DONE = "静かに置きました。"
-STATUS_ERROR = "静かに置けませんでした。"
-STATUS_WORKING = ("置いています.", "置いています..", "置いています...")
+UI_TEXT = {
+    "subtitle": "言葉を、静かに置く。",
+    "button_place": "置く",
+    "button_preview": "プレビュー",
+    "view_post_link": "置いた記事を見る",
+    "footer_credit": "Yukihiko Kikuta",
+    "status_ready": "",
+    "status_preview": "置く前に、少し見る。",
+    "status_done": "静かに置きました。",
+    "status_error": "静かに置けませんでした。",
+    "status_working": ("置いています.", "置いています..", "置いています..."),
+    "error_empty_body": "本文が空です。",
+    "error_customtkinter_missing": "customtkinter が見つかりません。requirements.txt を確認してください。",
+}
+
+STATUS_READY = UI_TEXT["status_ready"]
+STATUS_PREVIEW = UI_TEXT["status_preview"]
+STATUS_DONE = UI_TEXT["status_done"]
+STATUS_ERROR = UI_TEXT["status_error"]
+STATUS_WORKING = tuple(UI_TEXT["status_working"])
 
 POST_FILE_RE = re.compile(r"^(\d{8})-(\d{3})\.html$")
 PARTICLE_RE = re.compile(
@@ -108,6 +125,22 @@ def get_app_dir() -> Path:
 
 
 APP_DIR = get_app_dir()
+
+
+def apply_common_icon(window: object) -> None:
+    candidates = [
+        APP_DIR / "dake_icon.ico",
+        APP_DIR.parent.parent / "02_assets" / "dake_icon.ico",
+        APP_DIR.parent.parent.parent / "02_assets" / "dake_icon.ico",
+    ]
+    for icon_path in candidates:
+        if not icon_path.exists():
+            continue
+        try:
+            window.iconbitmap(str(icon_path))
+        except Exception:
+            continue
+        return
 
 
 def read_text(path: Path) -> str:
@@ -862,10 +895,11 @@ class YukizBlogPostApp(ctk.CTk):  # type: ignore[misc]
         self.status_index = 0
         self.last_post_path: Path | None = None
 
-        self.title(APP_NAME)
+        self.title(WINDOW_TITLE)
         self.geometry("960x780")
         self.minsize(780, 640)
         self.configure(fg_color="#F6F7F9")
+        apply_common_icon(self)
 
         self.font_family = "BIZ UDPGothic"
         self.title_font = ctk.CTkFont(family=self.font_family, size=25, weight="normal")
@@ -885,7 +919,7 @@ class YukizBlogPostApp(ctk.CTk):  # type: ignore[misc]
         title = ctk.CTkLabel(header, text=APP_NAME, font=self.title_font, text_color="#20242A")
         title.grid(row=0, column=0, sticky="w")
 
-        subtitle = ctk.CTkLabel(header, text="言葉を、静かに置く。", font=self.sub_font, text_color="#667085")
+        subtitle = ctk.CTkLabel(header, text=UI_TEXT["subtitle"], font=self.sub_font, text_color="#667085")
         subtitle.grid(row=1, column=0, sticky="w", pady=(8, 0))
 
         body_wrap = ctk.CTkFrame(
@@ -932,7 +966,7 @@ class YukizBlogPostApp(ctk.CTk):  # type: ignore[misc]
 
         self.place_button = ctk.CTkButton(
             lower,
-            text="置く",
+            text=UI_TEXT["button_place"],
             font=self.button_font,
             fg_color="#587898",
             hover_color="#4D6B88",
@@ -946,7 +980,7 @@ class YukizBlogPostApp(ctk.CTk):  # type: ignore[misc]
 
         self.preview_button = ctk.CTkButton(
             lower,
-            text="プレビュー",
+            text=UI_TEXT["button_preview"],
             font=self.button_font,
             fg_color="#EEF3F7",
             hover_color="#E4ECF3",
@@ -963,7 +997,7 @@ class YukizBlogPostApp(ctk.CTk):  # type: ignore[misc]
 
         self.view_post_link = ctk.CTkLabel(
             lower,
-            text="置いた記事を見る",
+            text=UI_TEXT["view_post_link"],
             font=self.link_font,
             text_color="#8A9AAC",
         )
@@ -973,7 +1007,7 @@ class YukizBlogPostApp(ctk.CTk):  # type: ignore[misc]
         self.view_post_link.bind("<Leave>", lambda _event: self.view_post_link.configure(text_color="#8A9AAC"))
         self.view_post_link.grid_remove()
 
-        footer = ctk.CTkLabel(self, text="Yukihiko Kikuta", font=self.footer_font, text_color="#8A94A6")
+        footer = ctk.CTkLabel(self, text=UI_TEXT["footer_credit"], font=self.footer_font, text_color="#8A94A6")
         footer.grid(row=3, column=0, sticky="s", pady=(0, 26))
 
     def get_body(self) -> str:
@@ -1003,7 +1037,7 @@ class YukizBlogPostApp(ctk.CTk):  # type: ignore[misc]
             return
         body = self.get_body()
         if not normalize_body(body):
-            self.status_label.configure(text=f"{STATUS_ERROR} 本文が空です。")
+            self.status_label.configure(text=f"{STATUS_ERROR} {UI_TEXT['error_empty_body']}")
             return
         self.view_post_link.grid_remove()
         self.is_working = True
@@ -1047,7 +1081,7 @@ class YukizBlogPostApp(ctk.CTk):  # type: ignore[misc]
             return
         body = self.get_body()
         if not normalize_body(body):
-            self.status_label.configure(text=f"{STATUS_ERROR} 本文が空です。")
+            self.status_label.configure(text=f"{STATUS_ERROR} {UI_TEXT['error_empty_body']}")
             return
         try:
             self.view_post_link.grid_remove()
@@ -1119,7 +1153,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if ctk is None:
-        print("customtkinter が見つかりません。requirements.txt を確認してください。", file=sys.stderr)
+        print(UI_TEXT["error_customtkinter_missing"], file=sys.stderr)
         return 1
 
     ctk.set_appearance_mode("light")

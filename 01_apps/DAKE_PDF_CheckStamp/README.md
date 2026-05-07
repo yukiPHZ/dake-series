@@ -43,3 +43,31 @@ PDFに名字と日付入りの確認印を1か所だけ押して、別名PDFと�
 3. `dist/Dake_Check_Stamp.exe` が生成されます。
 
 DAKEシリーズ共通アイコンは `../../02_assets/dake_icon.ico` を参照します。アイコン正本は `02_assets/dake_icon.ico` で、アプリ個別のアイコンは使用しません。
+
+## DAKE_META
+
+```json
+{
+  "app_key": "dake_pdf_checkstamp",
+  "display_name": "Dake確認印",
+  "launcher_title": "PDF確認印",
+  "launcher_description": "PDFに名字と日付入りの確認印を押します。",
+  "site_title": "Dake確認印",
+  "site_description": "PDFプレビュー上で位置を選び、名字と日付入りの確認印を1か所押せるWindows向けアプリです。",
+  "update_summary": "READMEメタ情報とRelease本文を整備。スクリーンショットをassets/screenshot.webpに作成。",
+  "folder_name": "DAKE_PDF_CheckStamp",
+  "exe_name": "Dake_Check_Stamp.exe",
+  "release_url": "",
+  "screenshot_path": "assets/screenshot.webp",
+  "status": "available",
+  "show_in_launcher": true,
+  "show_on_site": true
+}
+```
+
+## RELEASE_BODY
+
+- PDF確認印アプリ
+- 名字と日付入りの印影に対応
+- クリック位置へ押印
+- Windows向けexe

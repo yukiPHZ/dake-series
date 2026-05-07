@@ -61,3 +61,42 @@ DAKEシリーズ共通アイコン `..\..\02_assets\dake_icon.ico` を使用し�
 - 共通アイコン `..\..\02_assets\dake_icon.ico` を Tkinter 起動時と PyInstaller ビルド時に参照します。
 - `build.bat` による `DakePDF_Viewer.exe` のビルドを確認しました。
 - `dist\DakePDF_Viewer.exe` の起動確認を実施しました。
+
+## 表示レイアウト修正
+
+2026-05-06 に閲覧体験を調整しました。
+
+- 1P / 2P 閲覧モードに対応しました。
+- PDFを開いた直後は、1ページ全体が見える高さフィットを基本にしました。
+- 高さフィット / 幅フィットを切り替えられるようにしました。
+- `PDFを追加` を主ボタンに変更し、単体PDFをすぐ開く導線を優先しました。
+- スクロールバーとPDF表示位置を調整し、表示ページ全体が自然に中央へ来るようにしました。
+- 既存の文字検索と現在ページのみ印刷は維持しています。
+
+## DAKE_META
+
+```json
+{
+  "app_key": "dake_pdf_viewer",
+  "display_name": "DakePDF見る",
+  "launcher_title": "PDF見る",
+  "launcher_description": "PDFを探してすぐ確認する軽量ビューワーです。",
+  "site_title": "DakePDF見る",
+  "site_description": "フォルダ内PDFの一覧表示、ページ確認、拡大縮小に絞った軽量PDFビューワーです。",
+  "update_summary": "READMEメタ情報とRelease本文を整備。スクリーンショットをassets/screenshot.webpに作成。",
+  "folder_name": "DAKE_PDF_Viewer",
+  "exe_name": "DakePDF_Viewer.exe",
+  "release_url": "",
+  "screenshot_path": "assets/screenshot.webp",
+  "status": "available",
+  "show_in_launcher": true,
+  "show_on_site": true
+}
+```
+
+## RELEASE_BODY
+
+- 軽量PDFビューワー
+- フォルダ内PDF一覧に対応
+- ページ表示・拡大縮小に対応
+- Windows向けexe

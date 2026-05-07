@@ -68,3 +68,31 @@ PDF を追加して保存先を選ぶだけで、各 PDF をページ単位の�
 - アイコン: `..\..\02_assets\dake_icon.ico` の共通アイコンのみ参照
 - ビルド確認: `build.bat` で `dist\DakePDF_to_Images.exe` を生成
 - 起動確認: 生成後の exe が起動することを確認
+
+## DAKE_META
+
+```json
+{
+  "app_key": "dake_pdf_toimages",
+  "display_name": "DakePDFto画像",
+  "launcher_title": "PDF→画像",
+  "launcher_description": "PDFの各ページをPNG画像に変換します。",
+  "site_title": "DakePDFto画像",
+  "site_description": "PDFを追加して保存先を選ぶだけで、各ページをPNG画像として書き出せるWindows向けアプリです。",
+  "update_summary": "READMEメタ情報とRelease本文を整備。スクリーンショットをassets/screenshot.webpに作成。",
+  "folder_name": "DAKE_PDF_ToImages",
+  "exe_name": "DakePDF_to_Images.exe",
+  "release_url": "",
+  "screenshot_path": "assets/screenshot.webp",
+  "status": "available",
+  "show_in_launcher": true,
+  "show_on_site": true
+}
+```
+
+## RELEASE_BODY
+
+- PDF→画像変換アプリ
+- ページごとのPNG保存に対応
+- 複数PDFの追加に対応
+- Windows向けexe

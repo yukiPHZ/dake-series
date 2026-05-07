@@ -53,3 +53,31 @@ build.bat
 - 共通アイコン `../../02_assets/dake_icon.ico` の参照を維持しました。
 - `build.bat` による exe 再ビルドに成功しました。
 - `dist/DakePDF_LookHere.exe` は短時間起動確認で正常に起動しました。
+
+## DAKE_META
+
+```json
+{
+  "app_key": "dake_pdf_lookhere",
+  "display_name": "DakePDFここ見て",
+  "launcher_title": "PDFここ見て",
+  "launcher_description": "PDFに赤い丸と矢印を付けます。",
+  "site_title": "DakePDFここ見て",
+  "site_description": "PDFに赤い丸や矢印を付けて、確認してほしい箇所を伝えられるWindows向けアプリです。",
+  "update_summary": "READMEメタ情報とRelease本文を整備。スクリーンショットをassets/screenshot.webpに作成。",
+  "folder_name": "DAKE_PDF_LookHere",
+  "exe_name": "DakePDF_LookHere.exe",
+  "release_url": "",
+  "screenshot_path": "assets/screenshot.webp",
+  "status": "available",
+  "show_in_launcher": true,
+  "show_on_site": true
+}
+```
+
+## RELEASE_BODY
+
+- PDF注目箇所マークアプリ
+- 赤い丸・矢印に対応
+- 元PDFとは別名で保存
+- Windows向けexe

@@ -1,0 +1,4 @@
+- YUKIZ BLOG投稿アプリ
+- 本文入力だけの投稿導線
+- HTML・JSON反映に対応
+- Windows向けexe

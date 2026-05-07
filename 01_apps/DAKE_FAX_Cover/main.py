@@ -21,6 +21,7 @@ try:
     from reportlab.lib.units import mm
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+    from reportlab.pdfbase.ttfonts import TTFont
     from reportlab.pdfgen import canvas as pdf_canvas
 
     REPORTLAB_AVAILABLE = True
@@ -31,6 +32,7 @@ except Exception as exc:
     pdf_colors = None
     pdfmetrics = None
     UnicodeCIDFont = None
+    TTFont = None
     pdf_canvas = None
     REPORTLAB_AVAILABLE = False
     REPORTLAB_IMPORT_ERROR = exc
@@ -93,7 +95,8 @@ UI_TEXT = {
     "footer_copyright": COPYRIGHT,
     "honorific_company": "御中",
     "honorific_person": "様",
-    "default_message": "下記のとおりFAXを送信いたします。ご確認のほどよろしくお願いいたします。",
+    "default_message": "下記のとおりFAXを送信いたします。\nご確認のほどよろしくお願いいたします。",
+    "message_help": "必要に応じて、送信先への連絡文を入力できます。",
     "date_format": "{year}年{month}月{day}日",
     "date_placeholder": "例：2026年4月27日",
     "folder_dialog_title": "保存先フォルダを選択",
@@ -124,6 +127,7 @@ UI_TEXT = {
     "pdf_email": "E-mail",
     "pdf_postal_mark": "〒",
     "pdf_closing": "以上",
+    "pdf_continued_suffix": "...",
     "empty_value": "",
     "save_folder_default_label": "Downloads",
 }
@@ -151,6 +155,12 @@ LINK_URLS = {
 CONFIG_NAME = "fax_cover_config.json"
 WINDOW_APP_ID = "Dake.FAXCover"
 INITIAL_ITEM_ROWS = 3
+PDF_FONT_CANDIDATES = [
+    ("BIZUDGothic", "BIZUDGothic-Bold", Path(r"C:\Windows\Fonts\BIZ-UDGothicR.ttc"), Path(r"C:\Windows\Fonts\BIZ-UDGothicB.ttc")),
+    ("YuGothic", "YuGothic-Bold", Path(r"C:\Windows\Fonts\YuGothR.ttc"), Path(r"C:\Windows\Fonts\YuGothB.ttc")),
+    ("Meiryo", "Meiryo-Bold", Path(r"C:\Windows\Fonts\meiryo.ttc"), Path(r"C:\Windows\Fonts\meiryob.ttc")),
+    ("MSGothic", "MSGothic-Bold", Path(r"C:\Windows\Fonts\msgothic.ttc"), Path(r"C:\Windows\Fonts\msgothic.ttc")),
+]
 DATE_SEPARATED_PATTERN = re.compile(r"^\s*(\d{4})\D+(\d{1,2})\D+(\d{1,2})\D*\s*$")
 DATE_DIGIT_PATTERN = re.compile(r"^\s*(\d{4})(\d{2})(\d{2})\s*$")
 FILENAME_UNSAFE_PATTERN = re.compile(r'[\\/:*?"<>|]+')
@@ -264,17 +274,41 @@ def set_windows_app_id() -> None:
         pass
 
 
-def register_pdf_fonts() -> tuple[str, str]:
+def register_pdf_fonts() -> tuple[str, str, str]:
     if not REPORTLAB_AVAILABLE or pdfmetrics is None or UnicodeCIDFont is None:
         raise RuntimeError(UI_TEXT["error_reportlab_missing"])
-    gothic = "HeiseiKakuGo-W5"
-    mincho = "HeiseiMin-W3"
-    for font_name in (gothic, mincho):
+    if TTFont is not None:
+        for regular_name, bold_name, regular_path, bold_path in PDF_FONT_CANDIDATES:
+            if not regular_path.exists():
+                continue
+            try:
+                pdfmetrics.getFont(regular_name)
+            except KeyError:
+                try:
+                    pdfmetrics.registerFont(TTFont(regular_name, str(regular_path)))
+                except Exception:
+                    continue
+            if bold_path.exists():
+                try:
+                    pdfmetrics.getFont(bold_name)
+                except KeyError:
+                    try:
+                        pdfmetrics.registerFont(TTFont(bold_name, str(bold_path)))
+                    except Exception:
+                        bold_name = regular_name
+            else:
+                bold_name = regular_name
+            return regular_name, bold_name, regular_name
+
+    regular = "HeiseiKakuGo-W5"
+    bold = "HeiseiKakuGo-W5"
+    title = "HeiseiMin-W3"
+    for font_name in (regular, title):
         try:
             pdfmetrics.getFont(font_name)
         except KeyError:
             pdfmetrics.registerFont(UnicodeCIDFont(font_name))
-    return gothic, mincho
+    return regular, bold, title
 
 
 def wrap_pdf_text(text: str, max_width: float, font_name: str, font_size: int) -> list[str]:
@@ -315,6 +349,43 @@ def draw_wrapped(
     return y
 
 
+def fit_pdf_lines(
+    text: str,
+    max_width: float,
+    font_name: str,
+    font_size: int,
+    max_lines: int,
+) -> list[str]:
+    lines = wrap_pdf_text(text, max_width, font_name, font_size)
+    if max_lines <= 0:
+        return []
+    if len(lines) <= max_lines:
+        return lines
+    fitted = lines[:max_lines]
+    suffix = UI_TEXT["pdf_continued_suffix"]
+    last = fitted[-1]
+    while last and pdfmetrics is not None and pdfmetrics.stringWidth(last + suffix, font_name, font_size) > max_width:
+        last = last[:-1]
+    fitted[-1] = (last + suffix) if last else suffix
+    return fitted
+
+
+def draw_fitted_lines(
+    canvas: object,
+    lines: list[str],
+    x: float,
+    y: float,
+    font_name: str,
+    font_size: int,
+    leading: float,
+) -> float:
+    canvas.setFont(font_name, font_size)
+    for line in lines:
+        canvas.drawString(x, y, line)
+        y -= leading
+    return y
+
+
 def draw_label_value(
     canvas: object,
     label: str,
@@ -329,7 +400,7 @@ def draw_label_value(
 ) -> float:
     canvas.setFont(label_font, font_size)
     canvas.drawString(x, y, label)
-    return draw_wrapped(canvas, value, x + label_width, y, max_width - label_width, font_name, font_size, 12, max_lines=2)
+    return draw_wrapped(canvas, value, x + label_width, y, max_width - label_width, font_name, font_size, 13, max_lines=2)
 
 
 def draw_table_cell(
@@ -401,79 +472,93 @@ def create_pdf(data: FaxCoverData) -> Path:
         detail = f" ({REPORTLAB_IMPORT_ERROR})" if REPORTLAB_IMPORT_ERROR else ""
         raise RuntimeError(UI_TEXT["error_reportlab_missing"] + detail)
 
-    gothic, mincho = register_pdf_fonts()
+    gothic, bold_font, title_font = register_pdf_fonts()
     recipient_name = data.recipient["company"] or data.recipient["name"]
     filename_recipient = sanitize_filename_part(recipient_name)
     filename = f"{data.output_date:%Y%m%d}_{UI_TEXT['filename_title']}_{filename_recipient}.pdf"
     output_path = unique_pdf_path(data.save_folder, filename)
 
     width, height = A4
-    margin_x = 22 * mm
-    top_y = height - 22 * mm
+    margin_x = 20 * mm
+    top_y = height - 20 * mm
+    bottom_limit = 24 * mm
     canvas = pdf_canvas.Canvas(str(output_path), pagesize=A4)
     canvas.setTitle(UI_TEXT["pdf_title"])
-    canvas.setLineWidth(0.9)
+    canvas.setLineWidth(1.0)
     canvas.setStrokeColor(pdf_colors.black)
     canvas.setFillColor(pdf_colors.black)
 
-    canvas.setFont(gothic, 10)
+    canvas.setFont(gothic, 10.5)
     canvas.drawRightString(width - margin_x, top_y, format_japanese_date(data.output_date))
 
-    title_y = top_y - 36
-    canvas.setFont(mincho, 22)
+    title_y = top_y - 34
+    canvas.setFont(title_font, 22)
     canvas.drawCentredString(width / 2, title_y, UI_TEXT["pdf_title"])
-    canvas.line(margin_x, title_y - 12, width - margin_x, title_y - 12)
+    canvas.setLineWidth(1.1)
+    canvas.line(margin_x, title_y - 13, width - margin_x, title_y - 13)
 
-    block_top = title_y - 42
+    block_top = title_y - 41
     left_x = margin_x
     right_x = width / 2 + 8 * mm
     block_width = width / 2 - margin_x - 8 * mm
 
-    canvas.setFont(gothic, 10)
+    canvas.setFont(bold_font, 10.5)
     canvas.drawString(left_x, block_top, UI_TEXT["pdf_recipient_heading"])
     canvas.drawString(right_x, block_top, UI_TEXT["pdf_sender_heading"])
+    canvas.setLineWidth(0.9)
     canvas.line(left_x, block_top - 4, left_x + block_width, block_top - 4)
     canvas.line(right_x, block_top - 4, right_x + block_width, block_top - 4)
 
     y_left = block_top - 20
     for line in build_recipient_lines(data.recipient):
-        font_size = 11 if line.startswith(UI_TEXT["pdf_fax"]) else 9
-        y_left = draw_wrapped(canvas, line, left_x, y_left, block_width, gothic, font_size, 13, max_lines=2)
+        is_fax = line.startswith(UI_TEXT["pdf_fax"])
+        font_size = 12 if is_fax else 9.5
+        font_name = bold_font if is_fax else gothic
+        y_left = draw_wrapped(canvas, line, left_x, y_left, block_width, font_name, font_size, 13.5, max_lines=2)
 
     y_right = block_top - 20
     for line in build_sender_lines(data.sender):
-        y_right = draw_wrapped(canvas, line, right_x, y_right, block_width, gothic, 9, 12, max_lines=2)
+        is_fax = line.startswith(UI_TEXT["pdf_fax"])
+        font_size = 11 if is_fax else 9.2
+        font_name = bold_font if is_fax else gothic
+        y_right = draw_wrapped(canvas, line, right_x, y_right, block_width, font_name, font_size, 12.8, max_lines=2)
 
-    fax_info_top = min(y_left, y_right) - 16
-    info_height = 50
+    fax_info_top = min(y_left, y_right) - 15
+    info_height = 56
+    canvas.setLineWidth(1.0)
     canvas.rect(margin_x, fax_info_top - info_height, width - margin_x * 2, info_height, stroke=1, fill=0)
-    canvas.setFont(gothic, 10)
+    canvas.setFont(bold_font, 10.5)
     canvas.drawString(margin_x + 8, fax_info_top - 16, UI_TEXT["pdf_fax_info_heading"])
-    info_x = margin_x + 74
+    info_x = margin_x + 76
     info_y = fax_info_top - 16
-    draw_label_value(canvas, UI_TEXT["pdf_subject"], data.fax_info["subject"], info_x, info_y, 48, 270, gothic, gothic, 10)
-    draw_label_value(canvas, UI_TEXT["pdf_total_pages"], data.fax_info["total_pages"], info_x, info_y - 18, 48, 170, gothic, gothic, 10)
+    draw_label_value(canvas, UI_TEXT["pdf_subject"], data.fax_info["subject"], info_x, info_y, 50, 285, bold_font, bold_font, 11)
+    draw_label_value(canvas, UI_TEXT["pdf_total_pages"], data.fax_info["total_pages"], info_x, info_y - 21, 50, 175, bold_font, bold_font, 11)
     draw_label_value(
         canvas,
         UI_TEXT["pdf_send_date"],
         format_japanese_date(data.send_date),
         info_x + 210,
-        info_y - 18,
-        48,
+        info_y - 21,
+        50,
         190,
-        gothic,
-        gothic,
-        10,
+        bold_font,
+        bold_font,
+        11,
     )
 
-    message_y = fax_info_top - info_height - 28
+    message_y = fax_info_top - info_height - 26
     message = data.message.strip() or UI_TEXT["default_message"]
-    message_y = draw_wrapped(canvas, message, margin_x, message_y, width - margin_x * 2, gothic, 10, 15, max_lines=3)
-
     table_x = margin_x
-    table_top = message_y - 18
-    col_widths = [270, 70, width - margin_x * 2 - 340]
-    row_height = 29
+    col_widths = [276, 72, width - margin_x * 2 - 348]
+    row_height = 30
+    table_rows_height = row_height * (len(data.items) + 1)
+    closing_height = 34
+    available_message_height = message_y - 18 - table_rows_height - closing_height - bottom_limit
+    max_message_lines = max(1, min(8, int(available_message_height // 15)))
+    message_lines = fit_pdf_lines(message, width - margin_x * 2, gothic, 10.5, max_message_lines)
+    message_y = draw_fitted_lines(canvas, message_lines, margin_x, message_y, gothic, 10.5, 15)
+
+    table_top = message_y - 16
     headers = [
         UI_TEXT["pdf_table_item_name"],
         UI_TEXT["pdf_table_pages"],
@@ -481,14 +566,14 @@ def create_pdf(data: FaxCoverData) -> Path:
     ]
     table_width = sum(col_widths)
 
-    canvas.setLineWidth(0.8)
+    canvas.setLineWidth(0.95)
     canvas.setFillColor(pdf_colors.HexColor(COLORS["table_header"]))
     canvas.rect(table_x, table_top - row_height, table_width, row_height, stroke=1, fill=1)
     canvas.setFillColor(pdf_colors.black)
     current_x = table_x
     for index, header in enumerate(headers):
         canvas.line(current_x, table_top, current_x, table_top - row_height)
-        draw_table_cell(canvas, header, current_x, table_top - row_height, col_widths[index], row_height, gothic, 10, True)
+        draw_table_cell(canvas, header, current_x, table_top - row_height, col_widths[index], row_height, bold_font, 10.5, True)
         current_x += col_widths[index]
     canvas.line(current_x, table_top, current_x, table_top - row_height)
 
@@ -500,12 +585,13 @@ def create_pdf(data: FaxCoverData) -> Path:
         values = [item.name, item.pages, item.note]
         for index, value in enumerate(values):
             canvas.line(current_x, row_y + row_height, current_x, row_y)
-            draw_table_cell(canvas, value, current_x, row_y, col_widths[index], row_height, gothic, 10, index == 1)
+            cell_font = bold_font if index == 1 else gothic
+            draw_table_cell(canvas, value, current_x, row_y, col_widths[index], row_height, cell_font, 10.2, index == 1)
             current_x += col_widths[index]
         canvas.line(current_x, row_y + row_height, current_x, row_y)
 
-    canvas.setFont(gothic, 10)
-    canvas.drawRightString(width - margin_x, max(42 * mm, row_y - 28), UI_TEXT["pdf_closing"])
+    canvas.setFont(gothic, 10.5)
+    canvas.drawRightString(width - margin_x, max(bottom_limit, row_y - 28), UI_TEXT["pdf_closing"])
     canvas.showPage()
     canvas.save()
     return output_path
@@ -809,9 +895,20 @@ class FaxCoverApp:
 
     def build_message_card(self, parent: tk.Widget) -> None:
         card = self.card(parent, UI_TEXT["section_message"])
-        self.message_text = tk.Text(
+        tk.Label(
             card,
-            height=3,
+            text=UI_TEXT["message_help"],
+            font=self.fonts["small"],
+            fg=COLORS["muted"],
+            bg=COLORS["card"],
+        ).grid(row=1, column=0, columnspan=4, sticky="w", pady=(0, 8))
+        text_frame = tk.Frame(card, bg=COLORS["card"])
+        text_frame.grid(row=2, column=0, columnspan=4, sticky="ew")
+        text_frame.grid_columnconfigure(0, weight=1)
+        self.message_text = tk.Text(
+            text_frame,
+            height=5,
+            width=54,
             wrap="word",
             font=self.fonts["body"],
             fg=COLORS["text"],
@@ -821,8 +918,23 @@ class FaxCoverApp:
             highlightthickness=1,
             highlightbackground=COLORS["border"],
             highlightcolor=COLORS["accent"],
+            insertbackground=COLORS["text"],
+            padx=10,
+            pady=8,
+            undo=True,
         )
-        self.message_text.grid(row=1, column=0, columnspan=4, sticky="ew")
+        scrollbar = tk.Scrollbar(
+            text_frame,
+            orient="vertical",
+            command=self.message_text.yview,
+            relief="flat",
+            bd=0,
+            troughcolor=COLORS["background"],
+            activebackground=COLORS["border"],
+        )
+        self.message_text.configure(yscrollcommand=scrollbar.set)
+        self.message_text.grid(row=0, column=0, sticky="ew")
+        scrollbar.grid(row=0, column=1, sticky="ns", padx=(6, 0))
         self.message_text.insert("1.0", UI_TEXT["default_message"])
 
     def build_sender_card(self, parent: tk.Widget) -> None:

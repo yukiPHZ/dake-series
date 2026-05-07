@@ -58,8 +58,10 @@ UI_TEXT = {
     "main_title": "PDFのページ順を変える",
     "main_description": "PDFを読み込み、ページを並べ替えて保存します。",
     "empty_title": "PDFを追加してください",
+    "empty_subtitle": "ドラッグ＆ドロップ または クリックして追加",
     "empty_subtitle_dnd": "ここにPDFをドラッグ＆ドロップ、または下のボタンから追加",
     "empty_subtitle_button": "下のボタンからPDFを追加",
+    "reorder_hint": "ページをドラッグして順番を変えます。",
     "button_add_pdf": "PDFを追加",
     "button_choose_folder": "保存先を選ぶ",
     "button_save": "並べ替えて保存",
@@ -300,6 +302,7 @@ class PdfReorderApp:
 
         self.source_pdf: Path | None = None
         self.pages: list[PageItem] = []
+        self.page_order: list[int] = []
         self.queue: queue.Queue[tuple[Any, ...]] = queue.Queue()
         self.load_id = 0
         self.is_busy = False
@@ -409,6 +412,16 @@ class PdfReorderApp:
             anchor="e",
         )
         folder_label.grid(row=0, column=1, sticky="e", padx=(16, 0))
+
+        guide_label = tk.Label(
+            info,
+            text=UI_TEXT["reorder_hint"],
+            bg=THEME["card"],
+            fg=THEME["muted"],
+            font=(self.font_family, 9),
+            anchor="w",
+        )
+        guide_label.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(6, 0))
 
         canvas_wrap = tk.Frame(panel, bg=THEME["card"])
         canvas_wrap.grid(row=1, column=0, sticky="nsew", padx=18, pady=(0, 16))
@@ -668,15 +681,28 @@ class PdfReorderApp:
     def on_drop(self, event: tk.Event) -> None:
         if self.is_busy:
             return
-        try:
-            paths = [Path(value) for value in self.root.tk.splitlist(event.data)]  # type: ignore[attr-defined]
-        except Exception:
+        paths = self.drop_paths_from_data(str(event.data))  # type: ignore[attr-defined]
+        if not paths:
             self.show_warning(UI_TEXT["message_select_pdf"])
             return
         if len(paths) != 1:
             self.show_warning(UI_TEXT["message_pdf_one_file"])
             return
         self.load_pdf(paths[0])
+
+    def drop_paths_from_data(self, data: str) -> list[Path]:
+        raw = data.strip()
+        if not raw:
+            return []
+        braced = re.findall(r"\{([^{}]+)\}", raw)
+        if braced:
+            return [Path(value) for value in braced if value]
+        if re.match(r"^[A-Za-z]:[\\/]", raw):
+            return [Path(raw)]
+        try:
+            return [Path(value) for value in self.root.tk.splitlist(raw) if value]
+        except Exception:
+            return [Path(raw)]
 
     def load_pdf(self, pdf_path: Path) -> None:
         if pdf_path.suffix.lower() != ".pdf":
@@ -693,6 +719,7 @@ class PdfReorderApp:
         current_load_id = self.load_id
         self.source_pdf = pdf_path
         self.pages = []
+        self.page_order = []
         self.card_image_items.clear()
         self.file_var.set(UI_TEXT["file_label_none"])
         self.is_busy = True
@@ -757,6 +784,7 @@ class PdfReorderApp:
             _kind, _load_id, pdf_path, page_count = message
             self.source_pdf = pdf_path
             self.pages = [PageItem(original_index=index) for index in range(page_count)]
+            self.sync_page_order()
             self.file_var.set(UI_TEXT["file_label_value"].format(name=pdf_path.name, count=page_count))
             self.is_busy = False
             self.set_status(
@@ -789,6 +817,7 @@ class PdfReorderApp:
             _kind, _load_id, exc = message
             self.is_busy = False
             self.pages = []
+            self.page_order = []
             self.source_pdf = None
             self.file_var.set(UI_TEXT["file_label_none"])
             self.set_status("status_error", UI_TEXT["message_pdf_invalid"])
@@ -873,9 +902,10 @@ class PdfReorderApp:
         width = max(self.canvas.winfo_width(), 400)
         height = max(self.canvas.winfo_height(), 260)
         if not self.pages:
+            self.canvas.configure(cursor="hand2")
             self.canvas.configure(scrollregion=(0, 0, width, height))
             title_y = height // 2 - 20
-            subtitle = UI_TEXT["empty_subtitle_dnd"] if DND_ENABLED else UI_TEXT["empty_subtitle_button"]
+            subtitle = UI_TEXT["empty_subtitle"]
             self.canvas.create_text(
                 width // 2,
                 title_y,
@@ -893,6 +923,7 @@ class PdfReorderApp:
                 tags=("empty_state",),
             )
             return
+        self.canvas.configure(cursor="hand2")
 
         columns = self.column_count(width)
         rows = (len(self.pages) + columns - 1) // columns
@@ -1003,26 +1034,34 @@ class PdfReorderApp:
         y = CANVAS_PAD_Y + row * (CARD_HEIGHT + CARD_GAP_Y)
         return x, y
 
-    def page_index_from_event(self, event: tk.Event) -> int | None:
-        current = self.canvas.find_withtag("current")
-        if not current:
+    def card_index_from_event(self, event: tk.Event) -> int | None:
+        x = int(self.canvas.canvasx(event.x))
+        y = int(self.canvas.canvasy(event.y))
+        columns = self.column_count(max(self.canvas.winfo_width(), 400))
+        col_width = CARD_WIDTH + CARD_GAP_X
+        row_height = CARD_HEIGHT + CARD_GAP_Y
+        rel_x = x - CANVAS_PAD_X
+        rel_y = y - CANVAS_PAD_Y
+        if rel_x < 0 or rel_y < 0:
             return None
-        tags = self.canvas.gettags(current[0])
-        for tag in tags:
-            if tag.startswith("page_"):
-                try:
-                    original_index = int(tag.split("_", 1)[1])
-                except ValueError:
-                    return None
-                for index, page in enumerate(self.pages):
-                    if page.original_index == original_index:
-                        return index
+        col = rel_x // col_width
+        row = rel_y // row_height
+        local_x = rel_x - col * col_width
+        local_y = rel_y - row * row_height
+        if col >= columns or local_x > CARD_WIDTH or local_y > CARD_HEIGHT:
+            return None
+        index = int(row * columns + col)
+        if 0 <= index < len(self.pages):
+            return index
         return None
 
     def on_canvas_press(self, event: tk.Event) -> None:
-        if self.is_busy or not self.pages:
+        if self.is_busy:
             return
-        index = self.page_index_from_event(event)
+        if not self.pages:
+            self.choose_pdf()
+            return
+        index = self.card_index_from_event(event)
         if index is None:
             return
         self.drag_original_index = self.pages[index].original_index
@@ -1058,13 +1097,31 @@ class PdfReorderApp:
             return
 
         insert_index = max(0, min(insert_index, len(self.pages)))
+        changed = self.move_page(original_index, insert_index)
+        if changed:
+            self.set_status("status_ready", UI_TEXT["status_drag_detail"])
+        self.render_pages()
+
+    def move_page(self, original_index: int, insert_index: int) -> bool:
+        old_index = None
+        for index, page in enumerate(self.pages):
+            if page.original_index == original_index:
+                old_index = index
+                break
+        if old_index is None:
+            return False
+
+        insert_index = max(0, min(insert_index, len(self.pages)))
         page = self.pages.pop(old_index)
         if insert_index > old_index:
             insert_index -= 1
         insert_index = max(0, min(insert_index, len(self.pages)))
         self.pages.insert(insert_index, page)
-        self.set_status("status_ready", UI_TEXT["status_drag_detail"])
-        self.render_pages()
+        self.sync_page_order()
+        return insert_index != old_index
+
+    def sync_page_order(self) -> None:
+        self.page_order = [page.original_index for page in self.pages]
 
     def insert_index_from_xy(self, x: int, y: int) -> int:
         columns = self.column_count(max(self.canvas.winfo_width(), 400))
@@ -1137,7 +1194,8 @@ class PdfReorderApp:
                 return
 
         self.config_store.save_output_dir(self.output_dir)
-        order = [page.original_index for page in self.pages]
+        self.sync_page_order()
+        order = list(self.page_order)
         self.is_busy = True
         self.set_status("status_saving", UI_TEXT["status_saving_detail"])
         self.update_buttons()

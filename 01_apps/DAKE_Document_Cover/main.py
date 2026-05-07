@@ -20,7 +20,7 @@ try:
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.units import mm
     from reportlab.pdfbase import pdfmetrics
-    from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+    from reportlab.pdfbase.ttfonts import TTFont
     from reportlab.pdfgen import canvas as pdf_canvas
 
     REPORTLAB_AVAILABLE = True
@@ -30,7 +30,7 @@ except Exception as exc:
     mm = 1
     pdf_colors = None
     pdfmetrics = None
-    UnicodeCIDFont = None
+    TTFont = None
     pdf_canvas = None
     REPORTLAB_AVAILABLE = False
     REPORTLAB_IMPORT_ERROR = exc
@@ -43,8 +43,9 @@ COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
 UI_TEXT = {
     "brand_series": "シンプルそれDAKEシリーズ",
     "main_title": "書類送付状を作る",
-    "main_description": "相手方と送付内容を入力して、A4の送付状を作成します。",
+    "main_description": "相手方と本文を入力して、A4の送付状を作成します。",
     "section_recipient": "宛先",
+    "section_body": "本文",
     "section_documents": "送付内容",
     "section_sender": "作成者情報",
     "section_save": "保存先",
@@ -59,6 +60,7 @@ UI_TEXT = {
     "label_phone": "電話番号",
     "label_email": "メールアドレス",
     "label_save_folder": "保存先",
+    "label_body": "本文",
     "label_document_name": "書類名",
     "label_copies": "部数",
     "label_note": "備考",
@@ -74,7 +76,7 @@ UI_TEXT = {
     "message_complete_title": "完了",
     "message_complete_body": "書類送付状PDFを作成しました。",
     "message_error_title": "エラー",
-    "message_required_body": "宛先または送付内容を確認してください。",
+    "message_required_body": "宛先、本文、作成者情報を確認してください。",
     "message_busy_title": "処理中",
     "message_busy_body": "PDF作成が終わるまでお待ちください。",
     "message_open_folder_body": "OK後に保存先フォルダを開きます。",
@@ -90,17 +92,21 @@ UI_TEXT = {
     "date_placeholder": "例：2026年4月26日",
     "folder_dialog_title": "保存先フォルダを選択",
     "error_required_recipient": "宛先の会社名または氏名を入力してください。",
-    "error_required_documents": "送付内容の書類名を1行以上入力してください。",
+    "error_required_body": "本文を入力してください。",
+    "error_required_sender": "作成者の氏名を入力してください。",
     "error_date_format": "日付は「2026年4月26日」の形式で入力してください。",
     "error_save_folder": "保存先フォルダが見つかりません。保存先を確認してください。",
     "error_reportlab_missing": "PDF作成に必要な reportlab が見つかりません。reportlab をインストールしてから実行してください。",
+    "error_pdf_font_not_found": "日本語フォントが見つからないため、PDFを作成できませんでした。",
     "error_file_locked": "同名のPDFが開かれている可能性があります。PDFを閉じてからもう一度お試しください。",
     "error_pdf_failed": "PDF作成に失敗しました。入力内容と保存先を確認してください。",
     "filename_title": "書類送付状",
     "filename_recipient_fallback": "宛先",
     "documents_row_template": "{number}",
+    "documents_optional_note": "送付内容がない場合は空欄のままで作成できます。",
     "pdf_title": "書類送付状",
-    "pdf_body": "下記の通り書類を送付いたします。",
+    "body_default": "下記の通り書類を送付いたします。",
+    "body_help": "送付内容がない場合は、本文だけで作成できます。",
     "pdf_table_document_name": "書類名",
     "pdf_table_copies": "部数",
     "pdf_table_note": "備考",
@@ -147,6 +153,14 @@ INITIAL_DOCUMENT_ROWS = 5
 DATE_SEPARATED_PATTERN = re.compile(r"^\s*(\d{4})\D+(\d{1,2})\D+(\d{1,2})\D*\s*$")
 DATE_DIGIT_PATTERN = re.compile(r"^\s*(\d{4})(\d{2})(\d{2})\s*$")
 FILENAME_UNSAFE_PATTERN = re.compile(r'[\\/:*?"<>|]+')
+PDF_FONT_NAME = "DakeDocumentCoverJapanese"
+PDF_FONT_CANDIDATES = [
+    Path(r"C:\Windows\Fonts\BIZ-UDPGothicR.ttc"),
+    Path(r"C:\Windows\Fonts\BIZ-UDGothicR.ttc"),
+    Path(r"C:\Windows\Fonts\YuGothR.ttc"),
+    Path(r"C:\Windows\Fonts\YuGothM.ttc"),
+    Path(r"C:\Windows\Fonts\meiryo.ttc"),
+]
 
 
 @dataclass(frozen=True)
@@ -160,6 +174,7 @@ class DocumentRow:
 class CoverData:
     output_date: date
     recipient: dict[str, str]
+    body_text: str
     documents: list[DocumentRow]
     sender: dict[str, str]
     save_folder: Path
@@ -268,17 +283,29 @@ def find_icon_path() -> Path | None:
     return None
 
 
-def register_pdf_fonts() -> tuple[str, str]:
-    if not REPORTLAB_AVAILABLE or pdfmetrics is None or UnicodeCIDFont is None:
+def find_pdf_font_path() -> Path | None:
+    for candidate in PDF_FONT_CANDIDATES:
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def register_pdf_font() -> tuple[str, Path]:
+    if not REPORTLAB_AVAILABLE or pdfmetrics is None or TTFont is None:
         raise RuntimeError(UI_TEXT["error_reportlab_missing"])
-    gothic = "HeiseiKakuGo-W5"
-    mincho = "HeiseiMin-W3"
-    for font_name in (gothic, mincho):
+    font_path = find_pdf_font_path()
+    if font_path is None:
+        raise RuntimeError(UI_TEXT["error_pdf_font_not_found"])
+    try:
+        pdfmetrics.getFont(PDF_FONT_NAME)
+    except KeyError:
         try:
-            pdfmetrics.getFont(font_name)
-        except KeyError:
-            pdfmetrics.registerFont(UnicodeCIDFont(font_name))
-    return gothic, mincho
+            pdfmetrics.registerFont(TTFont(PDF_FONT_NAME, str(font_path), subfontIndex=0))
+        except TypeError:
+            pdfmetrics.registerFont(TTFont(PDF_FONT_NAME, str(font_path)))
+        except Exception as exc:
+            raise RuntimeError(UI_TEXT["error_pdf_font_not_found"]) from exc
+    return PDF_FONT_NAME, font_path
 
 
 def wrap_pdf_text(text: str, max_width: float, font_name: str, font_size: int) -> list[str]:
@@ -385,7 +412,7 @@ def create_pdf(data: CoverData) -> Path:
         detail = f" ({REPORTLAB_IMPORT_ERROR})" if REPORTLAB_IMPORT_ERROR else ""
         raise RuntimeError(UI_TEXT["error_reportlab_missing"] + detail)
 
-    gothic, mincho = register_pdf_fonts()
+    pdf_font, _font_path = register_pdf_font()
     recipient_name = data.recipient["company"] or data.recipient["name"]
     filename_recipient = sanitize_filename_part(recipient_name)
     filename = f"{data.output_date:%Y%m%d}_{UI_TEXT['filename_title']}_{filename_recipient}.pdf"
@@ -404,64 +431,75 @@ def create_pdf(data: CoverData) -> Path:
         pdf.setAuthor(APP_NAME)
         pdf.setFillColor(pdf_colors.HexColor(COLORS["text"]))
 
-        pdf.setFont(gothic, 10)
+        pdf.setFont(pdf_font, 10)
         pdf.drawRightString(width - margin_x, top_y, format_japanese_date(data.output_date))
 
         recipient_y = top_y - 34
         for line in build_recipient_lines(data.recipient):
-            recipient_y = draw_wrapped(pdf, line, margin_x, recipient_y, 72 * mm, gothic, 11, 16, max_lines=2)
+            recipient_y = draw_wrapped(pdf, line, margin_x, recipient_y, 72 * mm, pdf_font, 11, 16, max_lines=2)
 
         title_y = top_y - 132
-        pdf.setFont(mincho, 21)
+        pdf.setFont(pdf_font, 21)
         pdf.drawCentredString(width / 2, title_y, UI_TEXT["pdf_title"])
 
         body_y = title_y - 42
-        pdf.setFont(gothic, 11)
-        pdf.drawString(margin_x, body_y, UI_TEXT["pdf_body"])
+        content_y = draw_wrapped(
+            pdf,
+            data.body_text,
+            margin_x,
+            body_y,
+            table_width,
+            pdf_font,
+            11,
+            16,
+            max_lines=14,
+        )
 
-        table_x = margin_x
-        table_top = body_y - 38
-        headers = [
-            UI_TEXT["pdf_table_document_name"],
-            UI_TEXT["pdf_table_copies"],
-            UI_TEXT["pdf_table_note"],
-        ]
+        row_y = content_y - 18
+        if data.documents:
+            table_x = margin_x
+            table_top = content_y - 28
+            headers = [
+                UI_TEXT["pdf_table_document_name"],
+                UI_TEXT["pdf_table_copies"],
+                UI_TEXT["pdf_table_note"],
+            ]
 
-        pdf.setLineWidth(0.7)
-        pdf.setStrokeColor(pdf_colors.HexColor(COLORS["border"]))
-        pdf.setFillColor(pdf_colors.HexColor(COLORS["table_header"]))
-        pdf.rect(table_x, table_top - row_height, table_width, row_height, stroke=1, fill=1)
+            pdf.setLineWidth(0.5)
+            pdf.setStrokeColor(pdf_colors.HexColor(COLORS["border"]))
+            pdf.setFillColor(pdf_colors.HexColor(COLORS["table_header"]))
+            pdf.rect(table_x, table_top - row_height, table_width, row_height, stroke=1, fill=1)
 
-        current_x = table_x
-        pdf.setFillColor(pdf_colors.HexColor(COLORS["text"]))
-        for index, header in enumerate(headers):
-            pdf.line(current_x, table_top, current_x, table_top - row_height)
-            draw_table_cell(pdf, header, current_x, table_top - row_height, col_widths[index], row_height, gothic, 10, True)
-            current_x += col_widths[index]
-        pdf.line(current_x, table_top, current_x, table_top - row_height)
-
-        row_y = table_top - row_height
-        for document in data.documents:
-            row_y -= row_height
-            pdf.setFillColor(pdf_colors.white)
-            pdf.rect(table_x, row_y, table_width, row_height, stroke=1, fill=1)
-            pdf.setFillColor(pdf_colors.HexColor(COLORS["text"]))
             current_x = table_x
-            values = [document.name, document.copies, document.note]
-            for index, value in enumerate(values):
-                pdf.line(current_x, row_y + row_height, current_x, row_y)
-                draw_table_cell(pdf, value, current_x, row_y, col_widths[index], row_height, gothic, 10, index == 1)
+            pdf.setFillColor(pdf_colors.HexColor(COLORS["text"]))
+            for index, header in enumerate(headers):
+                pdf.line(current_x, table_top, current_x, table_top - row_height)
+                draw_table_cell(pdf, header, current_x, table_top - row_height, col_widths[index], row_height, pdf_font, 10, True)
                 current_x += col_widths[index]
-            pdf.line(current_x, row_y + row_height, current_x, row_y)
+            pdf.line(current_x, table_top, current_x, table_top - row_height)
+
+            row_y = table_top - row_height
+            for document in data.documents:
+                row_y -= row_height
+                pdf.setFillColor(pdf_colors.white)
+                pdf.rect(table_x, row_y, table_width, row_height, stroke=1, fill=1)
+                pdf.setFillColor(pdf_colors.HexColor(COLORS["text"]))
+                current_x = table_x
+                values = [document.name, document.copies, document.note]
+                for index, value in enumerate(values):
+                    pdf.line(current_x, row_y + row_height, current_x, row_y)
+                    draw_table_cell(pdf, value, current_x, row_y, col_widths[index], row_height, pdf_font, 10, index == 1)
+                    current_x += col_widths[index]
+                pdf.line(current_x, row_y + row_height, current_x, row_y)
 
         closing_y = max(row_y - 30, 40 * mm)
-        pdf.setFont(gothic, 10)
+        pdf.setFont(pdf_font, 10)
         pdf.drawRightString(width - margin_x, closing_y, UI_TEXT["pdf_closing"])
 
         sender_x = width - margin_x - 78 * mm
         sender_y = 74 * mm
         for line in build_sender_lines(data.sender):
-            sender_y = draw_wrapped(pdf, line, sender_x, sender_y, 78 * mm, gothic, 9, 13, max_lines=2)
+            sender_y = draw_wrapped(pdf, line, sender_x, sender_y, 78 * mm, pdf_font, 9, 13, max_lines=2)
 
         pdf.showPage()
         pdf.save()
@@ -477,6 +515,7 @@ class DocumentCoverApp:
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
         self.root.title(WINDOW_TITLE)
+        self.root.geometry("1120x760")
         self.root.configure(bg=COLORS["background"])
         self.root.minsize(900, 720)
 
@@ -513,6 +552,7 @@ class DocumentCoverApp:
             "email": tk.StringVar(),
         }
         self.document_rows: list[dict[str, tk.StringVar]] = []
+        self.body_widget: tk.Text | None = None
         self.items_card: tk.Frame | None = None
         self.add_row_button: tk.Button | None = None
         self.save_folder_var = tk.StringVar(value=self.initial_save_folder())
@@ -617,6 +657,7 @@ class DocumentCoverApp:
         sender_column.grid(row=0, column=2, sticky="nsew", padx=(9, 0))
 
         self.build_recipient_card(recipient_column)
+        self.build_body_card(recipient_column)
         self.build_items_card(items_column)
         self.build_sender_card(sender_column)
 
@@ -670,6 +711,48 @@ class DocumentCoverApp:
         )
         honorific_box.grid(row=6, column=1, sticky="w", pady=(5, 5))
 
+    def build_body_card(self, parent: tk.Widget) -> None:
+        card = self.card(parent, UI_TEXT["section_body"])
+        tk.Label(
+            card,
+            text=UI_TEXT["label_body"],
+            font=self.fonts["label"],
+            fg=COLORS["text"],
+            bg=COLORS["card"],
+        ).grid(row=1, column=0, sticky="nw", pady=(5, 5), padx=(0, 10))
+        body_frame = tk.Frame(card, bg=COLORS["card"])
+        body_frame.grid(row=1, column=1, sticky="nsew", pady=(5, 5))
+        body_frame.grid_columnconfigure(0, weight=1)
+        body_frame.grid_rowconfigure(0, weight=1)
+
+        self.body_widget = tk.Text(
+            body_frame,
+            height=4,
+            wrap="word",
+            font=self.fonts["body"],
+            fg=COLORS["text"],
+            bg="#FFFFFF",
+            relief="solid",
+            bd=1,
+            highlightthickness=1,
+            highlightbackground=COLORS["border"],
+            highlightcolor=COLORS["accent"],
+            insertbackground=COLORS["text"],
+            padx=8,
+            pady=7,
+        )
+        self.body_widget.grid(row=0, column=0, sticky="nsew")
+        self.body_widget.insert("1.0", UI_TEXT["body_default"])
+
+        tk.Label(
+            card,
+            text=UI_TEXT["body_help"],
+            font=self.fonts["footer"],
+            fg=COLORS["muted"],
+            bg=COLORS["card"],
+        ).grid(row=2, column=1, sticky="w", pady=(4, 0))
+        card.grid_rowconfigure(1, weight=1)
+
     def build_items_card(self, parent: tk.Widget) -> None:
         card = self.card(parent, UI_TEXT["section_documents"])
         self.items_card = card
@@ -687,6 +770,13 @@ class DocumentCoverApp:
                 fg=COLORS["muted"],
                 bg=COLORS["card"],
             ).grid(row=1, column=column + 1, sticky="w", padx=(0, 8), pady=(0, 6))
+        tk.Label(
+            card,
+            text=UI_TEXT["documents_optional_note"],
+            font=self.fonts["footer"],
+            fg=COLORS["muted"],
+            bg=COLORS["card"],
+        ).grid(row=2, column=1, columnspan=3, sticky="w", pady=(0, 6))
         for _ in range(INITIAL_DOCUMENT_ROWS):
             self.add_document_row()
 
@@ -871,11 +961,11 @@ class DocumentCoverApp:
             font=self.fonts["small"],
             fg=COLORS["muted"],
             bg=COLORS["card"],
-        ).grid(row=index + 1, column=0, sticky="e", padx=(0, 8), pady=4)
+        ).grid(row=index + 2, column=0, sticky="e", padx=(0, 8), pady=4)
         widths = {"name": 18, "copies": 6, "note": 18}
         for column, key in enumerate(("name", "copies", "note"), start=1):
             entry = self.make_entry(self.items_card, row_vars[key], width=widths[key])
-            entry.grid(row=index + 1, column=column, sticky="ew", padx=(0, 8), pady=4)
+            entry.grid(row=index + 2, column=column, sticky="ew", padx=(0, 8), pady=4)
         self.place_add_row_button()
 
     def add_document_row_from_ui(self) -> None:
@@ -886,7 +976,7 @@ class DocumentCoverApp:
         if self.add_row_button is None:
             return
         self.add_row_button.grid_forget()
-        self.add_row_button.grid(row=len(self.document_rows) + 2, column=1, sticky="w", pady=(10, 0))
+        self.add_row_button.grid(row=len(self.document_rows) + 3, column=1, sticky="w", pady=(10, 0))
 
     def add_footer_label(self, parent: tk.Widget, text: str) -> None:
         tk.Label(
@@ -1020,18 +1110,26 @@ class DocumentCoverApp:
                 rows.append(document)
         return rows
 
+    def collect_body_text(self) -> str:
+        if self.body_widget is None:
+            return UI_TEXT["empty_value"]
+        return self.body_widget.get("1.0", "end").strip()
+
     def collect_data(self) -> CoverData:
         output_date = parse_date_input(self.date_var.get())
         recipient = {key: variable.get().strip() for key, variable in self.recipient_vars.items()}
         sender = {key: variable.get().strip() for key, variable in self.sender_vars.items()}
+        body_text = self.collect_body_text()
         documents = self.collect_documents()
         save_folder = Path(self.save_folder_var.get()).expanduser()
 
         errors = []
         if not (recipient["company"] or recipient["name"]):
             errors.append(UI_TEXT["error_required_recipient"])
-        if not documents:
-            errors.append(UI_TEXT["error_required_documents"])
+        if not body_text:
+            errors.append(UI_TEXT["error_required_body"])
+        if not sender["name"]:
+            errors.append(UI_TEXT["error_required_sender"])
         if not save_folder.exists() or not save_folder.is_dir():
             errors.append(UI_TEXT["error_save_folder"])
         if errors:
@@ -1040,6 +1138,7 @@ class DocumentCoverApp:
         return CoverData(
             output_date=output_date,
             recipient=recipient,
+            body_text=body_text,
             documents=documents,
             sender=sender,
             save_folder=save_folder,

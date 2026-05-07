@@ -24,3 +24,31 @@ Win + Shift + S で切り取ったスクリーンショット画像を、クリ�
 - DAKE共通仕様に合わせて、フォント、ヘッダー、フッター、UI_TEXT、共通アイコン参照を確認しました。
 - `build.bat` で `DakeScreenshot_Print.exe` を再ビルドし、起動確認を行いました。
 - 実印刷は未実行です。印刷処理はスクショ画像のみをA4縦へ配置する静的確認まで実施しています。
+
+## DAKE_META
+
+```json
+{
+  "app_key": "dake_screenshot_print",
+  "display_name": "Dakeスクショ印刷",
+  "launcher_title": "スクショ印刷",
+  "launcher_description": "クリップボードのスクリーンショットをA4縦で印刷します。",
+  "site_title": "Dakeスクショ印刷",
+  "site_description": "Win + Shift + Sで切り取った画像をクリップボードから取得し、A4縦プレビューで印刷できるWindows向けアプリです。",
+  "update_summary": "READMEメタ情報とRelease本文を整備。スクリーンショットをassets/screenshot.webpに作成。",
+  "folder_name": "DAKE_Screenshot_Print",
+  "exe_name": "DakeScreenshot_Print.exe",
+  "release_url": "",
+  "screenshot_path": "assets/screenshot.webp",
+  "status": "available",
+  "show_in_launcher": true,
+  "show_on_site": true
+}
+```
+
+## RELEASE_BODY
+
+- スクリーンショット印刷アプリ
+- クリップボード画像の取得に対応
+- A4縦プレビュー付き
+- Windows向けexe

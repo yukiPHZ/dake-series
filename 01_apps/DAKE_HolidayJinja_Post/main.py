@@ -16,6 +16,8 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 
 
 APP_NAME = "holiday-jinja 投稿DAKE"
+WINDOW_TITLE = "holiday-jinja 投稿DAKE"
+COPYRIGHT = "© 2026 しまりす不動産 / Vibe-Coded by Yukihiko Kikuta"
 CONFIG_NAME = "config.json"
 DEFAULT_SITE_PATH = Path("C:/Users/yukiz/devlop/holiday-jinja-site")
 PREVIEW_URL = "http://127.0.0.1:4173/"
@@ -23,6 +25,56 @@ SUPPORTED_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp"}
 POST_ID_RE = re.compile(r"^hj-(\d+)$")
 MAX_IMAGE_EDGE = 2000
 JPEG_QUALITY = 90
+
+UI_TEXT = {
+    "site_path_unset": "未設定",
+    "status_select_photo": "写真を選んでください",
+    "section_photo": "写真",
+    "button_select_photo": "写真を選択",
+    "site_label": "holiday-jinja-site",
+    "button_change": "変更",
+    "meta_generated_id": "生成されるid",
+    "button_save_post": "投稿を保存",
+    "button_open_preview": "ローカルプレビューを開く",
+    "error_config_load": "エラー: config.json を読み込めません",
+    "dialog_select_site_title": "holiday-jinja-site フォルダを選択",
+    "status_select_site_folder": "holiday-jinja-site フォルダを選択してください",
+    "error_folder_not_found": "エラー: フォルダが見つかりません",
+    "error_posts_missing": "エラー: posts.json が見つかりません",
+    "error_posts_missing_plain": "posts.json が見つかりません",
+    "message_posts_missing_body": "選択したフォルダに posts.json が見つかりません。",
+    "error_posts_load": "エラー: posts.json を読み込めません",
+    "dialog_select_photo_title": "投稿する写真を選択",
+    "error_image_type": "エラー: jpg / png / webp を選んでください",
+    "status_loading_photo": "写真を読み込んでいます...",
+    "status_loaded_photo": "写真を読み込みました",
+    "error_photo_load": "エラー: 写真を読み込めません",
+    "status_prepare_save": "保存を準備しています...",
+    "status_save_cancelled": "保存をキャンセルしました",
+    "status_saved_image": "{path} を保存しました",
+    "status_posts_updated": "posts.json を更新しました",
+    "status_post_saved": "投稿を保存しました",
+    "status_error": "エラー: {error}",
+    "error_site_required": "holiday-jinja-site フォルダを選択してください",
+    "error_photo_required": "写真を選んでください",
+    "error_title_required": "title を入力してください",
+    "error_text_required": "text を入力してください",
+    "error_location_required": "location を入力してください",
+    "error_image_exists": "画像ファイルが既に存在します: {filename}",
+    "dialog_confirm_title": "保存前の確認",
+    "confirm_description": "この内容で holiday-jinja に投稿を置きます。",
+    "row_generated_id": "生成されるID",
+    "row_image_name": "保存画像名",
+    "button_cancel": "キャンセル",
+    "button_confirm_save": "保存する",
+    "dialog_saved_title": "保存しました",
+    "button_open_images": "imagesフォルダを開く",
+    "button_close": "閉じる",
+    "status_preview_opened": "ローカルプレビューを開きました",
+    "error_images_folder_missing": "エラー: images フォルダが見つかりません",
+    "status_images_opened": "imagesフォルダを開きました",
+    "error_posts_array": "posts.json は配列形式ではありません",
+}
 
 UI_FONT_TITLE = ("Yu Gothic UI", 21, "bold")
 UI_FONT_SECTION = ("Yu Gothic UI", 19, "bold")
@@ -72,7 +124,7 @@ CONFIG_PATH = APP_DIR / CONFIG_NAME
 class HolidayJinjaPostApp(ctk.CTk):
     def __init__(self) -> None:
         super().__init__()
-        self.title(APP_NAME)
+        self.title(WINDOW_TITLE)
         self.geometry("1180x760")
         self.minsize(1040, 680)
         self.configure(fg_color=COLORS["bg"])
@@ -82,10 +134,10 @@ class HolidayJinjaPostApp(ctk.CTk):
         self.preview_source: Image.Image | None = None
         self.preview_ctk_image: ctk.CTkImage | None = None
 
-        self.site_path_var = ctk.StringVar(value="未設定")
+        self.site_path_var = ctk.StringVar(value=UI_TEXT["site_path_unset"])
         self.generated_id_var = ctk.StringVar(value="hj-001")
         self.date_var = ctk.StringVar(value=dt.date.today().isoformat())
-        self.status_var = ctk.StringVar(value="写真を選んでください")
+        self.status_var = ctk.StringVar(value=UI_TEXT["status_select_photo"])
 
         self._setup_icon()
         self._build_ui()
@@ -128,14 +180,14 @@ class HolidayJinjaPostApp(ctk.CTk):
 
         ctk.CTkLabel(
             left_header,
-            text="写真",
+            text=UI_TEXT["section_photo"],
             text_color=COLORS["text"],
             font=UI_FONT_SECTION,
         ).grid(row=0, column=0, sticky="w")
 
         self.select_photo_button = ctk.CTkButton(
             left_header,
-            text="写真を選択",
+            text=UI_TEXT["button_select_photo"],
             command=self.select_photo,
             fg_color=COLORS["button"],
             hover_color=COLORS["button_hover"],
@@ -155,7 +207,7 @@ class HolidayJinjaPostApp(ctk.CTk):
 
         self.preview_label = ctk.CTkLabel(
             self.preview_frame,
-            text="写真を選んでください",
+            text=UI_TEXT["status_select_photo"],
             image=None,
             text_color=COLORS["sub"],
             font=UI_FONT_INPUT,
@@ -179,7 +231,7 @@ class HolidayJinjaPostApp(ctk.CTk):
 
         ctk.CTkLabel(
             site_frame,
-            text="holiday-jinja-site",
+            text=UI_TEXT["site_label"],
             text_color=COLORS["sub"],
             font=UI_FONT_LABEL,
         ).grid(row=0, column=0, padx=14, pady=(12, 2), sticky="w")
@@ -195,7 +247,7 @@ class HolidayJinjaPostApp(ctk.CTk):
 
         ctk.CTkButton(
             site_frame,
-            text="変更",
+            text=UI_TEXT["button_change"],
             command=self.choose_site_folder,
             fg_color=COLORS["button"],
             hover_color=COLORS["button_hover"],
@@ -215,12 +267,12 @@ class HolidayJinjaPostApp(ctk.CTk):
         meta.grid(row=5, column=0, padx=18, pady=(6, 14), sticky="ew")
         meta.grid_columnconfigure((0, 1), weight=1)
 
-        self._add_meta_value(meta, 0, "生成されるid", self.generated_id_var)
+        self._add_meta_value(meta, 0, UI_TEXT["meta_generated_id"], self.generated_id_var)
         self._add_meta_value(meta, 1, "date", self.date_var)
 
         self.save_button = ctk.CTkButton(
             right,
-            text="投稿を保存",
+            text=UI_TEXT["button_save_post"],
             command=self.save_post,
             fg_color=COLORS["accent"],
             hover_color="#dedede",
@@ -233,7 +285,7 @@ class HolidayJinjaPostApp(ctk.CTk):
 
         ctk.CTkButton(
             right,
-            text="ローカルプレビューを開く",
+            text=UI_TEXT["button_open_preview"],
             command=self.open_local_preview,
             fg_color=COLORS["button"],
             hover_color=COLORS["button_hover"],
@@ -328,7 +380,7 @@ class HolidayJinjaPostApp(ctk.CTk):
             raw_path = config.get("site_path", "")
             return Path(raw_path).expanduser() if raw_path else None
         except Exception:
-            self._set_status("エラー: config.json を読み込めません")
+            self._set_status(UI_TEXT["error_config_load"])
             return None
 
     def _save_config(self) -> None:
@@ -342,22 +394,22 @@ class HolidayJinjaPostApp(ctk.CTk):
     def choose_site_folder(self) -> None:
         initial_dir = str(self.site_path or DEFAULT_SITE_PATH.parent)
         folder = filedialog.askdirectory(
-            title="holiday-jinja-site フォルダを選択",
+            title=UI_TEXT["dialog_select_site_title"],
             initialdir=initial_dir,
         )
         if not folder:
             if self.site_path is None:
-                self._set_status("holiday-jinja-site フォルダを選択してください")
+                self._set_status(UI_TEXT["status_select_site_folder"])
             return
 
         path = Path(folder)
         if not path.exists():
-            self._set_status("エラー: フォルダが見つかりません")
+            self._set_status(UI_TEXT["error_folder_not_found"])
             return
 
         if not (path / "posts.json").exists():
-            self._set_status("エラー: posts.json が見つかりません")
-            messagebox.showerror(APP_NAME, "選択したフォルダに posts.json が見つかりません。")
+            self._set_status(UI_TEXT["error_posts_missing"])
+            messagebox.showerror(APP_NAME, UI_TEXT["message_posts_missing_body"])
             return
 
         self._apply_site_path(path, save=True)
@@ -371,22 +423,22 @@ class HolidayJinjaPostApp(ctk.CTk):
 
     def refresh_next_id(self) -> None:
         if self.site_path is None:
-            self.generated_id_var.set("未設定")
+            self.generated_id_var.set(UI_TEXT["site_path_unset"])
             return
 
         try:
             posts = self._read_posts()
             self.generated_id_var.set(self._next_post_id(posts))
         except FileNotFoundError:
-            self.generated_id_var.set("未設定")
-            self._set_status("エラー: posts.json が見つかりません")
+            self.generated_id_var.set(UI_TEXT["site_path_unset"])
+            self._set_status(UI_TEXT["error_posts_missing"])
         except Exception:
-            self.generated_id_var.set("未設定")
-            self._set_status("エラー: posts.json を読み込めません")
+            self.generated_id_var.set(UI_TEXT["site_path_unset"])
+            self._set_status(UI_TEXT["error_posts_load"])
 
     def select_photo(self) -> None:
         filename = filedialog.askopenfilename(
-            title="投稿する写真を選択",
+            title=UI_TEXT["dialog_select_photo_title"],
             filetypes=[
                 ("Image files", "*.jpg *.jpeg *.png *.webp"),
                 ("All files", "*.*"),
@@ -397,20 +449,20 @@ class HolidayJinjaPostApp(ctk.CTk):
 
     def load_photo(self, path: Path) -> None:
         if path.suffix.lower() not in SUPPORTED_IMAGE_EXTS:
-            self._set_status("エラー: jpg / png / webp を選んでください")
+            self._set_status(UI_TEXT["error_image_type"])
             return
 
-        self._set_status("写真を読み込んでいます...")
+        self._set_status(UI_TEXT["status_loading_photo"])
         try:
             with Image.open(path) as image:
                 self.preview_source = ImageOps.exif_transpose(image).copy()
             self.selected_image_path = path
             self._render_preview()
-            self._set_status("写真を読み込みました")
+            self._set_status(UI_TEXT["status_loaded_photo"])
         except (UnidentifiedImageError, OSError):
             self.selected_image_path = None
             self.preview_source = None
-            self._set_status("エラー: 写真を読み込めません")
+            self._set_status(UI_TEXT["error_photo_load"])
 
     def _render_preview(self) -> None:
         if self.preview_source is None:
@@ -432,19 +484,19 @@ class HolidayJinjaPostApp(ctk.CTk):
         self.preview_label.configure(image=self.preview_ctk_image, text="")
 
     def save_post(self) -> None:
-        self._set_status("保存を準備しています...")
+        self._set_status(UI_TEXT["status_prepare_save"])
         saved_image_path: Path | None = None
 
         try:
             draft = self._prepare_post_draft()
             if not self._confirm_save(draft):
-                self._set_status("保存をキャンセルしました")
+                self._set_status(UI_TEXT["status_save_cancelled"])
                 return
 
             draft.image_path.parent.mkdir(exist_ok=True)
             self._save_jpeg(draft.image_path)
             saved_image_path = draft.image_path
-            self._set_status(f"{draft.image_rel_path} を保存しました")
+            self._set_status(UI_TEXT["status_saved_image"].format(path=draft.image_rel_path))
 
             new_post = {
                 "id": draft.post_id,
@@ -457,43 +509,43 @@ class HolidayJinjaPostApp(ctk.CTk):
             }
             draft.posts.append(new_post)
             self._write_posts(draft.posts)
-            self._set_status("posts.json を更新しました")
+            self._set_status(UI_TEXT["status_posts_updated"])
 
             self._clear_form_after_save()
             self.refresh_next_id()
             self._show_saved_dialog(draft)
-            self._set_status("投稿を保存しました")
+            self._set_status(UI_TEXT["status_post_saved"])
         except Exception as exc:
             if saved_image_path is not None and saved_image_path.exists():
                 try:
                     saved_image_path.unlink()
                 except Exception:
                     pass
-            self._set_status(f"エラー: {exc}")
+            self._set_status(UI_TEXT["status_error"].format(error=exc))
             traceback.print_exc()
 
     def _prepare_post_draft(self) -> PostDraft:
         if self.site_path is None:
-            raise RuntimeError("holiday-jinja-site フォルダを選択してください")
+            raise RuntimeError(UI_TEXT["error_site_required"])
         if self.selected_image_path is None:
-            raise RuntimeError("写真を選んでください")
+            raise RuntimeError(UI_TEXT["error_photo_required"])
 
         title = self.title_entry.get().strip()
         text = self.text_box.get("1.0", "end").strip()
         location = self.location_entry.get().strip()
         if not title:
-            raise RuntimeError("title を入力してください")
+            raise RuntimeError(UI_TEXT["error_title_required"])
         if not text:
-            raise RuntimeError("text を入力してください")
+            raise RuntimeError(UI_TEXT["error_text_required"])
         if not location:
-            raise RuntimeError("location を入力してください")
+            raise RuntimeError(UI_TEXT["error_location_required"])
 
         posts = self._read_posts()
         post_id = self._next_post_id(posts)
         image_rel_path = f"images/{post_id}.jpg"
         image_path = self.site_path / "images" / f"{post_id}.jpg"
         if image_path.exists():
-            raise RuntimeError(f"画像ファイルが既に存在します: {image_path.name}")
+            raise RuntimeError(UI_TEXT["error_image_exists"].format(filename=image_path.name))
 
         return PostDraft(
             posts=posts,
@@ -509,7 +561,7 @@ class HolidayJinjaPostApp(ctk.CTk):
     def _confirm_save(self, draft: PostDraft) -> bool:
         result = {"save": False}
         dialog = ctk.CTkToplevel(self)
-        dialog.title("保存前の確認")
+        dialog.title(UI_TEXT["dialog_confirm_title"])
         dialog.configure(fg_color=COLORS["bg"])
         dialog.transient(self)
         dialog.resizable(False, False)
@@ -521,21 +573,21 @@ class HolidayJinjaPostApp(ctk.CTk):
 
         ctk.CTkLabel(
             container,
-            text="保存前の確認",
+            text=UI_TEXT["dialog_confirm_title"],
             text_color=COLORS["text"],
             font=UI_FONT_TITLE,
         ).grid(row=0, column=0, padx=18, pady=(18, 4), sticky="w")
 
         ctk.CTkLabel(
             container,
-            text="この内容で holiday-jinja に投稿を置きます。",
+            text=UI_TEXT["confirm_description"],
             text_color=COLORS["sub"],
             font=UI_FONT_LABEL,
         ).grid(row=1, column=0, padx=18, pady=(0, 14), sticky="w")
 
         rows = [
-            ("生成されるID", draft.post_id),
-            ("保存画像名", draft.image_rel_path),
+            (UI_TEXT["row_generated_id"], draft.post_id),
+            (UI_TEXT["row_image_name"], draft.image_rel_path),
             ("title", draft.title),
             ("text", draft.text),
             ("location", draft.location),
@@ -558,7 +610,7 @@ class HolidayJinjaPostApp(ctk.CTk):
 
         ctk.CTkButton(
             buttons,
-            text="キャンセル",
+            text=UI_TEXT["button_cancel"],
             command=cancel,
             fg_color=COLORS["button"],
             hover_color=COLORS["button_hover"],
@@ -570,7 +622,7 @@ class HolidayJinjaPostApp(ctk.CTk):
 
         ctk.CTkButton(
             buttons,
-            text="保存する",
+            text=UI_TEXT["button_confirm_save"],
             command=save,
             fg_color=COLORS["accent"],
             hover_color="#dedede",
@@ -590,7 +642,7 @@ class HolidayJinjaPostApp(ctk.CTk):
 
     def _show_saved_dialog(self, draft: PostDraft) -> None:
         dialog = ctk.CTkToplevel(self)
-        dialog.title("保存しました")
+        dialog.title(UI_TEXT["dialog_saved_title"])
         dialog.configure(fg_color=COLORS["bg"])
         dialog.transient(self)
         dialog.resizable(False, False)
@@ -602,15 +654,15 @@ class HolidayJinjaPostApp(ctk.CTk):
 
         ctk.CTkLabel(
             container,
-            text="保存しました",
+            text=UI_TEXT["dialog_saved_title"],
             text_color=COLORS["text"],
             font=UI_FONT_TITLE,
         ).grid(row=0, column=0, padx=18, pady=(18, 10), sticky="w")
 
         messages = [
-            "投稿を保存しました",
+            UI_TEXT["status_post_saved"],
             draft.image_rel_path,
-            "posts.json を更新しました",
+            UI_TEXT["status_posts_updated"],
         ]
         for index, message in enumerate(messages, start=1):
             ctk.CTkLabel(
@@ -627,7 +679,7 @@ class HolidayJinjaPostApp(ctk.CTk):
 
         ctk.CTkButton(
             actions,
-            text="ローカルプレビューを開く",
+            text=UI_TEXT["button_open_preview"],
             command=self.open_local_preview,
             fg_color=COLORS["button"],
             hover_color=COLORS["button_hover"],
@@ -639,7 +691,7 @@ class HolidayJinjaPostApp(ctk.CTk):
 
         ctk.CTkButton(
             actions,
-            text="imagesフォルダを開く",
+            text=UI_TEXT["button_open_images"],
             command=self.open_images_folder,
             fg_color=COLORS["button"],
             hover_color=COLORS["button_hover"],
@@ -651,7 +703,7 @@ class HolidayJinjaPostApp(ctk.CTk):
 
         ctk.CTkButton(
             container,
-            text="閉じる",
+            text=UI_TEXT["button_close"],
             command=dialog.destroy,
             fg_color=COLORS["accent"],
             hover_color="#dedede",
@@ -703,11 +755,11 @@ class HolidayJinjaPostApp(ctk.CTk):
         self.selected_image_path = None
         self.preview_source = None
         self.preview_ctk_image = None
-        self.preview_label.configure(image=None, text="写真を選んでください")
+        self.preview_label.configure(image=None, text=UI_TEXT["status_select_photo"])
 
     def _save_jpeg(self, destination: Path) -> None:
         if self.selected_image_path is None:
-            raise RuntimeError("写真を選んでください")
+            raise RuntimeError(UI_TEXT["error_photo_required"])
 
         with Image.open(self.selected_image_path) as source:
             image = ImageOps.exif_transpose(source)
@@ -730,20 +782,20 @@ class HolidayJinjaPostApp(ctk.CTk):
 
     def _read_posts(self) -> list[dict]:
         if self.site_path is None:
-            raise RuntimeError("holiday-jinja-site フォルダを選択してください")
+            raise RuntimeError(UI_TEXT["error_site_required"])
 
         posts_path = self.site_path / "posts.json"
         if not posts_path.exists():
-            raise FileNotFoundError("posts.json が見つかりません")
+            raise FileNotFoundError(UI_TEXT["error_posts_missing_plain"])
 
         data = json.loads(posts_path.read_text(encoding="utf-8"))
         if not isinstance(data, list):
-            raise ValueError("posts.json は配列形式ではありません")
+            raise ValueError(UI_TEXT["error_posts_array"])
         return data
 
     def _write_posts(self, posts: list[dict]) -> None:
         if self.site_path is None:
-            raise RuntimeError("holiday-jinja-site フォルダを選択してください")
+            raise RuntimeError(UI_TEXT["error_site_required"])
 
         posts_path = self.site_path / "posts.json"
         text = json.dumps(posts, ensure_ascii=False, indent=2) + "\n"
@@ -768,20 +820,20 @@ class HolidayJinjaPostApp(ctk.CTk):
 
     def open_local_preview(self) -> None:
         webbrowser.open(PREVIEW_URL)
-        self._set_status("ローカルプレビューを開きました")
+        self._set_status(UI_TEXT["status_preview_opened"])
 
     def open_images_folder(self) -> None:
         if self.site_path is None:
-            self._set_status("エラー: holiday-jinja-site フォルダを選択してください")
+            self._set_status(UI_TEXT["status_select_site_folder"])
             return
 
         images_dir = self.site_path / "images"
         if not images_dir.exists():
-            self._set_status("エラー: images フォルダが見つかりません")
+            self._set_status(UI_TEXT["error_images_folder_missing"])
             return
 
         webbrowser.open(images_dir.resolve().as_uri())
-        self._set_status("imagesフォルダを開きました")
+        self._set_status(UI_TEXT["status_images_opened"])
 
     def _set_status(self, message: str) -> None:
         self.status_var.set(message)
