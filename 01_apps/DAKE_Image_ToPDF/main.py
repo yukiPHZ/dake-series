@@ -940,7 +940,19 @@ def cli_message_for_app_error(error: AppError) -> str:
 
 
 def print_cli_error(message: str) -> None:
-    print(f"error: {message}", file=sys.stderr)
+    text = f"error: {message}\n"
+    try:
+        if sys.stderr is not None:
+            sys.stderr.write(text)
+            sys.stderr.flush()
+            return
+    except Exception:
+        pass
+
+    try:
+        os.write(2, text.encode("utf-8", errors="replace"))
+    except Exception:
+        pass
 
 
 def resource_path(name: str) -> str:
