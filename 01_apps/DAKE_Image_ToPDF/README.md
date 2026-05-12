@@ -33,6 +33,22 @@
 py main.py
 ```
 
+## しまりすくん連携CLI
+
+`--from-shimarisu` がある場合だけGUIを表示せず、指定画像を順番通りに1つのPDFへ変換します。
+
+```powershell
+DakeImageToPDF.exe --inputs "A.jpg" "B.png" --from-shimarisu
+DakeImageToPDF.exe --inputs "A.jpg" "B.png" --output "C:\out\merged.pdf" --from-shimarisu --silent
+```
+
+- `--inputs`: 画像ファイルパスを1つ以上指定
+- `--output`: 出力先フォルダまたはPDFファイルパス。未指定時は最初の画像と同じフォルダ
+- `--from-shimarisu`: CLIモード起動フラグ
+- `--silent`: 確認ダイアログ等を出さない指定
+- CLI対応形式: `jpg`, `jpeg`, `png`, `webp`, `bmp`, `tif`, `tiff`
+- 正常終了は exit code `0`、エラー時は exit code `1`
+
 ## ビルド
 
 ```powershell
@@ -67,7 +83,7 @@ build.bat
   "update_summary": "READMEメタ情報とRelease本文を整備。スクリーンショットをassets/screenshot.webpに作成。",
   "folder_name": "DAKE_Image_ToPDF",
   "exe_name": "DakeImageToPDF.exe",
-  "release_url": "",
+  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_ToPDF_v1.0.0",
   "screenshot_path": "assets/screenshot.webp",
   "status": "available",
   "show_in_launcher": true,

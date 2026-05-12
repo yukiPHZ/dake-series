@@ -8,7 +8,9 @@ import subprocess
 import sys
 import threading
 import webbrowser
+from argparse import ArgumentParser
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 
 import tkinter as tk
@@ -40,6 +42,7 @@ A4_PORTRAIT_PX = (1240, 1754)
 A4_LANDSCAPE_PX = (1754, 1240)
 SAFE_MARGIN_MM = 8
 SUPPORTED_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".webp"}
+CLI_SUPPORTED_EXTENSIONS = SUPPORTED_EXTENSIONS | {".tif", ".tiff"}
 RESET_DELAY_MS = 4500
 
 FOOTER_URLS = {
@@ -125,6 +128,10 @@ class AppError(Exception):
         self.original = original
 
 
+class CliError(Exception):
+    pass
+
+
 class WorkerNotifier:
     def __init__(self) -> None:
         self.event_queue: queue.Queue[WorkerEvent] = queue.Queue()
@@ -163,6 +170,51 @@ class ImagePdfService:
         finally:
             image.close()
             pdf_page.close()
+
+    def convert_images_to_pdf(
+        self,
+        source_paths: list[Path],
+        output_path: Path,
+        on_stage,
+    ) -> Path:
+        pages: list[Image.Image] = []
+
+        try:
+            for source_path in source_paths:
+                on_stage("loading", {"source_name": source_path.name})
+                image = self._load_image(source_path)
+                try:
+                    page_size = self._resolve_page_size(image.size)
+                    on_stage("converting", {"source_name": source_path.name})
+                    pages.append(self._build_pdf_page(image, page_size))
+                except AppError:
+                    raise
+                except Exception as exc:
+                    raise AppError("error_processing_failed", exc) from exc
+                finally:
+                    image.close()
+
+            if not pages:
+                raise AppError("error_processing_failed")
+
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            on_stage("saving", {"output_name": output_path.name})
+            first_page, rest_pages = pages[0], pages[1:]
+            first_page.save(
+                output_path,
+                "PDF",
+                resolution=PDF_DPI,
+                save_all=True,
+                append_images=rest_pages,
+            )
+            return output_path
+        except AppError:
+            raise
+        except Exception as exc:
+            raise AppError("error_save_failed", exc) from exc
+        finally:
+            for page in pages:
+                page.close()
 
     def _load_image(self, source_path: Path) -> Image.Image:
         try:
@@ -815,6 +867,82 @@ def make_safe_stem(stem: str) -> str:
     return cleaned or "image"
 
 
+class ShimarisuArgumentParser(ArgumentParser):
+    def error(self, message: str) -> None:
+        raise CliError(message)
+
+
+def run_cli(argv: list[str]) -> int:
+    parser = ShimarisuArgumentParser(add_help=False)
+    parser.add_argument("--inputs", nargs="+")
+    parser.add_argument("--output")
+    parser.add_argument("--from-shimarisu", action="store_true", dest="from_shimarisu")
+    parser.add_argument("--silent", action="store_true")
+
+    try:
+        args, unknown_args = parser.parse_known_args(argv)
+        if unknown_args:
+            raise CliError(f"unknown option: {unknown_args[0]}")
+        if not args.inputs:
+            raise CliError("no input images")
+
+        input_paths = [Path(raw_path) for raw_path in args.inputs]
+        for input_path in input_paths:
+            validate_cli_input(input_path)
+
+        output_path = resolve_cli_output_path(input_paths, args.output)
+        service = ImagePdfService()
+        service.convert_images_to_pdf(
+            source_paths=input_paths,
+            output_path=output_path,
+            on_stage=lambda _stage, _payload: None,
+        )
+        return 0
+    except CliError as exc:
+        print_cli_error(str(exc))
+        return 1
+    except AppError as exc:
+        print_cli_error(cli_message_for_app_error(exc))
+        return 1
+    except Exception:
+        print_cli_error("failed to create PDF")
+        return 1
+
+
+def validate_cli_input(input_path: Path) -> None:
+    if input_path.suffix.lower() not in CLI_SUPPORTED_EXTENSIONS:
+        raise CliError(f"unsupported image format: {input_path}")
+    if not input_path.exists() or not input_path.is_file():
+        raise CliError(f"input file not found: {input_path}")
+
+
+def resolve_cli_output_path(input_paths: list[Path], output: str | None) -> Path:
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    default_name = f"images_{timestamp}.pdf"
+
+    if output:
+        output_path = Path(output)
+        if output_path.suffix.lower() == ".pdf":
+            return make_available_path(output_path)
+        return make_available_path(output_path / default_name)
+
+    return make_available_path(input_paths[0].parent / default_name)
+
+
+def cli_message_for_app_error(error: AppError) -> str:
+    if error.code == "error_unsupported":
+        return "unsupported image format"
+    if error.code == "error_open_failed":
+        return "failed to open image"
+    if error.code == "error_save_failed":
+        return "failed to save PDF"
+    return "failed to create PDF"
+
+
+def print_cli_error(message: str) -> None:
+    print(f"error: {message}", file=sys.stderr)
+
+
 def resource_path(name: str) -> str:
     base_path = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
     return str(base_path / name)
@@ -824,10 +952,15 @@ def get_common_icon_path() -> Path:
     return Path(__file__).resolve().parent / ".." / ".." / "02_assets" / "dake_icon.ico"
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> int:
+    argv = list(sys.argv[1:] if argv is None else argv)
+    if "--from-shimarisu" in argv:
+        return run_cli(argv)
+
     app = DakeImageToPdfApp()
     app.run()
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
