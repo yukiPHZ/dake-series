@@ -36,6 +36,7 @@ CONFIG_NAME = "dake_pdf_merge_config.json"
 COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
 COMMON_ICON_RELATIVE = os.path.join("..", "..", "02_assets", "dake_icon.ico")
 COMMON_ICON_FILENAME = "dake_icon.ico"
+LAUNCHER_LP_URL = "https://dakeapp.com/launcher/"
 
 BG = "#F6F7F9"
 CARD = "#FFFFFF"
@@ -102,6 +103,12 @@ UI_TEXT = {
     "footer_link_2": "Instagram",
     "footer_separator": " ｜ ",
     "footer_copyright": COPYRIGHT,
+    "link_other_tools": "他のDAKEツール",
+    "cli_error_not_enough_inputs": "入力PDFが2つ未満です",
+    "cli_error_file_not_found": "入力ファイルが見つかりません",
+    "cli_error_not_pdf": "PDF以外のファイルが含まれています",
+    "cli_error_output_failed": "出力先を準備できませんでした",
+    "cli_error_merge_failed": "PDF結合に失敗しました",
 }
 
 MAIN_TITLE = UI_TEXT["main_title"]
@@ -184,7 +191,14 @@ def detect_font_name():
     return "TkDefaultFont"
 
 
-FONT_NAME = detect_font_name()
+FONT_NAME = None
+
+
+def ensure_font_name():
+    global FONT_NAME
+    if FONT_NAME is None:
+        FONT_NAME = detect_font_name()
+    return FONT_NAME
 
 
 def icon_ico_path() -> str:
@@ -244,6 +258,135 @@ def save_config(data: dict) -> None:
             json.dump(data, f, ensure_ascii=False, indent=2)
     except Exception:
         pass
+
+
+class CliError(Exception):
+    pass
+
+
+def write_cli_error(message: str) -> None:
+    try:
+        sys.stderr.write(f"{message}\n")
+        sys.stderr.flush()
+    except Exception:
+        pass
+
+
+def parse_shimarisu_cli_args(argv: list[str]) -> tuple[list[str], str | None, bool]:
+    inputs: list[str] = []
+    output: str | None = None
+    silent = False
+    i = 0
+
+    while i < len(argv):
+        arg = argv[i]
+        if arg == "--from-shimarisu":
+            i += 1
+            continue
+        if arg == "--silent":
+            silent = True
+            i += 1
+            continue
+        if arg == "--output":
+            i += 1
+            if i >= len(argv) or argv[i].startswith("--"):
+                raise CliError(UI_TEXT["cli_error_output_failed"])
+            output = argv[i]
+            i += 1
+            continue
+        if arg == "--inputs":
+            i += 1
+            while i < len(argv) and not argv[i].startswith("--"):
+                inputs.append(argv[i])
+                i += 1
+            continue
+        raise CliError(UI_TEXT["cli_error_merge_failed"])
+
+    return inputs, output, silent
+
+
+def validate_cli_inputs(inputs: list[str]) -> list[str]:
+    if len(inputs) < 2:
+        raise CliError(UI_TEXT["cli_error_not_enough_inputs"])
+
+    validated: list[str] = []
+    for path in inputs:
+        full_path = os.path.abspath(path)
+        if not os.path.isfile(full_path):
+            raise CliError(UI_TEXT["cli_error_file_not_found"])
+        if os.path.splitext(full_path)[1].lower() != ".pdf":
+            raise CliError(UI_TEXT["cli_error_not_pdf"])
+        validated.append(full_path)
+    return validated
+
+
+def unique_output_path(path: str, protected_paths: list[str]) -> str:
+    protected = {os.path.normcase(os.path.abspath(p)) for p in protected_paths}
+    output = os.path.abspath(path)
+    stem, ext = os.path.splitext(output)
+    n = 1
+
+    while os.path.exists(output) or os.path.normcase(output) in protected:
+        output = f"{stem}_{n:02d}{ext}"
+        n += 1
+
+    return output
+
+
+def make_cli_output_path(inputs: list[str], output_arg: str | None) -> str:
+    from datetime import datetime
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"merged_{timestamp}.pdf"
+
+    if output_arg:
+        output = os.path.abspath(output_arg)
+        if os.path.splitext(output)[1].lower() == ".pdf":
+            folder = os.path.dirname(output) or os.getcwd()
+            os.makedirs(folder, exist_ok=True)
+            return unique_output_path(output, inputs)
+
+        os.makedirs(output, exist_ok=True)
+        return unique_output_path(os.path.join(output, filename), inputs)
+
+    folder = os.path.dirname(inputs[0]) or os.getcwd()
+    return unique_output_path(os.path.join(folder, filename), inputs)
+
+
+def merge_pdfs_for_cli(inputs: list[str], output: str) -> None:
+    try:
+        writer = PdfWriter()
+        for path in inputs:
+            reader = PdfReader(path)
+            for page in reader.pages:
+                writer.add_page(page)
+
+        with open(output, "wb") as f:
+            writer.write(f)
+    except CliError:
+        raise
+    except Exception as e:
+        try:
+            if os.path.exists(output):
+                os.remove(output)
+        except Exception:
+            pass
+        raise CliError(UI_TEXT["cli_error_merge_failed"]) from e
+
+
+def run_shimarisu_cli(argv: list[str]) -> int:
+    try:
+        inputs, output_arg, _silent = parse_shimarisu_cli_args(argv)
+        validated_inputs = validate_cli_inputs(inputs)
+        output = make_cli_output_path(validated_inputs, output_arg)
+        merge_pdfs_for_cli(validated_inputs, output)
+        return 0
+    except CliError as e:
+        write_cli_error(str(e))
+        return 1
+    except Exception:
+        write_cli_error(UI_TEXT["cli_error_merge_failed"])
+        return 1
 
 
 def shorten_path(path: str, max_len: int = 56) -> str:
@@ -704,6 +847,18 @@ class DAKEPDFMergeApp:
         )
         self.merge_button.pack(side="left")
         self.action_buttons.append(self.merge_button)
+
+        launcher_link_row = tk.Frame(main, bg=BG)
+        launcher_link_row.pack(fill="x", pady=(6, 0))
+        launcher_link = tk.Label(
+            launcher_link_row,
+            text=UI_TEXT["link_other_tools"],
+            font=(FONT_NAME, 9),
+            bg=BG,
+            fg=SUBTEXT,
+        )
+        launcher_link.pack(side="right")
+        bind_footer_link(launcher_link, LAUNCHER_LP_URL)
 
         footer = tk.Frame(shell, bg=BG)
         footer.pack(fill="x", padx=24, pady=(0, 10))
@@ -1434,6 +1589,10 @@ class DAKEPDFMergeApp:
 
 
 def main():
+    if "--from-shimarisu" in sys.argv[1:]:
+        raise SystemExit(run_shimarisu_cli(sys.argv[1:]))
+
+    ensure_font_name()
     set_windows_app_id()
     root = make_root()
     apply_window_icon(root)
