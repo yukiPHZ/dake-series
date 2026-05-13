@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+build/
+dist/
+*.spec
+*.exe
+*_config.json
+*.local.json
+two_person_memo_data.json
+Thumbs.db
+desktop.ini
