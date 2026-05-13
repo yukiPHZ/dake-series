@@ -33,3 +33,11 @@ DAKEシリーズ全体で参照する共通仕様ファイル置き場です。
 - アプリごとの正本: `01_apps/<app>/README.md`
 - スクリーンショット正本: `01_apps/<app>/assets/screenshot.webp`
 - Release説明文の生成元: 各アプリREADMEの `RELEASE_BODY`
+
+## CLI標準化
+
+| ファイル | 役割 |
+| --- | --- |
+| `DAKE_CLI_SPEC.md` | しまりすくんCLI対応の共通仕様。`--from-shimarisu`、引数、exit code、stderr、保存ルールを定義します。 |
+| `DAKE_CLI_TEMPLATE.md` | 新規アプリへCLI入口を追加するためのargparse/GUI分岐テンプレートです。 |
+| `SHIMARISU_DAKE_FLOW.md` | しまりすくんとDAKEの責務分担、呼び出し構造、実務パイプラインの考え方です。 |
