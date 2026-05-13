@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+build/
+dist/
+*.spec
+*.exe
+data/memos/*.json
+!data/memos/.gitkeep
