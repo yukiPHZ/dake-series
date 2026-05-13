@@ -82,7 +82,7 @@ DAKEシリーズの単機能アプリとして、土地評価額と建物評価�
   "update_summary": "READMEメタ情報とRelease本文を整備。スクリーンショットをassets/screenshot.webpに作成。",
   "folder_name": "DAKE_Price_FixedTax",
   "exe_name": "DakeFixedTax.exe",
-  "release_url": "",
+  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Price_FixedTax_v1.0.0",
   "screenshot_path": "assets/screenshot.webp",
   "status": "available",
   "show_in_launcher": true,

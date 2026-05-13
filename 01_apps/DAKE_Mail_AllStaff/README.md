@@ -78,7 +78,7 @@ build.bat
   "update_summary": "READMEメタ情報とRelease本文を整備。スクリーンショットをassets/screenshot.webpに作成。",
   "folder_name": "DAKE_Mail_AllStaff",
   "exe_name": "Dake_AllStaff_Mail.exe",
-  "release_url": "",
+  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_AllStaff_v1.0.0",
   "screenshot_path": "assets/screenshot.webp",
   "status": "available",
   "show_in_launcher": true,

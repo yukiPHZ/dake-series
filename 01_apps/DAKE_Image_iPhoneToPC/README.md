@@ -48,7 +48,7 @@ DAKEシリーズは、単機能・軽量・高速・安定を優先した「シ�
   "update_summary": "READMEメタ情報とRelease本文を整備。スクリーンショットをassets/screenshot.webpに作成。",
   "folder_name": "DAKE_Image_iPhoneToPC",
   "exe_name": "DakeImage_iPhoneToPC.exe",
-  "release_url": "",
+  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_iPhoneToPC_v1.0.0",
   "screenshot_path": "assets/screenshot.webp",
   "status": "available",
   "show_in_launcher": true,
