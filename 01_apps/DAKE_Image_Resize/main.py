@@ -4,6 +4,8 @@ from __future__ import annotations
 import io
 import os
 import queue
+import argparse
+import sys
 import threading
 import webbrowser
 from collections import OrderedDict
@@ -100,7 +102,7 @@ LINK_URLS = {
     "footer_link_2": "https://www.instagram.com/kikuta.shimarisu_fudosan",
 }
 
-SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp"}
+SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tif", ".tiff"}
 JPEG_QUALITY_STEPS = [95, 92, 90, 88, 86, 84, 82, 80, 78, 76, 74, 72, 70, 68, 66, 64, 62, 60, 58, 56, 54, 52, 50]
 MAX_LONG_EDGE = 1600
 TARGET_MIN_BYTES = 500 * 1024
@@ -162,13 +164,13 @@ def normalize_image_for_jpeg(image: Image.Image) -> Image.Image:
     return image.convert("RGB")
 
 
-def resize_image(image: Image.Image) -> tuple[Image.Image, bool]:
+def resize_image(image: Image.Image, max_long_edge: int = MAX_LONG_EDGE) -> tuple[Image.Image, bool]:
     width, height = image.size
     long_edge = max(width, height)
-    if long_edge <= MAX_LONG_EDGE:
+    if long_edge <= max_long_edge:
         return image, False
 
-    scale = MAX_LONG_EDGE / float(long_edge)
+    scale = max_long_edge / float(long_edge)
     new_size = (max(1, round(width * scale)), max(1, round(height * scale)))
     return image.resize(new_size, RESAMPLE), True
 
@@ -226,6 +228,100 @@ def build_output_path(source_path: Path, destination_dir: Path) -> Path:
         sequence += 1
 
     return candidate
+
+
+def build_cli_output_path(source_path: Path, destination_dir: Path) -> Path:
+    base_name = f"{source_path.stem}_resized"
+    candidate = destination_dir / f"{base_name}.jpg"
+    sequence = 2
+
+    while candidate.exists():
+        candidate = destination_dir / f"{base_name}_{sequence}.jpg"
+        sequence += 1
+
+    return candidate
+
+
+def write_stderr(message: str) -> None:
+    try:
+        sys.stderr.write(f"{message}\n")
+        sys.stderr.flush()
+    except Exception:
+        pass
+
+
+class ShimarisuArgumentParser(argparse.ArgumentParser):
+    def error(self, message: str) -> None:
+        raise ValueError(message)
+
+
+def parse_shimarisu_args(argv: list[str]) -> argparse.Namespace:
+    parser = ShimarisuArgumentParser(add_help=False)
+    parser.add_argument("--inputs", nargs="+")
+    parser.add_argument("--output")
+    parser.add_argument("--from-shimarisu", action="store_true")
+    parser.add_argument("--silent", action="store_true")
+    parser.add_argument("--max-size", type=int, default=MAX_LONG_EDGE)
+    args = parser.parse_args(argv)
+
+    if not args.from_shimarisu:
+        raise ValueError("--from-shimarisu is required")
+    if not args.inputs:
+        raise ValueError("input images are required")
+    if args.max_size <= 0:
+        raise ValueError("--max-size must be greater than 0")
+
+    return args
+
+
+def validate_cli_inputs(raw_inputs: list[str]) -> list[Path]:
+    if not raw_inputs:
+        raise ValueError("input images are required")
+
+    paths: list[Path] = []
+    for raw_input in raw_inputs:
+        path = Path(raw_input)
+        if not path.exists() or path.is_dir():
+            raise ValueError(f"input file not found: {raw_input}")
+        if path.suffix.lower() not in SUPPORTED_EXTENSIONS:
+            raise ValueError(f"unsupported file type: {raw_input}")
+        paths.append(path.resolve())
+
+    return paths
+
+
+def resize_cli_image(source_path: Path, output_dir: Path, max_size: int) -> Path:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_path = build_cli_output_path(source_path, output_dir)
+
+    with Image.open(source_path) as image:
+        image.load()
+        transposed = ImageOps.exif_transpose(image)
+        prepared = normalize_image_for_jpeg(transposed)
+        resized_image, was_resized = resize_image(prepared, max_size)
+        if was_resized:
+            resized_image = resized_image.filter(
+                ImageFilter.UnsharpMask(radius=0.6, percent=90, threshold=2)
+            )
+        jpeg_bytes, _quality, _output_size = encode_jpeg(resized_image)
+
+    output_path.write_bytes(jpeg_bytes)
+    return output_path
+
+
+def run_shimarisu_cli(argv: list[str]) -> int:
+    try:
+        args = parse_shimarisu_args(argv)
+        input_paths = validate_cli_inputs(args.inputs)
+        output_dir = Path(args.output).resolve() if args.output else input_paths[0].parent
+
+        for source_path in input_paths:
+            resize_cli_image(source_path, output_dir, args.max_size)
+
+        return 0
+    except Exception as exc:
+        write_stderr(str(exc) or "image resize failed")
+        return 1
 
 
 def open_output_folder(folder_path: Path) -> None:
@@ -612,7 +708,7 @@ class ImageResizeApp:
             return
 
         filetypes = [
-            (UI_TEXT["filetype_images"], "*.jpg *.jpeg *.png *.bmp"),
+            (UI_TEXT["filetype_images"], "*.jpg *.jpeg *.png *.webp *.bmp *.tif *.tiff"),
             (UI_TEXT["filetype_all"], "*.*"),
         ]
         selected = filedialog.askopenfilenames(
@@ -1135,4 +1231,7 @@ class ImageResizeApp:
 
 
 if __name__ == "__main__":
+    if "--from-shimarisu" in sys.argv[1:]:
+        sys.exit(run_shimarisu_cli(sys.argv[1:]))
+
     ImageResizeApp().run()
