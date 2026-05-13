@@ -1,0 +1,10 @@
+build/
+dist/
+*.spec
+*_config.json
+__pycache__/
+*.pyc
+*.exe
+*.local.json
+Thumbs.db
+desktop.ini
