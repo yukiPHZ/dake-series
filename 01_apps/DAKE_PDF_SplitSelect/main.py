@@ -6,6 +6,7 @@ import sys
 import threading
 import webbrowser
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
 from itertools import count
 from pathlib import Path
@@ -168,6 +169,10 @@ class RangeParseError(ValueError):
     pass
 
 
+class ShimarisuCliError(ValueError):
+    pass
+
+
 class AppState(Enum):
     UNLOADED = "unloaded"
     LOADING = "loading"
@@ -182,6 +187,14 @@ class AppState(Enum):
 class StatusPayload:
     state: AppState
     message: str
+
+
+@dataclass
+class ShimarisuCliArgs:
+    inputs: list[str]
+    pages: Optional[str]
+    output: Optional[str]
+    silent: bool = False
 
 
 def parse_range_expression(expression: str, page_count: Optional[int] = None) -> set[int]:
@@ -226,6 +239,136 @@ def make_available_path(target_path: Path) -> Path:
         if not candidate.exists():
             return candidate
         index += 1
+
+
+def parse_shimarisu_cli_args(argv: list[str]) -> ShimarisuCliArgs:
+    inputs: list[str] = []
+    pages: Optional[str] = None
+    output: Optional[str] = None
+    silent = False
+
+    index = 0
+    while index < len(argv):
+        arg = argv[index]
+        if arg == "--from-shimarisu":
+            index += 1
+            continue
+        if arg == "--silent":
+            silent = True
+            index += 1
+            continue
+        if arg == "--inputs":
+            index += 1
+            while index < len(argv) and not argv[index].startswith("--"):
+                inputs.append(argv[index])
+                index += 1
+            continue
+        if arg == "--pages":
+            if index + 1 >= len(argv) or argv[index + 1].startswith("--"):
+                raise ShimarisuCliError("pagesを指定してください。")
+            pages = argv[index + 1]
+            index += 2
+            continue
+        if arg == "--output":
+            if index + 1 >= len(argv) or argv[index + 1].startswith("--"):
+                raise ShimarisuCliError("出力先を指定してください。")
+            output = argv[index + 1]
+            index += 2
+            continue
+        index += 1
+
+    return ShimarisuCliArgs(inputs=inputs, pages=pages, output=output, silent=silent)
+
+
+def resolve_shimarisu_output_path(source_path: Path, output: Optional[str]) -> Path:
+    output_name = f"{source_path.stem}_extract_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+
+    if output:
+        output_path = Path(output)
+        if output_path.exists() and output_path.is_dir():
+            target_path = output_path / output_name
+        elif output_path.suffix.lower() == ".pdf":
+            target_path = output_path
+        else:
+            target_path = output_path / output_name
+    else:
+        target_path = source_path.parent / output_name
+
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    return make_available_path(target_path)
+
+
+def write_cli_error(message: str) -> None:
+    text = f"{message}\n"
+    for stream in (getattr(sys, "stderr", None), getattr(sys, "__stderr__", None)):
+        if stream is None:
+            continue
+        try:
+            stream.write(text)
+            stream.flush()
+            return
+        except Exception:
+            pass
+
+    if os.name == "nt":
+        try:
+            import ctypes
+
+            error_handle = ctypes.windll.kernel32.GetStdHandle(-12)
+            if error_handle and error_handle != -1:
+                data = text.encode("utf-8", errors="replace")
+                written = ctypes.c_ulong(0)
+                ctypes.windll.kernel32.WriteFile(error_handle, data, len(data), ctypes.byref(written), None)
+                return
+        except Exception:
+            pass
+
+    try:
+        os.write(2, text.encode("utf-8", errors="replace"))
+    except Exception:
+        pass
+
+
+def run_shimarisu_cli(argv: list[str]) -> int:
+    try:
+        args = parse_shimarisu_cli_args(argv)
+        if not args.inputs:
+            raise ShimarisuCliError("PDFを指定してください。")
+
+        source_path = Path(args.inputs[0])
+        if not source_path.exists() or not source_path.is_file():
+            raise ShimarisuCliError("PDFが見つかりません。")
+        if source_path.suffix.lower() != ".pdf":
+            raise ShimarisuCliError("PDFファイルを指定してください。")
+        if not args.pages or not args.pages.strip():
+            raise ShimarisuCliError("pagesを指定してください。")
+
+        try:
+            reader = PdfReader(str(source_path))
+            page_count = len(reader.pages)
+        except Exception as error:
+            raise ShimarisuCliError("PDFを読み取れません。") from error
+
+        try:
+            pages = sorted(parse_range_expression(args.pages, page_count))
+        except RangeParseError as error:
+            raise ShimarisuCliError(str(error)) from error
+        if not pages:
+            raise ShimarisuCliError("pagesを指定してください。")
+
+        output_path = resolve_shimarisu_output_path(source_path, args.output)
+        writer = PdfWriter()
+        for page_number in pages:
+            writer.add_page(reader.pages[page_number - 1])
+        with output_path.open("wb") as handle:
+            writer.write(handle)
+        return 0
+    except ShimarisuCliError as error:
+        write_cli_error(str(error))
+        return 1
+    except Exception:
+        write_cli_error("抽出に失敗しました。")
+        return 1
 
 
 def open_directory(path: str) -> None:
@@ -1602,6 +1745,9 @@ class DakePdfSplitSelectApp(BASE_WINDOW):
 
 
 def main() -> None:
+    if "--from-shimarisu" in sys.argv[1:]:
+        raise SystemExit(run_shimarisu_cli(sys.argv[1:]))
+
     app = DakePdfSplitSelectApp()
     app.mainloop()
 

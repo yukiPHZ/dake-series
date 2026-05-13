@@ -24,6 +24,22 @@ python -m pip install -r requirements.txt
 python main.py
 ```
 
+## しまりすくん連携CLI
+
+`--from-shimarisu` を付けた場合のみGUIを開かず、指定ページを1つのPDFとして抽出します。
+
+```powershell
+DakePDF_Split_Select.exe --from-shimarisu --inputs "sample.pdf" --pages "1,3-5"
+DakePDF_Split_Select.exe --from-shimarisu --inputs "sample.pdf" --pages "1" --output "out.pdf" --silent
+DakePDF_Split_Select.exe --from-shimarisu --inputs "sample.pdf" --pages "1-3" --output "C:\Output"
+```
+
+- `--inputs` は先頭のPDFだけを使用します。
+- `--pages` は `1`、`1,3,5`、`1-3`、`1,3-5` 形式に対応します。
+- `--output` がPDFパスならそのPDF名、フォルダならその中へ保存します。
+- `--output` 未指定時は元PDFと同じフォルダに `sample_extract_YYYYMMDD_HHMMSS.pdf` 形式で保存します。
+- 不正な指定や存在しないページは短いエラーを `stderr` に出して exit code 1 で終了します。
+
 ## 使い方
 
 1. `PDF追加` またはドラッグ＆ドロップで PDF を読み込みます。
