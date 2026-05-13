@@ -11,8 +11,12 @@ import tkinter as tk
 from tkinter import font as tkfont
 
 
+APP_NAME = "付箋メモ"
+WINDOW_TITLE = APP_NAME
+COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
+
 UI_TEXT = {
-    "app_title": "付箋メモ",
+    "app_title": APP_NAME,
     "main_title": "付箋を並べる",
     "main_description": "思いついたことを付箋に書いて、動かして、捨てられます。",
     "button_add_note": "付箋を追加",
@@ -24,7 +28,7 @@ UI_TEXT = {
     "footer_link_1": "戸建買取査定",
     "footer_link_2": "Instagram",
     "footer_separator": " ｜ ",
-    "footer_copyright": "© 2026 しまリス不動産 / Vibe-Coded by Yukihiko Kikuta",
+    "footer_copyright": COPYRIGHT,
 }
 
 LINK_URLS = {
@@ -56,6 +60,7 @@ FONT_CANDIDATES = ("BIZ UDPGothic", "Yu Gothic UI", "Meiryo")
 WINDOW_SIZE = "940x640"
 WINDOW_MIN_SIZE = (720, 520)
 APP_USER_MODEL_ID = "Shimarisu.DakeStickyMemo"
+FOOTER_NARROW_WIDTH = 860
 
 NOTE_WIDTH = 220
 NOTE_HEIGHT = 170
@@ -118,15 +123,17 @@ class StickyMemoApp:
         self.drag_offset_x = 0
         self.drag_offset_y = 0
         self.empty_text_item: int | None = None
+        self.footer: tk.Frame | None = None
+        self.footer_mode: str | None = None
 
         self.fonts = {
             "title": tkfont.Font(root, family=self.font_family, size=20, weight="bold"),
             "description": tkfont.Font(root, family=self.font_family, size=10),
             "button": tkfont.Font(root, family=self.font_family, size=10, weight="bold"),
-            "note": tkfont.Font(root, family=self.font_family, size=11),
-            "note_button": tkfont.Font(root, family=self.font_family, size=10, weight="bold"),
+            "note": tkfont.Font(root, family=self.font_family, size=10),
+            "note_button": tkfont.Font(root, family=self.font_family, size=9, weight="bold"),
             "empty": tkfont.Font(root, family=self.font_family, size=13),
-            "footer": tkfont.Font(root, family=self.font_family, size=9),
+            "footer": tkfont.Font(root, family=self.font_family, size=8),
         }
 
         self._configure_root()
@@ -134,7 +141,7 @@ class StickyMemoApp:
         self._apply_icon()
 
     def _configure_root(self) -> None:
-        self.root.title(UI_TEXT["app_title"])
+        self.root.title(WINDOW_TITLE)
         self.root.geometry(WINDOW_SIZE)
         self.root.minsize(*WINDOW_MIN_SIZE)
         self.root.configure(bg=COLORS["background"])
@@ -160,6 +167,7 @@ class StickyMemoApp:
         self._build_header(outer)
         self._build_canvas(outer)
         self._build_footer(outer)
+        self.root.bind("<Configure>", self._on_root_configure, add="+")
 
     def _build_header(self, parent: tk.Widget) -> None:
         header = tk.Frame(parent, bg=COLORS["background"])
@@ -232,24 +240,57 @@ class StickyMemoApp:
         self.canvas.bind("<Configure>", self._on_canvas_configure)
 
     def _build_footer(self, parent: tk.Widget) -> None:
-        footer = tk.Frame(parent, bg=COLORS["background"])
-        footer.pack(fill="x", pady=(14, 0))
-        footer.grid_columnconfigure(0, weight=1)
-        footer.grid_columnconfigure(1, weight=1)
+        self.footer = tk.Frame(parent, bg=COLORS["background"])
+        self.footer.pack(fill="x", pady=(14, 0))
+        self._render_footer("wide")
 
-        left = tk.Frame(footer, bg=COLORS["background"])
+    def _on_root_configure(self, event: tk.Event) -> None:
+        if event.widget is not self.root:
+            return
+        next_mode = "narrow" if event.width < FOOTER_NARROW_WIDTH else "wide"
+        self._render_footer(next_mode)
+
+    def _render_footer(self, mode: str) -> None:
+        if self.footer is None or self.footer_mode == mode:
+            return
+
+        self.footer_mode = mode
+        for child in self.footer.winfo_children():
+            child.destroy()
+
+        if mode == "narrow":
+            thought_line = tk.Frame(self.footer, bg=COLORS["background"])
+            thought_line.pack(anchor="center")
+            self._footer_thought_line(thought_line)
+
+            link_line = tk.Frame(self.footer, bg=COLORS["background"])
+            link_line.pack(anchor="center", pady=(4, 0))
+            self._footer_link_line(link_line)
+            return
+
+        self.footer.grid_columnconfigure(0, weight=0)
+        self.footer.grid_columnconfigure(1, weight=1)
+        self.footer.grid_columnconfigure(2, weight=0)
+
+        left = tk.Frame(self.footer, bg=COLORS["background"])
         left.grid(row=0, column=0, sticky="w")
-        self._footer_text(left, UI_TEXT["footer_left"])
-        self._footer_text(left, UI_TEXT["footer_separator"])
-        self._footer_text(left, UI_TEXT["footer_tagline"])
+        self._footer_thought_line(left)
 
-        right = tk.Frame(footer, bg=COLORS["background"])
-        right.grid(row=0, column=1, sticky="e")
-        self._footer_link(right, "footer_link_1")
-        self._footer_text(right, UI_TEXT["footer_separator"])
-        self._footer_link(right, "footer_link_2")
-        self._footer_text(right, UI_TEXT["footer_separator"])
-        self._footer_text(right, UI_TEXT["footer_copyright"])
+        right = tk.Frame(self.footer, bg=COLORS["background"])
+        right.grid(row=0, column=2, sticky="e")
+        self._footer_link_line(right)
+
+    def _footer_thought_line(self, parent: tk.Widget) -> None:
+        self._footer_text(parent, UI_TEXT["footer_left"])
+        self._footer_text(parent, UI_TEXT["footer_separator"])
+        self._footer_text(parent, UI_TEXT["footer_tagline"])
+
+    def _footer_link_line(self, parent: tk.Widget) -> None:
+        self._footer_link(parent, "footer_link_1")
+        self._footer_text(parent, UI_TEXT["footer_separator"])
+        self._footer_link(parent, "footer_link_2")
+        self._footer_text(parent, UI_TEXT["footer_separator"])
+        self._footer_text(parent, UI_TEXT["footer_copyright"])
 
     def _make_button(self, parent: tk.Widget, label: str, command, primary: bool) -> tk.Button:
         bg = COLORS["button"] if primary else COLORS["secondary_button"]
@@ -341,18 +382,21 @@ class StickyMemoApp:
             font=self.fonts["note_button"],
             relief="flat",
             bd=0,
-            width=2,
+            width=3,
             cursor="hand2",
-            padx=0,
-            pady=0,
+            padx=2,
+            pady=1,
         )
-        close_button.pack(side="right", padx=(0, 7), pady=4)
+        close_button.pack(side="right", padx=(0, 8), pady=3)
 
         text = tk.Text(
             frame,
             bg=COLORS["note"],
             fg=COLORS["note_text"],
             insertbackground=COLORS["note_text"],
+            selectbackground="#D7E7FF",
+            selectforeground=COLORS["note_text"],
+            inactiveselectbackground="#EAF2FF",
             font=self.fonts["note"],
             relief="flat",
             bd=0,

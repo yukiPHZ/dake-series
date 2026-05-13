@@ -1,6 +1,10 @@
+__pycache__/
+*.pyc
 build/
 dist/
 *.spec
+*.exe
 *_config.json
-__pycache__/
-*.pyc
+*.local.json
+Thumbs.db
+desktop.ini
