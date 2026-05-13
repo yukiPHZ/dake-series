@@ -7,7 +7,9 @@ import sys
 import threading
 import tkinter as tk
 import webbrowser
+from argparse import ArgumentParser
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from tkinter import filedialog, messagebox
 
@@ -111,6 +113,123 @@ class PdfServiceError(Exception):
         super().__init__(code)
         self.code = code
         self.original = original
+
+
+class CliError(Exception):
+    pass
+
+
+class ShimarisuArgumentParser(ArgumentParser):
+    def error(self, message: str) -> None:
+        raise CliError(message)
+
+
+def print_cli_error(message: str) -> None:
+    text = f"error: {message}\n"
+    try:
+        if sys.stderr is not None:
+            sys.stderr.write(text)
+            sys.stderr.flush()
+            return
+    except Exception:
+        pass
+
+    try:
+        os.write(2, text.encode("utf-8", errors="replace"))
+    except Exception:
+        pass
+
+
+def run_cli(argv: list[str]) -> int:
+    parser = ShimarisuArgumentParser(add_help=False)
+    parser.add_argument("--inputs", nargs="+")
+    parser.add_argument("--output")
+    parser.add_argument("--from-shimarisu", action="store_true", dest="from_shimarisu")
+    parser.add_argument("--silent", action="store_true")
+
+    try:
+        args, unknown_args = parser.parse_known_args(argv)
+        if unknown_args:
+            raise CliError(f"unknown option: {unknown_args[0]}")
+
+        source_pdf = resolve_cli_input(args.inputs)
+        output_folder = resolve_cli_output_folder(source_pdf, args.output)
+        split_pdf_for_cli(source_pdf, output_folder)
+        return 0
+    except CliError as exc:
+        print_cli_error(str(exc))
+        return 1
+    except Exception:
+        print_cli_error("failed to split PDF")
+        return 1
+
+
+def resolve_cli_input(inputs: list[str] | None) -> Path:
+    if not inputs:
+        raise CliError("no PDF input")
+
+    source_pdf = Path(inputs[0]).expanduser()
+    if not source_pdf.is_absolute():
+        source_pdf = Path.cwd() / source_pdf
+    source_pdf = source_pdf.resolve()
+
+    if not source_pdf.exists() or not source_pdf.is_file():
+        raise CliError("input file not found")
+    if source_pdf.suffix.lower() != ".pdf":
+        raise CliError("input is not PDF")
+    return source_pdf
+
+
+def resolve_cli_output_folder(source_pdf: Path, output: str | None) -> Path:
+    if output:
+        output_folder = Path(output).expanduser()
+        if not output_folder.is_absolute():
+            output_folder = Path.cwd() / output_folder
+    else:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_folder = source_pdf.parent / f"split_{timestamp}"
+
+    try:
+        if output_folder.exists() and not output_folder.is_dir():
+            raise CliError("output is not a folder")
+        output_folder.mkdir(parents=True, exist_ok=True)
+        return output_folder.resolve()
+    except CliError:
+        raise
+    except Exception as exc:
+        raise CliError("failed to prepare output folder") from exc
+
+
+def split_pdf_for_cli(source_pdf: Path, output_folder: Path) -> Path:
+    try:
+        reader = PdfReader(str(source_pdf))
+        total_pages = len(reader.pages)
+        if total_pages < 1:
+            raise CliError("failed to split PDF")
+    except CliError:
+        raise
+    except Exception as exc:
+        raise CliError("failed to split PDF") from exc
+
+    written_paths: list[Path] = []
+    try:
+        digits = max(3, len(str(total_pages)))
+        safe_stem = make_safe_stem(source_pdf.stem)
+        for index, page in enumerate(reader.pages, start=1):
+            writer = PdfWriter()
+            writer.add_page(page)
+            output_path = output_folder / f"{safe_stem}_p{index:0{digits}d}.pdf"
+            with output_path.open("wb") as stream:
+                writer.write(stream)
+            written_paths.append(output_path)
+        return output_folder
+    except Exception as exc:
+        for output_path in written_paths:
+            try:
+                output_path.unlink()
+            except Exception:
+                pass
+        raise CliError("failed to split PDF") from exc
 
 
 class AppConfig:
@@ -1023,7 +1142,11 @@ def create_root() -> tk.Tk:
     return tk.Tk()
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> int:
+    argv = list(sys.argv[1:] if argv is None else argv)
+    if "--from-shimarisu" in argv:
+        return run_cli(argv)
+
     root = create_root()
     config = AppConfig(resource_base_dir() / CONFIG_NAME)
     notifier = WorkerNotifier()
@@ -1031,7 +1154,8 @@ def main() -> None:
     controller = SplitController(config=config, notifier=notifier, service=service)
     SplitOneApp(root=root, controller=controller)
     root.mainloop()
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

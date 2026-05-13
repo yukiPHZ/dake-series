@@ -55,6 +55,23 @@ build.bat
 
 `python` や `py` がPATHにない場合は、先に `set PYTHON_EXE=C:\Path\To\python.exe` を指定してから `build.bat` を実行できます。
 
+## Shimarisu CLI
+
+`--from-shimarisu` がある場合だけ、GUIを表示せずにCLIモードでPDFをページ単位に分割します。通常起動では従来どおりGUIを表示します。
+
+```bat
+dist\DakePDF_Split_One.exe --from-shimarisu --inputs "C:\path\sample.pdf"
+dist\DakePDF_Split_One.exe --from-shimarisu --inputs "C:\path\sample.pdf" --output "C:\path\out" --silent
+```
+
+- `--inputs`: PDFファイルを1件以上指定します。複数指定時は先頭の1件だけ使用します
+- `--output`: 出力先フォルダです。未指定時は元PDFと同じフォルダに `split_YYYYMMDD_HHMMSS` を作成します
+- `--from-shimarisu`: CLIモード起動フラグです
+- `--silent`: しまりすくん側から渡せる任意フラグです
+- 正常時は exit code 0、エラー時は exit code 1 を返します
+
+出力ファイル名は `sample_p001.pdf`、`sample_p002.pdf` の形式です。
+
 ## DAKE_META
 
 ```json
