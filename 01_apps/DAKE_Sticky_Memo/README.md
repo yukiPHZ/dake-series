@@ -59,7 +59,7 @@ build.bat
   "update_summary": "フッター表示とUI文言をDAKE共通仕様に合わせて調整しました。",
   "folder_name": "DAKE_Sticky_Memo",
   "exe_name": "DakeSticky_Memo.exe",
-  "release_url": "",
+  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Sticky_Memo_v1.0.0",
   "screenshot_path": "assets/screenshot.webp",
   "status": "available",
   "show_in_launcher": true,
