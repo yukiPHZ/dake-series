@@ -46,6 +46,22 @@ PDF を追加して保存先を選ぶだけで、各 PDF をページ単位の�
 3. 依存関係を自動インストール後、PyInstaller で exe を生成します
 4. 成功すると `dist` フォルダが開きます
 
+## しまりすくん連携CLI
+
+`--from-shimarisu` を付けた場合だけ、GUIを開かずにCLIモードでPDFを画像化します。通常のダブルクリック起動では、これまで通りGUIを表示します。
+
+```bat
+dist\DakePDF_to_Images.exe --from-shimarisu --inputs "C:\path\sample.pdf" --output "C:\path\images"
+```
+
+- `--inputs`: PDFファイルを1つ以上指定します
+- `--output`: 出力先フォルダです。未指定時は最初のPDFと同じフォルダに `pdf_images_YYYYMMDD_HHMMSS` を作成します
+- `--format`: `png` または `jpg` を指定します。未指定時は `png` です
+- `--dpi`: 出力解像度です。未指定時は `200` です
+- `--silent`: しまりすくん側から渡せる任意フラグです
+
+正常終了時は終了コード `0`、入力不備や変換失敗時は終了コード `1` を返します。
+
 ## 生成物
 
 - onefile 形式
@@ -82,7 +98,7 @@ PDF を追加して保存先を選ぶだけで、各 PDF をページ単位の�
   "update_summary": "READMEメタ情報とRelease本文を整備。スクリーンショットをassets/screenshot.webpに作成。",
   "folder_name": "DAKE_PDF_ToImages",
   "exe_name": "DakePDF_to_Images.exe",
-  "release_url": "",
+  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_ToImages_v1.0.0",
   "screenshot_path": "assets/screenshot.webp",
   "status": "available",
   "show_in_launcher": true,

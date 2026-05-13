@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import queue
@@ -133,6 +134,7 @@ WINDOW_SIZE = "1020x800"
 WINDOW_MIN_SIZE = (940, 720)
 RENDER_SCALE = 2.0
 POLL_INTERVAL_MS = 80
+DEFAULT_CLI_DPI = 200
 
 
 @dataclass
@@ -163,6 +165,110 @@ def sanitize_name(name: str) -> str:
 def humanize_error(exc: Exception) -> str:
     message = str(exc).strip().replace("\n", " ")
     return message or UI_TEXT["message_unknown_error"]
+
+
+def write_cli_error(message: str) -> None:
+    stream = getattr(sys, "stderr", None)
+    if stream is not None:
+        print(message, file=stream)
+
+
+def unique_file_path(path: Path) -> Path:
+    if not path.exists():
+        return path
+    index = 2
+    while True:
+        candidate = path.with_name(f"{path.stem}_{index:02d}{path.suffix}")
+        if not candidate.exists():
+            return candidate
+        index += 1
+
+
+class CliArgumentParser(argparse.ArgumentParser):
+    def error(self, message: str) -> None:
+        raise ValueError(message)
+
+    def exit(self, status: int = 0, message: str | None = None) -> None:
+        if status:
+            raise ValueError((message or "").strip() or "invalid arguments")
+        raise SystemExit(status)
+
+
+def parse_cli_args(argv: list[str]) -> argparse.Namespace:
+    parser = CliArgumentParser(add_help=True, prog=APP_NAME_EN)
+    parser.add_argument("--from-shimarisu", action="store_true")
+    parser.add_argument("--inputs", nargs="+")
+    parser.add_argument("--output")
+    parser.add_argument("--silent", action="store_true")
+    parser.add_argument("--format", dest="image_format", default="png")
+    parser.add_argument("--dpi", type=int, default=DEFAULT_CLI_DPI)
+    return parser.parse_args(argv)
+
+
+def make_cli_output_dir(first_pdf: Path, output: str | None) -> Path:
+    if output:
+        output_dir = Path(output).expanduser()
+    else:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_dir = first_pdf.parent / f"pdf_images_{timestamp}"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    return output_dir
+
+
+def validate_cli_inputs(raw_inputs: list[str] | None) -> list[Path]:
+    if not raw_inputs:
+        raise ValueError("input PDF is required")
+    pdf_paths: list[Path] = []
+    for raw_input in raw_inputs:
+        pdf_path = Path(raw_input).expanduser()
+        if not pdf_path.exists():
+            raise ValueError(f"input file not found: {raw_input}")
+        if not pdf_path.is_file() or pdf_path.suffix.lower() != ".pdf":
+            raise ValueError(f"input is not PDF: {raw_input}")
+        pdf_paths.append(pdf_path.resolve())
+    return pdf_paths
+
+
+def convert_pdf_to_images_cli(pdf_path: Path, output_dir: Path, image_format: str, dpi: int, prefix: str) -> None:
+    matrix = fitz.Matrix(dpi / 72, dpi / 72)
+    with fitz.open(pdf_path) as document:
+        if document.page_count < 1:
+            raise ValueError(f"no pages: {pdf_path}")
+        digits = max(3, len(str(document.page_count)))
+        for page_index in range(document.page_count):
+            page = document.load_page(page_index)
+            pixmap = page.get_pixmap(matrix=matrix, alpha=False)
+            output_path = unique_file_path(output_dir / f"{prefix}_p{page_index + 1:0{digits}d}.{image_format}")
+            pixmap.save(str(output_path))
+
+
+def run_cli(argv: list[str]) -> int:
+    try:
+        args = parse_cli_args(argv)
+        if not args.from_shimarisu:
+            return 0
+        image_format = str(args.image_format).lower().lstrip(".")
+        if image_format not in {"png", "jpg"}:
+            raise ValueError("--format must be png or jpg")
+        if args.dpi <= 0:
+            raise ValueError("--dpi must be greater than 0")
+
+        pdf_paths = validate_cli_inputs(args.inputs)
+        output_dir = make_cli_output_dir(pdf_paths[0], args.output)
+        prefix_counts: dict[str, int] = {}
+
+        for pdf_path in pdf_paths:
+            base_prefix = sanitize_name(pdf_path.stem)
+            prefix_key = base_prefix.lower()
+            prefix_counts[prefix_key] = prefix_counts.get(prefix_key, 0) + 1
+            prefix = base_prefix if prefix_counts[prefix_key] == 1 else f"{base_prefix}_{prefix_counts[prefix_key]:02d}"
+            convert_pdf_to_images_cli(pdf_path, output_dir, image_format, args.dpi, prefix)
+        return 0
+    except SystemExit as exc:
+        return int(exc.code or 0)
+    except Exception as exc:
+        write_cli_error(humanize_error(exc))
+        return 1
 
 
 class ConfigStore:
@@ -980,6 +1086,8 @@ class App:
 
 
 def main() -> None:
+    if "--from-shimarisu" in sys.argv[1:]:
+        raise SystemExit(run_cli(sys.argv[1:]))
     app = App()
     app.run()
 
