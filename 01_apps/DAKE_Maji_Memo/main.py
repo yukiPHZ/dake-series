@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import ctypes
 import json
-import os
 import re
 import sys
 import webbrowser
@@ -21,9 +20,11 @@ UI_TEXT = {
     "main_description": "保存を気にせず、今の考えをそのまま置いておきます。",
     "label_main": "メイン",
     "label_sub": "補助",
-    "button_refresh": "リフレッシュ",
+    "button_refresh_main": "メインをリフレッシュ",
+    "button_refresh_sub": "補助をリフレッシュ",
     "status_idle": "そのまま残ります",
-    "status_refreshed": "リフレッシュしました",
+    "status_refreshed_main": "メインをリフレッシュしました",
+    "status_refreshed_sub": "補助をリフレッシュしました",
     "footer_left": "シンプルそれDAKEシリーズ",
     "footer_tagline": "止まらない、迷わない、すぐ終わる。",
     "footer_link_1": "戸建買取査定",
@@ -42,7 +43,7 @@ THEME = {
     "card": "#FFFFFF",
     "text": "#1E2430",
     "muted": "#667085",
-    "border": "#E6EAF0",
+    "border": "#EEF2F7",
     "accent": "#2F6FED",
 }
 
@@ -50,8 +51,9 @@ FONT_FACE = "BIZ UDPGothic"
 WINDOW_DEFAULT_SIZE = (960, 620)
 WINDOW_MIN_SIZE = (760, 480)
 CONFIG_FILE_NAME = "DAKE_Maji_Memo_config.json"
+CONFIG_LAYOUT_VERSION = 2
 SAVE_DEBOUNCE_MS = 380
-STATUS_RESET_MS = 1800
+STATUS_RESET_MS = 1300
 APP_USER_MODEL_ID = "Shimarisu.DakeMajiMemo"
 
 CLASS_NAME = "DakeMajiMemoWindow"
@@ -60,9 +62,10 @@ STATUS_TIMER_ID = 2
 
 ID_TITLE = 101
 ID_DESCRIPTION = 102
-ID_REFRESH = 103
 ID_LABEL_MAIN = 104
 ID_LABEL_SUB = 105
+ID_REFRESH_SUB = 106
+ID_REFRESH_MAIN = 107
 ID_EDIT_MAIN = 201
 ID_EDIT_SUB = 202
 ID_STATUS = 301
@@ -347,6 +350,14 @@ def text_value(data: dict[str, object], key: str) -> str:
     return value if isinstance(value, str) else ""
 
 
+def memo_texts(data: dict[str, object]) -> tuple[str, str]:
+    left_text = text_value(data, "left_text")
+    right_text = text_value(data, "right_text")
+    if data.get("layout_version") == CONFIG_LAYOUT_VERSION:
+        return left_text, right_text
+    return right_text, left_text
+
+
 def parse_geometry(value: object) -> tuple[int, int, int | None, int | None]:
     if not isinstance(value, str):
         return (*WINDOW_DEFAULT_SIZE, None, None)
@@ -480,6 +491,7 @@ class MajiMemoApp:
 
     def _create_controls(self, hwnd: int) -> None:
         self._init_fonts(hwnd)
+        left_text, right_text = memo_texts(self.config)
         self.controls[ID_TITLE] = self._static(hwnd, ID_TITLE, UI_TEXT["main_title"], self.fonts["title"])
         self.controls[ID_DESCRIPTION] = self._static(
             hwnd,
@@ -487,19 +499,30 @@ class MajiMemoApp:
             UI_TEXT["main_description"],
             self.fonts["description"],
         )
-        self.controls[ID_REFRESH] = self._button(hwnd, ID_REFRESH, UI_TEXT["button_refresh"], self.fonts["button"])
         self.controls[ID_LABEL_MAIN] = self._static(hwnd, ID_LABEL_MAIN, UI_TEXT["label_main"], self.fonts["label"])
         self.controls[ID_LABEL_SUB] = self._static(hwnd, ID_LABEL_SUB, UI_TEXT["label_sub"], self.fonts["label"])
+        self.controls[ID_REFRESH_SUB] = self._button(
+            hwnd,
+            ID_REFRESH_SUB,
+            UI_TEXT["button_refresh_sub"],
+            self.fonts["button"],
+        )
+        self.controls[ID_REFRESH_MAIN] = self._button(
+            hwnd,
+            ID_REFRESH_MAIN,
+            UI_TEXT["button_refresh_main"],
+            self.fonts["button"],
+        )
         self.controls[ID_EDIT_MAIN] = self._edit(
             hwnd,
             ID_EDIT_MAIN,
-            text_value(self.config, "left_text"),
+            right_text,
             self.fonts["input"],
         )
         self.controls[ID_EDIT_SUB] = self._edit(
             hwnd,
             ID_EDIT_SUB,
-            text_value(self.config, "right_text"),
+            left_text,
             self.fonts["input"],
         )
         self.controls[ID_STATUS] = self._static(hwnd, ID_STATUS, UI_TEXT["status_idle"], self.fonts["status"])
@@ -617,28 +640,27 @@ class MajiMemoApp:
         return int(hwnd)
 
     def _layout(self, width: int, height: int) -> None:
-        margin_x = 30
-        margin_top = 24
-        margin_bottom = 24
-        footer_h = 40 if width < 900 else 20
+        margin_x = 24
+        margin_top = 22
+        margin_bottom = 18
+        footer_h = 42 if width < 1180 else 20
         status_h = 22
-        header_h = 72
-        body_top = margin_top + header_h + 8
+        header_h = 58
+        body_top = margin_top + header_h + 10
         footer_y = height - margin_bottom - footer_h
-        status_y = footer_y - 8 - status_h
-        body_h = max(status_y - 12 - body_top, 220)
+        status_y = footer_y - 6 - status_h
+        body_h = max(status_y - 10 - body_top, 240)
         content_w = max(width - margin_x * 2, WINDOW_MIN_SIZE[0] - margin_x * 2)
 
-        button_w = 116
-        button_h = 34
-        header_text_w = max(content_w - button_w - 18, 320)
+        button_w = 142
+        button_h = 28
+        label_w = 92
 
-        self._move(ID_TITLE, margin_x, margin_top, header_text_w, 30)
-        self._move(ID_DESCRIPTION, margin_x, margin_top + 35, header_text_w, 24)
-        self._move(ID_REFRESH, width - margin_x - button_w, margin_top + 8, button_w, button_h)
+        self._move(ID_TITLE, margin_x, margin_top, content_w, 30)
+        self._move(ID_DESCRIPTION, margin_x, margin_top + 34, content_w, 24)
 
-        gap = 24
-        left_w = (content_w - gap) * 58 // 100
+        gap = 16
+        left_w = (content_w - gap) * 42 // 100
         right_w = content_w - gap - left_w
         left_x = margin_x
         right_x = margin_x + left_w + gap
@@ -647,24 +669,31 @@ class MajiMemoApp:
             wintypes.RECT(right_x, body_top, right_x + right_w, body_top + body_h),
         ]
 
-        self._move(ID_LABEL_MAIN, left_x + 18, body_top + 14, left_w - 36, 22)
-        self._move(ID_LABEL_SUB, right_x + 18, body_top + 14, right_w - 36, 22)
-        self._move(ID_EDIT_MAIN, left_x + 18, body_top + 44, left_w - 36, body_h - 62)
-        self._move(ID_EDIT_SUB, right_x + 18, body_top + 44, right_w - 36, body_h - 62)
+        left_pad = 12
+        top_pad = 10
+        self._move(ID_LABEL_SUB, left_x + left_pad, body_top + top_pad, label_w, 22)
+        self._move(ID_REFRESH_SUB, left_x + left_w - left_pad - button_w, body_top + top_pad - 3, button_w, button_h)
+        self._move(ID_EDIT_SUB, left_x + left_pad, body_top + 38, left_w - left_pad * 2, body_h - 48)
+
+        self._move(ID_LABEL_MAIN, right_x + left_pad, body_top + top_pad, label_w, 22)
+        self._move(ID_REFRESH_MAIN, right_x + right_w - left_pad - button_w, body_top + top_pad - 3, button_w, button_h)
+        self._move(ID_EDIT_MAIN, right_x + left_pad, body_top + 38, right_w - left_pad * 2, body_h - 48)
         self._move(ID_STATUS, margin_x, status_y, content_w, status_h)
 
-        self._move(ID_FOOTER_LEFT, margin_x, footer_y, min(380, content_w), 18)
-        if width < 900:
+        right_total_w = 560
+        if width < 1180:
+            self._move(ID_FOOTER_LEFT, margin_x, footer_y, content_w, 18)
             right_y = footer_y + 18
             right_x = margin_x
         else:
+            self._move(ID_FOOTER_LEFT, margin_x, footer_y, max(content_w - right_total_w - 20, 260), 18)
             right_y = footer_y
-            right_x = width - margin_x - 482
+            right_x = width - margin_x - right_total_w
         self._move(ID_FOOTER_LINK_1, right_x, right_y, 92, 18)
         self._move(ID_FOOTER_SEPARATOR_1, right_x + 92, right_y, 26, 18)
         self._move(ID_FOOTER_LINK_2, right_x + 118, right_y, 78, 18)
         self._move(ID_FOOTER_SEPARATOR_2, right_x + 196, right_y, 26, 18)
-        self._move(ID_FOOTER_COPYRIGHT, right_x + 222, right_y, 260, 18)
+        self._move(ID_FOOTER_COPYRIGHT, right_x + 222, right_y, 338, 18)
         user32.InvalidateRect(self.hwnd, None, True)
 
     def _move(self, control_id: int, x: int, y: int, width: int, height: int) -> None:
@@ -680,7 +709,6 @@ class MajiMemoApp:
         user32.FillRect(hdc, ctypes.byref(client), self.brushes["background"])
         for rect in self.card_rects:
             user32.FillRect(hdc, ctypes.byref(rect), self.brushes["card"])
-            user32.FrameRect(hdc, ctypes.byref(rect), self.brushes["border"])
         user32.EndPaint(hwnd, ctypes.byref(ps))
 
     def _get_edit_text(self, control_id: int) -> str:
@@ -700,10 +728,11 @@ class MajiMemoApp:
     def _save_now(self) -> None:
         user32.KillTimer(self.hwnd, SAVE_TIMER_ID)
         payload = {
-            "left_text": self._get_edit_text(ID_EDIT_MAIN),
-            "right_text": self._get_edit_text(ID_EDIT_SUB),
+            "left_text": self._get_edit_text(ID_EDIT_SUB),
+            "right_text": self._get_edit_text(ID_EDIT_MAIN),
             "window_geometry": self._window_geometry(),
             "last_updated": datetime.now().isoformat(timespec="seconds"),
+            "layout_version": CONFIG_LAYOUT_VERSION,
         }
         try:
             CONFIG_PATH.write_text(
@@ -720,18 +749,17 @@ class MajiMemoApp:
         height = max(rect.bottom - rect.top, WINDOW_MIN_SIZE[1])
         return f"{width}x{height}+{rect.left}+{rect.top}"
 
-    def _refresh(self) -> None:
+    def _refresh_one(self, edit_id: int, status_key: str) -> None:
         self.suppress_change = True
         try:
-            user32.SetWindowTextW(self.controls[ID_EDIT_MAIN], "")
-            user32.SetWindowTextW(self.controls[ID_EDIT_SUB], "")
+            user32.SetWindowTextW(self.controls[edit_id], "")
         finally:
             self.suppress_change = False
         self._save_now()
-        self._set_status(UI_TEXT["status_refreshed"])
+        self._set_status(UI_TEXT[status_key])
         user32.KillTimer(self.hwnd, STATUS_TIMER_ID)
         user32.SetTimer(self.hwnd, STATUS_TIMER_ID, STATUS_RESET_MS, None)
-        user32.SetFocus(self.controls[ID_EDIT_MAIN])
+        user32.SetFocus(self.controls[edit_id])
 
     def _handle_command(self, wparam: int) -> int:
         control_id = loword(wparam)
@@ -740,8 +768,11 @@ class MajiMemoApp:
             if not self.suppress_change:
                 self._schedule_save()
             return 0
-        if control_id == ID_REFRESH and notification == BN_CLICKED:
-            self._refresh()
+        if control_id == ID_REFRESH_SUB and notification == BN_CLICKED:
+            self._refresh_one(ID_EDIT_SUB, "status_refreshed_sub")
+            return 0
+        if control_id == ID_REFRESH_MAIN and notification == BN_CLICKED:
+            self._refresh_one(ID_EDIT_MAIN, "status_refreshed_main")
             return 0
         if control_id == ID_FOOTER_LINK_1 and notification == STN_CLICKED:
             webbrowser.open(LINK_URLS["footer_link_1"])
