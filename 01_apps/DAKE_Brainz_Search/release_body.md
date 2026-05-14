@@ -10,6 +10,9 @@
 - semantic類似による流れ接続
 - timeline item navigation
 - PEAKHEADZロゴのヘッダー表示
+- PEAKHEADZロゴのアプリアイコン化
+- フォント可読性改善
+- 検索中ステータス表示
 
 ## 継続
 

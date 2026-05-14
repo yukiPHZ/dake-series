@@ -22,6 +22,7 @@ UI_TEXT = {
     "subtitle": "Local Memory Search",
     "search_placeholder": "うろ覚えで検索",
     "button_search": "Search",
+    "button_searching": "Searching...",
     "checkbox_semantic_search": "Semantic Search",
     "button_index": "Index",
     "button_cancel": "Cancel",
@@ -119,12 +120,20 @@ UI_TEXT = {
     "log_index_cancelled": "INDEX CANCELLED: indexed={indexed}, skipped={skipped}, errors={errors}",
     "log_index_error": "INDEX ERROR: {error}",
     "log_search": "SEARCH: {query} -> {count} results",
+    "log_searching": "SEARCH: searching... {query}",
+    "log_search_complete": "SEARCH COMPLETE: {count} results",
+    "log_no_results": "NO RESULTS: {query}",
+    "phrase_searching_memory": "補助脳：関連する記憶を探しています。",
+    "phrase_no_results": "補助脳：関連する記憶はまだ見つかりません。",
     "log_export": "EXPORT: {path}",
     "index_idle": "IDLE",
     "index_running": "RUNNING {current}/{total}",
     "index_embedding": "EMBEDDING CHUNKS...",
     "index_done": "DONE {indexed} indexed / {skipped} skipped / {errors} errors",
     "searching": "SEARCHING...",
+    "status_searching": "SEARCHING...",
+    "status_search_complete": "SEARCH COMPLETE / {count} results",
+    "status_no_results": "NO RESULTS",
     "status_sqlite_ready": "SQLITE READY",
     "status_sqlite_error": "SQLITE ERROR",
     "status_cuda_online": "CUDA ONLINE",
@@ -389,9 +398,9 @@ def run_gui(launch_check: bool = False) -> int:
 
     from core.app_config import (
         ConfigStore,
-        common_icon_path,
         ensure_app_dirs,
         open_path,
+        peakheadz_icon_path,
         peakheadz_logo_path,
     )
     from core.chatgpt_importer import ConversationsJsonNotFound, ChatGPTImportResult, import_chatgpt_export
@@ -405,7 +414,7 @@ def run_gui(launch_check: bool = False) -> int:
     from core.ollama_embeddings import check_embedding_status
     from core.search_engine import SearchEngine, SearchResponse
     from ui.components import choose_font_family, set_textbox_text
-    from ui.theme import COLORS, FONT_CANDIDATES
+    from ui.theme import COLORS, FONT_CANDIDATES, MONO_FONT_CANDIDATES, READING_FONT_CANDIDATES
 
     ensure_app_dirs()
     ctk.set_appearance_mode("dark")
@@ -419,6 +428,8 @@ def run_gui(launch_check: bool = False) -> int:
             self.minsize(1120, 680)
             self.configure(fg_color=COLORS["bg"])
             self.font_family = choose_font_family(self, FONT_CANDIDATES)
+            self.reading_font_family = choose_font_family(self, READING_FONT_CANDIDATES)
+            self.mono_font_family = choose_font_family(self, MONO_FONT_CANDIDATES)
             self.config_store = ConfigStore()
             self.config_data = self.config_store.load()
             self.database = BrainzDatabase()
@@ -455,7 +466,7 @@ def run_gui(launch_check: bool = False) -> int:
 
         def _apply_icon(self) -> None:
             try:
-                icon = common_icon_path()
+                icon = peakheadz_icon_path()
                 if icon.exists():
                     self.iconbitmap(str(icon))
             except Exception:
@@ -506,20 +517,21 @@ def run_gui(launch_check: bool = False) -> int:
                 fg_color=COLORS["input"],
                 border_color=COLORS["border"],
                 text_color=COLORS["text"],
-                font=(self.font_family, 15),
+                font=(self.reading_font_family, 16),
             )
             self.search_entry.grid(row=0, column=0, padx=(0, 10))
             self.search_entry.insert(0, self.current_query)
             self.search_entry.bind("<Return>", lambda _event: self._start_search())
-            ctk.CTkButton(
+            self.search_button = ctk.CTkButton(
                 search_box,
                 text=UI_TEXT["button_search"],
-                width=92,
+                width=112,
                 height=42,
                 fg_color=COLORS["accent"],
                 hover_color=COLORS["accent_hover"],
                 command=self._start_search,
-            ).grid(row=0, column=1)
+            )
+            self.search_button.grid(row=0, column=1)
             self.semantic_checkbox = ctk.CTkCheckBox(
                 search_box,
                 text=UI_TEXT["checkbox_semantic_search"],
@@ -528,7 +540,7 @@ def run_gui(launch_check: bool = False) -> int:
                 fg_color=COLORS["accent"],
                 hover_color=COLORS["accent_hover"],
                 border_color=COLORS["border"],
-                font=(self.font_family, 12),
+                font=(self.reading_font_family, 13),
             )
             self.semantic_checkbox.grid(row=1, column=0, columnspan=2, sticky="w", pady=(6, 0))
 
@@ -657,10 +669,11 @@ def run_gui(launch_check: bool = False) -> int:
                 border_color=COLORS["border"],
                 border_width=1,
                 text_color=COLORS["text"],
-                font=(self.font_family, 12),
+                font=(self.reading_font_family, 13),
                 wrap="word",
             )
             self.preview_box.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 10))
+            self._relax_textbox_spacing(self.preview_box)
             set_textbox_text(self.preview_box, UI_TEXT["empty_preview"])
 
             self._section_title(right, UI_TEXT["tags_title"], 2)
@@ -682,10 +695,11 @@ def run_gui(launch_check: bool = False) -> int:
                 border_color=COLORS["border"],
                 border_width=1,
                 text_color=COLORS["muted"],
-                font=(self.font_family, 12),
+                font=(self.reading_font_family, 13),
                 wrap="word",
             )
             self.related_box.grid(row=5, column=0, sticky="ew", padx=10, pady=(0, 10))
+            self._relax_textbox_spacing(self.related_box)
             set_textbox_text(self.related_box, UI_TEXT["related_memory_empty"])
 
             self._section_title(right, UI_TEXT["section_memory_flow"], 6)
@@ -730,10 +744,11 @@ def run_gui(launch_check: bool = False) -> int:
                 border_color=COLORS["border"],
                 border_width=1,
                 text_color=COLORS["muted"],
-                font=(self.font_family, 12),
+                font=(self.reading_font_family, 13),
                 wrap="word",
             )
             self.handoff_box.grid(row=10, column=0, sticky="nsew", padx=10, pady=(0, 10))
+            self._relax_textbox_spacing(self.handoff_box)
             set_textbox_text(self.handoff_box, UI_TEXT["empty_handoff"])
 
             export_row = ctk.CTkFrame(right, fg_color="transparent")
@@ -765,10 +780,11 @@ def run_gui(launch_check: bool = False) -> int:
                 height=96,
                 fg_color=COLORS["input"],
                 text_color=COLORS["muted"],
-                font=(self.font_family, 12),
+                font=(self.mono_font_family, 12),
                 wrap="word",
             )
             self.log_box.grid(row=1, column=0, sticky="ew", padx=10, pady=(0, 10))
+            self._relax_textbox_spacing(self.log_box, spacing1=1, spacing3=3)
             self.log_box.configure(state="disabled")
 
         def _panel(self, parent, corner_radius: int):
@@ -785,8 +801,14 @@ def run_gui(launch_check: bool = False) -> int:
                 parent,
                 text=text,
                 text_color=COLORS["text"],
-                font=(self.font_family, 14, "bold"),
+                font=(self.font_family, 15, "bold"),
             ).grid(row=row, column=0, sticky="w", padx=12, pady=(12, 8))
+
+        def _relax_textbox_spacing(self, textbox, spacing1: int = 2, spacing3: int = 4) -> None:
+            try:
+                textbox._textbox.configure(spacing1=spacing1, spacing2=1, spacing3=spacing3)
+            except Exception:
+                pass
 
         def _render_empty_results(self) -> None:
             for child in self.results_frame.winfo_children():
@@ -883,10 +905,11 @@ def run_gui(launch_check: bool = False) -> int:
                 border_color=COLORS["border"],
                 border_width=1,
                 text_color=COLORS["text"],
-                font=(self.font_family, 12),
+                font=(self.reading_font_family, 13),
                 wrap="word",
             )
             input_box.grid(row=1, column=0, sticky="nsew", padx=14, pady=(0, 12))
+            self._relax_textbox_spacing(input_box)
 
             button_row = ctk.CTkFrame(dialog, fg_color="transparent")
             button_row.grid(row=2, column=0, sticky="ew", padx=14, pady=(0, 14))
@@ -1014,10 +1037,16 @@ def run_gui(launch_check: bool = False) -> int:
             query_text = self.search_entry.get().strip()
             if not query_text:
                 return
+            if self.search_thread and self.search_thread.is_alive():
+                return
             self.current_query = query_text
             self.config_data.last_query = query_text
             self.config_store.save(self.config_data)
-            self.index_status_var.set(UI_TEXT["searching"])
+            self._set_search_running(True)
+            self.index_status_var.set(UI_TEXT["status_searching"])
+            self._append_log(UI_TEXT["log_searching"].format(query=query_text))
+            self._append_log(UI_TEXT["phrase_searching_memory"])
+            self.update_idletasks()
             semantic_enabled = bool(self.semantic_search_var.get()) and self.semantic_available
             self.search_thread = threading.Thread(
                 target=self._search_worker,
@@ -1032,6 +1061,12 @@ def run_gui(launch_check: bool = False) -> int:
                 self.events.put(("search_done", (query_text, response, semantic_enabled)))
             except Exception as exc:
                 self.events.put(("index_error", str(exc)))
+
+        def _set_search_running(self, running: bool) -> None:
+            if running:
+                self.search_button.configure(text=UI_TEXT["button_searching"], state="disabled")
+            else:
+                self.search_button.configure(text=UI_TEXT["button_search"], state="normal")
 
         def _render_results(self, results: list[SearchResult]) -> None:
             for child in self.results_frame.winfo_children():
@@ -1059,18 +1094,18 @@ def run_gui(launch_check: bool = False) -> int:
                     item,
                     text=self._result_meta(result),
                     text_color=COLORS["muted"],
-                    font=(self.font_family, 11),
+                    font=(self.reading_font_family, 12),
                     anchor="w",
                 ).grid(row=1, column=0, sticky="ew", padx=12)
                 ctk.CTkLabel(
                     item,
                     text=result.snippet,
                     text_color=COLORS["muted"],
-                    font=(self.font_family, 12),
+                    font=(self.reading_font_family, 13),
                     wraplength=510,
                     justify="left",
                     anchor="w",
-                ).grid(row=2, column=0, sticky="ew", padx=12, pady=(3, 10))
+                ).grid(row=2, column=0, sticky="ew", padx=12, pady=(5, 12))
 
         def _result_title(self, result: SearchResult) -> str:
             if result.source_type == "chatgpt_export":
@@ -1241,7 +1276,7 @@ def run_gui(launch_check: bool = False) -> int:
                     card,
                     text=short_summary(result, 140),
                     text_color=COLORS["muted"],
-                    font=(self.font_family, 11),
+                    font=(self.reading_font_family, 12),
                     wraplength=305,
                     justify="left",
                     anchor="w",
@@ -1354,6 +1389,7 @@ def run_gui(launch_check: bool = False) -> int:
             self.index_button.configure(state="normal")
             self.cancel_button.configure(state="disabled")
             self._set_import_buttons_state("normal")
+            self._set_search_running(False)
             self.index_status_var.set(UI_TEXT["index_idle"])
             self._append_log(UI_TEXT["log_index_error"].format(error=error_text))
 
@@ -1448,7 +1484,11 @@ def run_gui(launch_check: bool = False) -> int:
             results = response.results
             self.current_results = results
             self.current_related_results = response.related
-            self.index_status_var.set(UI_TEXT["index_idle"])
+            self._set_search_running(False)
+            if results:
+                self.index_status_var.set(UI_TEXT["status_search_complete"].format(count=len(results)))
+            else:
+                self.index_status_var.set(UI_TEXT["status_no_results"])
             self._render_results(results)
             self._render_related_memory(response.related)
             self._update_handoff_preview()
@@ -1459,6 +1499,11 @@ def run_gui(launch_check: bool = False) -> int:
                 self.current_flow_items = []
                 self._render_empty_memory_flow()
             self._refresh_stats()
+            if results:
+                self._append_log(UI_TEXT["log_search_complete"].format(count=len(results)))
+            else:
+                self._append_log(UI_TEXT["log_no_results"].format(query=query_text))
+                self._append_log(UI_TEXT["phrase_no_results"])
             if semantic_enabled:
                 self._append_log(UI_TEXT["log_semantic_search_initialized"])
                 if response.semantic_available:

@@ -70,6 +70,10 @@ def peakheadz_logo_path() -> Path:
     return assets_dir() / "peakheadz_logo.png"
 
 
+def peakheadz_icon_path() -> Path:
+    return assets_dir() / "peakheadz_logo.ico"
+
+
 def common_icon_path() -> Path:
     return series_root() / "02_assets" / "dake_icon.ico"
 

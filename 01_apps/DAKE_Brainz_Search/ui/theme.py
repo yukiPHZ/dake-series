@@ -20,3 +20,5 @@ COLORS = {
 }
 
 FONT_CANDIDATES = ("BIZ UDPGothic", "Yu Gothic UI", "Meiryo", "Segoe UI")
+READING_FONT_CANDIDATES = ("Yu Gothic UI", "Meiryo", "BIZ UDPGothic", "Segoe UI")
+MONO_FONT_CANDIDATES = ("Consolas", "Cascadia Mono", "Yu Gothic UI", "Meiryo")

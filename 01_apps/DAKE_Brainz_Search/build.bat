@@ -8,6 +8,7 @@ set "DIST_DIR=dist"
 set "BUILD_DIR=build"
 set "SPEC_FILE=%APP_NAME%.spec"
 set "OUTPUT_EXE=%DIST_DIR%\DakeBrainz_Search.exe"
+set "ICON_FILE=assets\peakheadz_logo.ico"
 
 echo [1/3] Cleaning previous build artifacts...
 if exist "%BUILD_DIR%" rmdir /s /q "%BUILD_DIR%"
@@ -17,6 +18,12 @@ if exist "main.spec" del /q "main.spec"
 
 if exist "%BUILD_DIR%" goto :clean_error
 if exist "%DIST_DIR%" goto :clean_error
+
+if not exist "%ICON_FILE%" (
+    echo.
+    echo Missing icon: %ICON_FILE%
+    goto :build_error
+)
 
 set "PYTHON_EXE=python"
 where python >nul 2>nul
@@ -45,7 +52,7 @@ if defined PYINSTALLER_EXE (
      --onefile ^
      --noconsole ^
      --name DakeBrainz_Search ^
-     --icon=..\..\02_assets\dake_icon.ico ^
+     --icon=%ICON_FILE% ^
      --exclude-module numpy ^
      --add-data "assets;assets" ^
      main.py
@@ -56,7 +63,7 @@ if defined PYINSTALLER_EXE (
      --onefile ^
      --noconsole ^
      --name DakeBrainz_Search ^
-     --icon=..\..\02_assets\dake_icon.ico ^
+     --icon=%ICON_FILE% ^
      --exclude-module numpy ^
      --add-data "assets;assets" ^
      main.py

@@ -194,7 +194,16 @@ BRAINZは単語を探すだけの検索ツールではなく、過去の記録�
 - ロゴは左上ヘッダー付近に小さく表示
 - 縦横比を維持
 - ロゴがない場合も通常起動
-- exeアイコンはDAKE共通アイコンのまま
+- BRAINZはPEAKHEADZロゴをアプリアイコンに使用
+
+## Phase 8: アイコン・フォント・検索中UI改善
+
+補助脳BRAINZは、PEAKHEADZロゴをexeアイコンにも使用します。
+
+- `assets/peakheadz_logo.ico` をビルドアイコンに使用
+- フォント可読性を改善
+- Preview / Log / Search Results の文字サイズと行間を調整
+- 検索中ステータスとSearchボタンのSearching表示を追加
 
 ## DAKE_META
 
