@@ -9,6 +9,25 @@ PDFを1つ追加して、ファイルサイズを軽くするDAKEのWindowsデ�
 3. 「圧縮して保存」を押します。
 4. 完了後、保存先フォルダが開きます。
 
+## SHIMARISU連携CLI
+
+SHIMARISUから呼び出す場合だけ、GUIなしでPDF圧縮を実行できます。
+
+```bat
+DakePDF_Compress.exe --from-shimarisu --inputs "A.pdf"
+```
+
+複数PDFを渡す場合:
+
+```bat
+DakePDF_Compress.exe --from-shimarisu --inputs "A.pdf" "B.pdf"
+```
+
+- 成功時は exit code `0` で、圧縮後PDFのパスを標準出力に出します。
+- 失敗時は exit code `1` で、短いエラーを標準エラーに出します。
+- `--help-cli` でCLI仕様を表示して終了します。
+- `--from-shimarisu` がない通常起動は、これまで通りGUIで起動します。
+
 ## 出力ファイル名
 
 元PDFと同じフォルダに、次の名前で保存します。
@@ -59,6 +78,7 @@ build.bat
 - 2026-05-06: ソース構文確認、圧縮関数の単体確認、重複ファイル名回避、PyInstallerビルドを確認しました。
 - 2026-05-06: `dist\DakePDF_Compress.exe` の短時間起動確認を行い、プロセス起動後に停止できることを確認しました。
 - 2026-05-06: 共通アイコン参照、初期ウインドウサイズ、最小高さの設定を再確認しました。
+- 2026-05-14: SHIMARISU連携用CLIモードを追加し、`--help-cli`、正常圧縮、入力なし、存在しないPDFの確認を行いました。
 
 ## DAKE_META
 

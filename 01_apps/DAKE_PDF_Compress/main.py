@@ -13,22 +13,17 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-import tkinter as tk
-from tkinter import filedialog, font as tkfont, messagebox, ttk
-
-try:
-    import fitz  # PyMuPDF
-except Exception:
-    fitz = None
-
-try:
-    from tkinterdnd2 import DND_FILES, TkinterDnD
-
-    DND_ENABLED = True
-except Exception:
-    DND_FILES = None
-    TkinterDnD = None
-    DND_ENABLED = False
+tk = None
+filedialog = None
+tkfont = None
+messagebox = None
+ttk = None
+fitz = None
+DND_FILES = None
+TkinterDnD = None
+DND_ENABLED = False
+FITZ_IMPORT_ATTEMPTED = False
+DND_IMPORT_ATTEMPTED = False
 
 
 APP_NAME = "DakePDF圧縮"
@@ -127,6 +122,33 @@ FOOTER_NARROW_WIDTH = 900
 STATUS_ANIMATION_INTERVAL_MS = 450
 STATUS_PHRASE_DELAY_SECONDS = 1.6
 
+CLI_HELP_TEXT = """DakePDF_Compress CLI
+Usage:
+  DakePDF_Compress.exe --from-shimarisu --inputs "A.pdf" ["B.pdf" ...]
+
+Options:
+  --from-shimarisu   Run without GUI for SHIMARISU.
+  --inputs           One or more PDF files.
+  --help-cli         Show this help and exit.
+
+Output:
+  Saves next to each source PDF as *_compressed.pdf.
+  Prints output PDF path on success.
+"""
+
+CLI_ERROR_TEXT = {
+    "missing_inputs": "No input PDF.",
+    "not_pdf": "PDF only.",
+    "not_found": "File not found.",
+    "dependency": "Missing PDF library.",
+    "read_failed": "Cannot read PDF.",
+    "encrypted": "Encrypted PDF.",
+    "save_failed": "Save failed.",
+    "output_missing": "Output missing.",
+    "file_in_use": "File in use.",
+    "unknown": "Compression failed.",
+}
+
 
 class CompressError(Exception):
     def __init__(self, message_key: str, detail: str | None = None) -> None:
@@ -144,7 +166,58 @@ class PdfResult:
     low_reduction: bool
 
 
+def get_fitz() -> Any:
+    global fitz, FITZ_IMPORT_ATTEMPTED
+    if not FITZ_IMPORT_ATTEMPTED:
+        try:
+            import fitz as fitz_module  # PyMuPDF
+
+            fitz = fitz_module
+        except Exception:
+            fitz = None
+        FITZ_IMPORT_ATTEMPTED = True
+    return fitz
+
+
+def ensure_tkinter() -> None:
+    global filedialog, messagebox, tk, tkfont, ttk
+    if tk is not None:
+        return
+    import tkinter as tk_module
+    from tkinter import filedialog as filedialog_module
+    from tkinter import font as tkfont_module
+    from tkinter import messagebox as messagebox_module
+    from tkinter import ttk as ttk_module
+
+    tk = tk_module
+    filedialog = filedialog_module
+    tkfont = tkfont_module
+    messagebox = messagebox_module
+    ttk = ttk_module
+
+
+def ensure_dnd() -> None:
+    global DND_ENABLED, DND_FILES, DND_IMPORT_ATTEMPTED, TkinterDnD
+    if DND_IMPORT_ATTEMPTED:
+        return
+
+    try:
+        from tkinterdnd2 import DND_FILES as dnd_files
+        from tkinterdnd2 import TkinterDnD as tkinter_dnd
+
+        DND_FILES = dnd_files
+        TkinterDnD = tkinter_dnd
+        DND_ENABLED = True
+    except Exception:
+        DND_FILES = None
+        TkinterDnD = None
+        DND_ENABLED = False
+    DND_IMPORT_ATTEMPTED = True
+
+
 def make_root() -> tk.Tk:
+    ensure_tkinter()
+    ensure_dnd()
     if DND_ENABLED and TkinterDnD is not None:
         return TkinterDnD.Tk()
     return tk.Tk()
@@ -195,6 +268,7 @@ def apply_window_icon(window: tk.Misc) -> None:
 
 
 def choose_font_family(root: tk.Tk) -> str:
+    ensure_tkinter()
     available = set(tkfont.families(root))
     for family in FONT_CANDIDATES:
         if family in available:
@@ -232,7 +306,8 @@ def unique_output_path(source_path: Path) -> Path:
 
 
 def validate_pdf(path: Path) -> None:
-    if fitz is None:
+    pdf_lib = get_fitz()
+    if pdf_lib is None:
         raise CompressError("error_dependency_missing")
     if not path.exists() or not path.is_file():
         raise CompressError("error_read_failed")
@@ -241,7 +316,7 @@ def validate_pdf(path: Path) -> None:
 
     doc = None
     try:
-        doc = fitz.open(str(path))
+        doc = pdf_lib.open(str(path))
         if getattr(doc, "needs_pass", False):
             raise CompressError("error_encrypted")
         if doc.page_count < 1:
@@ -307,7 +382,7 @@ def verify_created_pdf(path: Path) -> None:
 
     doc = None
     try:
-        doc = fitz.open(str(path))
+        doc = get_fitz().open(str(path))
         if doc.page_count < 1:
             raise CompressError("error_output_missing")
     except CompressError:
@@ -323,7 +398,8 @@ def verify_created_pdf(path: Path) -> None:
 
 
 def compress_pdf(source_path: Path) -> PdfResult:
-    if fitz is None:
+    pdf_lib = get_fitz()
+    if pdf_lib is None:
         raise CompressError("error_dependency_missing")
 
     validate_pdf(source_path)
@@ -340,7 +416,7 @@ def compress_pdf(source_path: Path) -> PdfResult:
 
     doc = None
     try:
-        doc = fitz.open(str(source_path))
+        doc = pdf_lib.open(str(source_path))
         if getattr(doc, "needs_pass", False):
             raise CompressError("error_encrypted")
         rewrite_images_if_supported(doc)
@@ -396,6 +472,76 @@ def compress_pdf(source_path: Path) -> PdfResult:
         reduction_rate=reduction_rate,
         low_reduction=low_reduction,
     )
+
+
+def cli_write_error(message: str) -> None:
+    print(message, file=sys.stderr)
+
+
+def cli_error_for_exception(exc: CompressError) -> str:
+    mapping = {
+        "error_not_pdf": "not_pdf",
+        "error_read_failed": "read_failed",
+        "error_encrypted": "encrypted",
+        "error_save_failed": "save_failed",
+        "error_output_missing": "output_missing",
+        "error_file_in_use": "file_in_use",
+        "error_dependency_missing": "dependency",
+    }
+    return CLI_ERROR_TEXT.get(mapping.get(exc.message_key, "unknown"), CLI_ERROR_TEXT["unknown"])
+
+
+def collect_cli_inputs(argv: list[str]) -> list[Path]:
+    inputs: list[Path] = []
+    index = 0
+    while index < len(argv):
+        if argv[index] != "--inputs":
+            index += 1
+            continue
+
+        index += 1
+        while index < len(argv) and not argv[index].startswith("--"):
+            value = argv[index].strip()
+            if value:
+                inputs.append(Path(value))
+            index += 1
+    return inputs
+
+
+def run_cli(argv: list[str]) -> int | None:
+    if "--help-cli" in argv:
+        print(CLI_HELP_TEXT)
+        return 0
+
+    if "--from-shimarisu" not in argv:
+        return None
+
+    inputs = collect_cli_inputs(argv)
+    if not inputs:
+        cli_write_error(CLI_ERROR_TEXT["missing_inputs"])
+        return 1
+
+    output_paths: list[Path] = []
+    try:
+        for source_path in inputs:
+            if source_path.suffix.lower() != ".pdf":
+                cli_write_error(CLI_ERROR_TEXT["not_pdf"])
+                return 1
+            if not source_path.exists() or not source_path.is_file():
+                cli_write_error(CLI_ERROR_TEXT["not_found"])
+                return 1
+            result = compress_pdf(source_path)
+            output_paths.append(result.output_path)
+    except CompressError as exc:
+        cli_write_error(cli_error_for_exception(exc))
+        return 1
+    except Exception:
+        cli_write_error(CLI_ERROR_TEXT["unknown"])
+        return 1
+
+    for output_path in output_paths:
+        print(str(output_path))
+    return 0
 
 
 class DakePdfCompressApp:
@@ -950,6 +1096,10 @@ class DakePdfCompressApp:
 
 
 def main() -> None:
+    cli_exit_code = run_cli(sys.argv[1:])
+    if cli_exit_code is not None:
+        raise SystemExit(cli_exit_code)
+
     root = make_root()
     DakePdfCompressApp(root)
     root.mainloop()

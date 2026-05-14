@@ -31,6 +31,13 @@ if %errorlevel%==0 set "DND_OPTION=--collect-data=tkinterdnd2"
 --clean ^
 %ICON_OPTION% ^
 %DND_OPTION% ^
+--exclude-module pandas ^
+--exclude-module numpy ^
+--exclude-module PIL ^
+--exclude-module openpyxl ^
+--exclude-module lxml ^
+--exclude-module matplotlib ^
+--exclude-module scipy ^
 --name DakePDF_Compress ^
 main.py
 
