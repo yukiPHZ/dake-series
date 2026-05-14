@@ -114,3 +114,11 @@
 - 現在package向けに `assistant_recommendation.md` を生成
 - Ollama READY時は推薦生成を試し、失敗時はテンプレートで継続
 - 補助脳は提案のみ行い、最終判断はユーザーが行う
+
+## Phase 3.2
+
+- 上部に STATUS STRIP を追加
+- NEXT ACTION で次に押す操作を1つだけ表示
+- SYSTEM / VIDEO / OUTPUT / PROJECT BRIDGE / MEMORY のまとまりへUIを整理
+- 補助脳ログの画面表示を最新20件に整理
+- 既存の処理ロジック、非自動投稿、安全方針は維持

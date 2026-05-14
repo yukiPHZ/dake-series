@@ -47,6 +47,7 @@ from core.project_bridge import (
 from core.memory_store import (
     ensure_memory_dirs,
     generate_memory_summary,
+    memory_index_path,
     memory_summary_path,
     save_package_to_memory,
 )
@@ -82,7 +83,7 @@ from core.transcription import is_faster_whisper_available, transcribe_media
 from ui.theme import COLORS, FONT_FAMILY, setup_theme
 
 if ctk is not None:
-    from ui.components import StatusPill, append_textbox, make_panel, set_textbox
+    from ui.components import StatusPill, make_panel, set_textbox
 
 
 APP_VERSION = "0.1.0"
@@ -96,7 +97,21 @@ UI_TEXT = {
     "select_video": "Select Video File",
     "youtube_url": "YouTube LIVE URL",
     "fetch_metadata": "Fetch Metadata",
+    "status_strip": "STATUS",
+    "next_action": "NEXT ACTION",
+    "dashboard_waiting": "WAITING",
+    "dashboard_connected": "CONNECTED",
+    "dashboard_package_ready": "READY",
+    "dashboard_entries": "entries",
+    "dashboard_gpu": "GPU",
+    "dashboard_ollama": "Ollama",
+    "dashboard_ffmpeg": "FFmpeg",
+    "dashboard_package": "Package",
+    "dashboard_memory": "Memory",
+    "dashboard_bridge": "Bridge",
+    "all_set": "整っています。",
     "process": "PROCESS",
+    "video": "VIDEO",
     "start": "Start Production Run",
     "run_system_check": "Run System Check",
     "recheck_system": "Recheck System",
@@ -325,6 +340,8 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.memory_running = False
         self.recommendation_running = False
         self.worker_running = False
+        self.system_check_completed = False
+        self.log_lines: list[str] = []
 
         self.file_var = ctk.StringVar(value=UI_TEXT["no_video_selected"])
         self.test_file_var = ctk.StringVar(value=UI_TEXT["test_not_selected"])
@@ -348,12 +365,15 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.finish_var = ctk.StringVar(value=UI_TEXT["finish_empty"])
         self.output_var = ctk.StringVar(value=UI_TEXT["no_output"])
         self.status_var = ctk.StringVar(value=UI_TEXT["ready"])
+        self.status_strip_var = ctk.StringVar(value="")
+        self.next_action_var = ctk.StringVar(value=UI_TEXT["run_system_check"])
         self.progress_var = ctk.DoubleVar(value=0.0)
 
         self.step_vars: dict[str, ctk.StringVar] = {}
         self.cli_pills: dict[str, StatusPill] = {}
 
         self._build_ui()
+        self._update_dashboard()
         self._log(LOG_TEXT["startup"])
         self._log(LOG_TEXT["running"])
         self._refresh_project_bridge(silent=True)
@@ -376,8 +396,8 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
 
     def _build_ui(self) -> None:
         self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=1)
-        self.grid_rowconfigure(2, weight=0)
+        self.grid_rowconfigure(2, weight=1)
+        self.grid_rowconfigure(3, weight=0)
 
         header = ctk.CTkFrame(self, fg_color="transparent", height=86)
         header.grid(row=0, column=0, sticky="ew", padx=20, pady=(16, 8))
@@ -411,8 +431,10 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         )
         phrase.grid(row=0, column=2, rowspan=2, sticky="e")
 
+        self._build_dashboard().grid(row=1, column=0, sticky="ew", padx=20, pady=(0, 10))
+
         main = ctk.CTkFrame(self, fg_color="transparent")
-        main.grid(row=1, column=0, sticky="nsew", padx=20, pady=(0, 10))
+        main.grid(row=2, column=0, sticky="nsew", padx=20, pady=(0, 10))
         main.grid_columnconfigure(0, weight=1, uniform="main")
         main.grid_columnconfigure(1, weight=1, uniform="main")
         main.grid_columnconfigure(2, weight=1, uniform="main")
@@ -423,12 +445,66 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self._build_output_panel(main).grid(row=0, column=2, sticky="nsew", padx=(8, 0))
 
         bottom = ctk.CTkFrame(self, fg_color="transparent")
-        bottom.grid(row=2, column=0, sticky="ew", padx=20, pady=(0, 16))
+        bottom.grid(row=3, column=0, sticky="ew", padx=20, pady=(0, 16))
         bottom.grid_columnconfigure(0, weight=2)
         bottom.grid_columnconfigure(1, weight=3)
 
         self._build_system_panel(bottom).grid(row=0, column=0, sticky="nsew", padx=(0, 8))
         self._build_log_panel(bottom).grid(row=0, column=1, sticky="nsew", padx=(8, 0))
+
+    def _build_dashboard(self) -> ctk.CTkFrame:
+        dashboard = ctk.CTkFrame(self, fg_color="transparent")
+        dashboard.grid_columnconfigure(0, weight=3)
+        dashboard.grid_columnconfigure(1, weight=1)
+
+        status_card = ctk.CTkFrame(
+            dashboard,
+            fg_color=COLORS["panel"],
+            border_width=1,
+            border_color=COLORS["line"],
+            corner_radius=8,
+        )
+        status_card.grid(row=0, column=0, sticky="ew", padx=(0, 8))
+        status_card.grid_columnconfigure(0, weight=1)
+        ctk.CTkLabel(
+            status_card,
+            text=UI_TEXT["status_strip"],
+            font=ctk.CTkFont(family=FONT_FAMILY, size=10, weight="bold"),
+            text_color=COLORS["accent_soft"],
+        ).grid(row=0, column=0, sticky="w", padx=12, pady=(8, 0))
+        ctk.CTkLabel(
+            status_card,
+            textvariable=self.status_strip_var,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
+            text_color=COLORS["text"],
+            wraplength=840,
+            justify="left",
+        ).grid(row=1, column=0, sticky="ew", padx=12, pady=(0, 8))
+
+        next_card = ctk.CTkFrame(
+            dashboard,
+            fg_color=COLORS["panel"],
+            border_width=1,
+            border_color=COLORS["line"],
+            corner_radius=8,
+        )
+        next_card.grid(row=0, column=1, sticky="ew", padx=(8, 0))
+        next_card.grid_columnconfigure(0, weight=1)
+        ctk.CTkLabel(
+            next_card,
+            text=UI_TEXT["next_action"],
+            font=ctk.CTkFont(family=FONT_FAMILY, size=10, weight="bold"),
+            text_color=COLORS["accent_soft"],
+        ).grid(row=0, column=0, sticky="w", padx=12, pady=(8, 0))
+        ctk.CTkLabel(
+            next_card,
+            textvariable=self.next_action_var,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=14, weight="bold"),
+            text_color=COLORS["accent"],
+            wraplength=300,
+            justify="left",
+        ).grid(row=1, column=0, sticky="ew", padx=12, pady=(0, 8))
+        return dashboard
 
     def _make_logo_label(self, parent: ctk.CTkFrame) -> ctk.CTkLabel:
         logo_path = app_root() / "assets" / "peakheadz_logo.png"
@@ -523,7 +599,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         return panel
 
     def _build_process_panel(self, parent: ctk.CTkFrame) -> ctk.CTkFrame:
-        panel, body = make_panel(parent, UI_TEXT["process"])
+        panel, body = make_panel(parent, UI_TEXT["video"])
         body.grid_columnconfigure(0, weight=1)
 
         for index, label in enumerate(
@@ -629,6 +705,16 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             text_color=COLORS["text"],
         )
         self.first_test_button.grid(row=2, column=1, sticky="ew", padx=(4, 12), pady=4)
+        self.generate_package_video_button = ctk.CTkButton(
+            test_box,
+            text=UI_TEXT["generate_posting_package"],
+            command=self._start_posting_package,
+            height=30,
+            fg_color=COLORS["button"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+        )
+        self.generate_package_video_button.grid(row=3, column=0, columnspan=2, sticky="ew", padx=12, pady=4)
         self.open_test_output_button = ctk.CTkButton(
             test_box,
             text=UI_TEXT["open_test_output"],
@@ -639,7 +725,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             text_color=COLORS["text"],
             state="disabled",
         )
-        self.open_test_output_button.grid(row=3, column=0, columnspan=2, sticky="ew", padx=12, pady=(4, 8))
+        self.open_test_output_button.grid(row=4, column=0, columnspan=2, sticky="ew", padx=12, pady=(4, 8))
         ctk.CTkLabel(
             test_box,
             textvariable=self.first_test_summary_var,
@@ -647,7 +733,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             text_color=COLORS["text"],
             wraplength=330,
             justify="left",
-        ).grid(row=4, column=0, columnspan=2, sticky="ew", padx=12, pady=(0, 12))
+        ).grid(row=5, column=0, columnspan=2, sticky="ew", padx=12, pady=(0, 12))
         return panel
 
     def _build_output_panel(self, parent: ctk.CTkFrame) -> ctk.CTkFrame:
@@ -1177,6 +1263,108 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         set_textbox(self.log_box, "")
         return panel
 
+    def _tool_state(self, key: str, default: str = "CHECKING") -> str:
+        status = self.cli_status.get(key, {})
+        if isinstance(status, dict):
+            return str(status.get("state") or default)
+        return default
+
+    def _dashboard_gpu_name(self) -> str:
+        detail = str(self.gpu_status.get("detail") or "")
+        name = str(self.gpu_status.get("name") or detail.split(" / ", 1)[0] or self.gpu_status.get("state") or "--")
+        for prefix in ("NVIDIA GeForce ", "NVIDIA "):
+            if name.startswith(prefix):
+                name = name[len(prefix) :]
+        return name or "--"
+
+    def _dashboard_memory_count(self) -> int:
+        path = memory_index_path()
+        if not path.exists():
+            return 0
+        try:
+            data = json.loads(path.read_text(encoding="utf-8", errors="replace"))
+        except Exception:
+            return 0
+        return len(data) if isinstance(data, list) else 0
+
+    def _dashboard_package_dir(self) -> Path | None:
+        if self.package_output_dir and self.package_output_dir.exists():
+            return self.package_output_dir
+        return None
+
+    def _dashboard_file_ready(self, package_dir: Path | None, relative_path: str, cached_path: Path | None = None) -> bool:
+        if cached_path is not None and cached_path.exists():
+            return True
+        if package_dir is None:
+            return False
+        return (package_dir / relative_path).exists()
+
+    def _dashboard_memory_saved(self, package_dir: Path | None) -> bool:
+        if package_dir is None:
+            return False
+        path = memory_index_path()
+        if not path.exists():
+            return False
+        try:
+            index = json.loads(path.read_text(encoding="utf-8", errors="replace"))
+        except Exception:
+            return False
+        if not isinstance(index, list):
+            return False
+        try:
+            target = str(package_dir.resolve(strict=False)).lower()
+        except Exception:
+            target = str(package_dir).lower()
+        for item in index:
+            if not isinstance(item, dict):
+                continue
+            source = str(item.get("source_package") or "")
+            try:
+                source = str(Path(source).resolve(strict=False))
+            except Exception:
+                pass
+            if source.lower() == target:
+                return True
+        return False
+
+    def _dashboard_next_action(self) -> str:
+        package_dir = self._dashboard_package_dir()
+        if not self.system_check_completed:
+            return UI_TEXT["run_system_check"]
+        if self.selected_file is None and self.test_video_path is None:
+            return UI_TEXT["select_test_video"]
+        if package_dir is None:
+            return UI_TEXT["generate_posting_package"]
+        if not self._dashboard_file_ready(package_dir, "assistant_review.md", self.review_file_path):
+            return UI_TEXT["run_assistant_review"]
+        if not self._dashboard_file_ready(package_dir, "selected/selected_summary.md", None):
+            return UI_TEXT["export_selected_draft"]
+        if not self._dashboard_file_ready(package_dir, "selected/short_vertical_1080x1920.mp4", self.vertical_short_path):
+            return UI_TEXT["generate_vertical_short"]
+        if not self._dashboard_memory_saved(package_dir):
+            return UI_TEXT["save_to_memory"]
+        if not self._dashboard_file_ready(package_dir, "assistant_recommendation.md", self.recommendation_path):
+            return UI_TEXT["generate_recommendation"]
+        return UI_TEXT["all_set"]
+
+    def _update_dashboard(self) -> None:
+        if not hasattr(self, "status_strip_var"):
+            return
+        package_dir = self._dashboard_package_dir()
+        package_state = UI_TEXT["dashboard_package_ready"] if package_dir else UI_TEXT["dashboard_waiting"]
+        bridge_state = UI_TEXT["dashboard_connected"] if self.project_bridge_data else UI_TEXT["dashboard_waiting"]
+        memory_count = self._dashboard_memory_count()
+        status_parts = [
+            f"{UI_TEXT['dashboard_gpu']}: {self._dashboard_gpu_name()}",
+            f"{UI_TEXT['dashboard_ollama']}: {self._tool_state('ollama')}",
+            f"{UI_TEXT['dashboard_ffmpeg']}: {self._tool_state('ffmpeg')}",
+            f"{UI_TEXT['dashboard_package']}: {package_state}",
+            f"{UI_TEXT['dashboard_memory']}: {memory_count} {UI_TEXT['dashboard_entries']}",
+            f"{UI_TEXT['dashboard_bridge']}: {bridge_state}",
+        ]
+        self.status_strip_var.set("  |  ".join(status_parts))
+        self.next_action_var.set(self._dashboard_next_action())
+
     def _select_video(self) -> None:
         file_path = filedialog.askopenfilename(
             title=UI_TEXT["select_video_dialog"],
@@ -1219,6 +1407,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.vertical_short_summary_var.set(UI_TEXT["vertical_short_ready_hint"])
         self.recommendation_summary_var.set(UI_TEXT["recommend_ready_hint"])
         self._log(LOG_TEXT["source_detected"])
+        self._update_dashboard()
         self._probe_selected_video()
 
     def _select_test_video(self) -> None:
@@ -1236,6 +1425,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.test_file_var.set(f"{UI_TEXT['test_selected']}: {path.name}")
         self.first_test_summary_var.set(UI_TEXT["first_test_ready_hint"])
         self._log(LOG_TEXT["source_detected"])
+        self._update_dashboard()
 
     def _select_package_folder(self) -> None:
         initial_dir = packages_dir()
@@ -1273,6 +1463,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             )
         )
         self._refresh_selected_candidates()
+        self._update_dashboard()
 
     def _start_first_video_test(self) -> None:
         if self.first_test_running:
@@ -1323,7 +1514,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             return
 
         self.package_running = True
-        self.generate_package_button.configure(state="disabled")
+        self._set_package_buttons("disabled")
         self.open_package_button.configure(state="disabled")
         self.status_var.set(UI_TEXT["running"])
         self.package_summary_var.set(
@@ -1432,6 +1623,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.open_selected_button.configure(state="normal" if self.selected_output_dir else "disabled")
         self.selected_summary_var.set(self._format_selected_candidates_summary(data))
         self._log(LOG_TEXT["selected_candidates_refreshed"])
+        self._update_dashboard()
 
     def _project_bridge_root_for_name(self, project_name: str) -> Path | None:
         for box in self.project_bridge_boxes:
@@ -1458,6 +1650,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             self.project_bridge_summary_var.set(UI_TEXT["no_project_boxes"])
             if not silent:
                 self._log(LOG_TEXT["project_bridge_missing"])
+            self._update_dashboard()
             return
 
         values = [str(box["name"]) for box in self.project_bridge_boxes]
@@ -1466,6 +1659,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         chosen = current if current in values else values[0]
         self.project_choice_var.set(chosen)
         self._load_project_bridge(chosen, silent=silent)
+        self._update_dashboard()
 
     def _on_project_bridge_choice(self, value: str) -> None:
         self._load_project_bridge(value)
@@ -1474,17 +1668,20 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         if project_name == UI_TEXT["no_project_boxes"]:
             self.project_bridge_data = {}
             self.project_bridge_summary_var.set(UI_TEXT["no_project_boxes"])
+            self._update_dashboard()
             return
         project_root = self._project_bridge_root_for_name(project_name)
         if project_root is None:
             self.project_bridge_data = {}
             self.project_bridge_summary_var.set(UI_TEXT["project_bridge_requires_project"])
+            self._update_dashboard()
             return
         try:
             data = read_project_box(project_root)
         except Exception as exc:
             self.project_bridge_data = {}
             self.project_bridge_summary_var.set(str(exc))
+            self._update_dashboard()
             return
 
         self.project_bridge_data = data
@@ -1497,6 +1694,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.project_bridge_summary_var.set(self._format_project_bridge_summary(data))
         if not silent:
             self._log(LOG_TEXT["project_box_loaded"])
+        self._update_dashboard()
 
     def _selected_project_bgm_path(self) -> Path | None:
         if not self.project_bridge_data:
@@ -1619,6 +1817,11 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.save_memory_button.configure(state=state)
         self.generate_memory_summary_button.configure(state=state)
 
+    def _set_package_buttons(self, state: str) -> None:
+        for attr in ("generate_package_button", "generate_package_video_button"):
+            if hasattr(self, attr):
+                getattr(self, attr).configure(state=state)
+
     def _set_recommendation_buttons(self, state: str) -> None:
         self.generate_recommendation_button.configure(state=state)
         self.refresh_memory_button.configure(state=state)
@@ -1631,6 +1834,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             return
         self.recommendation_summary_var.set(self._format_recommend_memory_summary(analysis))
         self._log(LOG_TEXT["recommend_memory_loading"])
+        self._update_dashboard()
 
     def _start_save_memory(self) -> None:
         if self.memory_running:
@@ -1993,10 +2197,12 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
 
     def _start_cli_check(self) -> None:
         self._log(LOG_TEXT["system_check_start"])
+        self.system_check_completed = False
         self.system_check_status_var.set(UI_TEXT["checking"])
         self._set_system_action_buttons("disabled")
         for pill in self.cli_pills.values():
             pill.set_state("CHECKING")
+        self._update_dashboard()
 
         def worker() -> None:
             try:
@@ -2653,10 +2859,10 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                     self.status_var.set(UI_TEXT["error"])
                     self.step_vars[UI_TEXT["export_package"]].set(UI_TEXT["error"])
             self.package_running = False
-            self.generate_package_button.configure(state="normal")
+            self._set_package_buttons("normal")
         elif event_type == "posting_package_error":
             self.package_running = False
-            self.generate_package_button.configure(state="normal")
+            self._set_package_buttons("normal")
             self.status_var.set(UI_TEXT["error"])
             self.step_vars[UI_TEXT["export_package"]].set(UI_TEXT["error"])
             self.package_summary_var.set(str(event.get("message", "")))
@@ -2917,6 +3123,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             self.start_button.configure(state="normal")
             self.status_var.set(UI_TEXT["error"])
             messagebox.showerror(APP_NAME, str(event.get("message", "Unknown error")))
+        self._update_dashboard()
 
     def _apply_cli_status(
         self,
@@ -2932,6 +3139,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             self.nvenc_status = nvenc  # type: ignore[assignment]
         if isinstance(gpu, dict):
             self.gpu_status = gpu  # type: ignore[assignment]
+        self.system_check_completed = True
         self.install_guide_path = Path(install_guide) if install_guide else None
         self.install_commands = [str(item) for item in install_commands] if isinstance(install_commands, list) else []
 
@@ -2997,7 +3205,9 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
 
     def _log(self, message: str) -> None:
         timestamp = datetime.now().strftime("%H:%M:%S")
-        append_textbox(self.log_box, f"[{timestamp}] {message}\n")
+        self.log_lines.append(f"[{timestamp}] {message}")
+        self.log_lines = self.log_lines[-20:]
+        set_textbox(self.log_box, "\n".join(self.log_lines) + ("\n" if self.log_lines else ""))
 
 
 def run_launch_check() -> int:

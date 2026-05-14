@@ -366,6 +366,18 @@ OllamaがREADYの場合は、memory全文をそのまま渡さず、`memory_summ
 
 補助脳は提案だけを行います。外部API、OpenAI API、YouTube自動投稿、自動公開、元動画変更、memory削除は行いません。最終判断はユーザーが行います。
 
+## Phase 3.2 補助脳ダッシュボード整理
+
+Phase 3.1までに増えた機能を、迷わず使えるように上部ダッシュボードへ整理しました。
+
+- `STATUS STRIP` で GPU / Ollama / FFmpeg / Package / Memory / Bridge の状態を小さく一覧表示
+- `NEXT ACTION` で次に押す操作を1つだけ表示
+- SYSTEM / VIDEO / OUTPUT / PROJECT BRIDGE / MEMORY のまとまりで導線を整理
+- 補助脳ログは画面上では最新20件を表示
+- 投稿・公開・元動画変更は行わず、制作の現在地を見失わないことを優先
+
+NEXT ACTION は、System Check、動画選択、Posting Package、Assistant Review、Selected Draft、9:16 Short、Memory、Recommendation の順に不足している工程を見て更新します。すべて揃っている場合は「整っています。」を表示します。
+
 ## Phase 2候補
 
 - YouTube LIVE URLからyt-dlpで本取得
