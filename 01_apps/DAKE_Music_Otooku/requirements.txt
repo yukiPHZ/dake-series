@@ -1,0 +1,10 @@
+customtkinter
+requests
+pillow
+
+# Optional local generation stack.
+# Install only when the PC is ready for the heavier PyTorch / AudioCraft setup.
+# torch
+# torchaudio
+# audiocraft
+
