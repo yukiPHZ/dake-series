@@ -219,6 +219,15 @@ BRAINZは単語を探すだけの検索ツールではなく、過去の記録�
 - 完全ローカル処理
 - OpenAI API未使用
 
+## UI再調整: フォントと読みやすさ
+
+補助脳BRAINZは、長時間読める記憶OSとしてフォントと余白を再調整しました。
+
+- フォント可読性を再調整
+- 日本語太字の潰れを避けるため、サイズと余白で階層化
+- Logは等幅フォント、本文は読みやすい日本語フォントへ調整
+- Search Results / Preview / BRAINZ Log の行間と文字色を整理
+
 ## DAKE_META
 
 ```json
@@ -229,7 +238,7 @@ BRAINZは単語を探すだけの検索ツールではなく、過去の記録�
   "launcher_description": "ローカルの会話・仕様・メモを忘れず探すための記憶検索アプリです。",
   "site_title": "補助脳BRAINZ",
   "site_description": "ChatGPT、Codex、Claude、Geminiのやり取りをローカル記憶として再接続する検索補助脳です。",
-  "update_summary": "Watch Folder / Auto Index に対応しました。",
+  "update_summary": "フォント可読性とUIバランスを再調整しました。",
   "folder_name": "DAKE_Brainz_Search",
   "exe_name": "DakeBrainz_Search.exe",
   "release_url": "",
@@ -243,12 +252,16 @@ BRAINZは単語を探すだけの検索ツールではなく、過去の記録�
 ## RELEASE_BODY
 
 ```markdown
-# 補助脳BRAINZ v0.6.0
+# 補助脳BRAINZ v0.6.1
 
 ローカルの会話・仕様・Codex実装結果を忘れず探すための記憶検索アプリです。
 
 ## 追加
 
+- フォント可読性再調整
+- 日本語太字を避けたUI階層化
+- Log等幅フォント調整
+- Search Results / Preview / Log の余白と行間調整
 - Watch Folder
 - Auto Index
 - 新規/更新ファイル自動検出

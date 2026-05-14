@@ -27,8 +27,8 @@ UI_TEXT = {
     "button_index": "Index",
     "button_cancel": "Cancel",
     "button_choose": "Choose",
-    "button_import_chatgpt_export": "ChatGPT exportを取り込む",
-    "button_import_codex_result": "Codex結果を取り込む",
+    "button_import_chatgpt_export": "ChatGPT export取込",
+    "button_import_codex_result": "Codex結果取込",
     "button_chatgpt": "ChatGPTまとめ",
     "button_codex": "Codex素材",
     "memory_title": "Memory Folder",
@@ -456,7 +456,14 @@ def run_gui(launch_check: bool = False) -> int:
     from core.search_engine import SearchEngine, SearchResponse
     from core.watch_folder import WatchScanResult, detect_changed_files, write_watch_log
     from ui.components import choose_font_family, set_textbox_text
-    from ui.theme import COLORS, FONT_CANDIDATES, MONO_FONT_CANDIDATES, READING_FONT_CANDIDATES
+    from ui.theme import (
+        COLORS,
+        FONT_CANDIDATES,
+        FONT_SIZES,
+        MONO_FONT_CANDIDATES,
+        READING_FONT_CANDIDATES,
+        STATUS_FONT_CANDIDATES,
+    )
 
     ensure_app_dirs()
     ctk.set_appearance_mode("dark")
@@ -471,6 +478,7 @@ def run_gui(launch_check: bool = False) -> int:
             self.configure(fg_color=COLORS["bg"])
             self.font_family = choose_font_family(self, FONT_CANDIDATES)
             self.reading_font_family = choose_font_family(self, READING_FONT_CANDIDATES)
+            self.status_font_family = choose_font_family(self, STATUS_FONT_CANDIDATES)
             self.mono_font_family = choose_font_family(self, MONO_FONT_CANDIDATES)
             self.config_store = ConfigStore()
             self.config_data = self.config_store.load()
@@ -528,14 +536,14 @@ def run_gui(launch_check: bool = False) -> int:
                 pass
 
         def _build_ui(self) -> None:
-            self.grid_columnconfigure(0, weight=0, minsize=290)
+            self.grid_columnconfigure(0, weight=0, minsize=300)
             self.grid_columnconfigure(1, weight=1, minsize=470)
-            self.grid_columnconfigure(2, weight=0, minsize=360)
+            self.grid_columnconfigure(2, weight=0, minsize=370)
             self.grid_rowconfigure(1, weight=1)
             self.grid_rowconfigure(2, weight=0)
 
             header = ctk.CTkFrame(self, fg_color=COLORS["bg"], corner_radius=0)
-            header.grid(row=0, column=0, columnspan=3, sticky="ew", padx=18, pady=(16, 10))
+            header.grid(row=0, column=0, columnspan=3, sticky="ew", padx=20, pady=(14, 8))
             header.grid_columnconfigure(1, weight=1)
 
             logo_path = peakheadz_logo_path()
@@ -543,7 +551,7 @@ def run_gui(launch_check: bool = False) -> int:
                 try:
                     image = Image.open(logo_path)
                     self.logo_image = ctk.CTkImage(light_image=image, dark_image=image, size=fit_logo_size(image.size))
-                    ctk.CTkLabel(header, image=self.logo_image, text="").grid(row=0, column=0, rowspan=2, padx=(0, 12))
+                    ctk.CTkLabel(header, image=self.logo_image, text="").grid(row=0, column=0, rowspan=2, padx=(0, 10))
                 except Exception:
                     pass
 
@@ -551,13 +559,13 @@ def run_gui(launch_check: bool = False) -> int:
                 header,
                 text=UI_TEXT["app_title"],
                 text_color=COLORS["text"],
-                font=(self.font_family, 26, "bold"),
+                font=(self.font_family, FONT_SIZES["title"]),
             ).grid(row=0, column=1, sticky="w")
             ctk.CTkLabel(
                 header,
                 text=UI_TEXT["subtitle"],
                 text_color=COLORS["muted"],
-                font=(self.font_family, 13),
+                font=(self.status_font_family, FONT_SIZES["subtitle"]),
             ).grid(row=1, column=1, sticky="w")
 
             search_box = ctk.CTkFrame(header, fg_color=COLORS["bg"], corner_radius=0)
@@ -572,7 +580,7 @@ def run_gui(launch_check: bool = False) -> int:
                 fg_color=COLORS["input"],
                 border_color=COLORS["border"],
                 text_color=COLORS["text"],
-                font=(self.reading_font_family, 16),
+                font=(self.reading_font_family, FONT_SIZES["search"]),
             )
             self.search_entry.grid(row=0, column=0, padx=(0, 10))
             self.search_entry.insert(0, self.current_query)
@@ -584,6 +592,7 @@ def run_gui(launch_check: bool = False) -> int:
                 height=42,
                 fg_color=COLORS["accent"],
                 hover_color=COLORS["accent_hover"],
+                font=(self.status_font_family, FONT_SIZES["button"]),
                 command=self._start_search,
             )
             self.search_button.grid(row=0, column=1)
@@ -595,7 +604,7 @@ def run_gui(launch_check: bool = False) -> int:
                 fg_color=COLORS["accent"],
                 hover_color=COLORS["accent_hover"],
                 border_color=COLORS["border"],
-                font=(self.reading_font_family, 13),
+                font=(self.status_font_family, FONT_SIZES["small"]),
             )
             self.semantic_checkbox.grid(row=1, column=0, columnspan=2, sticky="w", pady=(6, 0))
 
@@ -608,36 +617,39 @@ def run_gui(launch_check: bool = False) -> int:
                 left,
                 textvariable=self.memory_var,
                 text_color=COLORS["muted"],
-                font=(self.font_family, 12),
+                font=(self.reading_font_family, FONT_SIZES["small"]),
                 wraplength=238,
                 justify="left",
-            ).grid(row=1, column=0, sticky="ew", padx=14, pady=(0, 10))
+            ).grid(row=1, column=0, sticky="ew", padx=16, pady=(0, 10))
             ctk.CTkButton(
                 left,
                 text=UI_TEXT["button_choose"],
-                height=34,
+                height=36,
                 fg_color=COLORS["panel_soft"],
                 hover_color=COLORS["accent_soft"],
+                font=(self.font_family, FONT_SIZES["button"]),
                 command=self._choose_memory_folder,
-            ).grid(row=2, column=0, sticky="ew", padx=14, pady=(0, 10))
+            ).grid(row=2, column=0, sticky="ew", padx=16, pady=(0, 9))
             self.import_button = ctk.CTkButton(
                 left,
                 text=UI_TEXT["button_import_chatgpt_export"],
-                height=34,
+                height=36,
                 fg_color=COLORS["panel_soft"],
                 hover_color=COLORS["accent_soft"],
+                font=(self.font_family, FONT_SIZES["button"]),
                 command=self._choose_chatgpt_export,
             )
-            self.import_button.grid(row=3, column=0, sticky="ew", padx=14, pady=(0, 16))
+            self.import_button.grid(row=3, column=0, sticky="ew", padx=16, pady=(0, 9))
             self.codex_import_button = ctk.CTkButton(
                 left,
                 text=UI_TEXT["button_import_codex_result"],
-                height=34,
+                height=36,
                 fg_color=COLORS["panel_soft"],
                 hover_color=COLORS["accent_soft"],
+                font=(self.font_family, FONT_SIZES["button"]),
                 command=self._open_codex_import_dialog,
             )
-            self.codex_import_button.grid(row=4, column=0, sticky="ew", padx=14, pady=(0, 16))
+            self.codex_import_button.grid(row=4, column=0, sticky="ew", padx=16, pady=(0, 16))
 
             self._section_title(left, UI_TEXT["label_watch_folder"], 5)
             self.watch_folder_var = ctk.StringVar(value=UI_TEXT["empty_watch_folder"])
@@ -645,18 +657,19 @@ def run_gui(launch_check: bool = False) -> int:
                 left,
                 textvariable=self.watch_folder_var,
                 text_color=COLORS["muted"],
-                font=(self.font_family, 12),
+                font=(self.reading_font_family, FONT_SIZES["small"]),
                 wraplength=238,
                 justify="left",
-            ).grid(row=6, column=0, sticky="ew", padx=14, pady=(0, 8))
+            ).grid(row=6, column=0, sticky="ew", padx=16, pady=(0, 8))
             ctk.CTkButton(
                 left,
                 text=UI_TEXT["button_choose"],
-                height=32,
+                height=34,
                 fg_color=COLORS["panel_soft"],
                 hover_color=COLORS["accent_soft"],
+                font=(self.font_family, FONT_SIZES["button"]),
                 command=self._choose_watch_folder,
-            ).grid(row=7, column=0, sticky="ew", padx=14, pady=(0, 8))
+            ).grid(row=7, column=0, sticky="ew", padx=16, pady=(0, 8))
             self.auto_index_checkbox = ctk.CTkCheckBox(
                 left,
                 text=UI_TEXT["checkbox_auto_index"],
@@ -665,10 +678,10 @@ def run_gui(launch_check: bool = False) -> int:
                 fg_color=COLORS["accent"],
                 hover_color=COLORS["accent_hover"],
                 border_color=COLORS["border"],
-                font=(self.reading_font_family, 13),
+                font=(self.status_font_family, FONT_SIZES["small"]),
                 command=self._toggle_auto_index,
             )
-            self.auto_index_checkbox.grid(row=8, column=0, sticky="w", padx=14, pady=(0, 8))
+            self.auto_index_checkbox.grid(row=8, column=0, sticky="w", padx=16, pady=(0, 8))
             self.watch_status_var = ctk.StringVar(value=UI_TEXT["status_auto_index_off"])
             self.last_memory_var = ctk.StringVar(value=UI_TEXT["status_last_memory"].format(path="-"))
             self.last_index_var = ctk.StringVar(value=UI_TEXT["status_last_index"].format(time="-"))
@@ -680,40 +693,42 @@ def run_gui(launch_check: bool = False) -> int:
                     left,
                     textvariable=variable,
                     text_color=COLORS["muted"],
-                    font=(self.font_family, 11),
+                    font=(self.status_font_family, FONT_SIZES["micro"]),
                     anchor="w",
-                ).grid(row=watch_index, column=0, sticky="ew", padx=14, pady=1)
+                ).grid(row=watch_index, column=0, sticky="ew", padx=16, pady=2)
 
             self._section_title(left, UI_TEXT["index_title"], 12)
             self.index_status_var = ctk.StringVar(value=UI_TEXT["index_idle"])
             ctk.CTkLabel(
                 left,
                 textvariable=self.index_status_var,
-                text_color=COLORS["text"],
-                font=(self.font_family, 13, "bold"),
-            ).grid(row=13, column=0, sticky="w", padx=14, pady=(0, 8))
+                text_color=COLORS["section"],
+                font=(self.status_font_family, FONT_SIZES["body"]),
+            ).grid(row=13, column=0, sticky="w", padx=16, pady=(0, 8))
             self.progress = ctk.CTkProgressBar(left, height=10, progress_color=COLORS["accent"])
             self.progress.set(0)
-            self.progress.grid(row=14, column=0, sticky="ew", padx=14, pady=(0, 12))
+            self.progress.grid(row=14, column=0, sticky="ew", padx=16, pady=(0, 12))
 
             button_row = ctk.CTkFrame(left, fg_color="transparent")
-            button_row.grid(row=15, column=0, sticky="ew", padx=14, pady=(0, 18))
+            button_row.grid(row=15, column=0, sticky="ew", padx=16, pady=(0, 18))
             button_row.grid_columnconfigure((0, 1), weight=1)
             self.index_button = ctk.CTkButton(
                 button_row,
                 text=UI_TEXT["button_index"],
-                height=34,
+                height=36,
                 fg_color=COLORS["accent"],
                 hover_color=COLORS["accent_hover"],
+                font=(self.status_font_family, FONT_SIZES["button"]),
                 command=self._start_index,
             )
             self.index_button.grid(row=0, column=0, sticky="ew", padx=(0, 6))
             self.cancel_button = ctk.CTkButton(
                 button_row,
                 text=UI_TEXT["button_cancel"],
-                height=34,
+                height=36,
                 fg_color=COLORS["panel_soft"],
                 hover_color=COLORS["accent_soft"],
+                font=(self.status_font_family, FONT_SIZES["button"]),
                 state="disabled",
                 command=self._cancel_index,
             )
@@ -743,21 +758,27 @@ def run_gui(launch_check: bool = False) -> int:
                     left,
                     textvariable=variable,
                     text_color=COLORS["muted"],
-                    font=(self.font_family, 12),
+                    font=(self.status_font_family, FONT_SIZES["small"]),
                     anchor="w",
-                ).grid(row=index, column=0, sticky="ew", padx=14, pady=2)
+                ).grid(row=index, column=0, sticky="ew", padx=16, pady=2)
 
             center = self._panel(self, 0)
-            center.grid(row=1, column=1, sticky="nsew", padx=8, pady=(0, 10))
+            center.grid(row=1, column=1, sticky="nsew", padx=8, pady=(0, 12))
             center.grid_columnconfigure(0, weight=1)
             center.grid_rowconfigure(1, weight=1)
             self._section_title(center, UI_TEXT["results_title"], 0)
-            self.results_frame = ctk.CTkScrollableFrame(center, fg_color=COLORS["panel"], corner_radius=0)
-            self.results_frame.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 10))
+            self.results_frame = ctk.CTkScrollableFrame(
+                center,
+                fg_color=COLORS["panel"],
+                corner_radius=0,
+                scrollbar_button_color=COLORS["panel_soft"],
+                scrollbar_button_hover_color=COLORS["accent_soft"],
+            )
+            self.results_frame.grid(row=1, column=0, sticky="nsew", padx=12, pady=(0, 12))
             self._render_empty_results()
 
             right = self._panel(self, 0)
-            right.grid(row=1, column=2, sticky="nsew", padx=(8, 18), pady=(0, 10))
+            right.grid(row=1, column=2, sticky="nsew", padx=(8, 20), pady=(0, 12))
             right.grid_columnconfigure(0, weight=1)
             right.grid_rowconfigure(1, weight=2)
             right.grid_rowconfigure(8, weight=1)
@@ -769,11 +790,11 @@ def run_gui(launch_check: bool = False) -> int:
                 border_color=COLORS["border"],
                 border_width=1,
                 text_color=COLORS["text"],
-                font=(self.reading_font_family, 13),
+                font=(self.reading_font_family, FONT_SIZES["preview"]),
                 wrap="word",
             )
-            self.preview_box.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 10))
-            self._relax_textbox_spacing(self.preview_box)
+            self.preview_box.grid(row=1, column=0, sticky="nsew", padx=12, pady=(0, 12))
+            self._relax_textbox_spacing(self.preview_box, spacing1=3, spacing3=5)
             set_textbox_text(self.preview_box, UI_TEXT["empty_preview"])
 
             self._section_title(right, UI_TEXT["tags_title"], 2)
@@ -782,10 +803,10 @@ def run_gui(launch_check: bool = False) -> int:
                 right,
                 textvariable=self.tags_var,
                 text_color=COLORS["muted"],
-                font=(self.font_family, 12),
+                font=(self.reading_font_family, FONT_SIZES["small"]),
                 wraplength=320,
                 justify="left",
-            ).grid(row=3, column=0, sticky="ew", padx=12, pady=(0, 10))
+            ).grid(row=3, column=0, sticky="ew", padx=14, pady=(0, 12))
 
             self._section_title(right, UI_TEXT["section_related_memory"], 4)
             self.related_box = ctk.CTkTextbox(
@@ -795,11 +816,11 @@ def run_gui(launch_check: bool = False) -> int:
                 border_color=COLORS["border"],
                 border_width=1,
                 text_color=COLORS["muted"],
-                font=(self.reading_font_family, 13),
+                font=(self.reading_font_family, FONT_SIZES["body"]),
                 wrap="word",
             )
-            self.related_box.grid(row=5, column=0, sticky="ew", padx=10, pady=(0, 10))
-            self._relax_textbox_spacing(self.related_box)
+            self.related_box.grid(row=5, column=0, sticky="ew", padx=12, pady=(0, 12))
+            self._relax_textbox_spacing(self.related_box, spacing1=2, spacing3=5)
             set_textbox_text(self.related_box, UI_TEXT["related_memory_empty"])
 
             self._section_title(right, UI_TEXT["section_memory_flow"], 6)
@@ -811,7 +832,7 @@ def run_gui(launch_check: bool = False) -> int:
                 flow_header,
                 textvariable=self.flow_status_var,
                 text_color=COLORS["muted"],
-                font=(self.font_family, 12),
+                font=(self.reading_font_family, FONT_SIZES["small"]),
                 anchor="w",
             ).grid(row=0, column=0, sticky="ew", padx=(2, 8))
             self.flow_sort_button = ctk.CTkButton(
@@ -822,6 +843,7 @@ def run_gui(launch_check: bool = False) -> int:
                 fg_color=COLORS["panel_soft"],
                 hover_color=COLORS["accent_soft"],
                 text_color=COLORS["muted"],
+                font=(self.status_font_family, FONT_SIZES["micro"]),
                 command=self._toggle_flow_sort,
             )
             self.flow_sort_button.grid(row=0, column=1, sticky="e")
@@ -832,8 +854,10 @@ def run_gui(launch_check: bool = False) -> int:
                 border_color=COLORS["border"],
                 border_width=1,
                 corner_radius=6,
+                scrollbar_button_color=COLORS["panel_soft"],
+                scrollbar_button_hover_color=COLORS["accent_soft"],
             )
-            self.flow_frame.grid(row=8, column=0, sticky="nsew", padx=10, pady=(0, 10))
+            self.flow_frame.grid(row=8, column=0, sticky="nsew", padx=12, pady=(0, 12))
             self._render_empty_memory_flow()
 
             self._section_title(right, UI_TEXT["handoff_title"], 9)
@@ -844,47 +868,49 @@ def run_gui(launch_check: bool = False) -> int:
                 border_color=COLORS["border"],
                 border_width=1,
                 text_color=COLORS["muted"],
-                font=(self.reading_font_family, 13),
+                font=(self.reading_font_family, FONT_SIZES["body"]),
                 wrap="word",
             )
-            self.handoff_box.grid(row=10, column=0, sticky="nsew", padx=10, pady=(0, 10))
-            self._relax_textbox_spacing(self.handoff_box)
+            self.handoff_box.grid(row=10, column=0, sticky="nsew", padx=12, pady=(0, 12))
+            self._relax_textbox_spacing(self.handoff_box, spacing1=2, spacing3=5)
             set_textbox_text(self.handoff_box, UI_TEXT["empty_handoff"])
 
             export_row = ctk.CTkFrame(right, fg_color="transparent")
-            export_row.grid(row=11, column=0, sticky="ew", padx=10, pady=(0, 10))
+            export_row.grid(row=11, column=0, sticky="ew", padx=12, pady=(0, 12))
             export_row.grid_columnconfigure((0, 1), weight=1)
             ctk.CTkButton(
                 export_row,
                 text=UI_TEXT["button_chatgpt"],
-                height=34,
+                height=36,
                 fg_color=COLORS["panel_soft"],
                 hover_color=COLORS["accent_soft"],
+                font=(self.font_family, FONT_SIZES["button"]),
                 command=lambda: self._export_handoff("chatgpt"),
             ).grid(row=0, column=0, sticky="ew", padx=(0, 6))
             ctk.CTkButton(
                 export_row,
                 text=UI_TEXT["button_codex"],
-                height=34,
+                height=36,
                 fg_color=COLORS["panel_soft"],
                 hover_color=COLORS["accent_soft"],
+                font=(self.font_family, FONT_SIZES["button"]),
                 command=lambda: self._export_handoff("codex"),
             ).grid(row=0, column=1, sticky="ew", padx=(6, 0))
 
             bottom = self._panel(self, 0)
-            bottom.grid(row=2, column=0, columnspan=3, sticky="ew", padx=18, pady=(0, 16))
+            bottom.grid(row=2, column=0, columnspan=3, sticky="ew", padx=20, pady=(0, 16))
             bottom.grid_columnconfigure(0, weight=1)
             self._section_title(bottom, UI_TEXT["log_title"], 0)
             self.log_box = ctk.CTkTextbox(
                 bottom,
                 height=96,
                 fg_color=COLORS["input"],
-                text_color=COLORS["muted"],
-                font=(self.mono_font_family, 12),
+                text_color=COLORS["log_text"],
+                font=(self.mono_font_family, FONT_SIZES["log"]),
                 wrap="word",
             )
-            self.log_box.grid(row=1, column=0, sticky="ew", padx=10, pady=(0, 10))
-            self._relax_textbox_spacing(self.log_box, spacing1=1, spacing3=3)
+            self.log_box.grid(row=1, column=0, sticky="ew", padx=12, pady=(0, 12))
+            self._relax_textbox_spacing(self.log_box, spacing1=2, spacing3=4)
             self.log_box.configure(state="disabled")
 
         def _panel(self, parent, corner_radius: int):
@@ -900,9 +926,9 @@ def run_gui(launch_check: bool = False) -> int:
             ctk.CTkLabel(
                 parent,
                 text=text,
-                text_color=COLORS["text"],
-                font=(self.font_family, 15, "bold"),
-            ).grid(row=row, column=0, sticky="w", padx=12, pady=(12, 8))
+                text_color=COLORS["section"],
+                font=(self.font_family, FONT_SIZES["section"]),
+            ).grid(row=row, column=0, sticky="w", padx=14, pady=(14, 7))
 
         def _relax_textbox_spacing(self, textbox, spacing1: int = 2, spacing3: int = 4) -> None:
             try:
@@ -917,7 +943,7 @@ def run_gui(launch_check: bool = False) -> int:
                 self.results_frame,
                 text=UI_TEXT["empty_results"],
                 text_color=COLORS["quiet"],
-                font=(self.font_family, 13),
+                font=(self.reading_font_family, FONT_SIZES["body"]),
             ).pack(fill="x", padx=12, pady=18)
 
         def _render_empty_memory_flow(self) -> None:
@@ -927,7 +953,7 @@ def run_gui(launch_check: bool = False) -> int:
                 self.flow_frame,
                 text=UI_TEXT["memory_flow_empty"],
                 text_color=COLORS["quiet"],
-                font=(self.font_family, 12),
+                font=(self.reading_font_family, FONT_SIZES["small"]),
                 wraplength=310,
             ).pack(fill="x", padx=10, pady=12)
 
@@ -1036,8 +1062,8 @@ def run_gui(launch_check: bool = False) -> int:
             ctk.CTkLabel(
                 dialog,
                 text=UI_TEXT["label_codex_result_input"],
-                text_color=COLORS["text"],
-                font=(self.font_family, 14, "bold"),
+                text_color=COLORS["section"],
+                font=(self.font_family, FONT_SIZES["section"]),
             ).grid(row=0, column=0, sticky="w", padx=14, pady=(14, 8))
             input_box = ctk.CTkTextbox(
                 dialog,
@@ -1045,7 +1071,7 @@ def run_gui(launch_check: bool = False) -> int:
                 border_color=COLORS["border"],
                 border_width=1,
                 text_color=COLORS["text"],
-                font=(self.reading_font_family, 13),
+                font=(self.reading_font_family, FONT_SIZES["body"]),
                 wrap="word",
             )
             input_box.grid(row=1, column=0, sticky="nsew", padx=14, pady=(0, 12))
@@ -1078,25 +1104,28 @@ def run_gui(launch_check: bool = False) -> int:
             ctk.CTkButton(
                 button_row,
                 text=UI_TEXT["button_import_pasted_codex"],
-                height=34,
+                height=36,
                 fg_color=COLORS["accent"],
                 hover_color=COLORS["accent_hover"],
+                font=(self.font_family, FONT_SIZES["button"]),
                 command=import_paste,
             ).grid(row=0, column=0, sticky="ew", padx=(0, 6))
             ctk.CTkButton(
                 button_row,
                 text=UI_TEXT["button_import_codex_file"],
-                height=34,
+                height=36,
                 fg_color=COLORS["panel_soft"],
                 hover_color=COLORS["accent_soft"],
+                font=(self.font_family, FONT_SIZES["button"]),
                 command=import_file,
             ).grid(row=0, column=1, sticky="ew", padx=6)
             ctk.CTkButton(
                 button_row,
                 text=UI_TEXT["button_close"],
-                height=34,
+                height=36,
                 fg_color=COLORS["panel_soft"],
                 hover_color=COLORS["accent_soft"],
+                font=(self.font_family, FONT_SIZES["button"]),
                 command=dialog.destroy,
             ).grid(row=0, column=2, sticky="ew", padx=(6, 0))
 
@@ -1262,7 +1291,7 @@ def run_gui(launch_check: bool = False) -> int:
 
             for result in results:
                 item = ctk.CTkFrame(self.results_frame, fg_color=COLORS["panel_alt"], corner_radius=6)
-                item.pack(fill="x", padx=4, pady=5)
+                item.pack(fill="x", padx=5, pady=6)
                 item.grid_columnconfigure(0, weight=1)
                 title = ctk.CTkButton(
                     item,
@@ -1271,26 +1300,26 @@ def run_gui(launch_check: bool = False) -> int:
                     fg_color="transparent",
                     hover_color=COLORS["accent_soft"],
                     text_color=COLORS["text"],
-                    font=(self.font_family, 14, "bold"),
+                    font=(self.reading_font_family, FONT_SIZES["result_title"]),
                     command=lambda selected=result: self._select_result(selected),
                 )
-                title.grid(row=0, column=0, sticky="ew", padx=8, pady=(8, 2))
+                title.grid(row=0, column=0, sticky="ew", padx=10, pady=(9, 2))
                 ctk.CTkLabel(
                     item,
                     text=self._result_meta(result),
-                    text_color=COLORS["muted"],
-                    font=(self.reading_font_family, 12),
+                    text_color=COLORS["quiet"],
+                    font=(self.status_font_family, FONT_SIZES["result_meta"]),
                     anchor="w",
-                ).grid(row=1, column=0, sticky="ew", padx=12)
+                ).grid(row=1, column=0, sticky="ew", padx=14)
                 ctk.CTkLabel(
                     item,
                     text=result.snippet,
                     text_color=COLORS["muted"],
-                    font=(self.reading_font_family, 13),
+                    font=(self.reading_font_family, FONT_SIZES["result_body"]),
                     wraplength=510,
                     justify="left",
                     anchor="w",
-                ).grid(row=2, column=0, sticky="ew", padx=12, pady=(5, 12))
+                ).grid(row=2, column=0, sticky="ew", padx=14, pady=(7, 14))
 
         def _result_title(self, result: SearchResult) -> str:
             if result.source_type == "chatgpt_export":
@@ -1428,7 +1457,7 @@ def run_gui(launch_check: bool = False) -> int:
             for item in items:
                 result = item.result
                 card = ctk.CTkFrame(self.flow_frame, fg_color=COLORS["panel_alt"], corner_radius=6)
-                card.pack(fill="x", padx=4, pady=5)
+                card.pack(fill="x", padx=5, pady=6)
                 card.grid_columnconfigure(0, weight=1)
                 title = ctk.CTkButton(
                     card,
@@ -1437,7 +1466,7 @@ def run_gui(launch_check: bool = False) -> int:
                     fg_color="transparent",
                     hover_color=COLORS["accent_soft"],
                     text_color=COLORS["text"],
-                    font=(self.font_family, 12, "bold"),
+                    font=(self.reading_font_family, FONT_SIZES["small"]),
                     command=lambda selected=result: self._select_result(selected),
                 )
                 title.grid(row=0, column=0, sticky="ew", padx=8, pady=(7, 1))
@@ -1453,19 +1482,19 @@ def run_gui(launch_check: bool = False) -> int:
                 ctk.CTkLabel(
                     card,
                     text=meta,
-                    text_color=COLORS["muted"],
-                    font=(self.font_family, 10),
+                    text_color=COLORS["quiet"],
+                    font=(self.status_font_family, FONT_SIZES["micro"]),
                     anchor="w",
                 ).grid(row=1, column=0, sticky="ew", padx=10)
                 ctk.CTkLabel(
                     card,
                     text=short_summary(result, 140),
                     text_color=COLORS["muted"],
-                    font=(self.reading_font_family, 12),
+                    font=(self.reading_font_family, FONT_SIZES["small"]),
                     wraplength=305,
                     justify="left",
                     anchor="w",
-                ).grid(row=2, column=0, sticky="ew", padx=10, pady=(2, 8))
+                ).grid(row=2, column=0, sticky="ew", padx=10, pady=(4, 9))
 
         def _export_handoff(self, kind: str) -> None:
             if not self.current_results:
