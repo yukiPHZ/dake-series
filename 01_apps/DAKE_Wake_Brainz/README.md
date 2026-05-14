@@ -84,3 +84,7 @@ dist/DakeWake_Brainz.exe
   "show_on_site": false
 }
 ```
+
+## 使い方
+
+Wake-on-LANの設定と実機確認手順は、[使い方.md](./使い方.md) を参照してください。
