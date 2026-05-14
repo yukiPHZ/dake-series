@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import ctypes
+import json
 import math
 import os
 import queue
@@ -20,6 +21,7 @@ from core.app_config import DEFAULT_DURATION_SECONDS, ensure_data_dirs
 from core.audio_preview import AudioPreviewItem, AudioPreviewPlayer, find_audio_preview_items
 from core.audio_probe import probe_audio_info
 from core.cli_checker import EnvironmentReport, check_environment
+from core.favorites import FAVORITES_DIR, ensure_favorites_dirs, save_favorite_audio
 from core.ffmpeg_audio import LoopPackOptions, export_audio_material, export_loop_pack
 from core.musicgen_runner import generate_music
 from core.ollama_client import generate_direction
@@ -64,6 +66,8 @@ UI_TEXT = {
     "button_preview_play": "Play",
     "button_preview_stop": "Stop",
     "button_preview_refresh": "Refresh",
+    "button_favorite_add": "Add to Favorite",
+    "button_favorite_open": "Open Favorites",
     "button_check": "環境チェック",
     "button_clear_reference": "参照を解除",
     "reference_none": "参照音源: なし",
@@ -122,6 +126,11 @@ UI_TEXT = {
     "preview_stopped": "Preview stopped.",
     "preview_external": "Opened in default player. Stop in player.",
     "preview_failed": "再生できませんでした。",
+    "favorite_saved": "Favorite saved.",
+    "favorite_no_audio": "Favorite target is not selected.",
+    "favorite_failed": "Favorite save failed.",
+    "favorite_opened": "Favorite folder opened.",
+    "favorite_open_failed": "Favorite folder could not be opened.",
     "status_tool_ffmpeg": "FFMPEG",
     "status_tool_ffprobe": "FFPROBE",
     "status_tool_ollama": "OLLAMA",
@@ -169,6 +178,10 @@ UI_TEXT = {
     "log_preview_stopped": "Preview stopped.",
     "log_preview_failed": "再生できませんでした。",
     "log_preview_external": "既定プレイヤーで開きました。停止はプレイヤー側です。",
+    "log_favorite_brain": "補助脳：お気に入りへ置きました。",
+    "log_favorite_saved": "Favorite saved.",
+    "log_favorite_opened": "Favorite folder opened.",
+    "log_favorite_failed": "Favorite save failed.",
     "log_complete": "整っています。",
     "dialog_error_title": "確認",
     "dialog_open_error": "出力フォルダを開けませんでした。",
@@ -634,6 +647,27 @@ class MusicOtookuApp:
         )
         self.preview_refresh_button.pack(side="left", padx=(8, 0))
 
+        favorite_button_row = tk.Frame(preview_panel, bg=COLORS["surface"])
+        favorite_button_row.grid(row=3, column=0, sticky="ew", pady=(8, 0))
+        self.favorite_add_button = make_button(
+            favorite_button_row,
+            UI_TEXT["button_favorite_add"],
+            self.add_selected_favorite,
+            COLORS,
+            self.fonts["button"],
+            primary=False,
+        )
+        self.favorite_add_button.pack(side="left")
+        self.favorite_open_button = make_button(
+            favorite_button_row,
+            UI_TEXT["button_favorite_open"],
+            self.open_favorites_folder,
+            COLORS,
+            self.fonts["button"],
+            primary=False,
+        )
+        self.favorite_open_button.pack(side="left", padx=(8, 0))
+
         tk.Label(
             preview_panel,
             textvariable=self.preview_status_var,
@@ -643,7 +677,7 @@ class MusicOtookuApp:
             anchor="w",
             wraplength=320,
             justify="left",
-        ).grid(row=3, column=0, sticky="ew", pady=(8, 0))
+        ).grid(row=4, column=0, sticky="ew", pady=(8, 0))
         self._sync_preview_controls()
 
     def _build_loop_controls(self, parent: tk.Widget) -> None:
@@ -870,6 +904,8 @@ class MusicOtookuApp:
             if busy:
                 self.preview_play_button.configure(state="disabled")
                 self.preview_refresh_button.configure(state="disabled")
+                self.favorite_add_button.configure(state="disabled")
+                self.favorite_open_button.configure(state="disabled")
             else:
                 self._sync_preview_controls()
 
@@ -890,6 +926,9 @@ class MusicOtookuApp:
         self.preview_play_button.configure(state=play_state)
         self.preview_refresh_button.configure(state=refresh_state)
         self.preview_stop_button.configure(state="normal" if has_items else "disabled")
+        if hasattr(self, "favorite_add_button"):
+            self.favorite_add_button.configure(state=play_state)
+            self.favorite_open_button.configure(state="normal" if not self.processing else "disabled")
 
     def _start_environment_check(self) -> None:
         if self.processing:
@@ -1263,6 +1302,32 @@ class MusicOtookuApp:
             self._append_log(UI_TEXT["log_preview_failed"])
         self._sync_preview_controls()
 
+    def add_selected_favorite(self) -> None:
+        item = self._selected_preview_item()
+        if not item:
+            self.preview_status_var.set(UI_TEXT["favorite_no_audio"])
+            return
+        result = save_favorite_audio(item.path, self.output_folder, self.last_preset)
+        if result.success and result.record:
+            self.preview_status_var.set(UI_TEXT["favorite_saved"])
+            self._append_log(UI_TEXT["log_favorite_brain"])
+            self._append_log(UI_TEXT["log_favorite_saved"])
+        else:
+            self.preview_status_var.set(UI_TEXT["favorite_failed"])
+            self._append_log(UI_TEXT["log_favorite_failed"])
+            if result.error:
+                self._append_log(result.error)
+        self._sync_preview_controls()
+
+    def open_favorites_folder(self) -> None:
+        ensure_favorites_dirs()
+        if open_output_folder(FAVORITES_DIR):
+            self.preview_status_var.set(UI_TEXT["favorite_opened"])
+            self._append_log(UI_TEXT["log_favorite_opened"])
+        else:
+            self.preview_status_var.set(UI_TEXT["favorite_open_failed"])
+            self._append_log(UI_TEXT["favorite_open_failed"])
+
     def start_video_bgm_pack(self) -> None:
         if self.processing:
             return
@@ -1396,6 +1461,29 @@ def run_smoke_test() -> int:
         missing_preview = preview_player.play(paths.audio / "missing_preview.mp3")
         if missing_preview.success:
             raise AssertionError("missing preview audio unexpectedly played")
+        favorite_dir = Path(temp_dir) / "favorites"
+        first_favorite = save_favorite_audio(preview_wav, paths.root, borinef, favorites_dir=favorite_dir)
+        second_favorite = save_favorite_audio(preview_wav, paths.root, borinef, favorites_dir=favorite_dir)
+        if not first_favorite.success or not second_favorite.success:
+            raise AssertionError("favorite save failed")
+        if not first_favorite.record or not second_favorite.record:
+            raise AssertionError("favorite record was not created")
+        if first_favorite.record.favorite_path == second_favorite.record.favorite_path:
+            raise AssertionError("duplicate favorite overwrote the existing file")
+        favorite_index = favorite_dir / "favorite_index.json"
+        favorite_note = favorite_dir / "notes" / "favorite_note.txt"
+        if not favorite_index.exists():
+            raise AssertionError("favorite_index.json was not created")
+        if not favorite_note.exists():
+            raise AssertionError("favorite_note.txt was not created")
+        index_data = json.loads(favorite_index.read_text(encoding="utf-8"))
+        if len(index_data.get("favorites", [])) != 2:
+            raise AssertionError("favorite_index.json did not record both favorites")
+        if "Preset:\nBORINEF" not in favorite_note.read_text(encoding="utf-8"):
+            raise AssertionError("favorite_note.txt did not include preset")
+        ensure_favorites_dirs(favorite_dir)
+        if not open_output_folder(favorite_dir, dry_run=True):
+            raise AssertionError("open favorites folder check failed")
         if not open_output_folder(paths.root, dry_run=True):
             raise AssertionError("open output folder check failed")
         missing_ffmpeg = export_audio_material(paths.root / "missing.wav", paths.audio, ffmpeg_command="__missing_ffmpeg__")
@@ -1510,7 +1598,14 @@ def run_generate_check() -> int:
         print(f"video bgm pack: {video_result.root}")
     else:
         print("video bgm pack: skipped")
-    print(f"preview files: {len(find_audio_preview_items(paths.root))}")
+    preview_items = find_audio_preview_items(paths.root)
+    print(f"preview files: {len(preview_items)}")
+    if preview_items:
+        favorite_source = next((item for item in preview_items if "loop_pack" in item.label), preview_items[0])
+        favorite_result = save_favorite_audio(favorite_source.path, paths.root, preset)
+        if not favorite_result.success or not favorite_result.record:
+            raise AssertionError(f"favorite save failed: {favorite_result.error}")
+        print(f"favorite saved: {favorite_result.record.favorite_path}")
     return 0
 
 

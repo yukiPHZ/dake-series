@@ -125,6 +125,14 @@ Shorts / Long / Ambient / Work 用に分類し、補助脳が使用イメージ�
 
 `pygame` が利用できる場合はアプリ内再生を試します。未導入の場合、wavはWindows標準の `winsound`、mp3は既定プレイヤーで開きます。既定プレイヤーで開いた場合、停止はプレイヤー側で行います。
 
+## Favorite
+
+Previewで確認した音源を、あとで使うための Favorite 棚へ保存できます。
+
+Favorite は `data/favorites` に保存されます。これは音楽管理ソフトではなく、動画やサイト制作で使えそうな音を一時的に置くための棚です。
+
+保存時は音源を `data/favorites/audio/` にコピーし、`favorite_index.json` と `notes/favorite_note.txt` に出どころ、日時、プリセット、タグ、尺を残します。同名ファイルがある場合は上書きせず、日時付きの名前で保存します。
+
 ## Preset System
 
 音を置く は、入力文だけでなく、BORINEF / holiday-jinja / YUKIZ稼働中 などのプリセットを使って、音の方向性を揃えることができます。

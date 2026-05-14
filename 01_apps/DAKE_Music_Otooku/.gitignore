@@ -18,6 +18,9 @@ data/outputs/**
 data/logs/**
 !data/logs/
 !data/logs/.gitkeep
+data/favorites/**
+!data/favorites/
+!data/favorites/.gitkeep
 
 # OS
 Thumbs.db
