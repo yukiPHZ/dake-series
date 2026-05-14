@@ -38,6 +38,9 @@ UI_TEXT = {
     "system_title": "System Status",
     "section_notifications": "Notifications",
     "checkbox_enable_notifications": "Enable Notifications",
+    "section_remote_queue": "Remote Queue",
+    "checkbox_enable_remote_queue": "Enable Remote Queue",
+    "button_choose_remote_queue": "Choose Queue",
     "results_title": "Search Results",
     "preview_title": "Preview",
     "tags_title": "Related Tags",
@@ -48,6 +51,7 @@ UI_TEXT = {
     "log_title": "BRAINZ Log",
     "empty_memory": "未選択",
     "empty_watch_folder": "未選択",
+    "empty_remote_queue_folder": "未選択",
     "empty_results": "検索結果はまだありません",
     "empty_preview": "結果を選ぶと詳細が表示されます",
     "empty_tags": "タグ候補なし",
@@ -138,6 +142,10 @@ UI_TEXT = {
     "log_auto_index_queued": "AUTO INDEX QUEUED: index is already running",
     "phrase_memory_updated": "補助脳：記憶を更新しました。",
     "log_notification_sent": "NOTIFY: {message}",
+    "log_remote_queue_detected": "REMOTE QUEUE: Task detected: {task_type} / {query}",
+    "log_remote_queue_processed": "Remote queue processed: processed={processed}, failed={failed}",
+    "log_remote_queue_failed": "Remote queue failed: {path} :: {error}",
+    "phrase_remote_queue_received": "補助脳：遠隔キューを受け取りました。",
     "log_export": "EXPORT: {path}",
     "notify_title": "補助脳",
     "notify_memory_detected": "新しい記憶を検出しました。",
@@ -146,6 +154,9 @@ UI_TEXT = {
     "notify_chatgpt_import_complete": "ChatGPTの記憶を取り込みました。",
     "notify_codex_import_complete": "Codex結果を記憶しました。",
     "notify_handoff_complete": "{kind} handoffを生成しました。",
+    "notify_remote_queue_detected": "Remote Queueを受け取りました。",
+    "notify_remote_queue_processed": "Remote Queueを処理しました。",
+    "notify_remote_queue_failed": "Remote Queueの処理に失敗しました。",
     "index_idle": "IDLE",
     "index_running": "RUNNING {current}/{total}",
     "index_embedding": "EMBEDDING CHUNKS...",
@@ -161,6 +172,13 @@ UI_TEXT = {
     "status_last_memory": "LAST MEMORY: {path}",
     "status_last_index": "LAST INDEX: {time}",
     "status_watch_folder_missing": "WATCH FOLDER NOT SET",
+    "status_remote_queue_off": "REMOTE QUEUE: OFF",
+    "status_remote_queue_watching": "REMOTE QUEUE: WATCHING",
+    "status_remote_queue_detected": "REMOTE QUEUE: DETECTED",
+    "status_remote_queue_processed": "REMOTE QUEUE: PROCESSED",
+    "status_remote_queue_failed": "REMOTE QUEUE: FAILED",
+    "status_remote_queue_folder_missing": "QUEUE FOLDER NOT SET",
+    "status_remote_queue_counts": "Pending {pending} / Processed {processed} / Failed {failed}",
     "status_sqlite_ready": "SQLITE READY",
     "status_sqlite_error": "SQLITE ERROR",
     "status_cuda_online": "CUDA ONLINE",
@@ -199,6 +217,7 @@ def run_smoke_test() -> int:
     from core.notifications import NotificationQueue
     from core.ollama_client import check_ollama
     from core.ollama_embeddings import DEFAULT_EMBED_MODEL, check_embedding_status
+    from core.remote_queue import count_pending_queue_files, process_remote_queue_folder
     from core.search_engine import SearchEngine
     from core.watch_folder import detect_changed_files
 
@@ -212,10 +231,22 @@ def run_smoke_test() -> int:
         if not default_config.enable_notifications:
             raise RuntimeError("notifications should default to enabled")
         config_store = ConfigStore(root / "config.json")
-        config_store.save(AppConfig(memory_folder=str(root), watch_folder=str(root), auto_index_enabled=True, enable_notifications=False))
+        config_store.save(
+            AppConfig(
+                memory_folder=str(root),
+                watch_folder=str(root),
+                auto_index_enabled=True,
+                remote_queue_folder=str(root / "remote_queue"),
+                enable_remote_queue=True,
+                auto_run_remote_search=False,
+                enable_notifications=False,
+            )
+        )
         config_data = config_store.load()
         if config_data.enable_notifications or not config_data.auto_index_enabled:
             raise RuntimeError("notification config did not roundtrip")
+        if not config_data.enable_remote_queue or config_data.auto_run_remote_search:
+            raise RuntimeError("remote queue config did not roundtrip")
 
         notification_queue = NotificationQueue(history_limit=3)
         for index in range(4):
@@ -267,6 +298,50 @@ def run_smoke_test() -> int:
         auto_update_progress = Indexer(database).run(root, threading.Event())
         if auto_update_progress.errors:
             raise RuntimeError(f"auto update index errors: {auto_update_progress.errors}")
+
+        remote_queue = root / "remote_queue"
+        remote_queue.mkdir()
+        import_target = root / "remote_import.md"
+        import_target.write_text("Remote Queue import target quiet workflow", encoding="utf-8")
+        (remote_queue / "search.md").write_text(
+            "# BRAINZ TASK\n\ntype: search\nquery: quiet workflow\nnote: ChatGPT handoff用",
+            encoding="utf-8",
+        )
+        (remote_queue / "note.txt").write_text(
+            "type: note\nnote: スマホから置いた補助脳メモ\n\nRemote Queue note memory",
+            encoding="utf-8",
+        )
+        (remote_queue / "handoff_chatgpt.json").write_text(
+            json.dumps({"type": "handoff_chatgpt", "query": "quiet workflow", "note": "ChatGPT handoff用"}, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        (remote_queue / "handoff_codex.txt").write_text(
+            "handoff_codex: DAKE Git rules\nnote: Codex素材候補",
+            encoding="utf-8",
+        )
+        (remote_queue / "import.json").write_text(
+            json.dumps({"type": "import", "path": str(import_target)}, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        (remote_queue / "missing_import.json").write_text(
+            json.dumps({"type": "import", "path": str(root / "missing.md")}, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        if count_pending_queue_files(remote_queue) != 6:
+            raise RuntimeError("remote queue pending count failed")
+        remote_result = process_remote_queue_folder(database, remote_queue)
+        if remote_result.processed < 5 or remote_result.failed < 1:
+            raise RuntimeError("remote queue processing failed")
+        if not (remote_queue / "processed").exists() or not (remote_queue / "failed").exists():
+            raise RuntimeError("remote queue did not create processed/failed folders")
+        queue_stats = database.remote_queue_stats()
+        if queue_stats["processed"] < 5 or queue_stats["failed"] < 1:
+            raise RuntimeError("remote queue history was not saved")
+        (remote_queue / "search.md").write_text("search: quiet workflow collision", encoding="utf-8")
+        collision_result = process_remote_queue_folder(database, remote_queue)
+        collision_names = [Path(item.destination_file).name for item in collision_result.results]
+        if not any(name.startswith("search_") and name.endswith(".md") for name in collision_names):
+            raise RuntimeError("remote queue collision timestamp failed")
 
         unique_suffix = str(time.time_ns())
         zip_export = root / "chatgpt_export_zip"
@@ -328,6 +403,13 @@ def run_smoke_test() -> int:
             raise RuntimeError("codex file import did not index")
 
     engine = SearchEngine(database)
+    remote_note_results = engine.search("Remote Queue note memory", limit=10)
+    if not any(result.source_type == "remote_queue_note" for result in remote_note_results):
+        raise RuntimeError("remote queue note was not indexed")
+    remote_import_results = engine.search("Remote Queue import target", limit=10)
+    if not remote_import_results:
+        raise RuntimeError("remote queue import was not indexed")
+
     file_results = engine.search(UI_TEXT["smoke_query_memory"], limit=10)
     if not file_results:
         raise RuntimeError("file search returned no results")
@@ -338,14 +420,15 @@ def run_smoke_test() -> int:
     if file_match is None:
         raise RuntimeError("file search returned no file source result")
 
-    chatgpt_results = engine.search(UI_TEXT["smoke_chatgpt_query"], limit=10)
+    chatgpt_query = f"brainz_zip_{unique_suffix}"
+    chatgpt_results = engine.search(chatgpt_query, limit=10)
     chatgpt_match = next((result for result in chatgpt_results if result.source_type == "chatgpt_export"), None)
     if chatgpt_match is None:
         raise RuntimeError("chatgpt_export search returned no result")
     if not chatgpt_match.conversation_title or not chatgpt_match.role:
         raise RuntimeError("chatgpt metadata was not stored")
 
-    chatgpt_path = write_chatgpt_handoff(UI_TEXT["smoke_chatgpt_query"], chatgpt_results)
+    chatgpt_path = write_chatgpt_handoff(chatgpt_query, chatgpt_results)
     codex_path = write_codex_handoff(UI_TEXT["smoke_query_git"], chatgpt_results + file_results)
     chatgpt_text = chatgpt_path.read_text(encoding="utf-8")
     if chatgpt_match.conversation_title not in chatgpt_text or chatgpt_match.role not in chatgpt_text:
@@ -426,6 +509,9 @@ def run_smoke_test() -> int:
     print(f"watch_update_detected={len(watch_update.changed_files)}")
     print(f"notification_queue_history={len(notification_queue.history)}")
     print(f"notifications_default={default_config.enable_notifications}")
+    print(f"remote_queue_processed={remote_result.processed}")
+    print(f"remote_queue_failed={remote_result.failed}")
+    print(f"remote_queue_note_results={len(remote_note_results)}")
     print(f"gpu_detected={gpu_status.gpu_detected}")
     return 0
 
@@ -488,6 +574,7 @@ def run_gui(launch_check: bool = False) -> int:
     from core.notifications import NotificationItem, NotificationQueue
     from core.ollama_client import check_ollama
     from core.ollama_embeddings import check_embedding_status
+    from core.remote_queue import RemoteQueueBatchResult, count_pending_queue_files, process_remote_queue_folder
     from core.search_engine import SearchEngine, SearchResponse
     from core.watch_folder import WatchScanResult, detect_changed_files, write_watch_log
     from ui.components import choose_font_family, set_textbox_text
@@ -530,6 +617,7 @@ def run_gui(launch_check: bool = False) -> int:
             self.import_thread: threading.Thread | None = None
             self.flow_thread: threading.Thread | None = None
             self.watch_scan_thread: threading.Thread | None = None
+            self.remote_queue_thread: threading.Thread | None = None
             self.current_results: list[SearchResult] = []
             self.current_related_results: list[SearchResult] = []
             self.current_flow_items: list[MemoryFlowItem] = []
@@ -539,6 +627,7 @@ def run_gui(launch_check: bool = False) -> int:
             self.semantic_search_var = ctk.BooleanVar(value=True)
             self.auto_index_var = ctk.BooleanVar(value=self.config_data.auto_index_enabled)
             self.notifications_var = ctk.BooleanVar(value=self.config_data.enable_notifications)
+            self.remote_queue_var = ctk.BooleanVar(value=self.config_data.enable_remote_queue)
             self.flow_sort_ascending = True
             self.flow_request_id = 0
             self.flow_cache: dict[tuple[int, bool, bool], MemoryFlowResponse] = {}
@@ -546,6 +635,7 @@ def run_gui(launch_check: bool = False) -> int:
             self.auto_index_active = False
             self.pending_auto_index_folder: Path | None = None
             self.watch_poll_interval_ms = 8000
+            self.remote_queue_poll_interval_ms = 8000
             self.notification_queue = NotificationQueue(history_limit=3)
             self.notification_visible = False
 
@@ -559,9 +649,11 @@ def run_gui(launch_check: bool = False) -> int:
                 self._append_log(UI_TEXT["log_watching_folder"].format(folder=self.config_data.watch_folder))
             self._refresh_stats()
             self._refresh_system_status()
+            self._update_remote_queue_status()
             self.after(100, self._poll_events)
             if not launch_check:
                 self.after(1500, self._poll_watch_folder)
+                self.after(2200, self._poll_remote_queue)
             if launch_check:
                 self.after(1200, self._launch_check_finish)
 
@@ -735,20 +827,68 @@ def run_gui(launch_check: bool = False) -> int:
                     anchor="w",
                 ).grid(row=watch_index, column=0, sticky="ew", padx=16, pady=2)
 
-            self._section_title(left, UI_TEXT["index_title"], 12)
+            self._section_title(left, UI_TEXT["section_remote_queue"], 12)
+            self.remote_queue_folder_var = ctk.StringVar(value=UI_TEXT["empty_remote_queue_folder"])
+            ctk.CTkLabel(
+                left,
+                textvariable=self.remote_queue_folder_var,
+                text_color=COLORS["muted"],
+                font=(self.reading_font_family, FONT_SIZES["small"]),
+                wraplength=238,
+                justify="left",
+            ).grid(row=13, column=0, sticky="ew", padx=16, pady=(0, 8))
+            remote_row = ctk.CTkFrame(left, fg_color="transparent")
+            remote_row.grid(row=14, column=0, sticky="ew", padx=16, pady=(0, 8))
+            remote_row.grid_columnconfigure(0, weight=1)
+            remote_row.grid_columnconfigure(1, weight=1)
+            ctk.CTkButton(
+                remote_row,
+                text=UI_TEXT["button_choose_remote_queue"],
+                height=34,
+                fg_color=COLORS["panel_soft"],
+                hover_color=COLORS["accent_soft"],
+                font=(self.font_family, FONT_SIZES["button"]),
+                command=self._choose_remote_queue_folder,
+            ).grid(row=0, column=0, sticky="ew", padx=(0, 6))
+            self.remote_queue_checkbox = ctk.CTkCheckBox(
+                remote_row,
+                text=UI_TEXT["checkbox_enable_remote_queue"],
+                variable=self.remote_queue_var,
+                text_color=COLORS["muted"],
+                fg_color=COLORS["accent"],
+                hover_color=COLORS["accent_hover"],
+                border_color=COLORS["border"],
+                font=(self.status_font_family, FONT_SIZES["micro"]),
+                command=self._toggle_remote_queue,
+            )
+            self.remote_queue_checkbox.grid(row=0, column=1, sticky="w", padx=(6, 0))
+            self.remote_queue_status_var = ctk.StringVar(value=UI_TEXT["status_remote_queue_off"])
+            self.remote_queue_counts_var = ctk.StringVar(
+                value=UI_TEXT["status_remote_queue_counts"].format(pending=0, processed=0, failed=0)
+            )
+            for remote_index, variable in enumerate((self.remote_queue_status_var, self.remote_queue_counts_var), start=15):
+                ctk.CTkLabel(
+                    left,
+                    textvariable=variable,
+                    text_color=COLORS["muted"],
+                    font=(self.status_font_family, FONT_SIZES["micro"]),
+                    anchor="w",
+                ).grid(row=remote_index, column=0, sticky="ew", padx=16, pady=2)
+
+            self._section_title(left, UI_TEXT["index_title"], 17)
             self.index_status_var = ctk.StringVar(value=UI_TEXT["index_idle"])
             ctk.CTkLabel(
                 left,
                 textvariable=self.index_status_var,
                 text_color=COLORS["section"],
                 font=(self.status_font_family, FONT_SIZES["body"]),
-            ).grid(row=13, column=0, sticky="w", padx=16, pady=(0, 8))
+            ).grid(row=18, column=0, sticky="w", padx=16, pady=(0, 8))
             self.progress = ctk.CTkProgressBar(left, height=10, progress_color=COLORS["accent"])
             self.progress.set(0)
-            self.progress.grid(row=14, column=0, sticky="ew", padx=16, pady=(0, 12))
+            self.progress.grid(row=19, column=0, sticky="ew", padx=16, pady=(0, 12))
 
             button_row = ctk.CTkFrame(left, fg_color="transparent")
-            button_row.grid(row=15, column=0, sticky="ew", padx=16, pady=(0, 18))
+            button_row.grid(row=20, column=0, sticky="ew", padx=16, pady=(0, 18))
             button_row.grid_columnconfigure((0, 1), weight=1)
             self.index_button = ctk.CTkButton(
                 button_row,
@@ -772,7 +912,7 @@ def run_gui(launch_check: bool = False) -> int:
             )
             self.cancel_button.grid(row=0, column=1, sticky="ew", padx=(6, 0))
 
-            self._section_title(left, UI_TEXT["system_title"], 16)
+            self._section_title(left, UI_TEXT["system_title"], 21)
             self.sqlite_var = ctk.StringVar(value=UI_TEXT["status_sqlite_ready"])
             self.cuda_var = ctk.StringVar(value=UI_TEXT["status_cuda_unavailable"])
             self.gpu_var = ctk.StringVar(value=UI_TEXT["status_gpu_missing"])
@@ -790,7 +930,7 @@ def run_gui(launch_check: bool = False) -> int:
                     self.semantic_status_var,
                     self.docs_var,
                 ),
-                start=17,
+                start=22,
             ):
                 ctk.CTkLabel(
                     left,
@@ -800,7 +940,7 @@ def run_gui(launch_check: bool = False) -> int:
                     anchor="w",
                 ).grid(row=index, column=0, sticky="ew", padx=16, pady=2)
 
-            self._section_title(left, UI_TEXT["section_notifications"], 24)
+            self._section_title(left, UI_TEXT["section_notifications"], 29)
             self.notifications_checkbox = ctk.CTkCheckBox(
                 left,
                 text=UI_TEXT["checkbox_enable_notifications"],
@@ -812,7 +952,7 @@ def run_gui(launch_check: bool = False) -> int:
                 font=(self.status_font_family, FONT_SIZES["small"]),
                 command=self._toggle_notifications,
             )
-            self.notifications_checkbox.grid(row=25, column=0, sticky="w", padx=16, pady=(0, 10))
+            self.notifications_checkbox.grid(row=30, column=0, sticky="w", padx=16, pady=(0, 10))
 
             center = self._panel(self, 0)
             center.grid(row=1, column=1, sticky="nsew", padx=8, pady=(0, 12))
@@ -1077,6 +1217,24 @@ def run_gui(launch_check: bool = False) -> int:
             if folder:
                 self._set_watch_folder(folder)
 
+        def _set_remote_queue_folder(self, folder: str, persist: bool = True) -> None:
+            clean = str(folder or "")
+            self.config_data.remote_queue_folder = clean
+            self.remote_queue_folder_var.set(clean if clean else UI_TEXT["empty_remote_queue_folder"])
+            self._update_remote_queue_status()
+            if persist:
+                self.config_store.save(self.config_data)
+
+        def _choose_remote_queue_folder(self) -> None:
+            folder = filedialog.askdirectory(title=UI_TEXT["section_remote_queue"])
+            if folder:
+                self._set_remote_queue_folder(folder)
+
+        def _toggle_remote_queue(self) -> None:
+            self.config_data.enable_remote_queue = bool(self.remote_queue_var.get())
+            self.config_store.save(self.config_data)
+            self._update_remote_queue_status()
+
         def _toggle_auto_index(self) -> None:
             self.config_data.auto_index_enabled = bool(self.auto_index_var.get())
             self.config_store.save(self.config_data)
@@ -1136,6 +1294,29 @@ def run_gui(launch_check: bool = False) -> int:
                 self.watch_status_var.set(UI_TEXT["status_auto_index_off"])
             last_indexed_at = self.config_data.last_indexed_at or "-"
             self.last_index_var.set(UI_TEXT["status_last_index"].format(time=last_indexed_at))
+
+        def _update_remote_queue_status(self) -> None:
+            if not hasattr(self, "remote_queue_folder_var"):
+                return
+            folder = self.config_data.remote_queue_folder
+            self.remote_queue_folder_var.set(folder if folder else UI_TEXT["empty_remote_queue_folder"])
+            if not folder:
+                self.remote_queue_status_var.set(UI_TEXT["status_remote_queue_folder_missing"])
+                pending = 0
+            elif self.remote_queue_var.get():
+                self.remote_queue_status_var.set(UI_TEXT["status_remote_queue_watching"])
+                pending = count_pending_queue_files(Path(folder))
+            else:
+                self.remote_queue_status_var.set(UI_TEXT["status_remote_queue_off"])
+                pending = count_pending_queue_files(Path(folder)) if Path(folder).exists() else 0
+            stats = self.database.remote_queue_stats()
+            self.remote_queue_counts_var.set(
+                UI_TEXT["status_remote_queue_counts"].format(
+                    pending=pending,
+                    processed=stats["processed"],
+                    failed=stats["failed"],
+                )
+            )
 
         def _choose_chatgpt_export(self) -> None:
             file_path = filedialog.askopenfilename(
@@ -1339,6 +1520,28 @@ def run_gui(launch_check: bool = False) -> int:
                 self.events.put(("watch_scan_done", result))
             except Exception as exc:
                 self.events.put(("watch_scan_error", str(exc)))
+
+        def _poll_remote_queue(self) -> None:
+            try:
+                if self.remote_queue_var.get() and self.config_data.remote_queue_folder:
+                    queue_folder = Path(self.config_data.remote_queue_folder)
+                    if queue_folder.exists() and queue_folder.is_dir():
+                        if not self.remote_queue_thread or not self.remote_queue_thread.is_alive():
+                            self.remote_queue_thread = threading.Thread(
+                                target=self._remote_queue_worker,
+                                args=(queue_folder,),
+                                daemon=True,
+                            )
+                            self.remote_queue_thread.start()
+            finally:
+                self.after(self.remote_queue_poll_interval_ms, self._poll_remote_queue)
+
+        def _remote_queue_worker(self, queue_folder: Path) -> None:
+            try:
+                result = process_remote_queue_folder(self.database, queue_folder)
+                self.events.put(("remote_queue_done", result))
+            except Exception as exc:
+                self.events.put(("remote_queue_error", str(exc)))
 
         def _start_auto_index(self, memory_folder: Path) -> None:
             if self.index_thread and self.index_thread.is_alive():
@@ -1688,8 +1891,55 @@ def run_gui(launch_check: bool = False) -> int:
                     self._handle_watch_scan_done(payload)
                 elif event == "watch_scan_error":
                     self._handle_watch_scan_error(str(payload))
+                elif event == "remote_queue_done":
+                    self._handle_remote_queue_done(payload)
+                elif event == "remote_queue_error":
+                    self._handle_remote_queue_error(str(payload))
 
             self.after(100, self._poll_events)
+
+        def _handle_remote_queue_done(self, result: RemoteQueueBatchResult) -> None:
+            if result.detected <= 0:
+                self._update_remote_queue_status()
+                return
+            if result.failed:
+                self.remote_queue_status_var.set(UI_TEXT["status_remote_queue_failed"])
+            else:
+                self.remote_queue_status_var.set(UI_TEXT["status_remote_queue_processed"])
+            for item in result.results:
+                query_label = item.query or item.note or Path(item.source_file).name
+                self._append_log(
+                    UI_TEXT["log_remote_queue_detected"].format(task_type=item.task_type, query=query_label)
+                )
+                if item.status == "failed":
+                    self._append_log(
+                        UI_TEXT["log_remote_queue_failed"].format(path=item.source_file, error=item.error)
+                    )
+                elif item.task_type in {"search", "handoff_chatgpt", "handoff_codex"} and item.query:
+                    self.search_entry.delete(0, "end")
+                    self.search_entry.insert(0, item.query)
+                    self.current_query = item.query
+                    self.config_data.last_query = item.query
+                    self.config_store.save(self.config_data)
+                    if self.config_data.auto_run_remote_search:
+                        self._start_search()
+            self._append_log(
+                UI_TEXT["log_remote_queue_processed"].format(processed=result.processed, failed=result.failed)
+            )
+            self._append_log(UI_TEXT["phrase_remote_queue_received"])
+            self._refresh_stats()
+            self._update_remote_queue_status()
+            self._notify(UI_TEXT["notify_remote_queue_detected"])
+            if result.processed:
+                self._notify(UI_TEXT["notify_remote_queue_processed"])
+            if result.failed:
+                self._notify(UI_TEXT["notify_remote_queue_failed"])
+
+        def _handle_remote_queue_error(self, error_text: str) -> None:
+            self.remote_queue_status_var.set(UI_TEXT["status_remote_queue_failed"])
+            self._append_log(UI_TEXT["log_remote_queue_failed"].format(path="-", error=error_text))
+            self._notify(UI_TEXT["notify_remote_queue_failed"])
+            self._update_remote_queue_status()
 
         def _handle_watch_scan_done(self, result: WatchScanResult) -> None:
             self._update_watch_status()

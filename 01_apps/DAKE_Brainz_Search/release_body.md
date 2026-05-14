@@ -1,20 +1,21 @@
-# 補助脳BRAINZ v0.7.0
+# 補助脳BRAINZ v0.8.0
 
 ローカルの会話・仕様・Codex実装結果を忘れず探すための記憶検索アプリです。
 
 ## 追加
 
-- Notification system
-- Auto Index通知
-- Semantic更新通知
-- ChatGPT / Codex import通知
-- 静かな補助脳通知
-- Notification queue
+- Remote Queue
+- md / txt / json task検出
+- search / import / handoff / note task対応
+- processed / failed 振り分け
+- Remote Queue通知
+- Queue履歴保存
 
 ## 継続
 
 - Watch Folder
 - Auto Index
+- Notification system
 - Semantic Search
 - Related Memory
 - Memory Flow

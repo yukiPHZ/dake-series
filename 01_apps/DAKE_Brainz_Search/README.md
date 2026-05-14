@@ -242,6 +242,22 @@ BRAINZは単語を探すだけの検索ツールではなく、過去の記録�
 - Windows toastは任意扱いで、Phase 10ではアプリ内通知を優先
 - 完全ローカル処理
 
+## Phase 11: Remote Queue
+
+補助脳BRAINZは、remote_queueフォルダに置かれた `.md` / `.txt` / `.json` を検出し、処理予約として受け取れます。
+
+- Remote Queue Folderを設定可能
+- Enable Remote Queue ON/OFFに対応
+- import / search / handoff_chatgpt / handoff_codex / note task対応
+- note taskは `source_type=remote_queue_note` として記憶DBへ取り込み
+- search / handoff taskは検索欄へqueryをセットし、候補として扱う
+- 処理済みは `processed/`、失敗は `failed/` へ移動
+- Queue履歴をSQLiteへ保存
+- Remote Queue通知に対応
+- 外部通信しない
+- スマホ連携は同期フォルダ経由を想定
+- ChatGPT / Codexへ自動送信しない
+
 ## DAKE_META
 
 ```json
@@ -252,7 +268,7 @@ BRAINZは単語を探すだけの検索ツールではなく、過去の記録�
   "launcher_description": "ローカルの会話・仕様・メモを忘れず探すための記憶検索アプリです。",
   "site_title": "補助脳BRAINZ",
   "site_description": "ChatGPT、Codex、Claude、Geminiのやり取りをローカル記憶として再接続する検索補助脳です。",
-  "update_summary": "通知システムに対応しました。",
+  "update_summary": "Remote Queue に対応しました。",
   "folder_name": "DAKE_Brainz_Search",
   "exe_name": "DakeBrainz_Search.exe",
   "release_url": "",
@@ -266,23 +282,24 @@ BRAINZは単語を探すだけの検索ツールではなく、過去の記録�
 ## RELEASE_BODY
 
 ```markdown
-# 補助脳BRAINZ v0.7.0
+# 補助脳BRAINZ v0.8.0
 
 ローカルの会話・仕様・Codex実装結果を忘れず探すための記憶検索アプリです。
 
 ## 追加
 
-- Notification system
-- Auto Index通知
-- Semantic更新通知
-- ChatGPT / Codex import通知
-- 静かな補助脳通知
-- Notification queue
+- Remote Queue
+- md / txt / json task検出
+- search / import / handoff / note task対応
+- processed / failed 振り分け
+- Remote Queue通知
+- Queue履歴保存
 
 ## 継続
 
 - Watch Folder
 - Auto Index
+- Notification system
 - Semantic Search
 - Related Memory
 - Memory Flow

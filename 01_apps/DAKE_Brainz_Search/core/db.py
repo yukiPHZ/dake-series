@@ -213,6 +213,21 @@ class BrainzDatabase:
                     created_at TEXT NOT NULL
                 );
 
+                CREATE TABLE IF NOT EXISTS remote_queue_tasks (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    task_type TEXT NOT NULL,
+                    query TEXT NOT NULL DEFAULT '',
+                    note TEXT NOT NULL DEFAULT '',
+                    source_file TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    processed_at TEXT NOT NULL,
+                    raw_text TEXT NOT NULL
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_remote_queue_tasks_status
+                ON remote_queue_tasks(status, processed_at);
+
                 CREATE VIRTUAL TABLE IF NOT EXISTS documents_fts USING fts5(
                     title,
                     path,
@@ -554,6 +569,52 @@ class BrainzDatabase:
             chunks = conn.execute("SELECT COUNT(*) AS count FROM chunks").fetchone()["count"]
             searches = conn.execute("SELECT COUNT(*) AS count FROM search_logs").fetchone()["count"]
         return {"documents": int(documents), "chunks": int(chunks), "searches": int(searches)}
+
+    def log_remote_queue_task(
+        self,
+        task_type: str,
+        query: str,
+        note: str,
+        source_file: str,
+        status: str,
+        raw_text: str,
+        created_at: str = "",
+        processed_at: str = "",
+    ) -> int:
+        self.ensure_schema()
+        with self._lock, self.connect() as conn:
+            cursor = conn.execute(
+                """
+                INSERT INTO remote_queue_tasks
+                (task_type, query, note, source_file, status, created_at, processed_at, raw_text)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    task_type,
+                    query,
+                    note,
+                    source_file,
+                    status,
+                    created_at or now_iso(),
+                    processed_at or now_iso(),
+                    raw_text,
+                ),
+            )
+            conn.commit()
+            return int(cursor.lastrowid)
+
+    def remote_queue_stats(self) -> dict[str, int]:
+        self.ensure_schema()
+        stats = {"processed": 0, "failed": 0}
+        with self._lock, self.connect() as conn:
+            rows = conn.execute(
+                "SELECT status, COUNT(*) AS count FROM remote_queue_tasks GROUP BY status"
+            ).fetchall()
+        for row in rows:
+            status = str(row["status"] or "")
+            if status in stats:
+                stats[status] = int(row["count"])
+        return stats
 
     def document_hashes_for_paths(self, paths: Iterable[str]) -> dict[str, str]:
         self.ensure_schema()
