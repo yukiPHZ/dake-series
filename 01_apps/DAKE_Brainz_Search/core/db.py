@@ -575,6 +575,25 @@ class BrainzDatabase:
             return None
         return row_to_result(row, snippet=make_snippet(row["content"], ""), score=0.0)
 
+    def list_documents(self, limit: int = 700) -> list[SearchResult]:
+        self.ensure_schema()
+        with self._lock, self.connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT
+                    id, path, title, source_type, modified_at, indexed_at, content,
+                    source_label, conversation_id, conversation_title, role, message_index,
+                    source_created_at, source_updated_at, codex_summary, changed_files_json,
+                    created_files_json, test_results, build_results, commit_hash, push_result,
+                    git_status, phase_notes
+                FROM documents
+                ORDER BY COALESCE(NULLIF(source_created_at, ''), modified_at, indexed_at) DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+        return [row_to_result(row, snippet=make_snippet(row["content"], ""), score=0.0) for row in rows]
+
     def search(self, query: str, limit: int = 40) -> list[SearchResult]:
         self.ensure_schema()
         query = query.strip()

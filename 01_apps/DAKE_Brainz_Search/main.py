@@ -37,6 +37,8 @@ UI_TEXT = {
     "preview_title": "Preview",
     "tags_title": "Related Tags",
     "section_related_memory": "Related Memory",
+    "section_memory_flow": "Memory Flow",
+    "label_memory_flow": "関連する記憶を辿っています。",
     "handoff_title": "Handoff Summary",
     "log_title": "BRAINZ Log",
     "empty_memory": "未選択",
@@ -44,6 +46,7 @@ UI_TEXT = {
     "empty_preview": "結果を選ぶと詳細が表示されます",
     "empty_tags": "タグ候補なし",
     "related_memory_empty": "関連記憶なし",
+    "memory_flow_empty": "記憶の流れはまだありません",
     "empty_handoff": "検索結果から引き継ぎ素材を生成できます",
     "choose_memory_title": "記憶フォルダを選択",
     "dialog_title": "補助脳BRAINZ",
@@ -58,6 +61,8 @@ UI_TEXT = {
     "button_import_pasted_codex": "貼り付けを取り込む",
     "button_import_codex_file": "txt / md を選択",
     "button_close": "閉じる",
+    "button_timeline_ascending": "Old -> New",
+    "button_timeline_descending": "New -> Old",
     "filetype_zip": "zipファイル",
     "filetype_text_markdown": "txt / md",
     "filetype_all": "すべてのファイル",
@@ -83,6 +88,10 @@ UI_TEXT = {
     "log_embedding_generated": "Embedding generated.",
     "log_related_memory_found": "Related memory found: {count}",
     "log_semantic_disabled": "FTS only mode: {message}",
+    "log_memory_flow_generated": "Memory Flow generated.",
+    "log_memory_flow_updated": "Related timeline updated: {count}",
+    "log_memory_flow_file": "MEMORY FLOW LOG: {path}",
+    "phrase_memory_reconnected": "補助脳：記憶の流れを接続しました。",
     "codex_source_paste": "Codex result paste",
     "smoke_markdown": "# quiet workflow\n\n補助脳BRAINZは静かな青の検索脳。Codexに投げたやつを忘れない。",
     "smoke_text": "DAKEのGitルール: git status, add, commit, push。UIを止めない。",
@@ -128,12 +137,16 @@ UI_TEXT = {
     "status_embedding_unavailable": "EMBEDDING UNAVAILABLE",
     "status_semantic_search_ready": "SEMANTIC SEARCH READY",
     "status_semantic_search_disabled": "SEMANTIC SEARCH DISABLED",
+    "status_memory_flow_ready": "MEMORY FLOW READY",
+    "status_memory_flow_loading": "MEMORY FLOW...",
     "status_docs": "DOCS {documents} / CHUNKS {chunks}",
     "preview_template": "PATH: {path}\nSOURCE: {source_type}\nLABEL: {source_label}\nCONVERSATION: {conversation_title}\nROLE: {role}\nMESSAGE INDEX: {message_index}\nCOMMIT: {commit_hash}\nCHANGED FILES: {changed_files}\nTEST RESULTS: {test_results}\nBUILD RESULTS: {build_results}\nPUSH: {push_result}\nGIT STATUS: {git_status}\nMODIFIED: {modified_at}\nINDEXED: {indexed_at}\nSCORE: {score:.2f}\nSEMANTIC: {semantic_score:.2f}\n\n{content}",
     "result_meta": "{source_type} | score {score:.1f}",
     "result_meta_chatgpt": "{source_label} | score {score:.1f}",
     "result_meta_codex": "commit {commit_hash} | score {score:.1f}",
     "result_meta_semantic": "semantic {semantic_score:.2f}",
+    "timeline_meta": "{date} [{source_type}] flow {flow_score:.1f}{semantic_text}",
+    "timeline_semantic": " / semantic {semantic_score:.2f}",
     "handoff_preview": "query: {query}\nresults: {count}\n\n{items}",
     "launch_check_ok": "LAUNCH CHECK OK",
 }
@@ -239,6 +252,12 @@ def run_smoke_test() -> int:
     file_results = engine.search(UI_TEXT["smoke_query_memory"], limit=10)
     if not file_results:
         raise RuntimeError("file search returned no results")
+    file_match = next((result for result in file_results if result.source_type not in {"chatgpt_export", "codex_result"}), None)
+    if file_match is None:
+        file_match_results = engine.search(UI_TEXT["smoke_query_git"], limit=10)
+        file_match = next((result for result in file_match_results if result.source_type not in {"chatgpt_export", "codex_result"}), None)
+    if file_match is None:
+        raise RuntimeError("file search returned no file source result")
 
     chatgpt_results = engine.search(UI_TEXT["smoke_chatgpt_query"], limit=10)
     chatgpt_match = next((result for result in chatgpt_results if result.source_type == "chatgpt_export"), None)
@@ -282,6 +301,27 @@ def run_smoke_test() -> int:
     elif semantic_response.semantic_available:
         raise RuntimeError("semantic unavailable branch failed")
 
+    flow_chatgpt = engine.memory_flow(chatgpt_match, semantic_enabled=False, ascending=True)
+    if len(flow_chatgpt.items) < 2:
+        raise RuntimeError("chatgpt memory flow returned too few items")
+    if sum(1 for item in flow_chatgpt.items if item.result.conversation_id == chatgpt_match.conversation_id) < 2:
+        raise RuntimeError("chatgpt memory flow did not include same conversation")
+
+    flow_codex = engine.memory_flow(codex_match, semantic_enabled=False, ascending=True)
+    if not any(item.result.source_type == "codex_result" for item in flow_codex.items):
+        raise RuntimeError("codex memory flow did not include codex_result")
+
+    flow_file = engine.memory_flow(file_match, semantic_enabled=False, ascending=True)
+    if not any(item.result.source_type not in {"chatgpt_export", "codex_result"} for item in flow_file.items):
+        raise RuntimeError("file memory flow did not include file result")
+
+    flow_semantic = engine.memory_flow(chatgpt_match, semantic_enabled=True, ascending=True)
+    if embedding_status.available and not flow_semantic.semantic_available:
+        raise RuntimeError("semantic memory flow was unavailable despite embedding readiness")
+    flow_desc = engine.memory_flow(chatgpt_match, semantic_enabled=False, ascending=False)
+    if not flow_desc.items:
+        raise RuntimeError("descending memory flow returned no items")
+
     ollama_status = check_ollama()
     gpu_status = check_gpu()
     stats = database.stats()
@@ -299,6 +339,10 @@ def run_smoke_test() -> int:
     print(f"embeddings_ready={embedding_stats['ready']}")
     print(f"semantic_available={semantic_response.semantic_available}")
     print(f"related_memory={len(semantic_response.related)}")
+    print(f"memory_flow_chatgpt={len(flow_chatgpt.items)}")
+    print(f"memory_flow_codex={len(flow_codex.items)}")
+    print(f"memory_flow_file={len(flow_file.items)}")
+    print(f"memory_flow_semantic={flow_semantic.semantic_available}")
     print(f"gpu_detected={gpu_status.gpu_detected}")
     return 0
 
@@ -348,6 +392,7 @@ def run_gui(launch_check: bool = False) -> int:
     from core.gpu_checker import check_gpu
     from core.handoff_writer import write_chatgpt_handoff, write_codex_handoff
     from core.indexer import IndexProgress, Indexer
+    from core.memory_flow import MemoryFlowItem, MemoryFlowResponse, short_summary, timeline_date
     from core.ollama_client import check_ollama
     from core.ollama_embeddings import check_embedding_status
     from core.search_engine import SearchEngine, SearchResponse
@@ -377,11 +422,17 @@ def run_gui(launch_check: bool = False) -> int:
             self.index_thread: threading.Thread | None = None
             self.search_thread: threading.Thread | None = None
             self.import_thread: threading.Thread | None = None
+            self.flow_thread: threading.Thread | None = None
             self.current_results: list[SearchResult] = []
             self.current_related_results: list[SearchResult] = []
+            self.current_flow_items: list[MemoryFlowItem] = []
+            self.selected_result: SearchResult | None = None
             self.current_query = self.config_data.last_query
             self.semantic_available = True
             self.semantic_search_var = ctk.BooleanVar(value=True)
+            self.flow_sort_ascending = True
+            self.flow_request_id = 0
+            self.flow_cache: dict[tuple[int, bool, bool], MemoryFlowResponse] = {}
             self.logo_image = None
 
             self._apply_icon()
@@ -589,7 +640,8 @@ def run_gui(launch_check: bool = False) -> int:
             right.grid(row=1, column=2, sticky="nsew", padx=(8, 18), pady=(0, 10))
             right.grid_columnconfigure(0, weight=1)
             right.grid_rowconfigure(1, weight=2)
-            right.grid_rowconfigure(7, weight=1)
+            right.grid_rowconfigure(8, weight=1)
+            right.grid_rowconfigure(10, weight=1)
             self._section_title(right, UI_TEXT["preview_title"], 0)
             self.preview_box = ctk.CTkTextbox(
                 right,
@@ -628,10 +680,44 @@ def run_gui(launch_check: bool = False) -> int:
             self.related_box.grid(row=5, column=0, sticky="ew", padx=10, pady=(0, 10))
             set_textbox_text(self.related_box, UI_TEXT["related_memory_empty"])
 
-            self._section_title(right, UI_TEXT["handoff_title"], 6)
+            self._section_title(right, UI_TEXT["section_memory_flow"], 6)
+            flow_header = ctk.CTkFrame(right, fg_color="transparent")
+            flow_header.grid(row=7, column=0, sticky="ew", padx=10, pady=(0, 8))
+            flow_header.grid_columnconfigure(0, weight=1)
+            self.flow_status_var = ctk.StringVar(value=UI_TEXT["label_memory_flow"])
+            ctk.CTkLabel(
+                flow_header,
+                textvariable=self.flow_status_var,
+                text_color=COLORS["muted"],
+                font=(self.font_family, 12),
+                anchor="w",
+            ).grid(row=0, column=0, sticky="ew", padx=(2, 8))
+            self.flow_sort_button = ctk.CTkButton(
+                flow_header,
+                text=UI_TEXT["button_timeline_ascending"],
+                width=92,
+                height=26,
+                fg_color=COLORS["panel_soft"],
+                hover_color=COLORS["accent_soft"],
+                text_color=COLORS["muted"],
+                command=self._toggle_flow_sort,
+            )
+            self.flow_sort_button.grid(row=0, column=1, sticky="e")
+            self.flow_frame = ctk.CTkScrollableFrame(
+                right,
+                height=150,
+                fg_color=COLORS["input"],
+                border_color=COLORS["border"],
+                border_width=1,
+                corner_radius=6,
+            )
+            self.flow_frame.grid(row=8, column=0, sticky="nsew", padx=10, pady=(0, 10))
+            self._render_empty_memory_flow()
+
+            self._section_title(right, UI_TEXT["handoff_title"], 9)
             self.handoff_box = ctk.CTkTextbox(
                 right,
-                height=118,
+                height=96,
                 fg_color=COLORS["input"],
                 border_color=COLORS["border"],
                 border_width=1,
@@ -639,11 +725,11 @@ def run_gui(launch_check: bool = False) -> int:
                 font=(self.font_family, 12),
                 wrap="word",
             )
-            self.handoff_box.grid(row=7, column=0, sticky="nsew", padx=10, pady=(0, 10))
+            self.handoff_box.grid(row=10, column=0, sticky="nsew", padx=10, pady=(0, 10))
             set_textbox_text(self.handoff_box, UI_TEXT["empty_handoff"])
 
             export_row = ctk.CTkFrame(right, fg_color="transparent")
-            export_row.grid(row=8, column=0, sticky="ew", padx=10, pady=(0, 10))
+            export_row.grid(row=11, column=0, sticky="ew", padx=10, pady=(0, 10))
             export_row.grid_columnconfigure((0, 1), weight=1)
             ctk.CTkButton(
                 export_row,
@@ -703,6 +789,17 @@ def run_gui(launch_check: bool = False) -> int:
                 text_color=COLORS["quiet"],
                 font=(self.font_family, 13),
             ).pack(fill="x", padx=12, pady=18)
+
+        def _render_empty_memory_flow(self) -> None:
+            for child in self.flow_frame.winfo_children():
+                child.destroy()
+            ctk.CTkLabel(
+                self.flow_frame,
+                text=UI_TEXT["memory_flow_empty"],
+                text_color=COLORS["quiet"],
+                font=(self.font_family, 12),
+                wraplength=310,
+            ).pack(fill="x", padx=10, pady=12)
 
         def _append_log(self, message: str) -> None:
             self.log_box.configure(state="normal")
@@ -1014,6 +1111,8 @@ def run_gui(launch_check: bool = False) -> int:
             )
             set_textbox_text(self.preview_box, preview)
             self.tags_var.set(self._tags_for_result(result))
+            self.selected_result = result
+            self._start_memory_flow(result)
 
         def _tags_for_result(self, result: SearchResult) -> str:
             tags = [
@@ -1048,6 +1147,97 @@ def run_gui(launch_check: bool = False) -> int:
                 if result.semantic_score > 0:
                     lines.append(f"  {UI_TEXT['result_meta_semantic'].format(semantic_score=result.semantic_score)}")
             set_textbox_text(self.related_box, "\n".join(lines))
+
+        def _toggle_flow_sort(self) -> None:
+            self.flow_sort_ascending = not self.flow_sort_ascending
+            label = UI_TEXT["button_timeline_ascending"] if self.flow_sort_ascending else UI_TEXT["button_timeline_descending"]
+            self.flow_sort_button.configure(text=label)
+            if self.selected_result:
+                self._start_memory_flow(self.selected_result, force=True)
+
+        def _start_memory_flow(self, result: SearchResult, force: bool = False) -> None:
+            semantic_enabled = bool(self.semantic_search_var.get()) and self.semantic_available
+            cache_key = (result.id, semantic_enabled, self.flow_sort_ascending)
+            cached = self.flow_cache.get(cache_key)
+            if cached and not force:
+                self._render_memory_flow(cached.items)
+                self.flow_status_var.set(UI_TEXT["status_memory_flow_ready"])
+                return
+            self.flow_request_id += 1
+            request_id = self.flow_request_id
+            self.flow_status_var.set(UI_TEXT["status_memory_flow_loading"])
+            self.flow_thread = threading.Thread(
+                target=self._memory_flow_worker,
+                args=(request_id, result, semantic_enabled, self.flow_sort_ascending),
+                daemon=True,
+            )
+            self.flow_thread.start()
+
+        def _memory_flow_worker(
+            self,
+            request_id: int,
+            result: SearchResult,
+            semantic_enabled: bool,
+            ascending: bool,
+        ) -> None:
+            try:
+                response = self.search_engine.memory_flow(
+                    result,
+                    semantic_enabled=semantic_enabled,
+                    ascending=ascending,
+                    limit=10,
+                )
+                self.events.put(("memory_flow_done", (request_id, semantic_enabled, ascending, response)))
+            except Exception as exc:
+                self.events.put(("memory_flow_error", (request_id, str(exc))))
+
+        def _render_memory_flow(self, items: list[MemoryFlowItem]) -> None:
+            for child in self.flow_frame.winfo_children():
+                child.destroy()
+            if not items:
+                self._render_empty_memory_flow()
+                return
+            for item in items:
+                result = item.result
+                card = ctk.CTkFrame(self.flow_frame, fg_color=COLORS["panel_alt"], corner_radius=6)
+                card.pack(fill="x", padx=4, pady=5)
+                card.grid_columnconfigure(0, weight=1)
+                title = ctk.CTkButton(
+                    card,
+                    text=result.conversation_title or result.title,
+                    anchor="w",
+                    fg_color="transparent",
+                    hover_color=COLORS["accent_soft"],
+                    text_color=COLORS["text"],
+                    font=(self.font_family, 12, "bold"),
+                    command=lambda selected=result: self._select_result(selected),
+                )
+                title.grid(row=0, column=0, sticky="ew", padx=8, pady=(7, 1))
+                semantic_text = ""
+                if result.semantic_score > 0:
+                    semantic_text = UI_TEXT["timeline_semantic"].format(semantic_score=result.semantic_score)
+                meta = UI_TEXT["timeline_meta"].format(
+                    date=timeline_date(result) or "-",
+                    source_type=result.source_type,
+                    flow_score=item.flow_score,
+                    semantic_text=semantic_text,
+                )
+                ctk.CTkLabel(
+                    card,
+                    text=meta,
+                    text_color=COLORS["muted"],
+                    font=(self.font_family, 10),
+                    anchor="w",
+                ).grid(row=1, column=0, sticky="ew", padx=10)
+                ctk.CTkLabel(
+                    card,
+                    text=short_summary(result, 140),
+                    text_color=COLORS["muted"],
+                    font=(self.font_family, 11),
+                    wraplength=305,
+                    justify="left",
+                    anchor="w",
+                ).grid(row=2, column=0, sticky="ew", padx=10, pady=(2, 8))
 
         def _export_handoff(self, kind: str) -> None:
             if not self.current_results:
@@ -1098,6 +1288,12 @@ def run_gui(launch_check: bool = False) -> int:
                 elif event == "system_status":
                     gpu, ollama, embedding = payload
                     self._handle_system_status(gpu, ollama, embedding)
+                elif event == "memory_flow_done":
+                    request_id, semantic_enabled, ascending, response = payload
+                    self._handle_memory_flow_done(request_id, semantic_enabled, ascending, response)
+                elif event == "memory_flow_error":
+                    request_id, error_text = payload
+                    self._handle_memory_flow_error(request_id, str(error_text))
                 elif event == "chatgpt_import_done":
                     self._handle_chatgpt_import_done(payload)
                 elif event == "chatgpt_import_missing":
@@ -1215,6 +1411,31 @@ def run_gui(launch_check: bool = False) -> int:
             self._append_log(f"{UI_TEXT['error_codex_import_failed']} {error_text}")
             messagebox.showwarning(UI_TEXT["dialog_title"], f"{UI_TEXT['error_codex_import_failed']}\n{error_text}")
 
+        def _handle_memory_flow_done(
+            self,
+            request_id: int,
+            semantic_enabled: bool,
+            ascending: bool,
+            response: MemoryFlowResponse,
+        ) -> None:
+            if request_id != self.flow_request_id:
+                return
+            self.current_flow_items = response.items
+            self.flow_cache[(response.anchor_id, semantic_enabled, ascending)] = response
+            self.flow_status_var.set(UI_TEXT["status_memory_flow_ready"])
+            self._render_memory_flow(response.items)
+            self._append_log(UI_TEXT["log_memory_flow_generated"])
+            self._append_log(UI_TEXT["log_memory_flow_updated"].format(count=len(response.items)))
+            self._append_log(UI_TEXT["phrase_memory_reconnected"])
+            self._append_log(UI_TEXT["log_memory_flow_file"].format(path=response.log_path))
+
+        def _handle_memory_flow_error(self, request_id: int, error_text: str) -> None:
+            if request_id != self.flow_request_id:
+                return
+            self.flow_status_var.set(UI_TEXT["index_idle"])
+            self._render_empty_memory_flow()
+            self._append_log(UI_TEXT["log_index_error"].format(error=error_text))
+
         def _handle_search_done(self, query_text: str, response: SearchResponse, semantic_enabled: bool) -> None:
             results = response.results
             self.current_results = results
@@ -1225,6 +1446,10 @@ def run_gui(launch_check: bool = False) -> int:
             self._update_handoff_preview()
             if results:
                 self._select_result(results[0])
+            else:
+                self.selected_result = None
+                self.current_flow_items = []
+                self._render_empty_memory_flow()
             self._refresh_stats()
             if semantic_enabled:
                 self._append_log(UI_TEXT["log_semantic_search_initialized"])

@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 
 from core.db import BrainzDatabase, SearchResult
+from core.memory_flow import MemoryFlowResponse, generate_memory_flow
 from core.ollama_embeddings import DEFAULT_EMBED_MODEL, embed_text, write_semantic_log
 
 
@@ -74,3 +75,18 @@ class SearchEngine:
 
     def stats(self) -> dict[str, int]:
         return self.database.stats()
+
+    def memory_flow(
+        self,
+        anchor: SearchResult,
+        semantic_enabled: bool = True,
+        ascending: bool = True,
+        limit: int = 10,
+    ) -> MemoryFlowResponse:
+        return generate_memory_flow(
+            self.database,
+            anchor,
+            semantic_enabled=semantic_enabled,
+            ascending=ascending,
+            limit=limit,
+        )

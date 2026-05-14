@@ -104,6 +104,8 @@ BRAINZは自動送信しません。検索結果から、ChatGPTに貼る用ま�
 - Codex結果ログ
 - PDF OCR
 - 音声Whisper
+- screenshots
+- browser logs
 - FAISS検索
 - FAISS GPU対応
 - 関連タグ自動生成
@@ -171,6 +173,21 @@ BRAINZは、Codexが実際に何を作成・修正・確認・commit / pushし�
 
 Ollama未起動、モデル未導入、embedding API失敗、GPU未検出のいずれでもアプリは落ちません。Semantic Searchが使えない場合はFTS only modeとして従来検索を使います。
 
+## Phase 6: Related Timeline / Memory Flow
+
+補助脳BRAINZ v0.5.0 では、検索結果を選択した時にRelated Timeline / Memory Flowを表示します。
+
+- 記憶の前後関係を表示
+- 同一conversation / semantic類似 / 時系列近接を利用
+- title類似 / 同一source_type / 関連commitを補助的に利用
+- 古い記憶から新しい記憶へ辿る表示
+- timeline itemクリックでPreviewへ移動
+- Semantic Search OFFでもtitle / date / source_type中心で生成
+- 完全ローカル処理
+- OpenAI API未使用
+
+BRAINZは単語を探すだけの検索ツールではなく、過去の記録を意味と流れで再接続する補助脳です。
+
 ## DAKE_META
 
 ```json
@@ -181,7 +198,7 @@ Ollama未起動、モデル未導入、embedding API失敗、GPU未検出のい�
   "launcher_description": "ローカルの会話・仕様・メモを忘れず探すための記憶検索アプリです。",
   "site_title": "補助脳BRAINZ",
   "site_description": "ChatGPT、Codex、Claude、Geminiのやり取りをローカル記憶として再接続する検索補助脳です。",
-  "update_summary": "Semantic Search に対応しました。",
+  "update_summary": "Memory Flow / Related Timeline に対応しました。",
   "folder_name": "DAKE_Brainz_Search",
   "exe_name": "DakeBrainz_Search.exe",
   "release_url": "",
@@ -195,25 +212,25 @@ Ollama未起動、モデル未導入、embedding API失敗、GPU未検出のい�
 ## RELEASE_BODY
 
 ```markdown
-# 補助脳BRAINZ v0.4.0
+# 補助脳BRAINZ v0.5.0
 
 ローカルの会話・仕様・Codex実装結果を忘れず探すための記憶検索アプリです。
 
 ## 追加
 
-- Ollama embedding対応
-- Semantic Search
-- Related Memory表示
-- 意味的に近い記録検索
-- embedding queue
-- Semantic Search ON/OFF
+- Related Timeline
+- Memory Flow
+- 記憶の前後関係表示
+- semantic類似による流れ接続
+- timeline item navigation
 
 ## 継続
 
+- Semantic Search
+- Related Memory
 - ChatGPT export取り込み
 - Codex結果取り込み
 - SQLite FTS5検索
-- うろ覚え検索
 - handoff生成
 - Ollama / CUDA / GPU状態チェック
 ```
