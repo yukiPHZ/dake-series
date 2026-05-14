@@ -145,6 +145,18 @@ System欄に `Open Install Guide`, `Copy Install Commands`, `Recheck System` を
 
 WranglerにはNode.js / npm が必要です。npmがない場合は先にNode.jsを入れてから `npm install -g wrangler` を実行します。OllamaとGPUは、FFmpegなどのCLIより先に `READY` として認識される場合があります。
 
+## Phase 1.7 初回動画テスト
+
+`Select Test Video`, `Run First Video Test`, `Open Test Output` を追加しました。実動画を1本選び、`ffprobe` で動画情報を取得し、`ffmpeg` で先頭10秒の `test_clip.mp4` を作成します。
+
+- `data/outputs/first_video_test/media_info.json` に動画情報を保存
+- `data/outputs/first_video_test/test_clip.mp4` に10秒テストクリップを保存
+- `h264_nvenc` が使える場合はNVENCを優先
+- NVENC失敗時はCPU `libx264` へフォールバック
+- `data/outputs/first_video_test/logs/test_log.txt` に結果ログを保存
+
+元動画は絶対に変更しません。元動画と同じフォルダにも出力しません。すべて `data/outputs/first_video_test` 配下に保存します。FFmpeg / FFprobe が未導入でもアプリは落ちず、CLI導入補助へ進めます。
+
 ## Phase 2候補
 
 - YouTube LIVE URLからyt-dlpで本取得

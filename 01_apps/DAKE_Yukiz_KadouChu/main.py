@@ -32,6 +32,7 @@ from core.app_config import (
     estimate_processing_seconds,
     format_duration,
     human_size,
+    seconds_to_timecode,
 )
 from core.cli_checker import (
     CLI_TOOLS,
@@ -40,6 +41,7 @@ from core.cli_checker import (
     run_system_check,
 )
 from core.ffmpeg_runner import create_preview_clip
+from core.first_video_test import first_video_test_dir, run_first_video_test
 from core.media_probe import MediaInfo, probe_media
 from core.ollama_client import build_metadata_draft
 from core.project_writer import (
@@ -97,6 +99,22 @@ UI_TEXT = {
     "shorts_candidates": "Shorts Candidates",
     "thumbnail_base": "Thumbnail Base",
     "export_package": "Export Package",
+    "first_video_test": "FIRST VIDEO TEST",
+    "select_test_video": "Select Test Video",
+    "run_first_video_test": "Run First Video Test",
+    "open_test_output": "Open Test Output",
+    "test_selected": "Selected",
+    "test_not_selected": "No test video selected",
+    "test_clip": "Test Clip",
+    "nvenc": "NVENC",
+    "codec": "Codec",
+    "resolution": "Resolution",
+    "duration": "Duration",
+    "first_test_ready_hint": "Select a video to run the first 10-second test.",
+    "first_test_requires_video": "Select a test video first.",
+    "first_test_ffmpeg_required": "FFmpeg is required for first video test.",
+    "first_test_completed": "Completed",
+    "open_test_output_unavailable": "Test output is not ready yet.",
     "phase2": "PHASE 2",
     "waiting": "WAITING",
     "done": "DONE",
@@ -126,9 +144,14 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.gpu_status: dict[str, str] = {"state": "CHECKING", "detail": ""}
         self.install_guide_path: Path | None = None
         self.install_commands: list[str] = []
+        self.test_video_path: Path | None = None
+        self.test_output_dir: Path | None = None
+        self.first_test_running = False
         self.worker_running = False
 
         self.file_var = ctk.StringVar(value="No video selected")
+        self.test_file_var = ctk.StringVar(value=UI_TEXT["test_not_selected"])
+        self.first_test_summary_var = ctk.StringVar(value=UI_TEXT["first_test_ready_hint"])
         self.youtube_var = ctk.StringVar(value="")
         self.youtube_status_var = ctk.StringVar(value="Metadata fetch is optional in Phase 1.")
         self.system_check_status_var = ctk.StringVar(value="System check has not run yet.")
@@ -378,6 +401,63 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
             text_color=COLORS["accent"],
         ).grid(row=10, column=0, sticky="w", pady=(18, 0))
+
+        test_box = ctk.CTkFrame(body, fg_color=COLORS["panel_alt"], border_width=1, border_color=COLORS["line"], corner_radius=8)
+        test_box.grid(row=11, column=0, sticky="ew", pady=(16, 0))
+        test_box.grid_columnconfigure(0, weight=1)
+        test_box.grid_columnconfigure(1, weight=1)
+        ctk.CTkLabel(
+            test_box,
+            text=UI_TEXT["first_video_test"],
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
+            text_color=COLORS["accent_soft"],
+        ).grid(row=0, column=0, columnspan=2, sticky="w", padx=12, pady=(10, 4))
+        ctk.CTkLabel(
+            test_box,
+            textvariable=self.test_file_var,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            text_color=COLORS["muted"],
+            wraplength=330,
+            justify="left",
+        ).grid(row=1, column=0, columnspan=2, sticky="ew", padx=12, pady=(0, 6))
+        ctk.CTkButton(
+            test_box,
+            text=UI_TEXT["select_test_video"],
+            command=self._select_test_video,
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+        ).grid(row=2, column=0, sticky="ew", padx=(12, 4), pady=4)
+        self.first_test_button = ctk.CTkButton(
+            test_box,
+            text=UI_TEXT["run_first_video_test"],
+            command=self._start_first_video_test,
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+        )
+        self.first_test_button.grid(row=2, column=1, sticky="ew", padx=(4, 12), pady=4)
+        self.open_test_output_button = ctk.CTkButton(
+            test_box,
+            text=UI_TEXT["open_test_output"],
+            command=self._open_test_output,
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+            state="disabled",
+        )
+        self.open_test_output_button.grid(row=3, column=0, columnspan=2, sticky="ew", padx=12, pady=(4, 8))
+        ctk.CTkLabel(
+            test_box,
+            textvariable=self.first_test_summary_var,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            text_color=COLORS["text"],
+            wraplength=330,
+            justify="left",
+        ).grid(row=4, column=0, columnspan=2, sticky="ew", padx=12, pady=(0, 12))
         return panel
 
     def _build_output_panel(self, parent: ctk.CTkFrame) -> ctk.CTkFrame:
@@ -508,6 +588,63 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.open_button.configure(state="disabled")
         self._log(LOG_TEXT["source_detected"])
         self._probe_selected_video()
+
+    def _select_test_video(self) -> None:
+        file_path = filedialog.askopenfilename(
+            title=UI_TEXT["select_test_video"],
+            filetypes=[(UI_TEXT["file_types"], "*.mp4 *.mov *.mkv *.webm"), ("All files", "*.*")],
+        )
+        if not file_path:
+            return
+        path = Path(file_path)
+        if path.suffix.lower() not in VIDEO_EXTENSIONS:
+            messagebox.showwarning(APP_NAME, "Supported files: mp4, mov, mkv, webm")
+            return
+        self.test_video_path = path
+        self.test_file_var.set(f"{UI_TEXT['test_selected']}: {path.name}")
+        self.first_test_summary_var.set(UI_TEXT["first_test_ready_hint"])
+        self._log(LOG_TEXT["source_detected"])
+
+    def _start_first_video_test(self) -> None:
+        if self.first_test_running:
+            return
+        if self.test_video_path is None:
+            messagebox.showinfo(APP_NAME, UI_TEXT["first_test_requires_video"])
+            return
+        self.first_test_running = True
+        self.first_test_button.configure(state="disabled")
+        self.open_test_output_button.configure(state="disabled")
+        self.first_test_summary_var.set(UI_TEXT["checking"])
+        self.status_var.set(UI_TEXT["working"])
+        self.progress_var.set(0.05)
+        self._set_eta(30)
+
+        def worker() -> None:
+            try:
+                system = run_system_check()
+                self.events.put(
+                    {
+                        "type": "cli",
+                        "statuses": system["cli"],
+                        "nvenc": system["nvenc"],
+                        "gpu": system["gpu"],
+                        "install_guide": system["install_guide"],
+                        "install_commands": system["install_commands"],
+                    }
+                )
+                statuses = system["cli"]
+                result = run_first_video_test(
+                    video_path=self.test_video_path,  # type: ignore[arg-type]
+                    ffprobe_path=statuses.get("ffprobe", {}).get("path"),
+                    ffmpeg_path=statuses.get("ffmpeg", {}).get("path"),
+                    nvenc_online=system["nvenc"].get("state") == "ONLINE",
+                    log=lambda message: self.events.put({"type": "log", "message": message}),
+                )
+                self.events.put({"type": "first_test_result", "result": result})
+            except Exception as exc:
+                self.events.put({"type": "first_test_error", "message": str(exc)})
+
+        threading.Thread(target=worker, daemon=True).start()
 
     def _probe_selected_video(self) -> None:
         if self.selected_file is None:
@@ -722,6 +859,16 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         except Exception as exc:
             messagebox.showerror(APP_NAME, f"Could not open output folder.\n{exc}")
 
+    def _open_test_output(self) -> None:
+        output_dir = self.test_output_dir or first_video_test_dir()
+        if not output_dir.exists():
+            messagebox.showinfo(APP_NAME, UI_TEXT["open_test_output_unavailable"])
+            return
+        try:
+            os.startfile(str(output_dir))  # type: ignore[attr-defined]
+        except Exception as exc:
+            messagebox.showerror(APP_NAME, f"Could not open test output.\n{exc}")
+
     def _open_install_guide(self) -> None:
         if self.install_guide_path is None or not self.install_guide_path.exists():
             messagebox.showinfo(APP_NAME, UI_TEXT["no_install_guide"])
@@ -747,6 +894,45 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             button = getattr(self, name, None)
             if button is not None:
                 button.configure(state=state)
+
+    def _format_first_test_summary(self, result: dict[str, object]) -> str:
+        media = result.get("media_info")
+        selected = Path(str(result.get("selected_file", ""))).name if result.get("selected_file") else "--"
+        lines = [
+            UI_TEXT["first_video_test"],
+            f"{UI_TEXT['test_selected']}: {selected}",
+        ]
+        if isinstance(media, dict):
+            duration = media.get("duration")
+            width = media.get("width") or 0
+            height = media.get("height") or 0
+            lines.extend(
+                [
+                    f"{UI_TEXT['duration']}: {seconds_to_timecode(float(duration or 0))}",
+                    f"{UI_TEXT['codec']}: {media.get('video_codec') or 'unknown'}",
+                    f"{UI_TEXT['resolution']}: {width}x{height}",
+                ]
+            )
+        else:
+            lines.extend(
+                [
+                    f"{UI_TEXT['duration']}: --",
+                    f"{UI_TEXT['codec']}: --",
+                    f"{UI_TEXT['resolution']}: --",
+                ]
+            )
+        lines.extend(
+            [
+                "",
+                f"{UI_TEXT['test_clip']}: {result.get('test_clip', 'UNKNOWN')}",
+                f"{UI_TEXT['nvenc']}: {result.get('nvenc', 'UNKNOWN')}",
+                f"Encoder: {result.get('encoder', 'none')}",
+            ]
+        )
+        message = str(result.get("message") or "")
+        if message:
+            lines.append(message)
+        return "\n".join(lines)
 
     def _drain_events(self) -> None:
         while True:
@@ -781,6 +967,27 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self._set_eta(estimate_processing_seconds(info.duration, is_faster_whisper_available()))
         elif event_type == "media_error":
             set_textbox(self.media_box, str(event.get("message", "Media information unavailable.")))
+        elif event_type == "first_test_result":
+            result = event.get("result", {})
+            if isinstance(result, dict):
+                self.test_output_dir = Path(str(result.get("output_dir") or first_video_test_dir()))
+                self.first_test_summary_var.set(self._format_first_test_summary(result))
+                self.output_var.set(str(self.test_output_dir))
+                self.open_test_output_button.configure(state="normal")
+                if result.get("test_clip") == "SKIPPED" and result.get("message") == UI_TEXT["first_test_ffmpeg_required"]:
+                    self.system_check_status_var.set(UI_TEXT["first_test_ffmpeg_required"])
+                self.progress_var.set(1.0)
+                self.eta_var.set(UI_TEXT["first_test_completed"])
+                self.finish_var.set(UI_TEXT["complete"])
+                self.status_var.set(UI_TEXT["complete"])
+                self._log(LOG_TEXT["complete"])
+            self.first_test_running = False
+            self.first_test_button.configure(state="normal")
+        elif event_type == "first_test_error":
+            self.first_test_running = False
+            self.first_test_button.configure(state="normal")
+            self.status_var.set(UI_TEXT["error"])
+            self.first_test_summary_var.set(str(event.get("message", "")))
         elif event_type == "youtube":
             self.youtube_status_var.set(str(event.get("message", "")))
         elif event_type == "progress":
@@ -908,6 +1115,10 @@ def run_launch_check() -> int:
         "install_commands": system["install_commands"],
         "faster_whisper": is_faster_whisper_available(),
     }
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
 

@@ -39,3 +39,11 @@
 - 不足CLIだけの導入候補コマンドをコピー可能に変更
 - Wrangler用にNode.js / npm確認を追加
 - 自動インストールしない安全方針を明記
+
+## Phase 1.7
+
+- 初回動画テスト導線を追加
+- ffprobeによる動画情報取得と `media_info.json` 保存に対応
+- 先頭10秒の `test_clip.mp4` 生成に対応
+- NVENC優先、失敗時CPU `libx264` フォールバックに対応
+- `data/outputs/first_video_test/logs/test_log.txt` に結果を保存
