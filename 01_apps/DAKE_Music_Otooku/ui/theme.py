@@ -23,6 +23,6 @@ COLORS = {
 }
 
 FONT_CANDIDATES = ("BIZ UDPGothic", "Yu Gothic UI", "Meiryo", "TkDefaultFont")
-WINDOW_SIZE = "1080x700"
-WINDOW_MIN_SIZE = (900, 580)
+WINDOW_SIZE = "1180x720"
+WINDOW_MIN_SIZE = (980, 620)
 APP_USER_MODEL_ID = "Shimarisu.DakeMusicOtooku"

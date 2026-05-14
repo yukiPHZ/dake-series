@@ -143,6 +143,11 @@ FFmpeg / FFprobe の実行時は、Windowsで黒いコンソールウィンド�
 
 dark background / thin border / blue-purple accent を基調にし、ログは小さく、音素材生成の状態だけを確認できるようにしています。
 
+## UI表示方針
+
+音を置く は、初期表示で主要操作が見えることを優先します。
+詳細ログやFFmpeg filterは画面には出さず、ログファイルに保存します。
+
 ## Tiny Ambient Generator
 
 音を置く は、文章から小さなambient preview音を生成できます。

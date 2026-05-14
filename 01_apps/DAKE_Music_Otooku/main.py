@@ -81,7 +81,7 @@ UI_TEXT = {
     "button_clear_reference": "参照を解除",
     "reference_none": "参照音源: なし",
     "reference_selected": "参照音源: {name}",
-    "reference_probe_waiting": "file name: --\nduration: --\ncodec: --\nsample rate: --\nchannels: --",
+    "reference_probe_waiting": "file: -- / duration: -- / codec: --",
     "reference_probe_running": "ffprobe info: checking...",
     "reference_probe_failed": "ffprobe info: unavailable",
     "loop_options_label": "LOOP PACK",
@@ -201,7 +201,7 @@ UI_TEXT = {
     "log_video_failed": "Video BGM Pack export failed.",
     "log_preview_ready_brain": "補助脳：音を確認できます。",
     "log_preview_ready": "Preview ready.",
-    "log_preview_file": "Preview file: {label}",
+    "log_preview_file": "Preview: {name}",
     "log_preview_actual": "Preview actual: {path}",
     "log_preview_exists": "Preview path exists: {exists}",
     "log_preview_size": "Preview size: {size}",
@@ -245,6 +245,7 @@ STATUS_LABEL_KEYS = {
     "cuda": "status_tool_cuda",
     "uvr": "status_tool_uvr",
 }
+VISIBLE_LOG_LIMIT = 8
 AUDIO_FILETYPES = (
     ("Audio", "*.wav *.mp3 *.m4a *.flac *.ogg"),
     ("All", "*.*"),
@@ -288,6 +289,17 @@ def open_output_folder(path: Path, dry_run: bool = False) -> bool:
         return True
     except Exception:
         return False
+
+
+def fit_window_geometry(root: tk.Tk, requested: str, minimum: tuple[int, int]) -> tuple[str, tuple[int, int]]:
+    width_text, height_text = requested.lower().split("x", 1)
+    requested_width = int(width_text)
+    requested_height = int(height_text)
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
+    width = min(requested_width, max(minimum[0], screen_width - 40))
+    height = min(requested_height, max(minimum[1], screen_height - 80))
+    return f"{width}x{height}", (min(minimum[0], width), min(minimum[1], height))
 
 
 def short_display_path(path: Path) -> str:
@@ -340,8 +352,9 @@ class MusicOtookuApp:
         self.root = root
         self.root.title(WINDOW_TITLE)
         self.root.configure(bg=COLORS["background"])
-        self.root.geometry(WINDOW_SIZE)
-        self.root.minsize(*WINDOW_MIN_SIZE)
+        window_geometry, window_min_size = fit_window_geometry(self.root, WINDOW_SIZE, WINDOW_MIN_SIZE)
+        self.root.geometry(window_geometry)
+        self.root.minsize(*window_min_size)
         self._apply_icon()
 
         self.font_family = self._font_family()
@@ -478,7 +491,7 @@ class MusicOtookuApp:
 
         prompt_panel = make_panel(body, COLORS)
         prompt_panel.grid(row=0, column=0, sticky="nsew", padx=(0, 14))
-        prompt_panel.grid_rowconfigure(1, weight=1)
+        prompt_panel.grid_rowconfigure(1, weight=0)
         prompt_panel.grid_columnconfigure(0, weight=1)
 
         prompt_header = tk.Frame(prompt_panel, bg=COLORS["surface"])
@@ -529,7 +542,7 @@ class MusicOtookuApp:
 
         self.prompt_text = tk.Text(
             prompt_panel,
-            height=7,
+            height=6,
             bg=COLORS["surface_soft"],
             fg=COLORS["text"],
             insertbackground=COLORS["text"],
@@ -586,8 +599,8 @@ class MusicOtookuApp:
             anchor="w",
             justify="left",
             padx=10,
-            pady=8,
-        ).grid(row=4, column=0, sticky="ew", padx=16, pady=(0, 10))
+            pady=5,
+        ).grid(row=4, column=0, sticky="ew", padx=16, pady=(0, 8))
 
         self._build_loop_controls(prompt_panel)
 
@@ -627,7 +640,7 @@ class MusicOtookuApp:
                 fg=COLORS["muted"],
                 font=self.fonts["small"],
                 anchor="w",
-            ).grid(row=row, column=0, sticky="w", pady=3)
+            ).grid(row=row, column=0, sticky="w", pady=1)
             var = tk.StringVar(value=UI_TEXT["env_unknown"])
             self.status_vars[key] = var
             tk.Label(
@@ -639,7 +652,7 @@ class MusicOtookuApp:
                 anchor="e",
                 justify="right",
                 wraplength=260,
-            ).grid(row=row, column=1, sticky="e", pady=3)
+            ).grid(row=row, column=1, sticky="e", pady=1)
 
         tk.Label(
             output_panel,
@@ -650,7 +663,7 @@ class MusicOtookuApp:
             anchor="w",
             wraplength=360,
             justify="left",
-        ).grid(row=3, column=0, sticky="ew", padx=16, pady=(18, 10))
+        ).grid(row=3, column=0, sticky="ew", padx=16, pady=(10, 8))
 
         self.open_button = make_button(
             output_panel,
@@ -660,7 +673,7 @@ class MusicOtookuApp:
             self.fonts["button"],
             primary=True,
         )
-        self.open_button.grid(row=4, column=0, sticky="ew", padx=16, pady=(0, 14))
+        self.open_button.grid(row=4, column=0, sticky="ew", padx=16, pady=(0, 8))
         self.open_button.configure(state="disabled")
 
         self.video_bgm_button = make_button(
@@ -671,7 +684,7 @@ class MusicOtookuApp:
             self.fonts["button"],
             primary=False,
         )
-        self.video_bgm_button.grid(row=5, column=0, sticky="ew", padx=16, pady=(0, 14))
+        self.video_bgm_button.grid(row=5, column=0, sticky="ew", padx=16, pady=(0, 8))
         self.video_bgm_button.configure(state="disabled")
 
         preview_panel = tk.Frame(output_panel, bg=COLORS["surface"])
@@ -689,7 +702,7 @@ class MusicOtookuApp:
 
         self.preview_listbox = tk.Listbox(
             preview_panel,
-            height=4,
+            height=3,
             bg=COLORS["surface_soft"],
             fg=COLORS["text"],
             selectbackground=COLORS["select"],
@@ -779,13 +792,14 @@ class MusicOtookuApp:
             anchor="w",
         ).grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 6))
 
-        tk.Label(
+        self.bridge_project_label = tk.Label(
             bridge_panel,
             text=UI_TEXT["project_name_label"],
             bg=COLORS["surface"],
             fg=COLORS["muted"],
             font=self.fonts["small"],
-        ).grid(row=1, column=0, sticky="w", padx=(0, 8), pady=(0, 6))
+        )
+        self.bridge_project_label.grid(row=1, column=0, sticky="w", padx=(0, 8), pady=(0, 6))
         self.bridge_project_entry = tk.Entry(
             bridge_panel,
             textvariable=self.bridge_project_name_var,
@@ -797,13 +811,14 @@ class MusicOtookuApp:
         )
         self.bridge_project_entry.grid(row=1, column=1, sticky="ew", pady=(0, 6))
 
-        tk.Label(
+        self.bridge_favorite_label = tk.Label(
             bridge_panel,
             text=UI_TEXT["project_favorite_label"],
             bg=COLORS["surface"],
             fg=COLORS["muted"],
             font=self.fonts["small"],
-        ).grid(row=2, column=0, sticky="w", padx=(0, 8))
+        )
+        self.bridge_favorite_label.grid(row=2, column=0, sticky="w", padx=(0, 8))
         self.bridge_favorite_menu = tk.OptionMenu(
             bridge_panel,
             self.bridge_favorite_var,
@@ -827,9 +842,13 @@ class MusicOtookuApp:
             activeforeground=COLORS["select_text"],
         )
         self.bridge_favorite_menu.grid(row=2, column=1, sticky="ew")
+        self.bridge_project_label.grid_remove()
+        self.bridge_project_entry.grid_remove()
+        self.bridge_favorite_label.grid_remove()
+        self.bridge_favorite_menu.grid_remove()
 
         bridge_button_row = tk.Frame(bridge_panel, bg=COLORS["surface"])
-        bridge_button_row.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(8, 0))
+        bridge_button_row.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(2, 0))
         self.project_create_button = make_button(
             bridge_button_row,
             UI_TEXT["button_project_create"],
@@ -862,10 +881,10 @@ class MusicOtookuApp:
             fg=COLORS["text"],
             font=self.fonts["label"],
             anchor="w",
-        ).grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 6))
+        ).grid(row=0, column=0, sticky="w", pady=(0, 4))
 
         duration_row = tk.Frame(panel, bg=COLORS["surface"])
-        duration_row.grid(row=1, column=0, columnspan=2, sticky="ew")
+        duration_row.grid(row=0, column=1, sticky="e", pady=(0, 4))
         tk.Label(
             duration_row,
             text=UI_TEXT["loop_duration_label"],
@@ -890,7 +909,7 @@ class MusicOtookuApp:
             ).pack(side="left", padx=(0, 8))
 
         setting_row = tk.Frame(panel, bg=COLORS["surface"])
-        setting_row.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(6, 0))
+        setting_row.grid(row=1, column=0, columnspan=2, sticky="ew")
         tk.Label(
             setting_row,
             text=UI_TEXT["fade_label"],
@@ -959,8 +978,7 @@ class MusicOtookuApp:
         )
         volume_menu.pack(side="left")
 
-        tag_row = tk.Frame(panel, bg=COLORS["surface"])
-        tag_row.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(6, 0))
+        tag_row = setting_row
         tk.Label(
             tag_row,
             text=UI_TEXT["tag_label"],
@@ -1065,9 +1083,26 @@ class MusicOtookuApp:
         self.log_lines.append(message)
         if hasattr(self, "log_text"):
             self.log_text.configure(state="normal")
-            self.log_text.insert("end", message + "\n")
+            self.log_text.delete("1.0", "end")
+            for line in self.log_lines[-VISIBLE_LOG_LIMIT:]:
+                self.log_text.insert("end", line + "\n")
             self.log_text.see("end")
             self.log_text.configure(state="disabled")
+
+    def _write_preview_debug_log(self, lines: list[str]) -> None:
+        if not self.output_folder:
+            return
+        try:
+            log_dir = self.output_folder / "logs"
+            log_dir.mkdir(parents=True, exist_ok=True)
+            timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+            with (log_dir / "preview_log.txt").open("a", encoding="utf-8") as log_file:
+                log_file.write(f"[{timestamp}]\n")
+                for line in lines:
+                    log_file.write(line + "\n")
+                log_file.write("\n")
+        except Exception:
+            return
 
     def _set_busy(self, busy: bool) -> None:
         self.processing = busy
@@ -1187,7 +1222,7 @@ class MusicOtookuApp:
         info = probe_audio_info(path)
         if info:
             lines = info.display_lines()
-            self.worker_queue.put(("reference_info", "\n".join(lines)))
+            self.worker_queue.put(("reference_info", " / ".join(lines[:3])))
             self.worker_queue.put(("log", UI_TEXT["log_reference_probe"].format(info=" / ".join(lines))))
         else:
             self.worker_queue.put(("reference_info", UI_TEXT["reference_probe_failed"]))
@@ -1313,7 +1348,7 @@ class MusicOtookuApp:
                 if tiny_result.mp3_path:
                     log(UI_TEXT["log_tiny_file"].format(name=tiny_result.mp3_path.name))
                 if tiny_result.plan:
-                    log(UI_TEXT["log_tiny_filter"].format(filter=tiny_result.plan.filter_text))
+                    process_log.append(UI_TEXT["log_tiny_filter"].format(filter=tiny_result.plan.filter_text))
                 if tiny_result.errors:
                     log(UI_TEXT["log_tiny_fallback"])
                 final_status = UI_TEXT["status_preview_complete"]
@@ -1433,7 +1468,6 @@ class MusicOtookuApp:
                             files=generated_file_summary(self.output_folder),
                         )
                     )
-                    self._append_log(str(self.output_folder))
                     self.open_button.configure(state="normal")
                     self._sync_video_bgm_button()
                     self.refresh_audio_preview(log_ready=True)
@@ -1537,15 +1571,28 @@ class MusicOtookuApp:
             return
         actual_path = item.path.resolve()
         exists_text = "yes" if actual_path.exists() else "no"
-        self._append_log(UI_TEXT["log_preview_file"].format(label=item.label))
-        self._append_log(UI_TEXT["log_preview_actual"].format(path=actual_path))
-        self._append_log(UI_TEXT["log_preview_exists"].format(exists=exists_text))
+        self._write_preview_debug_log(
+            [
+                f"Preview file: {item.label}",
+                f"Preview actual: {actual_path}",
+                f"Preview path exists: {exists_text}",
+                f"Preview size: {preview_size_text(actual_path)}",
+            ]
+        )
+        self._append_log(UI_TEXT["log_preview_file"].format(name=actual_path.name))
         self._append_log(UI_TEXT["log_preview_size"].format(size=preview_size_text(actual_path)))
         self.preview_status_var.set(UI_TEXT["preview_playing_start"])
         self.preview_play_button.configure(text=UI_TEXT["button_preview_playing"], state="disabled")
         self.root.update_idletasks()
         result = self.preview_player.play(actual_path)
         if result.success:
+            self._write_preview_debug_log(
+                [
+                    f"Playing via: {result.mode}",
+                    f"Result path: {result.path}",
+                    f"Result: {result.message}",
+                ]
+            )
             self._append_log(UI_TEXT["log_preview_mode"].format(mode=result.mode))
             display_name = result.path.name if result.path else item.path.name
             self.preview_status_var.set(UI_TEXT["preview_playing"].format(name=display_name))
@@ -1558,6 +1605,7 @@ class MusicOtookuApp:
                 self.preview_playing = True
         else:
             self.preview_status_var.set(UI_TEXT["preview_failed"])
+            self._write_preview_debug_log([f"Preview failed: {result.message}"])
             self._append_log(UI_TEXT["log_preview_failed"].format(reason=result.message))
             self.preview_playing = False
         self._sync_preview_controls()
