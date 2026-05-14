@@ -73,6 +73,12 @@ LOG_TEXT = {
     "review_shorts": "補助脳：Shorts候補を見直しました。",
     "review_created": "補助脳：レビューを作成しました。",
     "review_template_fallback": "補助脳：ローカル補助脳の応答がないため、固定レビューで整えました。",
+    "selected_candidates_refreshed": "補助脳：採用候補を読み込みました。",
+    "selected_default_short": "補助脳：候補#1を仮採用しました。",
+    "selected_short": "補助脳：Shorts候補を選択しました。",
+    "selected_title": "補助脳：タイトル候補を選択しました。",
+    "selected_draft_created": "補助脳：選択ドラフトを作成しました。",
+    "selected_human_decision": "補助脳：最後だけ、菊田さんが握ってください。",
 }
 
 SHORTS_REASON_TEXT = {

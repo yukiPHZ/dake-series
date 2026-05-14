@@ -55,6 +55,7 @@ from core.project_writer import (
     write_preview_note,
     write_source_manifest,
 )
+from core.selected_outputs import export_selected_draft, read_selected_candidates
 from core.shorts_analyzer import create_shorts_candidates, write_shorts_candidates
 from core.transcription import is_faster_whisper_available, transcribe_media
 from ui.theme import COLORS, FONT_FAMILY, setup_theme
@@ -113,6 +114,24 @@ UI_TEXT = {
     "review_file_unavailable": "Review file is not ready yet.",
     "open_review_failed": "Could not open review file.",
     "files_read": "Files read",
+    "selected_outputs": "SELECTED OUTPUTS",
+    "refresh_candidates": "Refresh Candidates",
+    "export_selected_draft": "Export Selected Draft",
+    "open_selected_folder": "Open Selected Folder",
+    "selected_ready_hint": "Refresh candidates from the posting package.",
+    "selected_requires_package": "Posting package is not ready yet.",
+    "selected_short": "Short",
+    "selected_title": "Title",
+    "selected_none": "No candidates loaded",
+    "selected_description": "Description",
+    "selected_tags": "Tags",
+    "selected_notes": "Upload Notes",
+    "selected_review": "Assistant Review",
+    "selected_available": "available",
+    "selected_missing": "missing",
+    "selected_completed": "Selected draft exported.",
+    "selected_folder_unavailable": "Selected folder is not ready yet.",
+    "open_selected_failed": "Could not open selected folder.",
     "transcription_short": "Transcription",
     "shorts": "Shorts",
     "ollama": "Ollama",
@@ -191,9 +210,14 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.test_output_dir: Path | None = None
         self.package_output_dir: Path | None = None
         self.review_file_path: Path | None = None
+        self.selected_output_dir: Path | None = None
+        self.candidate_data: dict[str, object] = {}
+        self.short_choice_touched = False
+        self.title_choice_touched = False
         self.first_test_running = False
         self.package_running = False
         self.review_running = False
+        self.selected_export_running = False
         self.worker_running = False
 
         self.file_var = ctk.StringVar(value=UI_TEXT["no_video_selected"])
@@ -201,6 +225,9 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.first_test_summary_var = ctk.StringVar(value=UI_TEXT["first_test_ready_hint"])
         self.package_summary_var = ctk.StringVar(value=UI_TEXT["package_ready_hint"])
         self.review_summary_var = ctk.StringVar(value=UI_TEXT["review_ready_hint"])
+        self.selected_summary_var = ctk.StringVar(value=UI_TEXT["selected_ready_hint"])
+        self.short_choice_var = ctk.StringVar(value=UI_TEXT["selected_none"])
+        self.title_choice_var = ctk.StringVar(value=UI_TEXT["selected_none"])
         self.youtube_var = ctk.StringVar(value="")
         self.youtube_status_var = ctk.StringVar(value=UI_TEXT["metadata_fetch_optional"])
         self.system_check_status_var = ctk.StringVar(value=UI_TEXT["system_check_not_run"])
@@ -525,7 +552,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
 
         self.media_box = ctk.CTkTextbox(
             body,
-            height=170,
+            height=120,
             fg_color=COLORS["field"],
             border_width=1,
             border_color=COLORS["line"],
@@ -626,6 +653,80 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         )
         self.open_review_button.grid(row=3, column=0, columnspan=2, sticky="ew", padx=12, pady=(4, 10))
 
+        selected_box = ctk.CTkFrame(body, fg_color=COLORS["panel_alt"], border_width=1, border_color=COLORS["line"], corner_radius=8)
+        selected_box.grid(row=4, column=0, sticky="ew", pady=(12, 0))
+        selected_box.grid_columnconfigure(0, weight=1)
+        selected_box.grid_columnconfigure(1, weight=1)
+        ctk.CTkLabel(
+            selected_box,
+            text=UI_TEXT["selected_outputs"],
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
+            text_color=COLORS["accent_soft"],
+        ).grid(row=0, column=0, columnspan=2, sticky="w", padx=12, pady=(10, 4))
+        ctk.CTkLabel(
+            selected_box,
+            textvariable=self.selected_summary_var,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            text_color=COLORS["text"],
+            wraplength=330,
+            justify="left",
+        ).grid(row=1, column=0, columnspan=2, sticky="ew", padx=12, pady=(0, 8))
+        self.short_choice_menu = ctk.CTkOptionMenu(
+            selected_box,
+            variable=self.short_choice_var,
+            values=[UI_TEXT["selected_none"]],
+            command=self._on_short_choice,
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            button_color=COLORS["button"],
+            button_hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+        )
+        self.short_choice_menu.grid(row=2, column=0, sticky="ew", padx=(12, 4), pady=4)
+        self.title_choice_menu = ctk.CTkOptionMenu(
+            selected_box,
+            variable=self.title_choice_var,
+            values=[UI_TEXT["selected_none"]],
+            command=self._on_title_choice,
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            button_color=COLORS["button"],
+            button_hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+        )
+        self.title_choice_menu.grid(row=2, column=1, sticky="ew", padx=(4, 12), pady=4)
+        self.refresh_candidates_button = ctk.CTkButton(
+            selected_box,
+            text=UI_TEXT["refresh_candidates"],
+            command=self._refresh_selected_candidates,
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+        )
+        self.refresh_candidates_button.grid(row=3, column=0, sticky="ew", padx=(12, 4), pady=4)
+        self.export_selected_button = ctk.CTkButton(
+            selected_box,
+            text=UI_TEXT["export_selected_draft"],
+            command=self._start_export_selected_draft,
+            height=30,
+            fg_color=COLORS["button"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+        )
+        self.export_selected_button.grid(row=3, column=1, sticky="ew", padx=(4, 12), pady=4)
+        self.open_selected_button = ctk.CTkButton(
+            selected_box,
+            text=UI_TEXT["open_selected_folder"],
+            command=self._open_selected_folder,
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+            state="disabled",
+        )
+        self.open_selected_button.grid(row=4, column=0, columnspan=2, sticky="ew", padx=12, pady=(4, 10))
+
         self.open_button = ctk.CTkButton(
             body,
             text=UI_TEXT["open_output"],
@@ -636,7 +737,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             text_color=COLORS["text"],
             state="disabled",
         )
-        self.open_button.grid(row=4, column=0, sticky="ew", pady=(12, 0))
+        self.open_button.grid(row=5, column=0, sticky="ew", pady=(12, 0))
         return panel
 
     def _build_system_panel(self, parent: ctk.CTkFrame) -> ctk.CTkFrame:
@@ -729,8 +830,16 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.open_button.configure(state="disabled")
         self.open_package_button.configure(state="disabled")
         self.open_review_button.configure(state="disabled")
+        self.open_selected_button.configure(state="disabled")
+        self.selected_output_dir = None
+        self.candidate_data = {}
+        self.short_choice_touched = False
+        self.title_choice_touched = False
+        self.short_choice_var.set(UI_TEXT["selected_none"])
+        self.title_choice_var.set(UI_TEXT["selected_none"])
         self.package_summary_var.set(UI_TEXT["package_ready_hint"])
         self.review_summary_var.set(UI_TEXT["review_ready_hint"])
+        self.selected_summary_var.set(UI_TEXT["selected_ready_hint"])
         self._log(LOG_TEXT["source_detected"])
         self._probe_selected_video()
 
@@ -782,6 +891,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 ]
             )
         )
+        self._refresh_selected_candidates()
 
     def _start_first_video_test(self) -> None:
         if self.first_test_running:
@@ -888,6 +998,90 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             self.package_output_dir = latest
             return latest
         return None
+
+    def _choice_index(self, value: str) -> int | None:
+        value = value.strip()
+        if not value.startswith("#"):
+            return None
+        number = value.split(" ", 1)[0].lstrip("#")
+        try:
+            return max(0, int(number) - 1)
+        except ValueError:
+            return None
+
+    def _on_short_choice(self, _value: str) -> None:
+        self.short_choice_touched = True
+
+    def _on_title_choice(self, _value: str) -> None:
+        self.title_choice_touched = True
+
+    def _compact_options(self, labels: list[str]) -> list[str]:
+        compact: list[str] = []
+        for label in labels:
+            compact.append(label if len(label) <= 78 else label[:75].rstrip() + "...")
+        return compact
+
+    def _refresh_selected_candidates(self) -> None:
+        package_dir = self._resolve_package_for_review()
+        if package_dir is None:
+            messagebox.showinfo(APP_NAME, UI_TEXT["selected_requires_package"])
+            return
+        try:
+            data = read_selected_candidates(package_dir)
+        except Exception as exc:
+            self.selected_summary_var.set(str(exc))
+            return
+
+        self.candidate_data = data
+        short_labels = self._compact_options([str(item) for item in data.get("short_labels", []) if str(item)])
+        title_labels = self._compact_options([str(item) for item in data.get("title_labels", []) if str(item)])
+        if not short_labels:
+            short_labels = [UI_TEXT["selected_none"]]
+        if not title_labels:
+            title_labels = [UI_TEXT["selected_none"]]
+        self.short_choice_menu.configure(values=short_labels)
+        self.title_choice_menu.configure(values=title_labels)
+        self.short_choice_var.set(short_labels[0])
+        self.title_choice_var.set(title_labels[0])
+        self.short_choice_touched = False
+        self.title_choice_touched = False
+
+        selected_dir = package_dir / "selected"
+        self.selected_output_dir = selected_dir if selected_dir.exists() else None
+        self.open_selected_button.configure(state="normal" if self.selected_output_dir else "disabled")
+        self.selected_summary_var.set(self._format_selected_candidates_summary(data))
+        self._log(LOG_TEXT["selected_candidates_refreshed"])
+
+    def _start_export_selected_draft(self) -> None:
+        if self.selected_export_running:
+            return
+        package_dir = self._resolve_package_for_review()
+        if package_dir is None:
+            messagebox.showinfo(APP_NAME, UI_TEXT["selected_requires_package"])
+            return
+        self.selected_export_running = True
+        self.export_selected_button.configure(state="disabled")
+        self.status_var.set(UI_TEXT["running"])
+        self.progress_var.set(0.16)
+
+        parsed_short_index = self._choice_index(self.short_choice_var.get())
+        parsed_title_index = self._choice_index(self.title_choice_var.get())
+        short_index = parsed_short_index if self.short_choice_touched or (parsed_short_index not in {None, 0}) else None
+        title_index = parsed_title_index if self.title_choice_touched or (parsed_title_index not in {None, 0}) else None
+
+        def worker() -> None:
+            try:
+                result = export_selected_draft(
+                    package_dir=package_dir,
+                    short_index=short_index,
+                    title_index=title_index,
+                    log=lambda message: self.events.put({"type": "log", "message": message}),
+                )
+                self.events.put({"type": "selected_export_result", "result": result})
+            except Exception as exc:
+                self.events.put({"type": "selected_export_error", "message": str(exc)})
+
+        threading.Thread(target=worker, daemon=True).start()
 
     def _start_assistant_review(self) -> None:
         if self.review_running:
@@ -1176,6 +1370,21 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         except Exception as exc:
             messagebox.showerror(APP_NAME, f"{UI_TEXT['open_review_failed']}\n{exc}")
 
+    def _open_selected_folder(self) -> None:
+        selected_dir = self.selected_output_dir
+        if selected_dir is None:
+            package_dir = self._resolve_package_for_review()
+            if package_dir is not None:
+                candidate = package_dir / "selected"
+                selected_dir = candidate if candidate.exists() else None
+        if selected_dir is None or not selected_dir.exists():
+            messagebox.showinfo(APP_NAME, UI_TEXT["selected_folder_unavailable"])
+            return
+        try:
+            os.startfile(str(selected_dir))  # type: ignore[attr-defined]
+        except Exception as exc:
+            messagebox.showerror(APP_NAME, f"{UI_TEXT['open_selected_failed']}\n{exc}")
+
     def _open_test_output(self) -> None:
         output_dir = self.test_output_dir or first_video_test_dir()
         if not output_dir.exists():
@@ -1291,6 +1500,43 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             ]
         )
 
+    def _format_selected_candidates_summary(self, data: dict[str, object]) -> str:
+        short_labels = [str(item) for item in data.get("short_labels", []) if str(item)]
+        title_labels = [str(item) for item in data.get("title_labels", []) if str(item)]
+        meta_parts = [
+            f"{UI_TEXT['selected_description']}: {UI_TEXT['selected_available'] if data.get('has_description') else UI_TEXT['selected_missing']}",
+            f"{UI_TEXT['selected_tags']}: {UI_TEXT['selected_available'] if data.get('has_tags') else UI_TEXT['selected_missing']}",
+            f"{UI_TEXT['selected_notes']}: {UI_TEXT['selected_available'] if data.get('has_notes') else UI_TEXT['selected_missing']}",
+            f"{UI_TEXT['selected_review']}: {UI_TEXT['selected_available'] if data.get('has_review') else UI_TEXT['selected_missing']}",
+        ]
+        lines = [
+            UI_TEXT["selected_outputs"],
+            f"{UI_TEXT['shorts']}: {len(short_labels)} / {UI_TEXT['selected_title']}: {len(title_labels)}",
+            " | ".join(meta_parts),
+        ]
+        if short_labels:
+            lines.append(short_labels[0] if len(short_labels[0]) <= 120 else short_labels[0][:117] + "...")
+        if title_labels:
+            lines.append(title_labels[0] if len(title_labels[0]) <= 120 else title_labels[0][:117] + "...")
+        return "\n".join(lines)
+
+    def _format_selected_export_summary(self, result: dict[str, object]) -> str:
+        selected_dir = str(result.get("selected_dir") or "")
+        selected_title = str(result.get("selected_title") or "--")
+        selected_short = result.get("selected_short")
+        short_text = "--"
+        if isinstance(selected_short, dict):
+            short_text = f"{selected_short.get('start', '--')} - {selected_short.get('end', '--')}"
+        return "\n".join(
+            [
+                UI_TEXT["selected_outputs"],
+                UI_TEXT["selected_completed"],
+                f"{UI_TEXT['selected_short']}: {short_text}",
+                f"{UI_TEXT['selected_title']}: {selected_title}",
+                f"{UI_TEXT['package']}: {selected_dir}",
+            ]
+        )
+
     def _drain_events(self) -> None:
         while True:
             try:
@@ -1365,6 +1611,16 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.current_project = ProjectPaths.from_root(package_dir)
                 self.open_package_button.configure(state="normal")
                 self.open_review_button.configure(state="disabled")
+                self.open_selected_button.configure(state="disabled")
+                self.selected_output_dir = None
+                self.candidate_data = {}
+                self.short_choice_touched = False
+                self.title_choice_touched = False
+                self.short_choice_var.set(UI_TEXT["selected_none"])
+                self.title_choice_var.set(UI_TEXT["selected_none"])
+                self.short_choice_menu.configure(values=[UI_TEXT["selected_none"]])
+                self.title_choice_menu.configure(values=[UI_TEXT["selected_none"]])
+                self.selected_summary_var.set(UI_TEXT["selected_ready_hint"])
                 self.open_button.configure(state="normal")
                 self.progress_var.set(1.0)
                 status = str(result.get("status") or "")
@@ -1410,6 +1666,27 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             self.assistant_review_button.configure(state="normal")
             self.status_var.set(UI_TEXT["error"])
             self.review_summary_var.set(str(event.get("message", "")))
+        elif event_type == "selected_export_result":
+            result = event.get("result", {})
+            if isinstance(result, dict):
+                selected_dir = Path(str(result.get("selected_dir") or ""))
+                package_dir = Path(str(result.get("package_dir") or packages_dir()))
+                self.package_output_dir = package_dir
+                self.selected_output_dir = selected_dir if selected_dir.exists() else None
+                self.selected_summary_var.set(self._format_selected_export_summary(result))
+                self.open_selected_button.configure(state="normal" if self.selected_output_dir else "disabled")
+                self.output_var.set(str(selected_dir))
+                self.progress_var.set(1.0)
+                self.status_var.set(UI_TEXT["complete"])
+                self.eta_var.set(UI_TEXT["selected_completed"])
+                self.finish_var.set(UI_TEXT["complete"])
+            self.selected_export_running = False
+            self.export_selected_button.configure(state="normal")
+        elif event_type == "selected_export_error":
+            self.selected_export_running = False
+            self.export_selected_button.configure(state="normal")
+            self.status_var.set(UI_TEXT["error"])
+            self.selected_summary_var.set(str(event.get("message", "")))
         elif event_type == "youtube":
             self.youtube_status_var.set(str(event.get("message", "")))
         elif event_type == "progress":

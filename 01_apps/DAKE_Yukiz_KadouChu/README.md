@@ -203,6 +203,33 @@ Ollamaが `READY` の場合は localhost のローカルLLMで、短い日本語
 
 補助脳レビューは提案だけを行います。YouTubeへ自動投稿せず、自動公開もせず、最終判断はユーザーが行います。OpenAI APIや外部APIへ投稿パッケージ内容を送りません。
 
+## Phase 2.1 採用候補の整理
+
+`SELECTED OUTPUTS` セクションを追加しました。直近の投稿パッケージ、または `Select Package Folder` で選択したpackageから候補を読み取り、Shorts候補とタイトル候補を選んで `selected/` に選択ドラフトを書き出します。
+
+読み取るファイル:
+
+- `shorts_candidates.json`
+- `metadata/title_ideas.txt`
+- `metadata/description_draft.txt`
+- `metadata/tags.txt`
+- `metadata/upload_notes.txt`
+- `assistant_review.md`
+
+`Refresh Candidates` で候補を再読み込みします。Shorts候補は最大5件、タイトル候補は最大7件まで選択できます。`Export Selected Draft` を押すと以下を作成します。
+
+```text
+selected/
+├ selected_short.json
+├ selected_title.txt
+├ selected_description.txt
+├ selected_tags.txt
+├ selected_upload_notes.txt
+└ selected_summary.md
+```
+
+まだ何も選択していない場合は、Shorts #1 と Title #1 を仮採用します。`selected_summary.md` には選択したShorts、タイトル、説明欄、タグ、公開前メモ、人間判断の注意をまとめます。YouTubeへ自動投稿せず、自動公開もしません。元動画や `assistant_review.md` は変更せず、上書き対象はpackage内の `selected/` 配下だけです。
+
 ## Phase 2候補
 
 - YouTube LIVE URLからyt-dlpで本取得
