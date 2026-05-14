@@ -201,9 +201,14 @@ UI_TEXT = {
     "log_video_failed": "Video BGM Pack export failed.",
     "log_preview_ready_brain": "補助脳：音を確認できます。",
     "log_preview_ready": "Preview ready.",
+    "log_preview_file": "Preview file: {label}",
+    "log_preview_actual": "Preview actual: {path}",
+    "log_preview_exists": "Preview path exists: {exists}",
+    "log_preview_size": "Preview size: {size}",
+    "log_preview_mode": "Playing via {mode}",
     "log_preview_playing": "Playing preview...",
     "log_preview_stopped": "Preview stopped.",
-    "log_preview_failed": "Preview could not play. Try generated_preview.wav.",
+    "log_preview_failed": "Preview failed: {reason}",
     "log_preview_external": "既定プレイヤーで開きました。停止はプレイヤー側です。",
     "log_favorite_brain": "補助脳：お気に入りへ置きました。",
     "log_favorite_saved": "Favorite saved.",
@@ -306,6 +311,16 @@ def generated_file_summary(output_folder: Path) -> str:
     return "\n".join(names[:5]) if names else "--"
 
 
+def preview_size_text(path: Path) -> str:
+    try:
+        size_kb = path.stat().st_size / 1024
+    except Exception:
+        return "--"
+    if size_kb >= 1024:
+        return f"{size_kb / 1024:.1f} MB"
+    return f"{size_kb:.1f} KB"
+
+
 def write_generate_check_wav(path: Path, duration_seconds: float = 2.0) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     sample_rate = 44100
@@ -403,7 +418,7 @@ class MusicOtookuApp:
 
     def _build_ui(self) -> None:
         outer = tk.Frame(self.root, bg=COLORS["background"])
-        outer.pack(fill="both", expand=True, padx=24, pady=(22, 16))
+        outer.pack(fill="both", expand=True, padx=20, pady=(14, 10))
 
         self._build_header(outer)
         self._build_body(outer)
@@ -412,7 +427,7 @@ class MusicOtookuApp:
 
     def _build_header(self, parent: tk.Widget) -> None:
         header = tk.Frame(parent, bg=COLORS["background"])
-        header.pack(fill="x", pady=(0, 14))
+        header.pack(fill="x", pady=(0, 10))
         header.grid_columnconfigure(0, weight=1)
 
         title_area = tk.Frame(header, bg=COLORS["background"])
@@ -514,7 +529,7 @@ class MusicOtookuApp:
 
         self.prompt_text = tk.Text(
             prompt_panel,
-            height=9,
+            height=7,
             bg=COLORS["surface_soft"],
             fg=COLORS["text"],
             insertbackground=COLORS["text"],
@@ -527,12 +542,12 @@ class MusicOtookuApp:
             padx=14,
             pady=12,
         )
-        self.prompt_text.grid(row=1, column=0, sticky="nsew", padx=16, pady=(0, 12))
+        self.prompt_text.grid(row=1, column=0, sticky="nsew", padx=16, pady=(0, 10))
         self.prompt_text.insert("1.0", UI_TEXT["prompt_hint"])
         self.prompt_text.bind("<FocusIn>", self._clear_prompt_hint)
 
         control_row = tk.Frame(prompt_panel, bg=COLORS["surface"])
-        control_row.grid(row=2, column=0, sticky="ew", padx=16, pady=(0, 14))
+        control_row.grid(row=2, column=0, sticky="ew", padx=16, pady=(0, 10))
 
         self.reference_button = make_button(
             control_row,
@@ -560,7 +575,7 @@ class MusicOtookuApp:
             fg=COLORS["muted"],
             font=self.fonts["small"],
             anchor="w",
-        ).grid(row=3, column=0, sticky="ew", padx=16, pady=(0, 14))
+        ).grid(row=3, column=0, sticky="ew", padx=16, pady=(0, 10))
 
         tk.Label(
             prompt_panel,
@@ -572,7 +587,7 @@ class MusicOtookuApp:
             justify="left",
             padx=10,
             pady=8,
-        ).grid(row=4, column=0, sticky="ew", padx=16, pady=(0, 14))
+        ).grid(row=4, column=0, sticky="ew", padx=16, pady=(0, 10))
 
         self._build_loop_controls(prompt_panel)
 
@@ -660,7 +675,7 @@ class MusicOtookuApp:
         self.video_bgm_button.configure(state="disabled")
 
         preview_panel = tk.Frame(output_panel, bg=COLORS["surface"])
-        preview_panel.grid(row=6, column=0, sticky="ew", padx=16, pady=(0, 14))
+        preview_panel.grid(row=6, column=0, sticky="ew", padx=16, pady=(0, 10))
         preview_panel.grid_columnconfigure(0, weight=1)
 
         tk.Label(
@@ -674,7 +689,7 @@ class MusicOtookuApp:
 
         self.preview_listbox = tk.Listbox(
             preview_panel,
-            height=5,
+            height=4,
             bg=COLORS["surface_soft"],
             fg=COLORS["text"],
             selectbackground=COLORS["select"],
@@ -690,7 +705,7 @@ class MusicOtookuApp:
         self.preview_listbox.bind("<<ListboxSelect>>", self._on_preview_select)
 
         preview_button_row = tk.Frame(preview_panel, bg=COLORS["surface"])
-        preview_button_row.grid(row=2, column=0, sticky="ew", pady=(8, 0))
+        preview_button_row.grid(row=2, column=0, sticky="ew", pady=(6, 0))
         self.preview_play_button = make_button(
             preview_button_row,
             UI_TEXT["button_preview_play"],
@@ -720,7 +735,7 @@ class MusicOtookuApp:
         self.preview_refresh_button.pack(side="left", padx=(8, 0))
 
         favorite_button_row = tk.Frame(preview_panel, bg=COLORS["surface"])
-        favorite_button_row.grid(row=3, column=0, sticky="ew", pady=(8, 0))
+        favorite_button_row.grid(row=3, column=0, sticky="ew", pady=(6, 0))
         self.favorite_add_button = make_button(
             favorite_button_row,
             UI_TEXT["button_favorite_add"],
@@ -749,10 +764,10 @@ class MusicOtookuApp:
             anchor="w",
             wraplength=320,
             justify="left",
-        ).grid(row=4, column=0, sticky="ew", pady=(8, 0))
+        ).grid(row=4, column=0, sticky="ew", pady=(6, 0))
 
         bridge_panel = tk.Frame(preview_panel, bg=COLORS["surface"])
-        bridge_panel.grid(row=5, column=0, sticky="ew", pady=(12, 0))
+        bridge_panel.grid(row=5, column=0, sticky="ew", pady=(8, 0))
         bridge_panel.grid_columnconfigure(1, weight=1)
 
         tk.Label(
@@ -837,7 +852,7 @@ class MusicOtookuApp:
 
     def _build_loop_controls(self, parent: tk.Widget) -> None:
         panel = tk.Frame(parent, bg=COLORS["surface"])
-        panel.grid(row=5, column=0, sticky="ew", padx=16, pady=(0, 14))
+        panel.grid(row=5, column=0, sticky="ew", padx=16, pady=(0, 10))
         panel.grid_columnconfigure(1, weight=1)
 
         tk.Label(
@@ -971,7 +986,7 @@ class MusicOtookuApp:
 
     def _build_system(self, parent: tk.Widget) -> None:
         system_panel = make_panel(parent, COLORS)
-        system_panel.pack(fill="x", pady=(14, 0))
+        system_panel.pack(fill="x", pady=(10, 0))
         system_panel.grid_columnconfigure(0, weight=1)
 
         header = tk.Frame(system_panel, bg=COLORS["surface"])
@@ -1007,7 +1022,7 @@ class MusicOtookuApp:
 
         self.log_text = tk.Text(
             system_panel,
-            height=5,
+            height=4,
             bg=COLORS["surface_soft"],
             fg=COLORS["text"],
             insertbackground=COLORS["text"],
@@ -1467,7 +1482,10 @@ class MusicOtookuApp:
             self.preview_listbox.insert("end", item.label)
 
         if self.preview_items:
+            self.preview_listbox.selection_clear(0, "end")
             self.preview_listbox.selection_set(0)
+            self.preview_listbox.activate(0)
+            self.preview_listbox.see(0)
             self.preview_status_var.set(UI_TEXT["preview_ready"])
             if log_ready:
                 self._append_log(UI_TEXT["log_preview_ready_brain"])
@@ -1517,12 +1535,20 @@ class MusicOtookuApp:
         if not item:
             self.preview_status_var.set(UI_TEXT["preview_no_audio"])
             return
+        actual_path = item.path.resolve()
+        exists_text = "yes" if actual_path.exists() else "no"
+        self._append_log(UI_TEXT["log_preview_file"].format(label=item.label))
+        self._append_log(UI_TEXT["log_preview_actual"].format(path=actual_path))
+        self._append_log(UI_TEXT["log_preview_exists"].format(exists=exists_text))
+        self._append_log(UI_TEXT["log_preview_size"].format(size=preview_size_text(actual_path)))
         self.preview_status_var.set(UI_TEXT["preview_playing_start"])
         self.preview_play_button.configure(text=UI_TEXT["button_preview_playing"], state="disabled")
         self.root.update_idletasks()
-        result = self.preview_player.play(item.path)
+        result = self.preview_player.play(actual_path)
         if result.success:
-            self.preview_status_var.set(UI_TEXT["preview_playing"].format(name=item.path.name))
+            self._append_log(UI_TEXT["log_preview_mode"].format(mode=result.mode))
+            display_name = result.path.name if result.path else item.path.name
+            self.preview_status_var.set(UI_TEXT["preview_playing"].format(name=display_name))
             self._append_log(UI_TEXT["log_preview_playing"])
             if result.mode == "external":
                 self.preview_status_var.set(UI_TEXT["preview_external"])
@@ -1532,7 +1558,7 @@ class MusicOtookuApp:
                 self.preview_playing = True
         else:
             self.preview_status_var.set(UI_TEXT["preview_failed"])
-            self._append_log(UI_TEXT["log_preview_failed"])
+            self._append_log(UI_TEXT["log_preview_failed"].format(reason=result.message))
             self.preview_playing = False
         self._sync_preview_controls()
 
@@ -1548,7 +1574,7 @@ class MusicOtookuApp:
                 self._append_log(UI_TEXT["log_preview_stopped"])
         else:
             self.preview_status_var.set(UI_TEXT["preview_failed"])
-            self._append_log(UI_TEXT["log_preview_failed"])
+            self._append_log(UI_TEXT["log_preview_failed"].format(reason=result.message))
         self._sync_preview_controls()
 
     def add_selected_favorite(self) -> None:
@@ -1768,6 +1794,8 @@ def run_smoke_test() -> int:
         play_result = preview_player.play(preview_wav)
         if not play_result.success:
             raise AssertionError(f"preview wav did not play safely: {play_result.message}")
+        if os.name == "nt" and play_result.mode != "winsound":
+            raise AssertionError(f"preview wav did not use winsound: {play_result.mode}")
         stop_result = preview_player.stop()
         if not stop_result.success:
             raise AssertionError(f"preview stop failed: {stop_result.message}")

@@ -127,7 +127,13 @@ Shorts / Long / Ambient / Work 用に分類し、補助脳が使用イメージ�
 
 生成後は `generated_preview.wav` を優先して再生対象にします。
 
-`pygame` が利用できる場合は mp3 / wav をアプリ内で再生できます。`pygame` がない場合は wav をWindows標準の `winsound` で優先再生し、mp3は同名wavがある場合はそちらを再生します。既定プレイヤーで開くのは最後のfallbackです。
+Windowsでは `generated_preview.wav` を `winsound` で最優先再生します。`pygame` が利用できる場合は mp3 / wav のアプリ内再生にも使います。mp3や既定プレイヤー起動は後段のfallbackです。
+
+## Preview Troubleshooting
+
+Playして音が聞こえない場合は、Previewログに表示されるファイル存在・サイズ・再生方式を確認してください。
+
+Windowsでは `generated_preview.wav` を `winsound` で優先再生します。
 
 FFmpeg / FFprobe の実行時は、Windowsで黒いコンソールウィンドウが出にくいよう `CREATE_NO_WINDOW` を指定しています。
 

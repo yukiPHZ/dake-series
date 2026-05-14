@@ -35,6 +35,8 @@ class PreviewResult:
     success: bool
     mode: str
     message: str
+    path: Path | None = None
+    size_bytes: int = 0
 
 
 def find_audio_preview_items(project_root: Path) -> list[AudioPreviewItem]:
@@ -89,11 +91,34 @@ class AudioPreviewPlayer:
         return self._pygame
 
     def play(self, path: Path) -> PreviewResult:
-        path = Path(path)
-        if not path.exists() or path.suffix.lower() not in AUDIO_PREVIEW_EXTENSIONS:
-            return PreviewResult(False, "missing", "audio file was not found")
+        path = Path(path).resolve()
+        if not path.exists():
+            return PreviewResult(False, "missing", "audio file was not found", path=path)
+        if path.suffix.lower() not in AUDIO_PREVIEW_EXTENSIONS:
+            return PreviewResult(False, "unsupported", "audio extension is not supported", path=path)
+        size_bytes = path.stat().st_size
+        if size_bytes <= 0:
+            return PreviewResult(False, "empty", "audio file size is 0", path=path, size_bytes=size_bytes)
 
         self.stop()
+
+        winsound_error = ""
+        if os.name == "nt" and path.suffix.lower() == ".wav":
+            try:
+                import winsound
+
+                winsound.PlaySound(str(path), winsound.SND_FILENAME | winsound.SND_ASYNC)
+                self._mode = "winsound"
+                return PreviewResult(True, "winsound", "playing with winsound", path=path, size_bytes=size_bytes)
+            except Exception as exc:
+                winsound_error = f"winsound failed: {exc}"
+
+        if path.suffix.lower() == ".mp3":
+            sibling_wav = path.with_suffix(".wav")
+            generated_wav = path.parent / "generated_preview.wav"
+            for wav_candidate in (sibling_wav, generated_wav):
+                if wav_candidate.exists() and wav_candidate.stat().st_size > 0:
+                    return self.play(wav_candidate)
 
         pygame = self._load_pygame()
         if pygame is not None:
@@ -101,29 +126,12 @@ class AudioPreviewPlayer:
                 pygame.mixer.music.load(str(path))
                 pygame.mixer.music.play()
                 self._mode = "pygame"
-                return PreviewResult(True, "pygame", "playing with pygame")
+                return PreviewResult(True, "pygame", "playing with pygame", path=path, size_bytes=size_bytes)
             except Exception as exc:
                 self._mode = ""
-                pygame_error = str(exc)
+                pygame_error = f"pygame failed: {exc}"
         else:
             pygame_error = "pygame unavailable"
-
-        if os.name == "nt" and path.suffix.lower() == ".wav":
-            try:
-                import winsound
-
-                winsound.PlaySound(str(path), winsound.SND_FILENAME | winsound.SND_ASYNC)
-                self._mode = "winsound"
-                return PreviewResult(True, "winsound", "playing with winsound")
-            except Exception as exc:
-                pygame_error = f"{pygame_error}; winsound failed: {exc}"
-
-        if path.suffix.lower() == ".mp3":
-            sibling_wav = path.with_suffix(".wav")
-            generated_wav = path.parent / "generated_preview.wav"
-            for wav_candidate in (sibling_wav, generated_wav):
-                if wav_candidate.exists():
-                    return self.play(wav_candidate)
 
         try:
             if os.name == "nt":
@@ -131,9 +139,11 @@ class AudioPreviewPlayer:
             else:
                 webbrowser.open(path.resolve().as_uri())
             self._mode = "external"
-            return PreviewResult(True, "external", "opened in default player")
+            message = "opened in default player"
+            return PreviewResult(True, "external", message, path=path, size_bytes=size_bytes)
         except Exception as exc:
-            return PreviewResult(False, "failed", f"{pygame_error}; external player failed: {exc}")
+            details = "; ".join(part for part in (winsound_error, pygame_error, f"external player failed: {exc}") if part)
+            return PreviewResult(False, "failed", details, path=path, size_bytes=size_bytes)
 
     def stop(self) -> PreviewResult:
         if self._mode == "pygame" and self._pygame is not None:
