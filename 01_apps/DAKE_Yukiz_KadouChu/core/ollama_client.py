@@ -34,11 +34,42 @@ def _get_models(timeout: int = 3) -> list[str]:
     return [str(model.get("name")) for model in models if model.get("name")]
 
 
+def _select_generation_model() -> str:
+    config = load_config()
+    preferred = str(config.get("ollama_model") or "").strip()
+    if preferred:
+        return preferred
+    models = _get_models()
+    generation_models = [
+        model
+        for model in models
+        if "embed" not in model.lower() and "nomic-embed" not in model.lower()
+    ]
+    return generation_models[0] if generation_models else (models[0] if models else "")
+
+
 def _read_transcript_excerpt(path: Path | None, limit: int = 1200) -> str:
     if not path or not path.exists():
         return ""
     text = path.read_text(encoding="utf-8", errors="replace").strip()
     return text[:limit]
+
+
+def generate_ollama_text(prompt: str, timeout: int = 60) -> dict[str, Any]:
+    if not is_ollama_api_ready():
+        return {"ok": False, "text": "", "model": "", "reason": "Ollama API is not ready."}
+
+    model = _select_generation_model()
+    if not model:
+        return {"ok": False, "text": "", "model": "", "reason": "No Ollama model is available."}
+
+    try:
+        response = _post_json("/api/generate", {"model": model, "prompt": prompt, "stream": False}, timeout=timeout)
+    except Exception as exc:
+        return {"ok": False, "text": "", "model": model, "reason": str(exc)}
+
+    text = str(response.get("response") or "").strip()
+    return {"ok": bool(text), "text": text, "model": model, "reason": "" if text else "Empty Ollama response."}
 
 
 def _fallback_metadata(source_name: str) -> dict[str, Any]:
@@ -83,10 +114,7 @@ def build_metadata_draft(
     if not is_ollama_api_ready():
         return fallback
 
-    config = load_config()
-    models = _get_models()
-    preferred = str(config.get("ollama_model") or "").strip()
-    model = preferred if preferred else (models[0] if models else "")
+    model = _select_generation_model()
     if not model:
         return fallback
 

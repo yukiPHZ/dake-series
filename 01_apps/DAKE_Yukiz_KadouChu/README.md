@@ -183,6 +183,26 @@ Ollamaが `READY` の場合は localhost のローカルLLMで、短い日本語
 
 この機能はYouTubeへ自動投稿しません。自動公開もしません。OpenAI APIや外部APIへ動画・文字起こしを送りません。元動画は変更せず、出力は `data/outputs/packages` 配下だけに作成します。
 
+## Phase 2.0 補助脳レビュー
+
+`Run Assistant Review`, `Open Review File` を追加しました。直近で生成した投稿パッケージ、または `Select Package Folder` で選んだ `data/outputs/packages` 配下のpackageを読み取り、package直下に `assistant_review.md` を作成します。
+
+レビューは以下のファイルから、存在するものだけを読みます。欠けているファイルがあっても処理は止まりません。
+
+- `transcript.txt`
+- `transcript_unavailable.txt`
+- `shorts_candidates.json`
+- `metadata/title_ideas.txt`
+- `metadata/description_draft.txt`
+- `metadata/tags.txt`
+- `metadata/upload_notes.txt`
+- `media_info.json`
+- `media_info_unavailable.json`
+
+`assistant_review.md` には、Summary、Atmosphere、Recommended Shorts、Title Direction、Description Notes、Before Publish、Assistant Note を出力します。Ollamaが利用できる場合は、長いtranscriptを先頭・中盤・末尾の抜粋に抑えてローカルLLMへ渡し、レビュー生成を試します。Ollamaが利用できない場合や応答に失敗した場合は、既存ファイルの有無、Shorts候補数、タイトル案、media_infoの有無を元に固定テンプレートでレビューを作成します。
+
+補助脳レビューは提案だけを行います。YouTubeへ自動投稿せず、自動公開もせず、最終判断はユーザーが行います。OpenAI APIや外部APIへ投稿パッケージ内容を送りません。
+
 ## Phase 2候補
 
 - YouTube LIVE URLからyt-dlpで本取得

@@ -68,6 +68,11 @@ LOG_TEXT = {
     "posting_titles_ready": "補助脳：タイトル案を整えました。",
     "posting_ollama_fallback": "補助脳：ローカル補助脳の応答がないため、固定テンプレートで整えました。",
     "posting_ready": "補助脳：出せる形になりました。",
+    "review_package_read": "補助脳：投稿パッケージを読みました。",
+    "review_atmosphere": "補助脳：動画の空気を整理しています。",
+    "review_shorts": "補助脳：Shorts候補を見直しました。",
+    "review_created": "補助脳：レビューを作成しました。",
+    "review_template_fallback": "補助脳：ローカル補助脳の応答がないため、固定レビューで整えました。",
 }
 
 SHORTS_REASON_TEXT = {

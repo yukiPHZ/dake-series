@@ -40,6 +40,7 @@ from core.cli_checker import (
     fetch_youtube_metadata,
     run_system_check,
 )
+from core.assistant_review import find_latest_package_dir, run_assistant_review
 from core.ffmpeg_runner import create_preview_clip
 from core.first_video_test import first_video_test_dir, run_first_video_test
 from core.media_probe import MediaInfo, probe_media
@@ -99,6 +100,19 @@ UI_TEXT = {
     "package_failed": "FAILED",
     "package_output_unavailable": "Package output is not ready yet.",
     "generated": "Generated",
+    "assistant_review": "ASSISTANT REVIEW",
+    "select_package_folder": "Select Package Folder",
+    "run_assistant_review": "Run Assistant Review",
+    "open_review_file": "Open Review File",
+    "review_ready_hint": "Generate a posting package, then run the assistant review.",
+    "review_requires_package": "Posting package is not ready yet.",
+    "review_running": "Status: RUNNING",
+    "review_completed": "COMPLETED",
+    "review_failed": "FAILED",
+    "review": "Review",
+    "review_file_unavailable": "Review file is not ready yet.",
+    "open_review_failed": "Could not open review file.",
+    "files_read": "Files read",
     "transcription_short": "Transcription",
     "shorts": "Shorts",
     "ollama": "Ollama",
@@ -176,14 +190,17 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.test_video_path: Path | None = None
         self.test_output_dir: Path | None = None
         self.package_output_dir: Path | None = None
+        self.review_file_path: Path | None = None
         self.first_test_running = False
         self.package_running = False
+        self.review_running = False
         self.worker_running = False
 
         self.file_var = ctk.StringVar(value=UI_TEXT["no_video_selected"])
         self.test_file_var = ctk.StringVar(value=UI_TEXT["test_not_selected"])
         self.first_test_summary_var = ctk.StringVar(value=UI_TEXT["first_test_ready_hint"])
         self.package_summary_var = ctk.StringVar(value=UI_TEXT["package_ready_hint"])
+        self.review_summary_var = ctk.StringVar(value=UI_TEXT["review_ready_hint"])
         self.youtube_var = ctk.StringVar(value="")
         self.youtube_status_var = ctk.StringVar(value=UI_TEXT["metadata_fetch_optional"])
         self.system_check_status_var = ctk.StringVar(value=UI_TEXT["system_check_not_run"])
@@ -508,7 +525,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
 
         self.media_box = ctk.CTkTextbox(
             body,
-            height=230,
+            height=170,
             fg_color=COLORS["field"],
             border_width=1,
             border_color=COLORS["line"],
@@ -559,6 +576,56 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         )
         self.open_package_button.grid(row=2, column=1, sticky="ew", padx=(4, 12), pady=(0, 10))
 
+        review_box = ctk.CTkFrame(body, fg_color=COLORS["panel_alt"], border_width=1, border_color=COLORS["line"], corner_radius=8)
+        review_box.grid(row=3, column=0, sticky="ew", pady=(12, 0))
+        review_box.grid_columnconfigure(0, weight=1)
+        review_box.grid_columnconfigure(1, weight=1)
+        ctk.CTkLabel(
+            review_box,
+            text=UI_TEXT["assistant_review"],
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
+            text_color=COLORS["accent_soft"],
+        ).grid(row=0, column=0, columnspan=2, sticky="w", padx=12, pady=(10, 4))
+        ctk.CTkLabel(
+            review_box,
+            textvariable=self.review_summary_var,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            text_color=COLORS["text"],
+            wraplength=330,
+            justify="left",
+        ).grid(row=1, column=0, columnspan=2, sticky="ew", padx=12, pady=(0, 8))
+        self.select_package_button = ctk.CTkButton(
+            review_box,
+            text=UI_TEXT["select_package_folder"],
+            command=self._select_package_folder,
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+        )
+        self.select_package_button.grid(row=2, column=0, sticky="ew", padx=(12, 4), pady=4)
+        self.assistant_review_button = ctk.CTkButton(
+            review_box,
+            text=UI_TEXT["run_assistant_review"],
+            command=self._start_assistant_review,
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+        )
+        self.assistant_review_button.grid(row=2, column=1, sticky="ew", padx=(4, 12), pady=4)
+        self.open_review_button = ctk.CTkButton(
+            review_box,
+            text=UI_TEXT["open_review_file"],
+            command=self._open_review_file,
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+            state="disabled",
+        )
+        self.open_review_button.grid(row=3, column=0, columnspan=2, sticky="ew", padx=12, pady=(4, 10))
+
         self.open_button = ctk.CTkButton(
             body,
             text=UI_TEXT["open_output"],
@@ -569,7 +636,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             text_color=COLORS["text"],
             state="disabled",
         )
-        self.open_button.grid(row=3, column=0, sticky="ew", pady=(12, 0))
+        self.open_button.grid(row=4, column=0, sticky="ew", pady=(12, 0))
         return panel
 
     def _build_system_panel(self, parent: ctk.CTkFrame) -> ctk.CTkFrame:
@@ -658,9 +725,12 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.current_project = None
         self.current_media_info = None
         self.package_output_dir = None
+        self.review_file_path = None
         self.open_button.configure(state="disabled")
         self.open_package_button.configure(state="disabled")
+        self.open_review_button.configure(state="disabled")
         self.package_summary_var.set(UI_TEXT["package_ready_hint"])
+        self.review_summary_var.set(UI_TEXT["review_ready_hint"])
         self._log(LOG_TEXT["source_detected"])
         self._probe_selected_video()
 
@@ -679,6 +749,39 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.test_file_var.set(f"{UI_TEXT['test_selected']}: {path.name}")
         self.first_test_summary_var.set(UI_TEXT["first_test_ready_hint"])
         self._log(LOG_TEXT["source_detected"])
+
+    def _select_package_folder(self) -> None:
+        initial_dir = packages_dir()
+        initial_dir.mkdir(parents=True, exist_ok=True)
+        folder = filedialog.askdirectory(
+            title=UI_TEXT["select_package_folder"],
+            initialdir=str(initial_dir),
+        )
+        if not folder:
+            return
+        package_dir = Path(folder)
+        try:
+            package_dir.resolve().relative_to(packages_dir().resolve())
+        except ValueError:
+            messagebox.showinfo(APP_NAME, UI_TEXT["review_requires_package"])
+            return
+        self.package_output_dir = package_dir
+        self.output_var.set(str(package_dir))
+        self.current_project = ProjectPaths.from_root(package_dir)
+        self.open_package_button.configure(state="normal")
+        self.open_button.configure(state="normal")
+        review_path = package_dir / "assistant_review.md"
+        self.review_file_path = review_path if review_path.exists() else None
+        self.open_review_button.configure(state="normal" if self.review_file_path else "disabled")
+        self.review_summary_var.set(
+            "\n".join(
+                [
+                    UI_TEXT["assistant_review"],
+                    f"{UI_TEXT['package']}: {package_dir}",
+                    f"{UI_TEXT['review']}: {review_path if review_path.exists() else '--'}",
+                ]
+            )
+        )
 
     def _start_first_video_test(self) -> None:
         if self.first_test_running:
@@ -774,6 +877,64 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.events.put({"type": "posting_package_result", "result": result})
             except Exception as exc:
                 self.events.put({"type": "posting_package_error", "message": str(exc)})
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _resolve_package_for_review(self) -> Path | None:
+        if self.package_output_dir and self.package_output_dir.exists():
+            return self.package_output_dir
+        latest = find_latest_package_dir()
+        if latest is not None:
+            self.package_output_dir = latest
+            return latest
+        return None
+
+    def _start_assistant_review(self) -> None:
+        if self.review_running:
+            return
+        package_dir = self._resolve_package_for_review()
+        if package_dir is None:
+            messagebox.showinfo(APP_NAME, UI_TEXT["review_requires_package"])
+            return
+
+        self.review_running = True
+        self.assistant_review_button.configure(state="disabled")
+        self.open_review_button.configure(state="disabled")
+        self.review_summary_var.set(
+            "\n".join(
+                [
+                    UI_TEXT["assistant_review"],
+                    UI_TEXT["review_running"],
+                    f"{UI_TEXT['package']}: {package_dir}",
+                ]
+            )
+        )
+        self.status_var.set(UI_TEXT["running"])
+        self.progress_var.set(0.08)
+        self._set_eta(45)
+
+        def worker() -> None:
+            try:
+                system = run_system_check()
+                self.events.put(
+                    {
+                        "type": "cli",
+                        "statuses": system["cli"],
+                        "nvenc": system["nvenc"],
+                        "gpu": system["gpu"],
+                        "install_guide": system["install_guide"],
+                        "install_commands": system["install_commands"],
+                    }
+                )
+                statuses = system["cli"]
+                result = run_assistant_review(
+                    package_dir=package_dir,
+                    ollama_ready=statuses.get("ollama", {}).get("state") == "READY",
+                    log=lambda message: self.events.put({"type": "log", "message": message}),
+                )
+                self.events.put({"type": "assistant_review_result", "result": result})
+            except Exception as exc:
+                self.events.put({"type": "assistant_review_error", "message": str(exc)})
 
         threading.Thread(target=worker, daemon=True).start()
 
@@ -1000,6 +1161,21 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         except Exception as exc:
             messagebox.showerror(APP_NAME, f"{UI_TEXT['package_output_unavailable']}\n{exc}")
 
+    def _open_review_file(self) -> None:
+        review_path = self.review_file_path
+        if review_path is None:
+            package_dir = self._resolve_package_for_review()
+            if package_dir is not None:
+                candidate = package_dir / "assistant_review.md"
+                review_path = candidate if candidate.exists() else None
+        if review_path is None or not review_path.exists():
+            messagebox.showinfo(APP_NAME, UI_TEXT["review_file_unavailable"])
+            return
+        try:
+            os.startfile(str(review_path))  # type: ignore[attr-defined]
+        except Exception as exc:
+            messagebox.showerror(APP_NAME, f"{UI_TEXT['open_review_failed']}\n{exc}")
+
     def _open_test_output(self) -> None:
         output_dir = self.test_output_dir or first_video_test_dir()
         if not output_dir.exists():
@@ -1099,6 +1275,22 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             lines.extend(["", message])
         return "\n".join(lines)
 
+    def _format_assistant_review_summary(self, result: dict[str, object]) -> str:
+        package_dir = str(result.get("package_dir") or "")
+        review_path = str(result.get("review_path") or "")
+        files_read = result.get("files_read")
+        read_count = len(files_read) if isinstance(files_read, list) else 0
+        return "\n".join(
+            [
+                UI_TEXT["assistant_review"],
+                f"{UI_TEXT['package_status']}: {result.get('status', UI_TEXT['review_failed'])}",
+                f"{UI_TEXT['package']}: {package_dir or '--'}",
+                f"{UI_TEXT['review']}: {review_path or '--'}",
+                f"{UI_TEXT['ollama']}: {UI_TEXT['used'] if result.get('used_ollama') else UI_TEXT['template_fallback']}",
+                f"{UI_TEXT['files_read']}: {read_count}",
+            ]
+        )
+
     def _drain_events(self) -> None:
         while True:
             try:
@@ -1158,10 +1350,21 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             if isinstance(result, dict):
                 package_dir = Path(str(result.get("package_dir") or packages_dir()))
                 self.package_output_dir = package_dir
+                self.review_file_path = None
                 self.package_summary_var.set(self._format_posting_package_summary(result))
+                self.review_summary_var.set(
+                    "\n".join(
+                        [
+                            UI_TEXT["assistant_review"],
+                            UI_TEXT["review_ready_hint"],
+                            f"{UI_TEXT['package']}: {package_dir}",
+                        ]
+                    )
+                )
                 self.output_var.set(str(package_dir))
                 self.current_project = ProjectPaths.from_root(package_dir)
                 self.open_package_button.configure(state="normal")
+                self.open_review_button.configure(state="disabled")
                 self.open_button.configure(state="normal")
                 self.progress_var.set(1.0)
                 status = str(result.get("status") or "")
@@ -1182,6 +1385,31 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             self.status_var.set(UI_TEXT["error"])
             self.step_vars[UI_TEXT["export_package"]].set(UI_TEXT["error"])
             self.package_summary_var.set(str(event.get("message", "")))
+        elif event_type == "assistant_review_result":
+            result = event.get("result", {})
+            if isinstance(result, dict):
+                review_path = Path(str(result.get("review_path") or ""))
+                package_dir = Path(str(result.get("package_dir") or packages_dir()))
+                self.package_output_dir = package_dir
+                self.review_file_path = review_path if review_path.exists() else None
+                self.review_summary_var.set(self._format_assistant_review_summary(result))
+                self.output_var.set(str(package_dir))
+                self.current_project = ProjectPaths.from_root(package_dir)
+                self.open_package_button.configure(state="normal")
+                self.open_review_button.configure(state="normal" if self.review_file_path else "disabled")
+                self.open_button.configure(state="normal")
+                self.progress_var.set(1.0)
+                self.status_var.set(UI_TEXT["complete"])
+                self.eta_var.set(UI_TEXT["review_completed"])
+                self.finish_var.set(UI_TEXT["complete"])
+                self._log(LOG_TEXT["complete"])
+            self.review_running = False
+            self.assistant_review_button.configure(state="normal")
+        elif event_type == "assistant_review_error":
+            self.review_running = False
+            self.assistant_review_button.configure(state="normal")
+            self.status_var.set(UI_TEXT["error"])
+            self.review_summary_var.set(str(event.get("message", "")))
         elif event_type == "youtube":
             self.youtube_status_var.set(str(event.get("message", "")))
         elif event_type == "progress":
