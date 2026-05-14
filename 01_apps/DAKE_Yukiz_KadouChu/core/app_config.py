@@ -106,6 +106,10 @@ LOG_TEXT = {
     "memory_organizing": "補助脳：過去の流れを整理しています。",
     "memory_ready": "補助脳：次の制作に使える形で残しました。",
     "memory_template_fallback": "補助脳：ローカル補助脳の応答がないため、メモリ要約を固定テンプレートで整えました。",
+    "recommend_memory_loading": "補助脳：過去の制作傾向を読み込んでいます。",
+    "recommend_borinef": "補助脳：最近のBORINEF系を参照しています。",
+    "recommend_ready": "補助脳：次の方向を整理しました。",
+    "recommend_template_fallback": "補助脳：ローカル補助脳の応答がないため、テンプレートでリコメンドを整えました。",
 }
 
 SHORTS_REASON_TEXT = {

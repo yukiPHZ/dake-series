@@ -106,3 +106,11 @@
 - packageごとの `projects/*.json` / `projects/*.md` を保存
 - 投稿package、selected、補助脳レビュー、Project Bridge結果を記録
 - Ollama READY時は過去制作傾向の要約を試し、失敗時はテンプレートで継続
+
+## Phase 3.1
+
+- 補助脳リコメンドを追加
+- `data/memory/` の履歴からBGM / Preset / タイトル / Shorts Directionを簡易解析
+- 現在package向けに `assistant_recommendation.md` を生成
+- Ollama READY時は推薦生成を試し、失敗時はテンプレートで継続
+- 補助脳は提案のみ行い、最終判断はユーザーが行う

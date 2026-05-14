@@ -337,6 +337,35 @@ data/memory/
 
 OllamaがREADYの場合は、`memory_index.json` と直近package情報をローカル補助脳に渡し、`memory_summary.md` の要約を試します。Ollamaが使えない場合や失敗した場合は固定テンプレートで継続します。OpenAI APIや外部APIは使いません。YouTube自動投稿、自動公開、元動画・元音源の変更も行いません。
 
+## Phase 3.1 補助脳リコメンド
+
+`ASSISTANT RECOMMEND` セクションを追加しました。`data/memory/` に保存された過去制作傾向を読み取り、現在の動画制作package、selected、Project Bridge、BGM、補助脳レビューに対して、次の方向を静かに提案します。
+
+入力:
+
+- `data/memory/memory_index.json`
+- `data/memory/memory_summary.md`
+- `data/memory/projects/*.json`
+- `data/memory/projects/*.md`
+- 現在packageの `selected/`
+- 現在packageの `metadata/`
+- `assistant_review.md`
+- `selected/upload/metadata_draft.txt`
+- `selected/bgm/`
+
+出力:
+
+```text
+package/
+└ assistant_recommendation.md
+```
+
+Memory簡易解析では、BGM出現回数、Preset出現回数、タイトル頻度、Shorts Direction頻度、関連Projectを集計します。`Refresh Memory` で読み込み状況を更新し、`Generate Recommendation` で `assistant_recommendation.md` を生成します。`Open Recommendation` で生成ファイルを開けます。
+
+OllamaがREADYの場合は、memory全文をそのまま渡さず、`memory_summary.md`、直近の `memory_index.json`、現在packageのmetadata、selected title / BGM、`assistant_review.md` を短くまとめてローカル補助脳へ渡します。Ollamaが使えない場合や失敗した場合でも、memory_indexの簡易解析からテンプレートで継続します。
+
+補助脳は提案だけを行います。外部API、OpenAI API、YouTube自動投稿、自動公開、元動画変更、memory削除は行いません。最終判断はユーザーが行います。
+
 ## Phase 2候補
 
 - YouTube LIVE URLからyt-dlpで本取得
