@@ -61,6 +61,19 @@ LOG_TEXT = {
     "whisper_loading": "補助脳：文字起こしモデルを読み込んでいます。",
     "whisper_saved": "補助脳：文字起こしを保存しました。",
     "whisper_unavailable": "補助脳：文字起こしが利用できませんでした。",
+    "posting_package_start": "補助脳：投稿用パッケージを作成しています。",
+    "posting_media_ready": "補助脳：投稿用の動画情報を保存しました。",
+    "posting_media_unavailable": "補助脳：動画情報は取得できませんでしたが、処理を続けます。",
+    "posting_shorts_ready": "補助脳：Shorts候補を投稿用に整えました。",
+    "posting_titles_ready": "補助脳：タイトル案を整えました。",
+    "posting_ollama_fallback": "補助脳：ローカル補助脳の応答がないため、固定テンプレートで整えました。",
+    "posting_ready": "補助脳：出せる形になりました。",
+}
+
+SHORTS_REASON_TEXT = {
+    "speech": "補助脳：発話と作業音が安定しています。",
+    "even": "補助脳：動画尺から均等に抽出しました。",
+    "duration_unknown": "補助脳：動画尺未取得のため、確認用の仮候補です。",
 }
 
 

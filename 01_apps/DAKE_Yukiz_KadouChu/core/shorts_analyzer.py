@@ -4,7 +4,7 @@ import json
 import re
 from pathlib import Path
 
-from core.app_config import seconds_to_timecode
+from core.app_config import SHORTS_REASON_TEXT, seconds_to_timecode
 from core.project_writer import ProjectPaths
 
 
@@ -52,14 +52,17 @@ def create_shorts_candidates(duration: float, srt_path: Path | None = None) -> l
     candidates: list[dict[str, object]] = []
     for index, start in enumerate(selected, start=1):
         end = min(duration, start + clip_length)
-        reason = "補助脳：発話と作業音が安定しています。" if starts else "補助脳：動画尺から均等に抽出しました。"
+        clip_duration = max(0.0, end - start)
+        reason = SHORTS_REASON_TEXT["speech"] if starts else SHORTS_REASON_TEXT["even"]
         candidates.append(
             {
                 "id": index,
                 "start": seconds_to_timecode(start),
                 "end": seconds_to_timecode(end),
+                "duration": seconds_to_timecode(clip_duration),
                 "start_seconds": round(start, 3),
                 "end_seconds": round(end, 3),
+                "duration_seconds": round(clip_duration, 3),
                 "reason": reason,
                 "status": "candidate",
             }

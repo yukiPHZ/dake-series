@@ -44,6 +44,7 @@ from core.ffmpeg_runner import create_preview_clip
 from core.first_video_test import first_video_test_dir, run_first_video_test
 from core.media_probe import MediaInfo, probe_media
 from core.ollama_client import build_metadata_draft
+from core.posting_package import generate_posting_package, packages_dir
 from core.project_writer import (
     ProjectPaths,
     create_project,
@@ -86,6 +87,24 @@ UI_TEXT = {
     "no_install_commands": "No missing CLI install commands.",
     "output": "OUTPUT",
     "open_output": "Open Output Folder",
+    "posting_package": "POSTING PACKAGE",
+    "generate_posting_package": "Generate Posting Package",
+    "open_package_folder": "Open Package Folder",
+    "package_status": "Status",
+    "package": "Package",
+    "package_ready_hint": "Select a video, then generate the YouTube posting package.",
+    "package_requires_video": "Select a video file first.",
+    "package_running": "Status: RUNNING",
+    "package_completed": "Completed",
+    "package_failed": "FAILED",
+    "package_output_unavailable": "Package output is not ready yet.",
+    "generated": "Generated",
+    "transcription_short": "Transcription",
+    "shorts": "Shorts",
+    "ollama": "Ollama",
+    "used": "used",
+    "template_fallback": "template fallback",
+    "open_output_failed": "Could not open output folder.",
     "system": "SYSTEM / CLI STATUS",
     "assistant_log": "補助脳 LOG",
     "ready": "READY",
@@ -94,6 +113,16 @@ UI_TEXT = {
     "error": "ERROR",
     "no_file": "Select a video file first.",
     "file_types": "Video files",
+    "select_video_dialog": "Select video file",
+    "supported_files": "Supported files: mp4, mov, mkv, webm",
+    "no_video_selected": "No video selected",
+    "metadata_fetch_optional": "Metadata fetch is optional in Phase 1.",
+    "system_check_not_run": "System check has not run yet.",
+    "eta_empty": "ETA --",
+    "eta_calculating": "ETA calculating...",
+    "finish_empty": "Expected Finish --",
+    "no_output": "No output yet",
+    "media_placeholder": "Media information will appear here.",
     "transcription": "Transcription",
     "scene_analysis": "Scene Analysis",
     "shorts_candidates": "Shorts Candidates",
@@ -146,18 +175,21 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.install_commands: list[str] = []
         self.test_video_path: Path | None = None
         self.test_output_dir: Path | None = None
+        self.package_output_dir: Path | None = None
         self.first_test_running = False
+        self.package_running = False
         self.worker_running = False
 
-        self.file_var = ctk.StringVar(value="No video selected")
+        self.file_var = ctk.StringVar(value=UI_TEXT["no_video_selected"])
         self.test_file_var = ctk.StringVar(value=UI_TEXT["test_not_selected"])
         self.first_test_summary_var = ctk.StringVar(value=UI_TEXT["first_test_ready_hint"])
+        self.package_summary_var = ctk.StringVar(value=UI_TEXT["package_ready_hint"])
         self.youtube_var = ctk.StringVar(value="")
-        self.youtube_status_var = ctk.StringVar(value="Metadata fetch is optional in Phase 1.")
-        self.system_check_status_var = ctk.StringVar(value="System check has not run yet.")
-        self.eta_var = ctk.StringVar(value="ETA --")
-        self.finish_var = ctk.StringVar(value="Expected Finish --")
-        self.output_var = ctk.StringVar(value="No output yet")
+        self.youtube_status_var = ctk.StringVar(value=UI_TEXT["metadata_fetch_optional"])
+        self.system_check_status_var = ctk.StringVar(value=UI_TEXT["system_check_not_run"])
+        self.eta_var = ctk.StringVar(value=UI_TEXT["eta_empty"])
+        self.finish_var = ctk.StringVar(value=UI_TEXT["finish_empty"])
+        self.output_var = ctk.StringVar(value=UI_TEXT["no_output"])
         self.status_var = ctk.StringVar(value=UI_TEXT["ready"])
         self.progress_var = ctk.DoubleVar(value=0.0)
 
@@ -485,7 +517,47 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             wrap="word",
         )
         self.media_box.grid(row=1, column=0, sticky="nsew")
-        set_textbox(self.media_box, "Media information will appear here.")
+        set_textbox(self.media_box, UI_TEXT["media_placeholder"])
+
+        package_box = ctk.CTkFrame(body, fg_color=COLORS["panel_alt"], border_width=1, border_color=COLORS["line"], corner_radius=8)
+        package_box.grid(row=2, column=0, sticky="ew", pady=(12, 0))
+        package_box.grid_columnconfigure(0, weight=1)
+        package_box.grid_columnconfigure(1, weight=1)
+        ctk.CTkLabel(
+            package_box,
+            text=UI_TEXT["posting_package"],
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
+            text_color=COLORS["accent_soft"],
+        ).grid(row=0, column=0, columnspan=2, sticky="w", padx=12, pady=(10, 4))
+        ctk.CTkLabel(
+            package_box,
+            textvariable=self.package_summary_var,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            text_color=COLORS["text"],
+            wraplength=330,
+            justify="left",
+        ).grid(row=1, column=0, columnspan=2, sticky="ew", padx=12, pady=(0, 8))
+        self.generate_package_button = ctk.CTkButton(
+            package_box,
+            text=UI_TEXT["generate_posting_package"],
+            command=self._start_posting_package,
+            height=30,
+            fg_color=COLORS["button"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+        )
+        self.generate_package_button.grid(row=2, column=0, sticky="ew", padx=(12, 4), pady=(0, 10))
+        self.open_package_button = ctk.CTkButton(
+            package_box,
+            text=UI_TEXT["open_package_folder"],
+            command=self._open_package_folder,
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+            state="disabled",
+        )
+        self.open_package_button.grid(row=2, column=1, sticky="ew", padx=(4, 12), pady=(0, 10))
 
         self.open_button = ctk.CTkButton(
             body,
@@ -497,7 +569,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             text_color=COLORS["text"],
             state="disabled",
         )
-        self.open_button.grid(row=2, column=0, sticky="ew", pady=(12, 0))
+        self.open_button.grid(row=3, column=0, sticky="ew", pady=(12, 0))
         return panel
 
     def _build_system_panel(self, parent: ctk.CTkFrame) -> ctk.CTkFrame:
@@ -571,21 +643,24 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
 
     def _select_video(self) -> None:
         file_path = filedialog.askopenfilename(
-            title="Select video file",
+            title=UI_TEXT["select_video_dialog"],
             filetypes=[(UI_TEXT["file_types"], "*.mp4 *.mov *.mkv *.webm"), ("All files", "*.*")],
         )
         if not file_path:
             return
         path = Path(file_path)
         if path.suffix.lower() not in VIDEO_EXTENSIONS:
-            messagebox.showwarning(APP_NAME, "Supported files: mp4, mov, mkv, webm")
+            messagebox.showwarning(APP_NAME, UI_TEXT["supported_files"])
             return
         self.selected_file = path
         self.file_var.set(str(path))
-        self.output_var.set("No output yet")
+        self.output_var.set(UI_TEXT["no_output"])
         self.current_project = None
         self.current_media_info = None
+        self.package_output_dir = None
         self.open_button.configure(state="disabled")
+        self.open_package_button.configure(state="disabled")
+        self.package_summary_var.set(UI_TEXT["package_ready_hint"])
         self._log(LOG_TEXT["source_detected"])
         self._probe_selected_video()
 
@@ -598,7 +673,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             return
         path = Path(file_path)
         if path.suffix.lower() not in VIDEO_EXTENSIONS:
-            messagebox.showwarning(APP_NAME, "Supported files: mp4, mov, mkv, webm")
+            messagebox.showwarning(APP_NAME, UI_TEXT["supported_files"])
             return
         self.test_video_path = path
         self.test_file_var.set(f"{UI_TEXT['test_selected']}: {path.name}")
@@ -643,6 +718,62 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.events.put({"type": "first_test_result", "result": result})
             except Exception as exc:
                 self.events.put({"type": "first_test_error", "message": str(exc)})
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _start_posting_package(self) -> None:
+        if self.package_running:
+            return
+        if self.selected_file is None:
+            messagebox.showinfo(APP_NAME, UI_TEXT["package_requires_video"])
+            return
+
+        self.package_running = True
+        self.generate_package_button.configure(state="disabled")
+        self.open_package_button.configure(state="disabled")
+        self.status_var.set(UI_TEXT["running"])
+        self.package_summary_var.set(
+            "\n".join(
+                [
+                    UI_TEXT["posting_package"],
+                    UI_TEXT["package_running"],
+                ]
+            )
+        )
+        self.progress_var.set(0.03)
+        self.step_vars[UI_TEXT["export_package"]].set(UI_TEXT["working"])
+        if self.current_media_info and self.current_media_info.duration > 0:
+            self._set_eta(estimate_processing_seconds(self.current_media_info.duration, is_faster_whisper_available()))
+        else:
+            self.eta_var.set(UI_TEXT["eta_calculating"])
+            self.finish_var.set(UI_TEXT["finish_empty"])
+
+        video_path = self.selected_file
+
+        def worker() -> None:
+            try:
+                system = run_system_check()
+                self.events.put(
+                    {
+                        "type": "cli",
+                        "statuses": system["cli"],
+                        "nvenc": system["nvenc"],
+                        "gpu": system["gpu"],
+                        "install_guide": system["install_guide"],
+                        "install_commands": system["install_commands"],
+                    }
+                )
+                statuses = system["cli"]
+                result = generate_posting_package(
+                    video_path=video_path,
+                    ffprobe_path=statuses.get("ffprobe", {}).get("path"),
+                    ollama_ready=statuses.get("ollama", {}).get("state") == "READY",
+                    log=lambda message: self.events.put({"type": "log", "message": message}),
+                    progress=lambda value: self.events.put({"type": "progress", "value": value}),
+                )
+                self.events.put({"type": "posting_package_result", "result": result})
+            except Exception as exc:
+                self.events.put({"type": "posting_package_error", "message": str(exc)})
 
         threading.Thread(target=worker, daemon=True).start()
 
@@ -857,7 +988,17 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         try:
             os.startfile(str(self.current_project.root))  # type: ignore[attr-defined]
         except Exception as exc:
-            messagebox.showerror(APP_NAME, f"Could not open output folder.\n{exc}")
+            messagebox.showerror(APP_NAME, f"{UI_TEXT['open_output_failed']}\n{exc}")
+
+    def _open_package_folder(self) -> None:
+        output_dir = self.package_output_dir or packages_dir()
+        if not output_dir.exists():
+            messagebox.showinfo(APP_NAME, UI_TEXT["package_output_unavailable"])
+            return
+        try:
+            os.startfile(str(output_dir))  # type: ignore[attr-defined]
+        except Exception as exc:
+            messagebox.showerror(APP_NAME, f"{UI_TEXT['package_output_unavailable']}\n{exc}")
 
     def _open_test_output(self) -> None:
         output_dir = self.test_output_dir or first_video_test_dir()
@@ -934,6 +1075,30 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             lines.append(message)
         return "\n".join(lines)
 
+    def _format_posting_package_summary(self, result: dict[str, object]) -> str:
+        package_dir = str(result.get("package_dir") or "")
+        generated = result.get("generated")
+        generated_items = [str(item) for item in generated] if isinstance(generated, list) else []
+        status = str(result.get("status") or UI_TEXT["package_failed"])
+        lines = [
+            UI_TEXT["posting_package"],
+            f"{UI_TEXT['package_status']}: {status}",
+            f"{UI_TEXT['package']}: {package_dir or '--'}",
+            f"{UI_TEXT['transcription_short']}: {result.get('transcription', 'UNKNOWN')}",
+            f"{UI_TEXT['shorts']}: {result.get('shorts_count', 0)}",
+            f"{UI_TEXT['ollama']}: {UI_TEXT['used'] if result.get('used_ollama') else UI_TEXT['template_fallback']}",
+            "",
+            f"{UI_TEXT['generated']}:",
+        ]
+        if generated_items:
+            lines.extend(f"- {Path(item).name}" for item in generated_items[:10])
+        else:
+            lines.append("- --")
+        message = str(result.get("message") or "")
+        if message:
+            lines.extend(["", message])
+        return "\n".join(lines)
+
     def _drain_events(self) -> None:
         while True:
             try:
@@ -988,6 +1153,35 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             self.first_test_button.configure(state="normal")
             self.status_var.set(UI_TEXT["error"])
             self.first_test_summary_var.set(str(event.get("message", "")))
+        elif event_type == "posting_package_result":
+            result = event.get("result", {})
+            if isinstance(result, dict):
+                package_dir = Path(str(result.get("package_dir") or packages_dir()))
+                self.package_output_dir = package_dir
+                self.package_summary_var.set(self._format_posting_package_summary(result))
+                self.output_var.set(str(package_dir))
+                self.current_project = ProjectPaths.from_root(package_dir)
+                self.open_package_button.configure(state="normal")
+                self.open_button.configure(state="normal")
+                self.progress_var.set(1.0)
+                status = str(result.get("status") or "")
+                if status == "COMPLETED":
+                    self.status_var.set(UI_TEXT["complete"])
+                    self.step_vars[UI_TEXT["export_package"]].set(UI_TEXT["done"])
+                    self.eta_var.set(UI_TEXT["package_completed"])
+                    self.finish_var.set(UI_TEXT["complete"])
+                    self._log(LOG_TEXT["complete"])
+                else:
+                    self.status_var.set(UI_TEXT["error"])
+                    self.step_vars[UI_TEXT["export_package"]].set(UI_TEXT["error"])
+            self.package_running = False
+            self.generate_package_button.configure(state="normal")
+        elif event_type == "posting_package_error":
+            self.package_running = False
+            self.generate_package_button.configure(state="normal")
+            self.status_var.set(UI_TEXT["error"])
+            self.step_vars[UI_TEXT["export_package"]].set(UI_TEXT["error"])
+            self.package_summary_var.set(str(event.get("message", "")))
         elif event_type == "youtube":
             self.youtube_status_var.set(str(event.get("message", "")))
         elif event_type == "progress":

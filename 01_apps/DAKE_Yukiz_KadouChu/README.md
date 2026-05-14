@@ -157,6 +157,32 @@ WranglerにはNode.js / npm が必要です。npmがない場合は先にNode.js
 
 元動画は絶対に変更しません。元動画と同じフォルダにも出力しません。すべて `data/outputs/first_video_test` 配下に保存します。FFmpeg / FFprobe が未導入でもアプリは落ちず、CLI導入補助へ進めます。
 
+## Phase 1.8 投稿パッケージ生成
+
+`Generate Posting Package`, `Open Package Folder` を追加しました。動画を1本選び、YouTube投稿前に人間が確認する素材一式を `data/outputs/packages/{YYYYMMDD_HHMM}_{safe_video_name}/` に作成します。
+
+出力フォルダ構成:
+
+```text
+data/outputs/packages/{YYYYMMDD_HHMM}_{safe_video_name}/
+├ media_info.json または media_info_unavailable.json
+├ transcript.txt / transcript.srt または transcript_unavailable.txt
+├ shorts_candidates.json
+├ metadata/
+│  ├ title_ideas.txt
+│  ├ description_draft.txt
+│  ├ tags.txt
+│  └ upload_notes.txt
+└ logs/
+   └ package_log.txt
+```
+
+`ffprobe` が使える場合は `media_info.json` を保存します。使えない場合は `media_info_unavailable.json` を作成し、処理は続行します。`faster-whisper` が使える場合は `transcript.txt` と `transcript.srt` を作成し、使えない場合は `transcript_unavailable.txt` を作成します。
+
+Ollamaが `READY` の場合は localhost のローカルLLMで、短い日本語タイトル案の生成を試します。Ollamaが応答しない場合や生成に失敗した場合は、固定テンプレートで `title_ideas.txt`, `description_draft.txt`, `tags.txt`, `upload_notes.txt` を整えます。
+
+この機能はYouTubeへ自動投稿しません。自動公開もしません。OpenAI APIや外部APIへ動画・文字起こしを送りません。元動画は変更せず、出力は `data/outputs/packages` 配下だけに作成します。
+
 ## Phase 2候補
 
 - YouTube LIVE URLからyt-dlpで本取得

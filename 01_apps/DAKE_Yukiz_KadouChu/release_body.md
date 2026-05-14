@@ -47,3 +47,12 @@
 - 先頭10秒の `test_clip.mp4` 生成に対応
 - NVENC優先、失敗時CPU `libx264` フォールバックに対応
 - `data/outputs/first_video_test/logs/test_log.txt` に結果を保存
+
+## Phase 1.8
+
+- 投稿パッケージ生成導線を追加
+- `data/outputs/packages/...` に投稿準備ファイル一式を出力
+- 文字起こし不可時も `transcript_unavailable.txt` で継続
+- Shorts候補、タイトル案、説明欄、タグ、確認メモを生成
+- Ollama不可時は固定テンプレートで継続
+- YouTube自動投稿と元動画変更は行わない

@@ -48,17 +48,27 @@ def _fallback_metadata(source_name: str) -> dict[str, Any]:
             "稼働中。夜に作る。",
             "止まらず作る。",
             "静かな作業机。",
+            "今日も、少し進める。",
         ],
         "description": (
             "制作記録です。\n\n"
-            "補助脳で素材を整理し、YouTube投稿前のメタデータ雛形を作成しました。\n"
-            "自動公開は行っていません。"
+            "この動画は、制作中の素材を投稿前に整理したものです。\n"
+            "補助脳でメディア情報、文字起こし、Shorts候補、投稿メモを整えました。\n\n"
+            "Links\n"
+            "PEAKHEADZ:\n"
+            "DAKE:\n"
+            "GitHub:\n\n"
+            "Memo\n"
+            f"- Source: {source_name}\n"
+            "- 自動公開はしていません。"
         ),
-        "tags": ["制作記録", "作業ログ", "Dakeユキズ稼働中", "補助脳", "PEAKHEADZ"],
+        "tags": ["稼働中", "DAKE", "PEAKHEADZ", "quiet workflow", "作業動画", "AI開発", "Python", "GitHub"],
         "notes": [
-            f"Source: {source_name}",
-            "Review title, description, tags, and preview clip before upload.",
-            "YouTube upload is not automated in Phase 1.",
+            "- 公開前にタイトル確認",
+            "- サムネ未生成",
+            "- BGM未適用",
+            "- Shorts候補は自動抽出のため要確認",
+            "- 自動公開はしていません",
         ],
     }
 
@@ -84,13 +94,15 @@ def build_metadata_draft(
     excerpt = _read_transcript_excerpt(transcript_path)
     prompt = (
         "You are the local assistant brain for a quiet GPU production console.\n"
-        "Create YouTube metadata draft in Japanese. Do not mention automatic upload.\n"
-        "Tone: quiet, practical, production-base feeling.\n\n"
+        "Create a YouTube posting package metadata draft in Japanese.\n"
+        "Do not mention automatic upload as a feature. The app never uploads automatically.\n"
+        "Tone: quiet, short, practical, production-base feeling, 稼働中。\n"
+        "Titles should be 3 to 7 short Japanese lines, not clickbait.\n\n"
         f"Project: {project_name}\n"
         f"Source: {source_name}\n"
         f"Duration: {duration}\n"
         f"Transcript excerpt:\n{excerpt}\n\n"
-        "Return JSON with keys: title_ideas (3 strings), description (string), tags (array), notes (array)."
+        "Return JSON with keys: title_ideas (3-7 strings), description (string with Links and Memo sections), tags (array), notes (array)."
     )
     try:
         response = _post_json("/api/generate", {"model": model, "prompt": prompt, "stream": False}, timeout=45)
