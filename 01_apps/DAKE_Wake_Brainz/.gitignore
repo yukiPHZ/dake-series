@@ -1,0 +1,9 @@
+build/
+dist/
+*.spec
+__pycache__/
+*.pyc
+config.json
+*_config.json
+data/config/*.json
+data/logs/
