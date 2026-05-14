@@ -2,13 +2,16 @@
 from __future__ import annotations
 
 import ctypes
+import math
 import os
 import queue
+import struct
 import sys
 import tempfile
 import threading
 import time
 import webbrowser
+import wave
 from pathlib import Path
 import tkinter as tk
 from tkinter import filedialog, font as tkfont, messagebox
@@ -26,7 +29,8 @@ from core.project_writer import (
     write_project_files,
     write_setup_needed,
 )
-from core.prompt_builder import fallback_direction
+from core.prompt_builder import MusicDirection, fallback_direction
+from core.video_bgm_pack import export_video_bgm_pack
 from ui.components import make_button, make_panel
 from ui.theme import APP_USER_MODEL_ID, COLORS, FONT_CANDIDATES, WINDOW_MIN_SIZE, WINDOW_SIZE
 
@@ -46,6 +50,7 @@ UI_TEXT = {
     "button_place_sound": "音を置く",
     "button_reference": "参照音源を選ぶ",
     "button_open_output": "出力フォルダを開く",
+    "button_video_bgm_pack": "Video BGM Pack を作る",
     "button_check": "環境チェック",
     "button_clear_reference": "参照を解除",
     "reference_none": "参照音源: なし",
@@ -79,6 +84,11 @@ UI_TEXT = {
     "status_complete": "整っています。",
     "status_ffmpeg_processing": "FFmpeg processing...",
     "status_audio_complete": "整いました。 Audio package created.",
+    "status_video_bgm_processing": "Video BGM Pack processing...",
+    "status_video_bgm_complete": "整いました。 Video BGM Pack exported.",
+    "status_video_bgm_failed": "Video BGM Pack failed. Loop Pack output is still available.",
+    "status_video_bgm_no_output": "出力フォルダがまだありません。",
+    "status_video_bgm_no_loop": "Loop Pack がまだありません。先に音を置いてください。",
     "status_ffmpeg_failed": "FFmpeg failed. Prompt output is still available.",
     "status_error": "処理を止めました。",
     "status_no_prompt": "言葉を入力してください。",
@@ -124,6 +134,11 @@ UI_TEXT = {
     "log_loop_file": "FFMPEG：{name} をloop_packへ書き出しました。",
     "log_loop_exported": "FFMPEG：Loop pack exported.",
     "log_loop_failed": "FFMPEG：Loop pack export failed.",
+    "log_video_brain": "補助脳：動画向け用途を整理しています。",
+    "log_video_classify": "Loop Pack を分類しています。",
+    "log_video_file": "Video BGM Pack：{name} を配置しました。",
+    "log_video_exported": "Video BGM Pack exported.",
+    "log_video_failed": "Video BGM Pack export failed.",
     "log_complete": "整っています。",
     "dialog_error_title": "確認",
     "dialog_open_error": "出力フォルダを開けませんでした。",
@@ -195,6 +210,19 @@ def open_output_folder(path: Path, dry_run: bool = False) -> bool:
         return False
 
 
+def write_generate_check_wav(path: Path, duration_seconds: float = 2.0) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    sample_rate = 44100
+    frames = int(sample_rate * duration_seconds)
+    with wave.open(str(path), "wb") as audio_file:
+        audio_file.setnchannels(1)
+        audio_file.setsampwidth(2)
+        audio_file.setframerate(sample_rate)
+        for index in range(frames):
+            sample = int(32767 * 0.12 * math.sin(2.0 * math.pi * 220.0 * index / sample_rate))
+            audio_file.writeframes(struct.pack("<h", sample))
+
+
 class MusicOtookuApp:
     def __init__(self, root: tk.Tk) -> None:
         ensure_data_dirs()
@@ -221,6 +249,7 @@ class MusicOtookuApp:
         self.environment_report: EnvironmentReport | None = None
         self.reference_audio_path: Path | None = None
         self.output_folder: Path | None = None
+        self.last_direction: MusicDirection | None = None
         self.log_lines: list[str] = []
         self.status_vars: dict[str, tk.StringVar] = {}
 
@@ -470,6 +499,17 @@ class MusicOtookuApp:
         self.open_button.grid(row=4, column=0, sticky="ew", padx=16, pady=(0, 14))
         self.open_button.configure(state="disabled")
 
+        self.video_bgm_button = make_button(
+            output_panel,
+            UI_TEXT["button_video_bgm_pack"],
+            self.start_video_bgm_pack,
+            COLORS,
+            self.fonts["button"],
+            primary=False,
+        )
+        self.video_bgm_button.grid(row=5, column=0, sticky="ew", padx=16, pady=(0, 14))
+        self.video_bgm_button.configure(state="disabled")
+
     def _build_loop_controls(self, parent: tk.Widget) -> None:
         panel = tk.Frame(parent, bg=COLORS["surface"])
         panel.grid(row=5, column=0, sticky="ew", padx=16, pady=(0, 14))
@@ -683,6 +723,18 @@ class MusicOtookuApp:
             self.clear_reference_button,
         ):
             button.configure(state=state)
+        if hasattr(self, "video_bgm_button"):
+            if busy:
+                self.video_bgm_button.configure(state="disabled")
+            else:
+                self._sync_video_bgm_button()
+
+    def _sync_video_bgm_button(self) -> None:
+        if not hasattr(self, "video_bgm_button"):
+            return
+        loop_pack = self.output_folder / "audio" / "loop_pack" if self.output_folder else None
+        enabled = bool(loop_pack and loop_pack.exists() and not self.processing)
+        self.video_bgm_button.configure(state="normal" if enabled else "disabled")
 
     def _start_environment_check(self) -> None:
         if self.processing:
@@ -830,6 +882,7 @@ class MusicOtookuApp:
                 self.worker_queue.put(("brain_response", UI_TEXT["local_brain_offline"]))
                 log(UI_TEXT["log_brain_template"])
 
+            self.worker_queue.put(("direction", direction))
             log(UI_TEXT["log_brain_arranged"])
             log(UI_TEXT["log_bpm"].format(bpm=direction.bpm))
             project_name = make_project_name(prompt)
@@ -939,14 +992,18 @@ class MusicOtookuApp:
                     self.output_folder = Path(folder_payload)
                     self.output_var.set(UI_TEXT["output_ready"].format(path=self.output_folder))
                     self.open_button.configure(state="normal")
+                    self._sync_video_bgm_button()
                     self.status_var.set(str(status_payload))
                 elif event == "error":
                     self.status_var.set(UI_TEXT["status_error"])
                     self._append_log(str(payload))
+                    self._sync_video_bgm_button()
                 elif event == "busy":
                     self._set_busy(bool(payload))
                 elif event == "brain_response":
                     self.brain_response_var.set(str(payload))
+                elif event == "direction":
+                    self.last_direction = payload
                 elif event == "reference_info":
                     self.reference_info_var.set(str(payload))
         except queue.Empty:
@@ -958,6 +1015,66 @@ class MusicOtookuApp:
             return
         if not open_output_folder(self.output_folder):
             messagebox.showinfo(UI_TEXT["dialog_error_title"], UI_TEXT["dialog_open_error"])
+
+    def start_video_bgm_pack(self) -> None:
+        if self.processing:
+            return
+        if not self.output_folder:
+            self.status_var.set(UI_TEXT["status_video_bgm_no_output"])
+            return
+        loop_pack = self.output_folder / "audio" / "loop_pack"
+        if not loop_pack.exists():
+            self.status_var.set(UI_TEXT["status_video_bgm_no_loop"])
+            return
+
+        prompt = self.prompt_text.get("1.0", "end").strip()
+        if not prompt or prompt == UI_TEXT["prompt_hint"]:
+            prompt = ""
+        direction = self.last_direction or fallback_direction(prompt)
+        self._set_busy(True)
+        self.status_var.set(UI_TEXT["status_video_bgm_processing"])
+        thread = threading.Thread(
+            target=self._video_bgm_pack_worker,
+            args=(self.output_folder, direction),
+            daemon=True,
+        )
+        thread.start()
+
+    def _video_bgm_pack_worker(self, output_folder: Path, direction: MusicDirection) -> None:
+        def log(message: str) -> None:
+            self.worker_queue.put(("log", message))
+
+        try:
+            report = self.environment_report or check_environment()
+            if self.environment_report is None:
+                self.worker_queue.put(("environment", report))
+
+            log(UI_TEXT["log_video_brain"])
+            result = export_video_bgm_pack(output_folder, direction, report.ollama_models)
+            if result.suggestion and result.suggestion.response_time is not None:
+                self.worker_queue.put(
+                    ("brain_response", UI_TEXT["local_brain_online"].format(seconds=result.suggestion.response_time))
+                )
+            elif result.suggestion and result.suggestion.source == "template":
+                self.worker_queue.put(("brain_response", UI_TEXT["local_brain_offline"]))
+
+            log(UI_TEXT["log_video_classify"])
+            for file_path in result.copied_files:
+                log(UI_TEXT["log_video_file"].format(name=file_path.name))
+
+            if result.success:
+                log(UI_TEXT["log_video_exported"])
+                log(UI_TEXT["log_complete"])
+                self.worker_queue.put(("done", (output_folder, UI_TEXT["status_video_bgm_complete"])))
+            else:
+                log(UI_TEXT["log_video_failed"])
+                if result.errors:
+                    log(result.errors[0])
+                self.worker_queue.put(("status", UI_TEXT["status_video_bgm_failed"]))
+        except Exception as exc:
+            self.worker_queue.put(("error", str(exc)))
+        finally:
+            self.worker_queue.put(("busy", False))
 
 
 def run_smoke_test() -> int:
@@ -1036,11 +1153,55 @@ def run_generate_check() -> int:
     for path in required:
         if not path.exists():
             raise AssertionError(f"missing {path}")
+    ffmpeg_status = report.status_for("ffmpeg")
+    video_result = None
+    if ffmpeg_status and ffmpeg_status.state == "ONLINE":
+        source_wav = paths.audio / "_generate_check_source.wav"
+        write_generate_check_wav(source_wav)
+        loop_options = LoopPackOptions(tags=("quiet", "midnight"))
+        loop_result = export_loop_pack(source_wav, paths.audio, loop_options)
+        if not loop_result.success:
+            raise AssertionError(f"loop pack failed: {loop_result.errors}")
+        write_loop_notes(
+            paths,
+            direction,
+            loop_options.tags,
+            loop_options.durations,
+            loop_options.fade_in,
+            loop_options.fade_out,
+            loop_options.volume_mode,
+            loop_result.files,
+        )
+        video_result = export_video_bgm_pack(paths.root, direction, report.ollama_models)
+        if not video_result.success:
+            raise AssertionError(f"video bgm pack failed: {video_result.errors}")
+        required_video = (
+            paths.root / "video_bgm_pack",
+            paths.root / "video_bgm_pack" / "bgm" / "shorts",
+            paths.root / "video_bgm_pack" / "bgm" / "long",
+            paths.root / "video_bgm_pack" / "bgm" / "ambient",
+            paths.root / "video_bgm_pack" / "bgm" / "work",
+            paths.root / "video_bgm_pack" / "notes" / "usage_note.txt",
+            paths.root / "video_bgm_pack" / "notes" / "shorts_ideas.txt",
+            paths.root / "video_bgm_pack" / "notes" / "long_video_ideas.txt",
+            paths.root / "video_bgm_pack" / "export_log.txt",
+        )
+        for path in required_video:
+            if not path.exists():
+                raise AssertionError(f"missing {path}")
     print(paths.root)
     if response_time is None:
         print("local brain: fallback")
     else:
         print(f"local brain: {direction.source} {response_time:.2f}s")
+    if video_result and video_result.suggestion:
+        if video_result.suggestion.response_time is None:
+            print(f"video bgm brain: {video_result.suggestion.source}")
+        else:
+            print(f"video bgm brain: {video_result.suggestion.source} {video_result.suggestion.response_time:.2f}s")
+        print(f"video bgm pack: {video_result.root}")
+    else:
+        print("video bgm pack: skipped")
     return 0
 
 

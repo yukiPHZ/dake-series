@@ -73,6 +73,17 @@ audio/
     quiet_loop_60s.wav
     quiet_loop_180s.mp3
     quiet_loop_180s.wav
+video_bgm_pack/
+  bgm/
+    shorts/
+    long/
+    ambient/
+    work/
+  notes/
+    usage_note.txt
+    shorts_ideas.txt
+    long_video_ideas.txt
+  export_log.txt
 prompts/
   music_direction.txt
   musicgen_prompt.txt
@@ -97,6 +108,12 @@ MusicGen未導入でも、手持ちのBGMや効果音を素材として整える
 音を置く は、既存音源から複数長さのループ素材を生成できます。
 
 動画編集前に、“置ける音素材棚”を作る用途を想定しています。
+
+## Video BGM Pack
+
+Loop Pack を、動画制作向けの用途別素材棚として整理できます。
+
+Shorts / Long / Ambient / Work 用に分類し、補助脳が使用イメージを生成します。
 
 ## AudioCraft / MusicGen について
 
