@@ -36,6 +36,8 @@ UI_TEXT = {
     "checkbox_auto_index": "Auto Index",
     "index_title": "Index Status",
     "system_title": "System Status",
+    "section_notifications": "Notifications",
+    "checkbox_enable_notifications": "Enable Notifications",
     "results_title": "Search Results",
     "preview_title": "Preview",
     "tags_title": "Related Tags",
@@ -135,7 +137,15 @@ UI_TEXT = {
     "log_watch_file": "WATCH LOG: {path}",
     "log_auto_index_queued": "AUTO INDEX QUEUED: index is already running",
     "phrase_memory_updated": "補助脳：記憶を更新しました。",
+    "log_notification_sent": "NOTIFY: {message}",
     "log_export": "EXPORT: {path}",
+    "notify_title": "補助脳",
+    "notify_memory_detected": "新しい記憶を検出しました。",
+    "notify_auto_index_complete": "記憶を更新しました。",
+    "notify_semantic_updated": "Semantic Searchを更新しました。",
+    "notify_chatgpt_import_complete": "ChatGPTの記憶を取り込みました。",
+    "notify_codex_import_complete": "Codex結果を記憶しました。",
+    "notify_handoff_complete": "{kind} handoffを生成しました。",
     "index_idle": "IDLE",
     "index_running": "RUNNING {current}/{total}",
     "index_embedding": "EMBEDDING CHUNKS...",
@@ -179,13 +189,14 @@ UI_TEXT = {
 
 
 def run_smoke_test() -> int:
-    from core.app_config import ensure_app_dirs
+    from core.app_config import AppConfig, ConfigStore, ensure_app_dirs
     from core.chatgpt_importer import import_chatgpt_export
     from core.codex_importer import import_codex_file, import_codex_text
     from core.db import BrainzDatabase
     from core.gpu_checker import check_gpu
     from core.handoff_writer import write_chatgpt_handoff, write_codex_handoff
     from core.indexer import Indexer
+    from core.notifications import NotificationQueue
     from core.ollama_client import check_ollama
     from core.ollama_embeddings import DEFAULT_EMBED_MODEL, check_embedding_status
     from core.search_engine import SearchEngine
@@ -197,6 +208,27 @@ def run_smoke_test() -> int:
 
     with tempfile.TemporaryDirectory(prefix="brainz_memory_") as tmp:
         root = Path(tmp)
+        default_config = ConfigStore(root / "default_config.json").load()
+        if not default_config.enable_notifications:
+            raise RuntimeError("notifications should default to enabled")
+        config_store = ConfigStore(root / "config.json")
+        config_store.save(AppConfig(memory_folder=str(root), watch_folder=str(root), auto_index_enabled=True, enable_notifications=False))
+        config_data = config_store.load()
+        if config_data.enable_notifications or not config_data.auto_index_enabled:
+            raise RuntimeError("notification config did not roundtrip")
+
+        notification_queue = NotificationQueue(history_limit=3)
+        for index in range(4):
+            notification_queue.push("BRAINZ", f"notification {index}")
+        popped = []
+        while notification_queue.pending_count:
+            item = notification_queue.pop()
+            if item:
+                notification_queue.remember(item)
+                popped.append(item.message)
+        if len(popped) != 4 or len(notification_queue.history) != 3:
+            raise RuntimeError("notification queue failed")
+
         (root / "ideas").mkdir(parents=True, exist_ok=True)
         (root / "ideas" / "quiet_blue.md").write_text(
             UI_TEXT["smoke_markdown"],
@@ -392,6 +424,8 @@ def run_smoke_test() -> int:
     print(f"memory_flow_semantic={flow_semantic.semantic_available}")
     print(f"watch_new_detected={len(watch_detection.changed_files)}")
     print(f"watch_update_detected={len(watch_update.changed_files)}")
+    print(f"notification_queue_history={len(notification_queue.history)}")
+    print(f"notifications_default={default_config.enable_notifications}")
     print(f"gpu_detected={gpu_status.gpu_detected}")
     return 0
 
@@ -451,6 +485,7 @@ def run_gui(launch_check: bool = False) -> int:
     from core.handoff_writer import write_chatgpt_handoff, write_codex_handoff
     from core.indexer import IndexProgress, Indexer
     from core.memory_flow import MemoryFlowItem, MemoryFlowResponse, short_summary, timeline_date
+    from core.notifications import NotificationItem, NotificationQueue
     from core.ollama_client import check_ollama
     from core.ollama_embeddings import check_embedding_status
     from core.search_engine import SearchEngine, SearchResponse
@@ -503,6 +538,7 @@ def run_gui(launch_check: bool = False) -> int:
             self.semantic_available = True
             self.semantic_search_var = ctk.BooleanVar(value=True)
             self.auto_index_var = ctk.BooleanVar(value=self.config_data.auto_index_enabled)
+            self.notifications_var = ctk.BooleanVar(value=self.config_data.enable_notifications)
             self.flow_sort_ascending = True
             self.flow_request_id = 0
             self.flow_cache: dict[tuple[int, bool, bool], MemoryFlowResponse] = {}
@@ -510,6 +546,8 @@ def run_gui(launch_check: bool = False) -> int:
             self.auto_index_active = False
             self.pending_auto_index_folder: Path | None = None
             self.watch_poll_interval_ms = 8000
+            self.notification_queue = NotificationQueue(history_limit=3)
+            self.notification_visible = False
 
             self._apply_icon()
             self._build_ui()
@@ -762,6 +800,20 @@ def run_gui(launch_check: bool = False) -> int:
                     anchor="w",
                 ).grid(row=index, column=0, sticky="ew", padx=16, pady=2)
 
+            self._section_title(left, UI_TEXT["section_notifications"], 24)
+            self.notifications_checkbox = ctk.CTkCheckBox(
+                left,
+                text=UI_TEXT["checkbox_enable_notifications"],
+                variable=self.notifications_var,
+                text_color=COLORS["muted"],
+                fg_color=COLORS["accent"],
+                hover_color=COLORS["accent_hover"],
+                border_color=COLORS["border"],
+                font=(self.status_font_family, FONT_SIZES["small"]),
+                command=self._toggle_notifications,
+            )
+            self.notifications_checkbox.grid(row=25, column=0, sticky="w", padx=16, pady=(0, 10))
+
             center = self._panel(self, 0)
             center.grid(row=1, column=1, sticky="nsew", padx=8, pady=(0, 12))
             center.grid_columnconfigure(0, weight=1)
@@ -900,6 +952,7 @@ def run_gui(launch_check: bool = False) -> int:
             bottom = self._panel(self, 0)
             bottom.grid(row=2, column=0, columnspan=3, sticky="ew", padx=20, pady=(0, 16))
             bottom.grid_columnconfigure(0, weight=1)
+            bottom.grid_columnconfigure(1, weight=0, minsize=300)
             self._section_title(bottom, UI_TEXT["log_title"], 0)
             self.log_box = ctk.CTkTextbox(
                 bottom,
@@ -912,6 +965,35 @@ def run_gui(launch_check: bool = False) -> int:
             self.log_box.grid(row=1, column=0, sticky="ew", padx=12, pady=(0, 12))
             self._relax_textbox_spacing(self.log_box, spacing1=2, spacing3=4)
             self.log_box.configure(state="disabled")
+
+            self.notification_frame = ctk.CTkFrame(
+                bottom,
+                fg_color=COLORS["notification"],
+                border_color=COLORS["notification_border"],
+                border_width=1,
+                corner_radius=6,
+            )
+            self.notification_frame.grid(row=0, column=1, rowspan=2, sticky="sew", padx=(0, 12), pady=(14, 12))
+            self.notification_frame.grid_columnconfigure(0, weight=1)
+            self.notification_title_var = ctk.StringVar(value=UI_TEXT["notify_title"])
+            self.notification_body_var = ctk.StringVar(value="")
+            ctk.CTkLabel(
+                self.notification_frame,
+                textvariable=self.notification_title_var,
+                text_color=COLORS["section"],
+                font=(self.font_family, FONT_SIZES["small"]),
+                anchor="w",
+            ).grid(row=0, column=0, sticky="ew", padx=14, pady=(10, 2))
+            ctk.CTkLabel(
+                self.notification_frame,
+                textvariable=self.notification_body_var,
+                text_color=COLORS["text"],
+                font=(self.reading_font_family, FONT_SIZES["body"]),
+                wraplength=260,
+                justify="left",
+                anchor="w",
+            ).grid(row=1, column=0, sticky="ew", padx=14, pady=(0, 12))
+            self.notification_frame.grid_remove()
 
         def _panel(self, parent, corner_radius: int):
             return ctk.CTkFrame(
@@ -1002,6 +1084,44 @@ def run_gui(launch_check: bool = False) -> int:
             if self.config_data.auto_index_enabled and self.config_data.watch_folder:
                 self._append_log(UI_TEXT["log_watch_initialized"])
                 self._append_log(UI_TEXT["log_watching_folder"].format(folder=self.config_data.watch_folder))
+
+        def _toggle_notifications(self) -> None:
+            self.config_data.enable_notifications = bool(self.notifications_var.get())
+            self.config_store.save(self.config_data)
+            if not self.config_data.enable_notifications:
+                self.notification_frame.grid_remove()
+                self.notification_visible = False
+
+        def _notify(self, message: str) -> None:
+            if not self.notifications_var.get():
+                return
+            self.notification_queue.push(UI_TEXT["notify_title"], message)
+            self._append_log(UI_TEXT["log_notification_sent"].format(message=message))
+            if not self.notification_visible:
+                self._show_next_notification()
+
+        def _show_next_notification(self) -> None:
+            if not self.notifications_var.get():
+                self.notification_visible = False
+                self.notification_frame.grid_remove()
+                return
+            item = self.notification_queue.pop()
+            if item is None:
+                self.notification_visible = False
+                self.notification_frame.grid_remove()
+                return
+            self.notification_visible = True
+            self.notification_title_var.set(item.title)
+            self.notification_body_var.set(item.message)
+            self.notification_frame.grid()
+            self.after(4200, lambda current=item: self._finish_notification(current))
+
+        def _finish_notification(self, item: NotificationItem) -> None:
+            self.notification_queue.remember(item)
+            self.notification_frame.grid_remove()
+            self.notification_visible = False
+            if self.notification_queue.pending_count:
+                self.after(250, self._show_next_notification)
 
         def _update_watch_status(self) -> None:
             if not hasattr(self, "watch_folder_var"):
@@ -1505,6 +1625,7 @@ def run_gui(launch_check: bool = False) -> int:
             else:
                 path = write_codex_handoff(self.current_query, self.current_results)
             self._append_log(UI_TEXT["log_export"].format(path=path))
+            self._notify(UI_TEXT["notify_handoff_complete"].format(kind=kind.upper()))
             messagebox.showinfo(UI_TEXT["dialog_title"], f"{UI_TEXT['dialog_export_done']}\n{path}")
             try:
                 open_path(path)
@@ -1580,6 +1701,7 @@ def run_gui(launch_check: bool = False) -> int:
             self.last_memory_var.set(UI_TEXT["status_last_memory"].format(path=first_path.name))
             for path_text in result.changed_files[:8]:
                 self._append_log(UI_TEXT["log_new_memory_detected"].format(path=path_text))
+            self._notify(UI_TEXT["notify_memory_detected"])
             lines = [
                 UI_TEXT["log_watch_initialized"],
                 UI_TEXT["log_watching_folder"].format(folder=result.folder),
@@ -1624,6 +1746,7 @@ def run_gui(launch_check: bool = False) -> int:
                     if was_auto_index:
                         self._append_log(UI_TEXT["log_auto_index_complete"])
                         self._append_log(UI_TEXT["phrase_memory_updated"])
+                        self._notify(UI_TEXT["notify_auto_index_complete"])
                         self._write_watch_event_log(
                             [
                                 UI_TEXT["log_auto_index_complete"],
@@ -1634,6 +1757,8 @@ def run_gui(launch_check: bool = False) -> int:
                                 ),
                             ]
                         )
+                    if progress.indexed > 0 and self.semantic_available:
+                        self._notify(UI_TEXT["notify_semantic_updated"])
                 if self.pending_auto_index_folder and not self.cancel_event.is_set():
                     next_folder = self.pending_auto_index_folder
                     self.pending_auto_index_folder = None
@@ -1672,6 +1797,7 @@ def run_gui(launch_check: bool = False) -> int:
             )
             self._append_log(UI_TEXT["log_chatgpt_memory_imported"])
             self._append_log(UI_TEXT["log_chatgpt_import_file"].format(path=result.log_path))
+            self._notify(UI_TEXT["notify_chatgpt_import_complete"])
             messagebox.showinfo(UI_TEXT["dialog_title"], UI_TEXT["status_chatgpt_import_complete"])
 
         def _handle_chatgpt_import_missing(self) -> None:
@@ -1702,6 +1828,7 @@ def run_gui(launch_check: bool = False) -> int:
             )
             self._append_log(UI_TEXT["log_codex_memory_imported"])
             self._append_log(UI_TEXT["log_codex_import_file"].format(path=result.log_path))
+            self._notify(UI_TEXT["notify_codex_import_complete"])
             messagebox.showinfo(UI_TEXT["dialog_title"], UI_TEXT["status_codex_import_complete"])
 
         def _handle_codex_import_empty(self) -> None:

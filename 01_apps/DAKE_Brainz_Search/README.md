@@ -228,6 +228,20 @@ BRAINZは単語を探すだけの検索ツールではなく、過去の記録�
 - Logは等幅フォント、本文は読みやすい日本語フォントへ調整
 - Search Results / Preview / BRAINZ Log の行間と文字色を整理
 
+## Phase 10: Notification system
+
+補助脳BRAINZは、処理完了や新規記憶検出をアプリ内の小さな通知で静かに知らせます。
+
+- Enable Notifications ON/OFFに対応
+- Auto Index通知
+- ChatGPT / Codex import通知
+- Semantic更新通知
+- handoff生成通知
+- Notification queueで順番表示
+- 通知はBRAINZ Logにも保存
+- Windows toastは任意扱いで、Phase 10ではアプリ内通知を優先
+- 完全ローカル処理
+
 ## DAKE_META
 
 ```json
@@ -238,7 +252,7 @@ BRAINZは単語を探すだけの検索ツールではなく、過去の記録�
   "launcher_description": "ローカルの会話・仕様・メモを忘れず探すための記憶検索アプリです。",
   "site_title": "補助脳BRAINZ",
   "site_description": "ChatGPT、Codex、Claude、Geminiのやり取りをローカル記憶として再接続する検索補助脳です。",
-  "update_summary": "フォント可読性とUIバランスを再調整しました。",
+  "update_summary": "通知システムに対応しました。",
   "folder_name": "DAKE_Brainz_Search",
   "exe_name": "DakeBrainz_Search.exe",
   "release_url": "",
@@ -252,30 +266,26 @@ BRAINZは単語を探すだけの検索ツールではなく、過去の記録�
 ## RELEASE_BODY
 
 ```markdown
-# 補助脳BRAINZ v0.6.1
+# 補助脳BRAINZ v0.7.0
 
 ローカルの会話・仕様・Codex実装結果を忘れず探すための記憶検索アプリです。
 
 ## 追加
 
-- フォント可読性再調整
-- 日本語太字を避けたUI階層化
-- Log等幅フォント調整
-- Search Results / Preview / Log の余白と行間調整
-- Watch Folder
-- Auto Index
-- 新規/更新ファイル自動検出
-- polling監視
-- Auto Semantic Index
-- WATCHING状態表示
+- Notification system
+- Auto Index通知
+- Semantic更新通知
+- ChatGPT / Codex import通知
+- 静かな補助脳通知
+- Notification queue
 
 ## 継続
 
+- Watch Folder
+- Auto Index
 - Semantic Search
 - Related Memory
 - Memory Flow
-- ChatGPT export取り込み
-- Codex結果取り込み
 - handoff生成
 - Ollama / CUDA / GPU状態チェック
 ```

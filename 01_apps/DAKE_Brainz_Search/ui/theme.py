@@ -6,6 +6,8 @@ COLORS = {
     "panel": "#08111C",
     "panel_alt": "#0B1624",
     "panel_soft": "#102033",
+    "notification": "#0D1D2E",
+    "notification_border": "#2A5A88",
     "border": "#23466F",
     "accent": "#2F80ED",
     "accent_hover": "#1C64C7",
