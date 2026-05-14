@@ -12,6 +12,7 @@ from typing import Any
 
 from core.app_config import logs_dir, now_iso
 from core.db import BrainzDatabase, DocumentRecord
+from core.ollama_embeddings import EmbeddingSession, generate_embeddings_for_document
 from core.text_splitter import split_text
 
 
@@ -69,14 +70,19 @@ def _import_from_root(original_path: Path, root: Path, database: BrainzDatabase)
     messages_indexed = 0
     skipped_duplicates = 0
     errors = 0
+    embedding_session = EmbeddingSession()
 
     for record in records:
         try:
             document = build_document_record(record)
             chunks = split_text(document.content)
-            _, changed = database.upsert_document(document, chunks)
+            document_id, changed = database.upsert_document(document, chunks)
             if changed:
                 messages_indexed += 1
+                try:
+                    generate_embeddings_for_document(database, document_id, session=embedding_session)
+                except Exception:
+                    pass
             else:
                 skipped_duplicates += 1
         except Exception:

@@ -9,6 +9,7 @@ from threading import Lock
 from typing import Iterable
 
 from core.app_config import db_path, ensure_app_dirs, now_iso
+from core.ollama_embeddings import cosine_similarity
 
 
 @dataclass(frozen=True)
@@ -66,6 +67,7 @@ class SearchResult:
     push_result: str = ""
     git_status: str = ""
     phase_notes: str = ""
+    semantic_score: float = 0.0
 
 
 DOCUMENT_METADATA_COLUMNS = {
@@ -163,6 +165,19 @@ class BrainzDatabase:
                     phase_notes TEXT NOT NULL DEFAULT '',
                     FOREIGN KEY(document_id) REFERENCES documents(id) ON DELETE CASCADE
                 );
+
+                CREATE TABLE IF NOT EXISTS embeddings (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    chunk_id INTEGER NOT NULL,
+                    model_name TEXT NOT NULL,
+                    embedding_json TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    UNIQUE(chunk_id, model_name),
+                    FOREIGN KEY(chunk_id) REFERENCES chunks(id) ON DELETE CASCADE
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_embeddings_chunk_model
+                ON embeddings(chunk_id, model_name);
 
                 CREATE TABLE IF NOT EXISTS codex_results (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -335,6 +350,134 @@ class BrainzDatabase:
             )
             conn.commit()
             return document_id, True
+
+    def chunk_rows_for_document(self, document_id: int, missing_only: bool = False) -> list[dict[str, object]]:
+        self.ensure_schema()
+        if missing_only:
+            sql = """
+                SELECT c.id, c.content, c.embedding_status
+                FROM chunks c
+                LEFT JOIN embeddings e ON e.chunk_id = c.id
+                WHERE c.document_id = ? AND e.id IS NULL
+                ORDER BY c.chunk_index
+            """
+        else:
+            sql = """
+                SELECT id, content, embedding_status
+                FROM chunks
+                WHERE document_id = ?
+                ORDER BY chunk_index
+            """
+        with self._lock, self.connect() as conn:
+            rows = conn.execute(sql, (document_id,)).fetchall()
+        return [dict(row) for row in rows]
+
+    def upsert_embedding(self, chunk_id: int, model_name: str, vector: list[float]) -> None:
+        self.ensure_schema()
+        payload = json.dumps(vector)
+        with self._lock, self.connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO embeddings (chunk_id, model_name, embedding_json, created_at)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(chunk_id, model_name)
+                DO UPDATE SET embedding_json = excluded.embedding_json, created_at = excluded.created_at
+                """,
+                (chunk_id, model_name, payload, now_iso()),
+            )
+            conn.execute("UPDATE chunks SET embedding_status = ? WHERE id = ?", ("ready", chunk_id))
+            conn.commit()
+
+    def mark_embedding_status(self, chunk_id: int, status: str) -> None:
+        self.ensure_schema()
+        with self._lock, self.connect() as conn:
+            conn.execute("UPDATE chunks SET embedding_status = ? WHERE id = ?", (status, chunk_id))
+            conn.commit()
+
+    def embedding_stats(self) -> dict[str, int]:
+        self.ensure_schema()
+        with self._lock, self.connect() as conn:
+            ready = conn.execute("SELECT COUNT(*) AS count FROM embeddings").fetchone()["count"]
+            pending = conn.execute(
+                "SELECT COUNT(*) AS count FROM chunks WHERE embedding_status = ?",
+                ("pending",),
+            ).fetchone()["count"]
+            unavailable = conn.execute(
+                "SELECT COUNT(*) AS count FROM chunks WHERE embedding_status = ?",
+                ("unavailable",),
+            ).fetchone()["count"]
+        return {"ready": int(ready), "pending": int(pending), "unavailable": int(unavailable)}
+
+    def semantic_search(
+        self,
+        query_vector: list[float],
+        model_name: str,
+        limit: int = 5,
+        exclude_document_ids: set[int] | None = None,
+    ) -> list[SearchResult]:
+        self.ensure_schema()
+        exclude_document_ids = exclude_document_ids or set()
+        with self._lock, self.connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT
+                    d.id,
+                    d.path,
+                    d.title,
+                    d.source_type,
+                    d.modified_at,
+                    d.indexed_at,
+                    d.content,
+                    d.source_label,
+                    d.conversation_id,
+                    d.conversation_title,
+                    d.role,
+                    d.message_index,
+                    d.source_created_at,
+                    d.source_updated_at,
+                    d.codex_summary,
+                    d.changed_files_json,
+                    d.created_files_json,
+                    d.test_results,
+                    d.build_results,
+                    d.commit_hash,
+                    d.push_result,
+                    d.git_status,
+                    d.phase_notes,
+                    c.content AS chunk_content,
+                    e.embedding_json AS embedding_json
+                FROM embeddings e
+                JOIN chunks c ON c.id = e.chunk_id
+                JOIN documents d ON d.id = c.document_id
+                WHERE e.model_name = ?
+                """,
+                (model_name,),
+            ).fetchall()
+
+        best_by_document: dict[int, SearchResult] = {}
+        for row in rows:
+            document_id = int(row["id"])
+            if document_id in exclude_document_ids:
+                continue
+            try:
+                vector_payload = json.loads(row["embedding_json"] or "[]")
+                vector = [float(value) for value in vector_payload]
+            except (TypeError, ValueError, json.JSONDecodeError):
+                continue
+            semantic_score = cosine_similarity(query_vector, vector)
+            if semantic_score <= 0:
+                continue
+            result = row_to_result(
+                row,
+                snippet=make_snippet(row["chunk_content"] or row["content"], ""),
+                score=semantic_score * 100.0,
+                semantic_score=semantic_score,
+            )
+            current = best_by_document.get(document_id)
+            if current is None or result.semantic_score > current.semantic_score:
+                best_by_document[document_id] = result
+
+        return sorted(best_by_document.values(), key=lambda item: item.semantic_score, reverse=True)[:limit]
 
     def upsert_codex_result(self, parsed: object, document_path: str) -> tuple[int, bool]:
         self.ensure_schema()
@@ -542,7 +685,7 @@ class BrainzDatabase:
         return results
 
 
-def row_to_result(row: sqlite3.Row, snippet: str, score: float) -> SearchResult:
+def row_to_result(row: sqlite3.Row, snippet: str, score: float, semantic_score: float = 0.0) -> SearchResult:
     return SearchResult(
         id=int(row["id"]),
         path=row["path"],
@@ -569,6 +712,7 @@ def row_to_result(row: sqlite3.Row, snippet: str, score: float) -> SearchResult:
         push_result=row["push_result"] or "",
         git_status=row["git_status"] or "",
         phase_notes=row["phase_notes"] or "",
+        semantic_score=semantic_score,
     )
 
 

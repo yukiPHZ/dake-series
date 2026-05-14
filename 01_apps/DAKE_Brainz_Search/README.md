@@ -43,9 +43,9 @@ BRAINZの役割は、忘れない、探せる、関連づく、再投入でき�
 
 ## OpenAI APIについて
 
-Phase 1ではOpenAI APIを使いません。APIキー入力欄もありません。
+OpenAI APIは使いません。APIキー入力欄もありません。
 
-基本方針は完全ローカル優先です。Ollamaがあれば接続状態を確認し、将来のローカルembeddingに備えます。Ollamaがなくても SQLite FTS5 による全文検索とうろ覚え検索は動きます。
+基本方針は完全ローカル優先です。OllamaがあればローカルembeddingによるSemantic Searchに使います。Ollamaがなくても SQLite FTS5 による全文検索とうろ覚え検索は動きます。
 
 ## ローカル記憶フォルダ
 
@@ -104,7 +104,6 @@ BRAINZは自動送信しません。検索結果から、ChatGPTに貼る用ま�
 - Codex結果ログ
 - PDF OCR
 - 音声Whisper
-- Ollama embedding本実装
 - FAISS検索
 - FAISS GPU対応
 - 関連タグ自動生成
@@ -157,6 +156,21 @@ BRAINZはChatGPTの代替ではありません。ChatGPTの会話履歴を、ロ
 
 BRAINZは、Codexが実際に何を作成・修正・確認・commit / pushしたかをローカル記憶として保存します。ChatGPTで仕様検討し、Codexが実装し、BRAINZが覚えて橋渡しするための履歴層です。
 
+## Phase 5: Semantic Search
+
+補助脳BRAINZ v0.4.0 では、Ollama embeddingを使ったSemantic Searchに対応しました。
+
+- Ollama embeddings APIに対応
+- 推奨モデルは `nomic-embed-text`
+- 完全ローカル処理
+- OpenAI API未使用
+- embedding unavailableでもFTS検索は継続
+- 意味的に近い記録をRelated Memoryとして表示
+- Semantic Search ON / OFF
+- `.txt` / `.md` / `.json`、ChatGPT export、Codex結果ログのchunkにembeddingを保存
+
+Ollama未起動、モデル未導入、embedding API失敗、GPU未検出のいずれでもアプリは落ちません。Semantic Searchが使えない場合はFTS only modeとして従来検索を使います。
+
 ## DAKE_META
 
 ```json
@@ -167,7 +181,7 @@ BRAINZは、Codexが実際に何を作成・修正・確認・commit / pushし�
   "launcher_description": "ローカルの会話・仕様・メモを忘れず探すための記憶検索アプリです。",
   "site_title": "補助脳BRAINZ",
   "site_description": "ChatGPT、Codex、Claude、Geminiのやり取りをローカル記憶として再接続する検索補助脳です。",
-  "update_summary": "Codex結果ログ取り込みに対応しました。",
+  "update_summary": "Semantic Search に対応しました。",
   "folder_name": "DAKE_Brainz_Search",
   "exe_name": "DakeBrainz_Search.exe",
   "release_url": "",
@@ -181,28 +195,25 @@ BRAINZは、Codexが実際に何を作成・修正・確認・commit / pushし�
 ## RELEASE_BODY
 
 ```markdown
-# 補助脳BRAINZ v0.1
+# 補助脳BRAINZ v0.4.0
 
-ローカルの会話・仕様・メモを忘れず探すための記憶検索アプリです。
+ローカルの会話・仕様・Codex実装結果を忘れず探すための記憶検索アプリです。
 
-## できること
+## 追加
 
-- ローカルフォルダのtxt / md / json取り込み
-- SQLiteによる記憶DB作成
-- 全文検索
+- Ollama embedding対応
+- Semantic Search
+- Related Memory表示
+- 意味的に近い記録検索
+- embedding queue
+- Semantic Search ON/OFF
+
+## 継続
+
+- ChatGPT export取り込み
+- Codex結果取り込み
+- SQLite FTS5検索
 - うろ覚え検索
+- handoff生成
 - Ollama / CUDA / GPU状態チェック
-- ChatGPT用まとめ生成
-- Codex用素材生成
-- 検索ログ保存
-
-## まだやらないこと
-
-- OpenAI API接続
-- 自動投稿
-- ChatGPT / Codexへの自動送信
-- Claude / Gemini自動連携
-- PDF OCR
-- 音声文字起こし
-- クラウド同期
 ```

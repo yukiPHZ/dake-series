@@ -8,6 +8,7 @@ from typing import Callable
 from core.app_config import logs_dir, now_iso
 from core.db import BrainzDatabase, DocumentRecord
 from core.file_scanner import iter_supported_files, scan_file
+from core.ollama_embeddings import EmbeddingSession, generate_embeddings_for_document
 from core.text_splitter import split_text
 
 
@@ -49,6 +50,7 @@ class Indexer:
         indexed = 0
         skipped = 0
         errors = 0
+        embedding_session = EmbeddingSession()
 
         self._emit(progress_callback, total, 0, indexed, skipped, errors, "scan_ready")
 
@@ -84,10 +86,25 @@ class Indexer:
                     hash=scanned.content_hash,
                     content=scanned.content,
                 )
-                _, changed = self.database.upsert_document(record, chunks)
+                document_id, changed = self.database.upsert_document(record, chunks)
                 if changed:
                     indexed += 1
                     log_lines.append(f"INDEXED {scanned.path}")
+                    self._emit(progress_callback, total, current, indexed, skipped, errors, "embedding_chunks")
+                    try:
+                        embedding_result = generate_embeddings_for_document(
+                            self.database,
+                            document_id,
+                            session=embedding_session,
+                            cancel_event=cancel_event,
+                        )
+                        log_lines.append(
+                            "EMBEDDING "
+                            f"generated={embedding_result.generated} skipped={embedding_result.skipped} "
+                            f"failed={embedding_result.failed} available={embedding_result.available}"
+                        )
+                    except Exception as exc:
+                        log_lines.append(f"EMBEDDING_ERROR {scanned.path} :: {exc}")
                 else:
                     skipped += 1
                     log_lines.append(f"SKIPPED_UNCHANGED {scanned.path}")

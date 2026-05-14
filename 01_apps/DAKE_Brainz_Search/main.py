@@ -22,6 +22,7 @@ UI_TEXT = {
     "subtitle": "Local Memory Search",
     "search_placeholder": "うろ覚えで検索",
     "button_search": "Search",
+    "checkbox_semantic_search": "Semantic Search",
     "button_index": "Index",
     "button_cancel": "Cancel",
     "button_choose": "Choose",
@@ -35,12 +36,14 @@ UI_TEXT = {
     "results_title": "Search Results",
     "preview_title": "Preview",
     "tags_title": "Related Tags",
+    "section_related_memory": "Related Memory",
     "handoff_title": "Handoff Summary",
     "log_title": "BRAINZ Log",
     "empty_memory": "未選択",
     "empty_results": "検索結果はまだありません",
     "empty_preview": "結果を選ぶと詳細が表示されます",
     "empty_tags": "タグ候補なし",
+    "related_memory_empty": "関連記憶なし",
     "empty_handoff": "検索結果から引き継ぎ素材を生成できます",
     "choose_memory_title": "記憶フォルダを選択",
     "dialog_title": "補助脳BRAINZ",
@@ -76,6 +79,10 @@ UI_TEXT = {
     "log_codex_import_complete": "Changed files: {changed_files}. Skipped duplicate: {skipped}.",
     "log_codex_memory_imported": "補助脳：Codexの実装結果を記憶しました。",
     "log_codex_import_file": "IMPORT LOG: {path}",
+    "log_semantic_search_initialized": "Semantic search initialized.",
+    "log_embedding_generated": "Embedding generated.",
+    "log_related_memory_found": "Related memory found: {count}",
+    "log_semantic_disabled": "FTS only mode: {message}",
     "codex_source_paste": "Codex result paste",
     "smoke_markdown": "# quiet workflow\n\n補助脳BRAINZは静かな青の検索脳。Codexに投げたやつを忘れない。",
     "smoke_text": "DAKEのGitルール: git status, add, commit, push。UIを止めない。",
@@ -106,6 +113,7 @@ UI_TEXT = {
     "log_export": "EXPORT: {path}",
     "index_idle": "IDLE",
     "index_running": "RUNNING {current}/{total}",
+    "index_embedding": "EMBEDDING CHUNKS...",
     "index_done": "DONE {indexed} indexed / {skipped} skipped / {errors} errors",
     "searching": "SEARCHING...",
     "status_sqlite_ready": "SQLITE READY",
@@ -116,11 +124,16 @@ UI_TEXT = {
     "status_gpu_missing": "GPU NOT DETECTED",
     "status_ollama_ready": "OLLAMA LOCAL READY",
     "status_ollama_not_running": "OLLAMA NOT RUNNING",
+    "status_embedding_ready": "EMBEDDING READY",
+    "status_embedding_unavailable": "EMBEDDING UNAVAILABLE",
+    "status_semantic_search_ready": "SEMANTIC SEARCH READY",
+    "status_semantic_search_disabled": "SEMANTIC SEARCH DISABLED",
     "status_docs": "DOCS {documents} / CHUNKS {chunks}",
-    "preview_template": "PATH: {path}\nSOURCE: {source_type}\nLABEL: {source_label}\nCONVERSATION: {conversation_title}\nROLE: {role}\nMESSAGE INDEX: {message_index}\nCOMMIT: {commit_hash}\nCHANGED FILES: {changed_files}\nTEST RESULTS: {test_results}\nBUILD RESULTS: {build_results}\nPUSH: {push_result}\nGIT STATUS: {git_status}\nMODIFIED: {modified_at}\nINDEXED: {indexed_at}\nSCORE: {score:.2f}\n\n{content}",
+    "preview_template": "PATH: {path}\nSOURCE: {source_type}\nLABEL: {source_label}\nCONVERSATION: {conversation_title}\nROLE: {role}\nMESSAGE INDEX: {message_index}\nCOMMIT: {commit_hash}\nCHANGED FILES: {changed_files}\nTEST RESULTS: {test_results}\nBUILD RESULTS: {build_results}\nPUSH: {push_result}\nGIT STATUS: {git_status}\nMODIFIED: {modified_at}\nINDEXED: {indexed_at}\nSCORE: {score:.2f}\nSEMANTIC: {semantic_score:.2f}\n\n{content}",
     "result_meta": "{source_type} | score {score:.1f}",
     "result_meta_chatgpt": "{source_label} | score {score:.1f}",
     "result_meta_codex": "commit {commit_hash} | score {score:.1f}",
+    "result_meta_semantic": "semantic {semantic_score:.2f}",
     "handoff_preview": "query: {query}\nresults: {count}\n\n{items}",
     "launch_check_ok": "LAUNCH CHECK OK",
 }
@@ -135,6 +148,7 @@ def run_smoke_test() -> int:
     from core.handoff_writer import write_chatgpt_handoff, write_codex_handoff
     from core.indexer import Indexer
     from core.ollama_client import check_ollama
+    from core.ollama_embeddings import DEFAULT_EMBED_MODEL, check_embedding_status
     from core.search_engine import SearchEngine
 
     ensure_app_dirs()
@@ -254,6 +268,20 @@ def run_smoke_test() -> int:
     if UI_TEXT["smoke_codex_codex_heading"] not in codex_codex_path.read_text(encoding="utf-8"):
         raise RuntimeError("codex handoff did not include implementation history")
 
+    semantic_off = engine.search_with_related(UI_TEXT["smoke_query_memory"], limit=10, semantic_enabled=False)
+    if not semantic_off.results or semantic_off.semantic_available:
+        raise RuntimeError("semantic off fallback failed")
+    embedding_status = check_embedding_status(model_name=DEFAULT_EMBED_MODEL)
+    semantic_response = engine.search_with_related(UI_TEXT["smoke_query_memory"], limit=10, semantic_enabled=True)
+    embedding_stats = database.embedding_stats()
+    if embedding_status.available:
+        if not semantic_response.semantic_available:
+            raise RuntimeError("semantic search was unavailable despite embedding readiness")
+        if embedding_stats["ready"] > 0 and not semantic_response.related:
+            raise RuntimeError("semantic related memory returned no results")
+    elif semantic_response.semantic_available:
+        raise RuntimeError("semantic unavailable branch failed")
+
     ollama_status = check_ollama()
     gpu_status = check_gpu()
     stats = database.stats()
@@ -267,6 +295,10 @@ def run_smoke_test() -> int:
     print(f"codex_chatgpt_handoff={codex_chatgpt_path}")
     print(f"codex_codex_handoff={codex_codex_path}")
     print(f"ollama_available={ollama_status.available}")
+    print(f"embedding_available={embedding_status.available}")
+    print(f"embeddings_ready={embedding_stats['ready']}")
+    print(f"semantic_available={semantic_response.semantic_available}")
+    print(f"related_memory={len(semantic_response.related)}")
     print(f"gpu_detected={gpu_status.gpu_detected}")
     return 0
 
@@ -317,7 +349,8 @@ def run_gui(launch_check: bool = False) -> int:
     from core.handoff_writer import write_chatgpt_handoff, write_codex_handoff
     from core.indexer import IndexProgress, Indexer
     from core.ollama_client import check_ollama
-    from core.search_engine import SearchEngine
+    from core.ollama_embeddings import check_embedding_status
+    from core.search_engine import SearchEngine, SearchResponse
     from ui.components import choose_font_family, set_textbox_text
     from ui.theme import COLORS, FONT_CANDIDATES
 
@@ -345,7 +378,10 @@ def run_gui(launch_check: bool = False) -> int:
             self.search_thread: threading.Thread | None = None
             self.import_thread: threading.Thread | None = None
             self.current_results: list[SearchResult] = []
+            self.current_related_results: list[SearchResult] = []
             self.current_query = self.config_data.last_query
+            self.semantic_available = True
+            self.semantic_search_var = ctk.BooleanVar(value=True)
             self.logo_image = None
 
             self._apply_icon()
@@ -425,6 +461,17 @@ def run_gui(launch_check: bool = False) -> int:
                 hover_color=COLORS["accent_hover"],
                 command=self._start_search,
             ).grid(row=0, column=1)
+            self.semantic_checkbox = ctk.CTkCheckBox(
+                search_box,
+                text=UI_TEXT["checkbox_semantic_search"],
+                variable=self.semantic_search_var,
+                text_color=COLORS["muted"],
+                fg_color=COLORS["accent"],
+                hover_color=COLORS["accent_hover"],
+                border_color=COLORS["border"],
+                font=(self.font_family, 12),
+            )
+            self.semantic_checkbox.grid(row=1, column=0, columnspan=2, sticky="w", pady=(6, 0))
 
             left = self._panel(self, 0)
             left.grid(row=1, column=0, sticky="nsew", padx=(18, 8), pady=(0, 10))
@@ -506,8 +553,21 @@ def run_gui(launch_check: bool = False) -> int:
             self.cuda_var = ctk.StringVar(value=UI_TEXT["status_cuda_unavailable"])
             self.gpu_var = ctk.StringVar(value=UI_TEXT["status_gpu_missing"])
             self.ollama_var = ctk.StringVar(value=UI_TEXT["status_ollama_not_running"])
+            self.embedding_var = ctk.StringVar(value=UI_TEXT["status_embedding_unavailable"])
+            self.semantic_status_var = ctk.StringVar(value=UI_TEXT["status_semantic_search_disabled"])
             self.docs_var = ctk.StringVar(value=UI_TEXT["status_docs"].format(documents=0, chunks=0))
-            for index, variable in enumerate((self.sqlite_var, self.cuda_var, self.gpu_var, self.ollama_var, self.docs_var), start=10):
+            for index, variable in enumerate(
+                (
+                    self.sqlite_var,
+                    self.cuda_var,
+                    self.gpu_var,
+                    self.ollama_var,
+                    self.embedding_var,
+                    self.semantic_status_var,
+                    self.docs_var,
+                ),
+                start=10,
+            ):
                 ctk.CTkLabel(
                     left,
                     textvariable=variable,
@@ -529,7 +589,7 @@ def run_gui(launch_check: bool = False) -> int:
             right.grid(row=1, column=2, sticky="nsew", padx=(8, 18), pady=(0, 10))
             right.grid_columnconfigure(0, weight=1)
             right.grid_rowconfigure(1, weight=2)
-            right.grid_rowconfigure(5, weight=1)
+            right.grid_rowconfigure(7, weight=1)
             self._section_title(right, UI_TEXT["preview_title"], 0)
             self.preview_box = ctk.CTkTextbox(
                 right,
@@ -554,7 +614,21 @@ def run_gui(launch_check: bool = False) -> int:
                 justify="left",
             ).grid(row=3, column=0, sticky="ew", padx=12, pady=(0, 10))
 
-            self._section_title(right, UI_TEXT["handoff_title"], 4)
+            self._section_title(right, UI_TEXT["section_related_memory"], 4)
+            self.related_box = ctk.CTkTextbox(
+                right,
+                height=92,
+                fg_color=COLORS["input"],
+                border_color=COLORS["border"],
+                border_width=1,
+                text_color=COLORS["muted"],
+                font=(self.font_family, 12),
+                wrap="word",
+            )
+            self.related_box.grid(row=5, column=0, sticky="ew", padx=10, pady=(0, 10))
+            set_textbox_text(self.related_box, UI_TEXT["related_memory_empty"])
+
+            self._section_title(right, UI_TEXT["handoff_title"], 6)
             self.handoff_box = ctk.CTkTextbox(
                 right,
                 height=118,
@@ -565,11 +639,11 @@ def run_gui(launch_check: bool = False) -> int:
                 font=(self.font_family, 12),
                 wrap="word",
             )
-            self.handoff_box.grid(row=5, column=0, sticky="nsew", padx=10, pady=(0, 10))
+            self.handoff_box.grid(row=7, column=0, sticky="nsew", padx=10, pady=(0, 10))
             set_textbox_text(self.handoff_box, UI_TEXT["empty_handoff"])
 
             export_row = ctk.CTkFrame(right, fg_color="transparent")
-            export_row.grid(row=6, column=0, sticky="ew", padx=10, pady=(0, 10))
+            export_row.grid(row=8, column=0, sticky="ew", padx=10, pady=(0, 10))
             export_row.grid_columnconfigure((0, 1), weight=1)
             ctk.CTkButton(
                 export_row,
@@ -839,13 +913,18 @@ def run_gui(launch_check: bool = False) -> int:
             self.config_data.last_query = query_text
             self.config_store.save(self.config_data)
             self.index_status_var.set(UI_TEXT["searching"])
-            self.search_thread = threading.Thread(target=self._search_worker, args=(query_text,), daemon=True)
+            semantic_enabled = bool(self.semantic_search_var.get()) and self.semantic_available
+            self.search_thread = threading.Thread(
+                target=self._search_worker,
+                args=(query_text, semantic_enabled),
+                daemon=True,
+            )
             self.search_thread.start()
 
-        def _search_worker(self, query_text: str) -> None:
+        def _search_worker(self, query_text: str, semantic_enabled: bool) -> None:
             try:
-                results = self.search_engine.search(query_text)
-                self.events.put(("search_done", (query_text, results)))
+                response = self.search_engine.search_with_related(query_text, semantic_enabled=semantic_enabled)
+                self.events.put(("search_done", (query_text, response, semantic_enabled)))
             except Exception as exc:
                 self.events.put(("index_error", str(exc)))
 
@@ -899,11 +978,19 @@ def run_gui(launch_check: bool = False) -> int:
         def _result_meta(self, result: SearchResult) -> str:
             if result.source_type == "chatgpt_export":
                 label = result.source_label or f"ChatGPT / {result.conversation_title or result.title} / {result.role}"
-                return UI_TEXT["result_meta_chatgpt"].format(source_label=label, score=result.score)
+                base = UI_TEXT["result_meta_chatgpt"].format(source_label=label, score=result.score)
+                return self._append_semantic_meta(base, result)
             if result.source_type == "codex_result":
                 commit_hash = result.commit_hash[:12] if result.commit_hash else "-"
-                return UI_TEXT["result_meta_codex"].format(commit_hash=commit_hash, score=result.score)
-            return UI_TEXT["result_meta"].format(source_type=result.source_type, score=result.score)
+                base = UI_TEXT["result_meta_codex"].format(commit_hash=commit_hash, score=result.score)
+                return self._append_semantic_meta(base, result)
+            base = UI_TEXT["result_meta"].format(source_type=result.source_type, score=result.score)
+            return self._append_semantic_meta(base, result)
+
+        def _append_semantic_meta(self, base: str, result: SearchResult) -> str:
+            if result.semantic_score <= 0:
+                return base
+            return f"{base} | {UI_TEXT['result_meta_semantic'].format(semantic_score=result.semantic_score)}"
 
         def _select_result(self, result: SearchResult) -> None:
             preview = UI_TEXT["preview_template"].format(
@@ -922,6 +1009,7 @@ def run_gui(launch_check: bool = False) -> int:
                 modified_at=result.modified_at,
                 indexed_at=result.indexed_at,
                 score=result.score,
+                semantic_score=result.semantic_score,
                 content=result.content[:9000],
             )
             set_textbox_text(self.preview_box, preview)
@@ -950,6 +1038,17 @@ def run_gui(launch_check: bool = False) -> int:
             )
             set_textbox_text(self.handoff_box, text)
 
+        def _render_related_memory(self, results: list[SearchResult]) -> None:
+            if not results:
+                set_textbox_text(self.related_box, UI_TEXT["related_memory_empty"])
+                return
+            lines = []
+            for result in results[:5]:
+                lines.append(f"- {self._result_title(result)}")
+                if result.semantic_score > 0:
+                    lines.append(f"  {UI_TEXT['result_meta_semantic'].format(semantic_score=result.semantic_score)}")
+            set_textbox_text(self.related_box, "\n".join(lines))
+
         def _export_handoff(self, kind: str) -> None:
             if not self.current_results:
                 messagebox.showwarning(UI_TEXT["dialog_title"], UI_TEXT["dialog_no_results"])
@@ -971,7 +1070,8 @@ def run_gui(launch_check: bool = False) -> int:
         def _system_worker(self) -> None:
             gpu = check_gpu()
             ollama = check_ollama()
-            self.events.put(("system_status", (gpu, ollama)))
+            embedding = check_embedding_status()
+            self.events.put(("system_status", (gpu, ollama, embedding)))
 
         def _refresh_stats(self) -> None:
             try:
@@ -993,11 +1093,11 @@ def run_gui(launch_check: bool = False) -> int:
                 elif event == "index_error":
                     self._handle_index_error(str(payload))
                 elif event == "search_done":
-                    query_text, results = payload
-                    self._handle_search_done(query_text, results)
+                    query_text, response, semantic_enabled = payload
+                    self._handle_search_done(query_text, response, semantic_enabled)
                 elif event == "system_status":
-                    gpu, ollama = payload
-                    self._handle_system_status(gpu, ollama)
+                    gpu, ollama, embedding = payload
+                    self._handle_system_status(gpu, ollama, embedding)
                 elif event == "chatgpt_import_done":
                     self._handle_chatgpt_import_done(payload)
                 elif event == "chatgpt_import_missing":
@@ -1039,9 +1139,12 @@ def run_gui(launch_check: bool = False) -> int:
                         UI_TEXT["log_index_done"].format(indexed=progress.indexed, skipped=progress.skipped, errors=progress.errors)
                     )
             else:
-                self.index_status_var.set(
-                    UI_TEXT["index_running"].format(current=progress.current, total=progress.total)
-                )
+                if progress.message == "embedding_chunks":
+                    self.index_status_var.set(UI_TEXT["index_embedding"])
+                else:
+                    self.index_status_var.set(
+                        UI_TEXT["index_running"].format(current=progress.current, total=progress.total)
+                    )
 
         def _handle_index_error(self, error_text: str) -> None:
             self.index_button.configure(state="normal")
@@ -1112,17 +1215,31 @@ def run_gui(launch_check: bool = False) -> int:
             self._append_log(f"{UI_TEXT['error_codex_import_failed']} {error_text}")
             messagebox.showwarning(UI_TEXT["dialog_title"], f"{UI_TEXT['error_codex_import_failed']}\n{error_text}")
 
-        def _handle_search_done(self, query_text: str, results: list[SearchResult]) -> None:
+        def _handle_search_done(self, query_text: str, response: SearchResponse, semantic_enabled: bool) -> None:
+            results = response.results
             self.current_results = results
+            self.current_related_results = response.related
             self.index_status_var.set(UI_TEXT["index_idle"])
             self._render_results(results)
+            self._render_related_memory(response.related)
             self._update_handoff_preview()
             if results:
                 self._select_result(results[0])
             self._refresh_stats()
+            if semantic_enabled:
+                self._append_log(UI_TEXT["log_semantic_search_initialized"])
+                if response.semantic_available:
+                    self.semantic_status_var.set(UI_TEXT["status_semantic_search_ready"])
+                    self._append_log(UI_TEXT["log_related_memory_found"].format(count=len(response.related)))
+                else:
+                    self.semantic_available = False
+                    self.semantic_search_var.set(False)
+                    self.embedding_var.set(UI_TEXT["status_embedding_unavailable"])
+                    self.semantic_status_var.set(UI_TEXT["status_semantic_search_disabled"])
+                    self._append_log(UI_TEXT["log_semantic_disabled"].format(message=response.semantic_message))
             self._append_log(UI_TEXT["log_search"].format(query=query_text, count=len(results)))
 
-        def _handle_system_status(self, gpu, ollama) -> None:
+        def _handle_system_status(self, gpu, ollama, embedding) -> None:
             if gpu.cuda_available:
                 self.cuda_var.set(UI_TEXT["status_cuda_online"])
             else:
@@ -1138,6 +1255,18 @@ def run_gui(launch_check: bool = False) -> int:
                 self.ollama_var.set(f"{UI_TEXT['status_ollama_ready']} ({model_count})")
             else:
                 self.ollama_var.set(UI_TEXT["status_ollama_not_running"])
+
+            if embedding.available:
+                self.semantic_available = True
+                self.embedding_var.set(UI_TEXT["status_embedding_ready"])
+                self.semantic_status_var.set(UI_TEXT["status_semantic_search_ready"])
+                self.semantic_checkbox.configure(state="normal")
+            else:
+                self.semantic_available = False
+                self.semantic_search_var.set(False)
+                self.embedding_var.set(UI_TEXT["status_embedding_unavailable"])
+                self.semantic_status_var.set(UI_TEXT["status_semantic_search_disabled"])
+                self.semantic_checkbox.configure(state="disabled")
 
         def _launch_check_finish(self) -> None:
             print(UI_TEXT["launch_check_ok"])

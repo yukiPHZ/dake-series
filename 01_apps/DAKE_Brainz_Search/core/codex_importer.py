@@ -8,6 +8,7 @@ from pathlib import Path
 
 from core.app_config import logs_dir, now_iso, read_text_safe
 from core.db import BrainzDatabase, DocumentRecord
+from core.ollama_embeddings import generate_embeddings_for_document
 from core.text_splitter import split_text
 
 
@@ -49,7 +50,12 @@ def import_codex_text(raw_text: str, database: BrainzDatabase, source_label: str
 
     document = build_document_record(parsed, source_label=source_label)
     chunks = split_text(document.content)
-    _, changed = database.upsert_document(document, chunks)
+    document_id, changed = database.upsert_document(document, chunks)
+    if changed:
+        try:
+            generate_embeddings_for_document(database, document_id)
+        except Exception:
+            pass
     database.upsert_codex_result(parsed, document.path)
     result_without_log = CodexImportResult(
         title=parsed.title,
