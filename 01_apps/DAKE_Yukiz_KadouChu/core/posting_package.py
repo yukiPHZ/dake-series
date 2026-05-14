@@ -188,6 +188,18 @@ def _write_package_log(package_root: Path, entries: list[str]) -> Path:
     return path
 
 
+def _write_package_meta(package_root: Path, video_path: Path) -> Path:
+    path = package_root / "package_meta.json"
+    payload = {
+        "created_at": datetime.now().isoformat(timespec="seconds"),
+        "source_video_name": video_path.name,
+        "source_video_path": str(video_path),
+        "note": "Source path is stored locally for selected short preview generation. No upload is performed.",
+    }
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    return path
+
+
 def _record_file(path: Path) -> str:
     try:
         return str(path.relative_to(outputs_dir()))
@@ -222,7 +234,10 @@ def generate_posting_package(
 
     try:
         emit(LOG_TEXT["posting_package_start"])
+        meta_path = _write_package_meta(package_root, video_path)
+        generated.append(_record_file(meta_path))
         log_entries.append(f"Selected file: {video_path.name}")
+        log_entries.append(f"source_video_path: {video_path}")
         log_entries.append(f"Source size: {human_size(video_path.stat().st_size) if video_path.exists() else 'unknown'}")
         tick(0.04)
 

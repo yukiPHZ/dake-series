@@ -72,3 +72,11 @@
 - `selected/` に選択ドラフト一式を出力
 - `selected_summary.md` を生成
 - 未選択時は #1 を仮採用し、自動投稿は行わない
+
+## Phase 2.2
+
+- `selected_short.json` からShortsプレビュー生成を追加
+- `selected/short_preview.mp4` と `short_preview_log.txt` を出力
+- NVENC優先、失敗時CPU `libx264` フォールバックに対応
+- 元比率のまま切り出し、9:16クロップは今後対応
+- 元動画変更とYouTube自動投稿は行わない

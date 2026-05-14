@@ -230,6 +230,24 @@ selected/
 
 まだ何も選択していない場合は、Shorts #1 と Title #1 を仮採用します。`selected_summary.md` には選択したShorts、タイトル、説明欄、タグ、公開前メモ、人間判断の注意をまとめます。YouTubeへ自動投稿せず、自動公開もしません。元動画や `assistant_review.md` は変更せず、上書き対象はpackage内の `selected/` 配下だけです。
 
+## Phase 2.2 Selected Shorts Preview生成
+
+`Generate Selected Short Preview`, `Open Short Preview` を追加しました。`selected/selected_short.json` から開始・終了・durationを読み取り、元動画から元比率のまま短いプレビュー動画を切り出します。
+
+出力:
+
+```text
+selected/
+├ short_preview.mp4
+└ short_preview_log.txt
+```
+
+`selected_short.json` がない場合は、`shorts_candidates.json` の #1 を仮採用して `selected/selected_short.json` を作成してから処理します。今後生成する投稿パッケージには `package_meta.json` と `logs/package_log.txt` に `source_video_path` を保存し、Shortsプレビュー生成で参照します。古いpackageなどで元動画パスが見つからない場合は、動画選択ダイアログから元動画を指定できます。
+
+FFmpegが利用できる場合は `short_preview.mp4` を生成します。NVENCがONLINEなら `h264_nvenc` を優先し、失敗時はCPU `libx264` にフォールバックします。FFmpegが未導入の場合でもアプリは落ちず、`short_preview_log.txt` に理由を残します。Phase 2.2では9:16クロップは行わず、元比率のまま切り出します。9:16自動クロップはPhase 2以降の候補です。
+
+この機能もYouTubeへ自動投稿せず、自動公開もしません。元動画は変更せず、出力と上書きはpackage内の `selected/` 配下だけに限定します。
+
 ## Phase 2候補
 
 - YouTube LIVE URLからyt-dlpで本取得

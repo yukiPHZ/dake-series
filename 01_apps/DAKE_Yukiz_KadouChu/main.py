@@ -56,6 +56,7 @@ from core.project_writer import (
     write_source_manifest,
 )
 from core.selected_outputs import export_selected_draft, read_selected_candidates
+from core.selected_preview import find_source_video_path, generate_selected_short_preview
 from core.shorts_analyzer import create_shorts_candidates, write_shorts_candidates
 from core.transcription import is_faster_whisper_available, transcribe_media
 from ui.theme import COLORS, FONT_FAMILY, setup_theme
@@ -132,6 +133,18 @@ UI_TEXT = {
     "selected_completed": "Selected draft exported.",
     "selected_folder_unavailable": "Selected folder is not ready yet.",
     "open_selected_failed": "Could not open selected folder.",
+    "short_preview": "SHORT PREVIEW",
+    "generate_short_preview": "Generate Selected Short Preview",
+    "open_short_preview": "Open Short Preview",
+    "short_preview_ready_hint": "Generate a short preview from selected_short.json.",
+    "short_preview_running": "Status: RUNNING",
+    "short_preview_completed": "Completed",
+    "short_preview_failed": "FAILED",
+    "short_preview_unavailable": "Short preview is not ready yet.",
+    "open_short_preview_failed": "Could not open short preview.",
+    "preview_source_dialog": "Select source video for short preview",
+    "encoder": "Encoder",
+    "preview_output": "Output",
     "transcription_short": "Transcription",
     "shorts": "Shorts",
     "ollama": "Ollama",
@@ -211,6 +224,8 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.package_output_dir: Path | None = None
         self.review_file_path: Path | None = None
         self.selected_output_dir: Path | None = None
+        self.short_preview_path: Path | None = None
+        self.preview_source_video_path: Path | None = None
         self.candidate_data: dict[str, object] = {}
         self.short_choice_touched = False
         self.title_choice_touched = False
@@ -218,6 +233,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.package_running = False
         self.review_running = False
         self.selected_export_running = False
+        self.short_preview_running = False
         self.worker_running = False
 
         self.file_var = ctk.StringVar(value=UI_TEXT["no_video_selected"])
@@ -226,6 +242,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.package_summary_var = ctk.StringVar(value=UI_TEXT["package_ready_hint"])
         self.review_summary_var = ctk.StringVar(value=UI_TEXT["review_ready_hint"])
         self.selected_summary_var = ctk.StringVar(value=UI_TEXT["selected_ready_hint"])
+        self.short_preview_summary_var = ctk.StringVar(value=UI_TEXT["short_preview_ready_hint"])
         self.short_choice_var = ctk.StringVar(value=UI_TEXT["selected_none"])
         self.title_choice_var = ctk.StringVar(value=UI_TEXT["selected_none"])
         self.youtube_var = ctk.StringVar(value="")
@@ -552,7 +569,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
 
         self.media_box = ctk.CTkTextbox(
             body,
-            height=120,
+            height=90,
             fg_color=COLORS["field"],
             border_width=1,
             border_color=COLORS["line"],
@@ -726,6 +743,35 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             state="disabled",
         )
         self.open_selected_button.grid(row=4, column=0, columnspan=2, sticky="ew", padx=12, pady=(4, 10))
+        ctk.CTkLabel(
+            selected_box,
+            textvariable=self.short_preview_summary_var,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            text_color=COLORS["muted"],
+            wraplength=330,
+            justify="left",
+        ).grid(row=5, column=0, columnspan=2, sticky="ew", padx=12, pady=(0, 8))
+        self.generate_short_preview_button = ctk.CTkButton(
+            selected_box,
+            text=UI_TEXT["generate_short_preview"],
+            command=self._start_generate_short_preview,
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+        )
+        self.generate_short_preview_button.grid(row=6, column=0, sticky="ew", padx=(12, 4), pady=(0, 10))
+        self.open_short_preview_button = ctk.CTkButton(
+            selected_box,
+            text=UI_TEXT["open_short_preview"],
+            command=self._open_short_preview,
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+            state="disabled",
+        )
+        self.open_short_preview_button.grid(row=6, column=1, sticky="ew", padx=(4, 12), pady=(0, 10))
 
         self.open_button = ctk.CTkButton(
             body,
@@ -831,7 +877,10 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.open_package_button.configure(state="disabled")
         self.open_review_button.configure(state="disabled")
         self.open_selected_button.configure(state="disabled")
+        self.open_short_preview_button.configure(state="disabled")
         self.selected_output_dir = None
+        self.short_preview_path = None
+        self.preview_source_video_path = None
         self.candidate_data = {}
         self.short_choice_touched = False
         self.title_choice_touched = False
@@ -840,6 +889,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.package_summary_var.set(UI_TEXT["package_ready_hint"])
         self.review_summary_var.set(UI_TEXT["review_ready_hint"])
         self.selected_summary_var.set(UI_TEXT["selected_ready_hint"])
+        self.short_preview_summary_var.set(UI_TEXT["short_preview_ready_hint"])
         self._log(LOG_TEXT["source_detected"])
         self._probe_selected_video()
 
@@ -1080,6 +1130,82 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.events.put({"type": "selected_export_result", "result": result})
             except Exception as exc:
                 self.events.put({"type": "selected_export_error", "message": str(exc)})
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _resolve_preview_source_video(self, package_dir: Path) -> Path | None:
+        source = self.preview_source_video_path
+        if source is not None and source.exists():
+            return source
+        source = find_source_video_path(package_dir)
+        if source is not None:
+            self.preview_source_video_path = source
+            return source
+        if self.selected_file is not None and self.selected_file.exists():
+            self.preview_source_video_path = self.selected_file
+            return self.selected_file
+        file_path = filedialog.askopenfilename(
+            title=UI_TEXT["preview_source_dialog"],
+            filetypes=[(UI_TEXT["file_types"], "*.mp4 *.mov *.mkv *.webm"), ("All files", "*.*")],
+        )
+        if not file_path:
+            return None
+        path = Path(file_path)
+        if path.suffix.lower() not in VIDEO_EXTENSIONS:
+            messagebox.showwarning(APP_NAME, UI_TEXT["supported_files"])
+            return None
+        self.preview_source_video_path = path
+        return path
+
+    def _start_generate_short_preview(self) -> None:
+        if self.short_preview_running:
+            return
+        package_dir = self._resolve_package_for_review()
+        if package_dir is None:
+            messagebox.showinfo(APP_NAME, UI_TEXT["selected_requires_package"])
+            return
+        source_video = self._resolve_preview_source_video(package_dir)
+
+        self.short_preview_running = True
+        self.generate_short_preview_button.configure(state="disabled")
+        self.open_short_preview_button.configure(state="disabled")
+        self.status_var.set(UI_TEXT["running"])
+        self.progress_var.set(0.12)
+        self._set_eta(45)
+        self.short_preview_summary_var.set(
+            "\n".join(
+                [
+                    UI_TEXT["short_preview"],
+                    UI_TEXT["short_preview_running"],
+                    f"{UI_TEXT['package']}: {package_dir}",
+                ]
+            )
+        )
+
+        def worker() -> None:
+            try:
+                system = run_system_check()
+                self.events.put(
+                    {
+                        "type": "cli",
+                        "statuses": system["cli"],
+                        "nvenc": system["nvenc"],
+                        "gpu": system["gpu"],
+                        "install_guide": system["install_guide"],
+                        "install_commands": system["install_commands"],
+                    }
+                )
+                statuses = system["cli"]
+                result = generate_selected_short_preview(
+                    package_dir=package_dir,
+                    ffmpeg_path=statuses.get("ffmpeg", {}).get("path"),
+                    nvenc_online=system["nvenc"].get("state") == "ONLINE",
+                    source_video_path=source_video,
+                    log=lambda message: self.events.put({"type": "log", "message": message}),
+                )
+                self.events.put({"type": "short_preview_result", "result": result})
+            except Exception as exc:
+                self.events.put({"type": "short_preview_error", "message": str(exc)})
 
         threading.Thread(target=worker, daemon=True).start()
 
@@ -1385,6 +1511,21 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         except Exception as exc:
             messagebox.showerror(APP_NAME, f"{UI_TEXT['open_selected_failed']}\n{exc}")
 
+    def _open_short_preview(self) -> None:
+        preview_path = self.short_preview_path
+        if preview_path is None:
+            package_dir = self._resolve_package_for_review()
+            if package_dir is not None:
+                candidate = package_dir / "selected" / "short_preview.mp4"
+                preview_path = candidate if candidate.exists() else None
+        if preview_path is None or not preview_path.exists():
+            messagebox.showinfo(APP_NAME, UI_TEXT["short_preview_unavailable"])
+            return
+        try:
+            os.startfile(str(preview_path))  # type: ignore[attr-defined]
+        except Exception as exc:
+            messagebox.showerror(APP_NAME, f"{UI_TEXT['open_short_preview_failed']}\n{exc}")
+
     def _open_test_output(self) -> None:
         output_dir = self.test_output_dir or first_video_test_dir()
         if not output_dir.exists():
@@ -1537,6 +1678,17 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             ]
         )
 
+    def _format_short_preview_summary(self, result: dict[str, object]) -> str:
+        output_path = str(result.get("output_path") or "")
+        return "\n".join(
+            [
+                UI_TEXT["short_preview"],
+                f"{UI_TEXT['package_status']}: {result.get('status', UI_TEXT['short_preview_failed'])}",
+                f"{UI_TEXT['encoder']}: {result.get('encoder', 'unavailable')}",
+                f"{UI_TEXT['preview_output']}: {output_path or '--'}",
+            ]
+        )
+
     def _drain_events(self) -> None:
         while True:
             try:
@@ -1613,6 +1765,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.open_review_button.configure(state="disabled")
                 self.open_selected_button.configure(state="disabled")
                 self.selected_output_dir = None
+                self.short_preview_path = None
                 self.candidate_data = {}
                 self.short_choice_touched = False
                 self.title_choice_touched = False
@@ -1621,6 +1774,8 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.short_choice_menu.configure(values=[UI_TEXT["selected_none"]])
                 self.title_choice_menu.configure(values=[UI_TEXT["selected_none"]])
                 self.selected_summary_var.set(UI_TEXT["selected_ready_hint"])
+                self.short_preview_summary_var.set(UI_TEXT["short_preview_ready_hint"])
+                self.open_short_preview_button.configure(state="disabled")
                 self.open_button.configure(state="normal")
                 self.progress_var.set(1.0)
                 status = str(result.get("status") or "")
@@ -1675,6 +1830,9 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.selected_output_dir = selected_dir if selected_dir.exists() else None
                 self.selected_summary_var.set(self._format_selected_export_summary(result))
                 self.open_selected_button.configure(state="normal" if self.selected_output_dir else "disabled")
+                self.short_preview_path = None
+                self.open_short_preview_button.configure(state="disabled")
+                self.short_preview_summary_var.set(UI_TEXT["short_preview_ready_hint"])
                 self.output_var.set(str(selected_dir))
                 self.progress_var.set(1.0)
                 self.status_var.set(UI_TEXT["complete"])
@@ -1687,6 +1845,32 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             self.export_selected_button.configure(state="normal")
             self.status_var.set(UI_TEXT["error"])
             self.selected_summary_var.set(str(event.get("message", "")))
+        elif event_type == "short_preview_result":
+            result = event.get("result", {})
+            if isinstance(result, dict):
+                output_path = Path(str(result.get("output_path") or ""))
+                selected_dir = Path(str(result.get("selected_dir") or ""))
+                package_dir = Path(str(result.get("package_dir") or packages_dir()))
+                self.package_output_dir = package_dir
+                self.selected_output_dir = selected_dir if selected_dir.exists() else None
+                self.short_preview_path = output_path if output_path.exists() else None
+                self.short_preview_summary_var.set(self._format_short_preview_summary(result))
+                self.open_selected_button.configure(state="normal" if self.selected_output_dir else "disabled")
+                self.open_short_preview_button.configure(state="normal" if self.short_preview_path else "disabled")
+                self.progress_var.set(1.0)
+                if result.get("status") == "COMPLETED":
+                    self.status_var.set(UI_TEXT["complete"])
+                    self.eta_var.set(UI_TEXT["short_preview_completed"])
+                    self.finish_var.set(UI_TEXT["complete"])
+                else:
+                    self.status_var.set(UI_TEXT["error"])
+            self.short_preview_running = False
+            self.generate_short_preview_button.configure(state="normal")
+        elif event_type == "short_preview_error":
+            self.short_preview_running = False
+            self.generate_short_preview_button.configure(state="normal")
+            self.status_var.set(UI_TEXT["error"])
+            self.short_preview_summary_var.set(str(event.get("message", "")))
         elif event_type == "youtube":
             self.youtube_status_var.set(str(event.get("message", "")))
         elif event_type == "progress":

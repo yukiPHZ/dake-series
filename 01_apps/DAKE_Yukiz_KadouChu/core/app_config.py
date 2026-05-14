@@ -79,6 +79,13 @@ LOG_TEXT = {
     "selected_title": "補助脳：タイトル候補を選択しました。",
     "selected_draft_created": "補助脳：選択ドラフトを作成しました。",
     "selected_human_decision": "補助脳：最後だけ、菊田さんが握ってください。",
+    "selected_preview_start": "補助脳：選択されたShorts候補を切り出しています。",
+    "selected_preview_nvenc": "補助脳：NVENCで書き出しています。",
+    "selected_preview_fallback": "補助脳：NVENCで試しましたが、CPUへ切り替えました。",
+    "selected_preview_created": "補助脳：Shortsプレビューを作成しました。",
+    "selected_preview_ffmpeg_missing": "補助脳：FFmpegが必要です。CLI導入補助を確認してください。",
+    "selected_preview_source_missing": "補助脳：元動画の場所を確認できませんでした。",
+    "selected_preview_failed": "補助脳：Shortsプレビュー作成に失敗しました。",
 }
 
 SHORTS_REASON_TEXT = {
