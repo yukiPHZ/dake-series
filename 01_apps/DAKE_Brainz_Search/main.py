@@ -374,6 +374,14 @@ def sample_conversations(conversation_id: str, title: str, user_text: str, assis
     ]
 
 
+def fit_logo_size(image_size: tuple[int, int], max_width: int = 118, max_height: int = 36) -> tuple[int, int]:
+    width, height = image_size
+    if width <= 0 or height <= 0:
+        return max_height, max_height
+    scale = min(max_width / width, max_height / height)
+    return max(1, round(width * scale)), max(1, round(height * scale))
+
+
 def run_gui(launch_check: bool = False) -> int:
     import customtkinter as ctk
     from PIL import Image
@@ -468,7 +476,7 @@ def run_gui(launch_check: bool = False) -> int:
             if logo_path.exists():
                 try:
                     image = Image.open(logo_path)
-                    self.logo_image = ctk.CTkImage(light_image=image, dark_image=image, size=(42, 42))
+                    self.logo_image = ctk.CTkImage(light_image=image, dark_image=image, size=fit_logo_size(image.size))
                     ctk.CTkLabel(header, image=self.logo_image, text="").grid(row=0, column=0, rowspan=2, padx=(0, 12))
                 except Exception:
                     pass

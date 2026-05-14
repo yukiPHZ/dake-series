@@ -113,7 +113,6 @@ BRAINZは自動送信しません。検索結果から、ChatGPTに貼る用ま�
 - ChatGPT投入用プロンプト生成強化
 - Codex指示書生成強化
 - Git差分連携
-- PEAKHEADZロゴ起動画面
 - 処理完了通知
 
 ## ビルド
@@ -187,6 +186,15 @@ Ollama未起動、モデル未導入、embedding API失敗、GPU未検出のい�
 - OpenAI API未使用
 
 BRAINZは単語を探すだけの検索ツールではなく、過去の記録を意味と流れで再接続する補助脳です。
+
+## Phase 7: PEAKHEADZロゴ表示
+
+補助脳BRAINZは、`assets/peakheadz_logo.png` がある場合にヘッダーへ小さくPEAKHEADZロゴを表示します。
+
+- ロゴは左上ヘッダー付近に小さく表示
+- 縦横比を維持
+- ロゴがない場合も通常起動
+- exeアイコンはDAKE共通アイコンのまま
 
 ## DAKE_META
 

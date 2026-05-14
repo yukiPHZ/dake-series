@@ -9,6 +9,7 @@
 - 記憶の前後関係表示
 - semantic類似による流れ接続
 - timeline item navigation
+- PEAKHEADZロゴのヘッダー表示
 
 ## 継続
 
