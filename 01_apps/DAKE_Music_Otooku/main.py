@@ -16,12 +16,13 @@ from tkinter import filedialog, font as tkfont, messagebox
 from core.app_config import DEFAULT_DURATION_SECONDS, ensure_data_dirs
 from core.audio_probe import probe_audio_info
 from core.cli_checker import EnvironmentReport, check_environment
-from core.ffmpeg_audio import export_audio_material
+from core.ffmpeg_audio import LoopPackOptions, export_audio_material, export_loop_pack
 from core.musicgen_runner import generate_music
 from core.ollama_client import generate_direction
 from core.project_writer import (
     create_project,
     make_project_name,
+    write_loop_notes,
     write_project_files,
     write_setup_needed,
 )
@@ -52,6 +53,24 @@ UI_TEXT = {
     "reference_probe_waiting": "file name: --\nduration: --\ncodec: --\nsample rate: --\nchannels: --",
     "reference_probe_running": "ffprobe info: checking...",
     "reference_probe_failed": "ffprobe info: unavailable",
+    "loop_options_label": "LOOP PACK",
+    "loop_duration_label": "出力尺",
+    "duration_30s": "30s",
+    "duration_60s": "60s",
+    "duration_180s": "180s",
+    "fade_label": "fade",
+    "fade_in_label": "in",
+    "fade_out_label": "out",
+    "volume_label": "音量",
+    "volume_original": "original",
+    "volume_soft": "soft",
+    "volume_normalized": "normalized",
+    "tag_label": "用途タグ",
+    "tag_quiet": "quiet",
+    "tag_work": "work",
+    "tag_midnight": "midnight",
+    "tag_shrine": "shrine",
+    "tag_borinef": "borinef",
     "output_none": "出力先: 未作成",
     "output_ready": "出力先: {path}",
     "status_idle": "稼働中。",
@@ -84,6 +103,7 @@ UI_TEXT = {
     "log_brain_thinking": "補助脳：空気を解析しています。",
     "log_brain_low_temp": "補助脳：静かな低温構成を提案しました。",
     "log_brain_arranged": "補助脳：音の置き方を整えました。",
+    "log_loop_brain": "補助脳：ループ構成を整えています。",
     "log_brain_start": "補助脳：音の方向性を考えています。",
     "log_brain_ollama": "補助脳：Ollamaで音設計を作成しました。",
     "log_brain_template": "補助脳：固定テンプレートで音設計を作成しました。",
@@ -101,6 +121,9 @@ UI_TEXT = {
     "log_ffmpeg_package": "FFMPEG：Audio package created.",
     "log_ffmpeg_failed": "FFMPEG：FFmpeg failed. Prompt output is still available.",
     "log_ffmpeg_missing": "FFMPEG：FFmpeg is required for audio export",
+    "log_loop_file": "FFMPEG：{name} をloop_packへ書き出しました。",
+    "log_loop_exported": "FFMPEG：Loop pack exported.",
+    "log_loop_failed": "FFMPEG：Loop pack export failed.",
     "log_complete": "整っています。",
     "dialog_error_title": "確認",
     "dialog_open_error": "出力フォルダを開けませんでした。",
@@ -130,6 +153,23 @@ STATUS_LABEL_KEYS = {
 AUDIO_FILETYPES = (
     ("Audio", "*.wav *.mp3 *.m4a *.flac *.ogg"),
     ("All", "*.*"),
+)
+LOOP_DURATION_OPTIONS = (
+    (30, "duration_30s"),
+    (60, "duration_60s"),
+    (180, "duration_180s"),
+)
+VOLUME_OPTIONS = (
+    ("original", "volume_original"),
+    ("soft", "volume_soft"),
+    ("normalized", "volume_normalized"),
+)
+TAG_OPTIONS = (
+    ("quiet", "tag_quiet"),
+    ("work", "tag_work"),
+    ("midnight", "tag_midnight"),
+    ("shrine", "tag_shrine"),
+    ("borinef", "tag_borinef"),
 )
 
 
@@ -189,6 +229,17 @@ class MusicOtookuApp:
         self.reference_info_var = tk.StringVar(value=UI_TEXT["reference_probe_waiting"])
         self.output_var = tk.StringVar(value=UI_TEXT["output_none"])
         self.brain_response_var = tk.StringVar(value=UI_TEXT["local_brain_idle"])
+        self.loop_duration_vars = {
+            duration: tk.BooleanVar(value=True)
+            for duration, _text_key in LOOP_DURATION_OPTIONS
+        }
+        self.fade_in_var = tk.StringVar(value="1.5")
+        self.fade_out_var = tk.StringVar(value="2.0")
+        self.volume_var = tk.StringVar(value="original")
+        self.tag_vars = {
+            tag: tk.BooleanVar(value=(tag == "quiet"))
+            for tag, _text_key in TAG_OPTIONS
+        }
 
         self._build_ui()
         self._append_log(UI_TEXT["log_ready"])
@@ -345,6 +396,8 @@ class MusicOtookuApp:
             pady=8,
         ).grid(row=4, column=0, sticky="ew", padx=16, pady=(0, 14))
 
+        self._build_loop_controls(prompt_panel)
+
         output_panel = make_panel(body, COLORS)
         output_panel.grid(row=0, column=1, sticky="nsew")
         output_panel.grid_columnconfigure(0, weight=1)
@@ -416,6 +469,127 @@ class MusicOtookuApp:
         )
         self.open_button.grid(row=4, column=0, sticky="ew", padx=16, pady=(0, 14))
         self.open_button.configure(state="disabled")
+
+    def _build_loop_controls(self, parent: tk.Widget) -> None:
+        panel = tk.Frame(parent, bg=COLORS["surface"])
+        panel.grid(row=5, column=0, sticky="ew", padx=16, pady=(0, 14))
+        panel.grid_columnconfigure(1, weight=1)
+
+        tk.Label(
+            panel,
+            text=UI_TEXT["loop_options_label"],
+            bg=COLORS["surface"],
+            fg=COLORS["text"],
+            font=self.fonts["label"],
+            anchor="w",
+        ).grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 6))
+
+        duration_row = tk.Frame(panel, bg=COLORS["surface"])
+        duration_row.grid(row=1, column=0, columnspan=2, sticky="ew")
+        tk.Label(
+            duration_row,
+            text=UI_TEXT["loop_duration_label"],
+            bg=COLORS["surface"],
+            fg=COLORS["muted"],
+            font=self.fonts["small"],
+        ).pack(side="left", padx=(0, 10))
+        for duration, text_key in LOOP_DURATION_OPTIONS:
+            tk.Checkbutton(
+                duration_row,
+                text=UI_TEXT[text_key],
+                variable=self.loop_duration_vars[duration],
+                bg=COLORS["surface"],
+                fg=COLORS["text"],
+                activebackground=COLORS["surface"],
+                font=self.fonts["small"],
+                bd=0,
+                padx=2,
+                pady=0,
+            ).pack(side="left", padx=(0, 8))
+
+        setting_row = tk.Frame(panel, bg=COLORS["surface"])
+        setting_row.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(6, 0))
+        tk.Label(
+            setting_row,
+            text=UI_TEXT["fade_label"],
+            bg=COLORS["surface"],
+            fg=COLORS["muted"],
+            font=self.fonts["small"],
+        ).pack(side="left", padx=(0, 8))
+        tk.Label(
+            setting_row,
+            text=UI_TEXT["fade_in_label"],
+            bg=COLORS["surface"],
+            fg=COLORS["muted"],
+            font=self.fonts["small"],
+        ).pack(side="left")
+        tk.Entry(
+            setting_row,
+            textvariable=self.fade_in_var,
+            width=5,
+            bg=COLORS["surface_soft"],
+            fg=COLORS["text"],
+            font=self.fonts["small"],
+            relief="flat",
+        ).pack(side="left", padx=(3, 8))
+        tk.Label(
+            setting_row,
+            text=UI_TEXT["fade_out_label"],
+            bg=COLORS["surface"],
+            fg=COLORS["muted"],
+            font=self.fonts["small"],
+        ).pack(side="left")
+        tk.Entry(
+            setting_row,
+            textvariable=self.fade_out_var,
+            width=5,
+            bg=COLORS["surface_soft"],
+            fg=COLORS["text"],
+            font=self.fonts["small"],
+            relief="flat",
+        ).pack(side="left", padx=(3, 12))
+        tk.Label(
+            setting_row,
+            text=UI_TEXT["volume_label"],
+            bg=COLORS["surface"],
+            fg=COLORS["muted"],
+            font=self.fonts["small"],
+        ).pack(side="left", padx=(0, 6))
+        volume_menu = tk.OptionMenu(setting_row, self.volume_var, *(UI_TEXT[text_key] for _value, text_key in VOLUME_OPTIONS))
+        volume_menu.configure(
+            bg=COLORS["surface_soft"],
+            fg=COLORS["text"],
+            activebackground=COLORS["secondary_hover"],
+            relief="flat",
+            bd=0,
+            font=self.fonts["small"],
+            highlightthickness=1,
+            highlightbackground=COLORS["border"],
+        )
+        volume_menu.pack(side="left")
+
+        tag_row = tk.Frame(panel, bg=COLORS["surface"])
+        tag_row.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(6, 0))
+        tk.Label(
+            tag_row,
+            text=UI_TEXT["tag_label"],
+            bg=COLORS["surface"],
+            fg=COLORS["muted"],
+            font=self.fonts["small"],
+        ).pack(side="left", padx=(0, 10))
+        for tag, text_key in TAG_OPTIONS:
+            tk.Checkbutton(
+                tag_row,
+                text=UI_TEXT[text_key],
+                variable=self.tag_vars[tag],
+                bg=COLORS["surface"],
+                fg=COLORS["text"],
+                activebackground=COLORS["surface"],
+                font=self.fonts["small"],
+                bd=0,
+                padx=2,
+                pady=0,
+            ).pack(side="left", padx=(0, 6))
 
     def _build_system(self, parent: tk.Widget) -> None:
         system_panel = make_panel(parent, COLORS)
@@ -572,6 +746,39 @@ class MusicOtookuApp:
         else:
             self.worker_queue.put(("reference_info", UI_TEXT["reference_probe_failed"]))
 
+    def _float_from_var(self, value_var: tk.StringVar, default: float) -> float:
+        try:
+            value = float(value_var.get())
+        except ValueError:
+            return default
+        return max(0.0, min(value, 20.0))
+
+    def _loop_options_from_ui(self) -> LoopPackOptions:
+        durations = tuple(
+            duration
+            for duration, _text_key in LOOP_DURATION_OPTIONS
+            if self.loop_duration_vars[duration].get()
+        )
+        if not durations:
+            durations = (30,)
+
+        volume_mode = self.volume_var.get()
+        valid_volume_modes = {value for value, _text_key in VOLUME_OPTIONS}
+        if volume_mode not in valid_volume_modes:
+            volume_mode = "original"
+
+        tags = tuple(tag for tag, _text_key in TAG_OPTIONS if self.tag_vars[tag].get())
+        if not tags:
+            tags = ("quiet",)
+
+        return LoopPackOptions(
+            durations=durations,
+            fade_in=self._float_from_var(self.fade_in_var, 1.5),
+            fade_out=self._float_from_var(self.fade_out_var, 2.0),
+            volume_mode=volume_mode,
+            tags=tags,
+        )
+
     def start_place_sound(self) -> None:
         if self.processing:
             return
@@ -579,12 +786,23 @@ class MusicOtookuApp:
         if not prompt or prompt == UI_TEXT["prompt_hint"]:
             self.status_var.set(UI_TEXT["status_no_prompt"])
             return
+        loop_options = self._loop_options_from_ui()
+        reference_audio_path = self.reference_audio_path
         self._set_busy(True)
         self.status_var.set(UI_TEXT["status_processing"])
-        thread = threading.Thread(target=self._place_sound_worker, args=(prompt,), daemon=True)
+        thread = threading.Thread(
+            target=self._place_sound_worker,
+            args=(prompt, loop_options, reference_audio_path),
+            daemon=True,
+        )
         thread.start()
 
-    def _place_sound_worker(self, prompt: str) -> None:
+    def _place_sound_worker(
+        self,
+        prompt: str,
+        loop_options: LoopPackOptions,
+        reference_audio_path: Path | None,
+    ) -> None:
         process_log: list[str] = []
         final_status = UI_TEXT["status_complete"]
 
@@ -619,8 +837,8 @@ class MusicOtookuApp:
             log(UI_TEXT["log_project"])
 
             source_audio: Path | None = None
-            if self.reference_audio_path:
-                source_audio = self.reference_audio_path
+            if reference_audio_path:
+                source_audio = reference_audio_path
                 log(UI_TEXT["log_reference"])
                 audio_info = probe_audio_info(source_audio)
                 if audio_info:
@@ -649,15 +867,39 @@ class MusicOtookuApp:
                 if ffmpeg_status and ffmpeg_status.state == "ONLINE":
                     self.worker_queue.put(("status", UI_TEXT["status_ffmpeg_processing"]))
                     log(UI_TEXT["log_ffmpeg_start"])
-                    output_stem = "source_converted" if self.reference_audio_path else "generated"
+                    output_stem = "source_converted" if reference_audio_path else "generated"
                     export_result = export_audio_material(source_audio, project_paths.audio, output_stem=output_stem)
                     if export_result.success:
                         for file_path in export_result.files:
                             log(UI_TEXT["log_ffmpeg_file"].format(name=file_path.name))
                         log(UI_TEXT["log_ffmpeg_package"])
                         log(UI_TEXT["log_ffmpeg_done"])
-                        final_status = UI_TEXT["status_audio_complete"]
-                        self.worker_queue.put(("status", UI_TEXT["status_audio_complete"]))
+
+                        log(UI_TEXT["log_loop_brain"])
+                        loop_result = export_loop_pack(source_audio, project_paths.audio, loop_options)
+                        if loop_result.files:
+                            for file_path in loop_result.files:
+                                log(UI_TEXT["log_loop_file"].format(name=file_path.name))
+                            write_loop_notes(
+                                project_paths,
+                                direction,
+                                loop_options.tags,
+                                loop_options.durations,
+                                loop_options.fade_in,
+                                loop_options.fade_out,
+                                loop_options.volume_mode,
+                                loop_result.files,
+                            )
+                        if loop_result.success:
+                            log(UI_TEXT["log_loop_exported"])
+                            final_status = UI_TEXT["status_audio_complete"]
+                            self.worker_queue.put(("status", UI_TEXT["status_audio_complete"]))
+                        else:
+                            log(UI_TEXT["log_loop_failed"])
+                            if loop_result.errors:
+                                write_setup_needed(project_paths, loop_result.errors[0])
+                            final_status = UI_TEXT["status_ffmpeg_failed"]
+                            self.worker_queue.put(("status", UI_TEXT["status_ffmpeg_failed"]))
                     else:
                         log(UI_TEXT["log_ffmpeg_failed"])
                         final_status = UI_TEXT["status_ffmpeg_failed"]

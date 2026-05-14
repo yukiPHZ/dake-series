@@ -66,6 +66,43 @@ def write_project_files(
     write_text(paths.logs / "process_log.txt", "\n".join(log_lines).strip() + "\n")
 
 
+def write_loop_notes(
+    paths: ProjectPaths,
+    direction: MusicDirection,
+    tags: tuple[str, ...],
+    durations: tuple[int, ...],
+    fade_in: float,
+    fade_out: float,
+    volume_mode: str,
+    files: list[Path],
+) -> None:
+    lines = [
+        "# Loop Pack Notes",
+        "",
+        "Mood:",
+        direction.mood,
+        "",
+        "BPM:",
+        direction.bpm,
+        "",
+        "Texture:",
+        direction.texture,
+        "",
+        "Suggested Use:",
+        direction.usage_idea,
+        "",
+        f"Tags: {', '.join(tags) if tags else 'quiet'}",
+        f"Durations: {', '.join(str(duration) + 's' for duration in durations)}",
+        f"Fade In: {fade_in:.1f}s",
+        f"Fade Out: {fade_out:.1f}s",
+        f"Volume: {volume_mode}",
+        "",
+        "Files:",
+    ]
+    lines.extend(f"- {path.name}" for path in files)
+    write_text(paths.notes / "loop_notes.txt", "\n".join(lines).strip() + "\n")
+
+
 def write_setup_needed(paths: ProjectPaths, reason: str) -> None:
     text = "\n".join(
         [
@@ -78,4 +115,3 @@ def write_setup_needed(paths: ProjectPaths, reason: str) -> None:
         ]
     )
     write_text(paths.root / "setup_needed.txt", text.strip() + "\n")
-

@@ -66,11 +66,19 @@ audio/
   source_converted.wav
   source_converted.mp3
   loop_preview.mp3
+  loop_pack/
+    quiet_loop_30s.mp3
+    quiet_loop_30s.wav
+    quiet_loop_60s.mp3
+    quiet_loop_60s.wav
+    quiet_loop_180s.mp3
+    quiet_loop_180s.wav
 prompts/
   music_direction.txt
   musicgen_prompt.txt
 notes/
   usage_note.txt
+  loop_notes.txt
 logs/
   process_log.txt
 setup_needed.txt
@@ -83,6 +91,12 @@ setup_needed.txt
 FFmpeg が導入されている場合、既存の音源ファイルを選択して、wav / mp3 / loop_preview.mp3 を出力できます。
 
 MusicGen未導入でも、手持ちのBGMや効果音を素材として整えることができます。
+
+## Loop Pack
+
+音を置く は、既存音源から複数長さのループ素材を生成できます。
+
+動画編集前に、“置ける音素材棚”を作る用途を想定しています。
 
 ## AudioCraft / MusicGen について
 
