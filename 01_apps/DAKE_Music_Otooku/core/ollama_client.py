@@ -15,7 +15,7 @@ def generate_direction(
     user_text: str,
     available_models: tuple[str, ...],
     base_url: str = OLLAMA_BASE_URL,
-    timeout: int = 24,
+    timeout: int = 90,
 ) -> MusicDirection:
     try:
         import requests
@@ -24,22 +24,32 @@ def generate_direction(
 
     model = pick_model(available_models)
     system_prompt = (
-        "You are a local assistant for a DAKE desktop app called 音を置く. "
-        "Create a compact sound-material direction from the user's Japanese words. "
-        "This is not a DAW and not a full song request. "
-        "Return only one JSON object with keys: mood, bpm, key, instruments, "
-        "loop_length, musicgen_prompt, usage_note. "
-        "Avoid copyrighted songs, famous artists, imitation, vocals, and publishing advice. "
-        "The musicgen_prompt must be in concise English for an original short BGM loop."
+        "You are a quiet local assistant for a DAKE desktop app called 音を置く. "
+        "The user provides a Japanese sound image. Propose a small BGM material direction, "
+        "not a finished song. Keep it quiet, ambient, minimal, practical, and easy to place "
+        "under video, work scenes, streams, websites, or Shorts. Avoid over-designed ideas, "
+        "vocals, famous melodies, copyrighted songs, and artist imitation. "
+        "Prefer midnight feeling, air, low temperature, texture, and '置ける音'. "
+        "Output must be concise. No markdown. No long explanation. "
+        "Return exactly these labels, one per section:\n"
+        "Mood:\n"
+        "BPM:\n"
+        "Key:\n"
+        "Texture:\n"
+        "Instruments:\n"
+        "Loop Length:\n"
+        "Music Direction:\n"
+        "MusicGen Prompt:\n"
+        "Usage Idea:"
     )
-    prompt = f"{system_prompt}\n\nUser words:\n{user_text.strip()}"
+    prompt = f"{system_prompt}\n\nInput words:\n{user_text.strip()}"
     payload = {
         "model": model,
         "prompt": prompt,
         "stream": False,
         "options": {
-            "temperature": 0.35,
-            "num_predict": 500,
+            "temperature": 0.25,
+            "num_predict": 420,
         },
     }
     response = requests.post(f"{base_url.rstrip('/')}/api/generate", json=payload, timeout=timeout)
@@ -49,4 +59,3 @@ def generate_direction(
     if not body:
         raise RuntimeError("Ollama returned an empty response")
     return parse_direction_response(body, user_text, source=f"ollama:{model}")
-

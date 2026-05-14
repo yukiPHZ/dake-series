@@ -19,7 +19,7 @@ LOGS_DIR = DATA_DIR / "logs"
 PRESETS_DIR = DATA_DIR / "presets"
 
 OLLAMA_BASE_URL = "http://localhost:11434"
-OLLAMA_DEFAULT_MODEL = "llama3.1"
+OLLAMA_DEFAULT_MODEL = "qwen2.5:7b"
 OLLAMA_SETTINGS_PATH = PRESETS_DIR / "ollama_settings.json"
 
 DEFAULT_DURATION_SECONDS = 12
@@ -54,4 +54,3 @@ def ensure_data_dirs() -> None:
         PRESETS_DIR,
     ):
         path.mkdir(parents=True, exist_ok=True)
-

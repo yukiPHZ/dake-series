@@ -76,7 +76,7 @@ def _check_ollama(base_url: str = OLLAMA_BASE_URL) -> tuple[ToolStatus, tuple[st
         },
     }
     try:
-        response = requests.post(f"{base_url.rstrip('/')}/api/generate", json=payload, timeout=4)
+        response = requests.post(f"{base_url.rstrip('/')}/api/generate", json=payload, timeout=12)
         if response.status_code != 200:
             return ToolStatus("ollama", "OLLAMA", "LOCAL OFFLINE", f"{model_name}: HTTP {response.status_code}"), ()
         return ToolStatus("ollama", "OLLAMA", "LOCAL READY", model_name), (model_name,)
@@ -124,4 +124,3 @@ def check_environment(base_url: str = OLLAMA_BASE_URL) -> EnvironmentReport:
         _check_uvr_candidates(),
     )
     return EnvironmentReport(statuses=statuses, ollama_models=models)
-

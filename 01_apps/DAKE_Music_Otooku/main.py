@@ -7,6 +7,7 @@ import queue
 import sys
 import tempfile
 import threading
+import time
 import webbrowser
 from pathlib import Path
 import tkinter as tk
@@ -58,11 +59,23 @@ UI_TEXT = {
     "env_unknown": "CHECK WAITING",
     "status_ffmpeg_offline_hint": "OFFLINE - FFmpeg is offline. Prompt output is still available.",
     "status_ffprobe_offline_hint": "OFFLINE - FFprobe is offline. Prompt output is still available.",
+    "local_brain_label": "LOCAL BRAIN RESPONSE",
+    "local_brain_idle": "Response Time: --",
+    "local_brain_measuring": "Response Time: measuring...",
+    "local_brain_online": "Response Time: {seconds:.1f}s",
+    "local_brain_offline": "LOCAL BRAIN OFFLINE / Fallback direction generated.",
+    "status_tool_ffmpeg": "FFMPEG",
+    "status_tool_ffprobe": "FFPROBE",
+    "status_tool_ollama": "OLLAMA",
+    "status_tool_musicgen": "MUSICGEN",
+    "status_tool_cuda": "CUDA",
+    "status_tool_uvr": "UVR",
     "log_ready": "補助脳：稼働中です。",
     "log_check_start": "SYSTEM：環境チェックを開始しました。",
     "log_check_done": "SYSTEM：環境チェックが完了しました。",
     "log_brain_received": "補助脳：言葉を受け取りました。",
-    "log_brain_thinking": "補助脳：音の方向性を考えています。",
+    "log_brain_thinking": "補助脳：空気を解析しています。",
+    "log_brain_low_temp": "補助脳：静かな低温構成を提案しました。",
     "log_brain_arranged": "補助脳：音の置き方を整えました。",
     "log_brain_start": "補助脳：音の方向性を考えています。",
     "log_brain_ollama": "補助脳：Ollamaで音設計を作成しました。",
@@ -95,13 +108,13 @@ LINK_URLS = {
 }
 
 STATUS_KEYS = ("ffmpeg", "ffprobe", "ollama", "musicgen", "cuda", "uvr")
-STATUS_LABELS = {
-    "ffmpeg": "FFMPEG",
-    "ffprobe": "FFPROBE",
-    "ollama": "OLLAMA",
-    "musicgen": "MUSICGEN",
-    "cuda": "CUDA",
-    "uvr": "UVR",
+STATUS_LABEL_KEYS = {
+    "ffmpeg": "status_tool_ffmpeg",
+    "ffprobe": "status_tool_ffprobe",
+    "ollama": "status_tool_ollama",
+    "musicgen": "status_tool_musicgen",
+    "cuda": "status_tool_cuda",
+    "uvr": "status_tool_uvr",
 }
 AUDIO_FILETYPES = (
     ("Audio", "*.wav *.mp3 *.m4a *.aac *.flac *.ogg"),
@@ -163,6 +176,7 @@ class MusicOtookuApp:
         self.status_var = tk.StringVar(value=UI_TEXT["status_idle"])
         self.reference_var = tk.StringVar(value=UI_TEXT["reference_none"])
         self.output_var = tk.StringVar(value=UI_TEXT["output_none"])
+        self.brain_response_var = tk.StringVar(value=UI_TEXT["local_brain_idle"])
 
         self._build_ui()
         self._append_log(UI_TEXT["log_ready"])
@@ -338,7 +352,7 @@ class MusicOtookuApp:
         for row, key in enumerate(STATUS_KEYS):
             tk.Label(
                 status_list,
-                text=STATUS_LABELS[key],
+                text=UI_TEXT[STATUS_LABEL_KEYS[key]],
                 bg=COLORS["surface"],
                 fg=COLORS["muted"],
                 font=self.fonts["small"],
@@ -400,6 +414,20 @@ class MusicOtookuApp:
             fg=COLORS["muted"],
             font=self.fonts["small"],
         ).pack(side="left", padx=(12, 0))
+        tk.Label(
+            header,
+            textvariable=self.brain_response_var,
+            bg=COLORS["surface"],
+            fg=COLORS["muted"],
+            font=self.fonts["small"],
+        ).pack(side="right")
+        tk.Label(
+            header,
+            text=UI_TEXT["local_brain_label"],
+            bg=COLORS["surface"],
+            fg=COLORS["quiet"],
+            font=self.fonts["small"],
+        ).pack(side="right", padx=(0, 12))
 
         self.log_text = tk.Text(
             system_panel,
@@ -529,20 +557,21 @@ class MusicOtookuApp:
         try:
             log(UI_TEXT["log_brain_received"])
             log(UI_TEXT["log_brain_thinking"])
+            self.worker_queue.put(("brain_response", UI_TEXT["local_brain_measuring"]))
             report = self.environment_report or check_environment()
             if self.environment_report is None:
                 self.worker_queue.put(("environment", report))
 
-            ollama_status = report.status_for("ollama")
-            if ollama_status and ollama_status.state == "LOCAL READY":
-                try:
-                    direction = generate_direction(prompt, report.ollama_models)
-                    log(UI_TEXT["log_brain_ollama"])
-                except Exception:
-                    direction = fallback_direction(prompt)
-                    log(UI_TEXT["log_brain_template"])
-            else:
+            try:
+                started_at = time.perf_counter()
+                direction = generate_direction(prompt, report.ollama_models)
+                elapsed = time.perf_counter() - started_at
+                self.worker_queue.put(("brain_response", UI_TEXT["local_brain_online"].format(seconds=elapsed)))
+                log(UI_TEXT["log_brain_ollama"])
+                log(UI_TEXT["log_brain_low_temp"])
+            except Exception:
                 direction = fallback_direction(prompt)
+                self.worker_queue.put(("brain_response", UI_TEXT["local_brain_offline"]))
                 log(UI_TEXT["log_brain_template"])
 
             log(UI_TEXT["log_brain_arranged"])
@@ -618,6 +647,8 @@ class MusicOtookuApp:
                     self._append_log(str(payload))
                 elif event == "busy":
                     self._set_busy(bool(payload))
+                elif event == "brain_response":
+                    self.brain_response_var.set(str(payload))
         except queue.Empty:
             pass
         self.root.after(100, self._poll_queue)
@@ -668,18 +699,32 @@ def run_smoke_test() -> int:
 
 def run_generate_check() -> int:
     prompt = "深夜、コード、ミシン、静かな稼働"
-    direction = fallback_direction(prompt)
+    report = check_environment()
     paths = create_project(make_project_name(prompt))
     log_lines = [
         UI_TEXT["log_brain_received"],
         UI_TEXT["log_brain_thinking"],
-        UI_TEXT["log_brain_template"],
-        UI_TEXT["log_brain_arranged"],
-        UI_TEXT["log_bpm"].format(bpm=direction.bpm),
-        UI_TEXT["log_project"],
-        UI_TEXT["log_musicgen_unavailable"],
-        UI_TEXT["log_complete"],
     ]
+    response_time: float | None = None
+    try:
+        started_at = time.perf_counter()
+        direction = generate_direction(prompt, report.ollama_models)
+        response_time = time.perf_counter() - started_at
+        log_lines.append(UI_TEXT["log_brain_ollama"])
+        log_lines.append(UI_TEXT["log_brain_low_temp"])
+    except Exception:
+        direction = fallback_direction(prompt)
+        log_lines.append(UI_TEXT["log_brain_template"])
+
+    log_lines.extend(
+        [
+            UI_TEXT["log_brain_arranged"],
+            UI_TEXT["log_bpm"].format(bpm=direction.bpm),
+            UI_TEXT["log_project"],
+            UI_TEXT["log_musicgen_unavailable"],
+            UI_TEXT["log_complete"],
+        ]
+    )
     write_setup_needed(paths, "generate check")
     write_project_files(paths, prompt, direction, log_lines)
     required = (
@@ -692,6 +737,10 @@ def run_generate_check() -> int:
         if not path.exists():
             raise AssertionError(f"missing {path}")
     print(paths.root)
+    if response_time is None:
+        print("local brain: fallback")
+    else:
+        print(f"local brain: {direction.source} {response_time:.2f}s")
     return 0
 
 

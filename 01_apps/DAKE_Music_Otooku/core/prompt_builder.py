@@ -11,8 +11,10 @@ class MusicDirection:
     mood: str
     bpm: str
     key: str
+    texture: str
     instrumentation: str
     loop_length: str
+    music_direction: str
     musicgen_prompt: str
     negative_notes: str
     usage_idea: str
@@ -22,23 +24,38 @@ class MusicDirection:
         lines = [
             "# 音の設計メモ",
             "",
-            f"入力: {user_text}",
-            f"source: {self.source}",
+            f"Input: {user_text}",
+            f"Source: {self.source}",
             "",
-            f"mood: {self.mood}",
-            f"BPM: {self.bpm}",
-            f"key: {self.key}",
-            f"instruments: {self.instrumentation}",
-            f"loop length: {self.loop_length}",
+            "Mood:",
+            self.mood,
             "",
-            "musicgen prompt:",
+            "BPM:",
+            self.bpm,
+            "",
+            "Key:",
+            self.key,
+            "",
+            "Texture:",
+            self.texture,
+            "",
+            "Instruments:",
+            self.instrumentation,
+            "",
+            "Loop Length:",
+            self.loop_length,
+            "",
+            "Music Direction:",
+            self.music_direction,
+            "",
+            "MusicGen Prompt:",
             self.musicgen_prompt,
             "",
-            "negative notes:",
-            self.negative_notes,
-            "",
-            "usage note:",
+            "Usage Idea:",
             self.usage_idea,
+            "",
+            "Negative Notes:",
+            self.negative_notes,
         ]
         return "\n".join(lines).strip() + "\n"
 
@@ -62,73 +79,141 @@ def fallback_direction(user_text: str) -> MusicDirection:
 
     if any(word in lowered for word in quiet_words):
         bpm = "72"
-        mood = "静かな稼働感、低い温度、余白がある"
+        mood = "quiet industrial ambient"
         key = "D minor / A minor"
+        texture = "soft low drone / midnight machine hum"
         instrumentation = "soft pad, low muted bass, light texture, small bell or noise layer"
+        music_direction = "深夜の作業音に寄り添う、低温で薄いループ素材。主張を抑えて、映像の下に置ける音。"
     elif any(word in lowered for word in bright_words):
         bpm = "86"
-        mood = "明るいが控えめ、朝の空気、近すぎない距離"
+        mood = "quiet morning ambient"
         key = "G major / D major"
+        texture = "soft air / distant light percussion"
         instrumentation = "warm pluck, soft marimba, light percussion, airy pad"
+        music_direction = "朝の余白を壊さない、軽く明るい短尺BGM素材。"
     else:
         bpm = "80"
-        mood = "落ち着いた背景、作業の邪魔をしない、短いループ向き"
+        mood = "minimal calm background"
         key = "C major / A minor"
+        texture = "gentle pulse / low soft pad"
         instrumentation = "minimal synth pad, soft pulse, simple sub bass, gentle texture"
+        music_direction = "作業や説明映像の邪魔をしない、短く置ける背景ループ。"
 
     clean_text = " ".join(user_text.split())
     prompt = (
-        "original short background music loop, no vocals, no famous melody, "
-        f"{mood}, {instrumentation}, {bpm} BPM, seamless 12 second loop, "
-        f"made for video background material, concept: {clean_text}"
+        "original quiet ambient minimal background music loop, no vocals, no famous melody, "
+        f"{mood}, {texture}, {instrumentation}, {bpm} BPM, seamless 12 second loop, "
+        f"practical video background material, concept: {clean_text}"
     )
     return MusicDirection(
         mood=mood,
         bpm=bpm,
         key=key,
+        texture=texture,
         instrumentation=instrumentation,
         loop_length="12 seconds",
+        music_direction=music_direction,
         musicgen_prompt=prompt,
-        negative_notes="no vocals, no copyrighted melody, no artist imitation, no loud lead, no sudden drop",
-        usage_idea="短い動画の背景、待機画面、サイトの空気付け、配信用の低音量ループに向いています。",
+        negative_notes="no vocals, no copyrighted melody, no artist imitation, no loud lead, no sudden drop, not over-designed",
+        usage_idea="深夜のコード作業や静かな制作風景の背景向け。小さな音量で、映像の空気だけを支える使い方に向いています。",
         source="template",
     )
 
 
 def _extract_json_object(text: str) -> str:
-    stripped = text.strip()
-    match = re.search(r"\{.*\}", stripped, flags=re.DOTALL)
+    match = re.search(r"\{.*\}", text.strip(), flags=re.DOTALL)
     if not match:
         raise ValueError("JSON object was not found")
     return match.group(0)
 
 
+def _value_from_json(data: dict, key: str, default: str, *aliases: str) -> str:
+    raw = data.get(key)
+    if raw is None:
+        for alias in aliases:
+            raw = data.get(alias)
+            if raw is not None:
+                break
+    if raw is None:
+        raw = default
+    if isinstance(raw, (list, tuple)):
+        return ", ".join(str(item) for item in raw if item)
+    return str(raw).strip() or default
+
+
+def _parse_sections(text: str) -> dict[str, str]:
+    label_map = {
+        "mood": "mood",
+        "bpm": "bpm",
+        "key": "key",
+        "texture": "texture",
+        "instruments": "instruments",
+        "instrumentation": "instruments",
+        "loop length": "loop_length",
+        "loop_length": "loop_length",
+        "music direction": "music_direction",
+        "music_direction": "music_direction",
+        "musicgen prompt": "musicgen_prompt",
+        "musicgen_prompt": "musicgen_prompt",
+        "usage idea": "usage_idea",
+        "usage_note": "usage_idea",
+        "usage idea.": "usage_idea",
+    }
+    sections: dict[str, list[str]] = {}
+    current_key: str | None = None
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        match = re.match(r"^([A-Za-z _]+):\s*(.*)$", line)
+        if match:
+            label = match.group(1).strip().lower()
+            mapped = label_map.get(label)
+            if mapped:
+                current_key = mapped
+                sections.setdefault(current_key, [])
+                value = match.group(2).strip()
+                if value:
+                    sections[current_key].append(value)
+                continue
+        if current_key:
+            sections.setdefault(current_key, []).append(line)
+
+    return {key: " ".join(value).strip() for key, value in sections.items() if value}
+
+
 def parse_direction_response(text: str, user_text: str, source: str = "ollama") -> MusicDirection:
-    data = json.loads(_extract_json_object(text))
     fallback = fallback_direction(user_text)
-
-    def value(key: str, default: str, *aliases: str) -> str:
-        raw = data.get(key)
-        if raw is None:
-            for alias in aliases:
-                raw = data.get(alias)
-                if raw is not None:
-                    break
-        if raw is None:
-            raw = default
-        if isinstance(raw, (list, tuple)):
-            return ", ".join(str(item) for item in raw if item)
-        return str(raw).strip() or default
-
-    return MusicDirection(
-        mood=value("mood", fallback.mood),
-        bpm=value("bpm", fallback.bpm),
-        key=value("key", fallback.key),
-        instrumentation=value("instruments", fallback.instrumentation, "instrumentation"),
-        loop_length=value("loop_length", fallback.loop_length),
-        musicgen_prompt=value("musicgen_prompt", fallback.musicgen_prompt),
-        negative_notes=value("negative_notes", fallback.negative_notes),
-        usage_idea=value("usage_note", fallback.usage_idea, "usage_idea"),
-        source=source,
-    )
+    try:
+        data = json.loads(_extract_json_object(text))
+        return MusicDirection(
+            mood=_value_from_json(data, "mood", fallback.mood),
+            bpm=_value_from_json(data, "bpm", fallback.bpm),
+            key=_value_from_json(data, "key", fallback.key),
+            texture=_value_from_json(data, "texture", fallback.texture),
+            instrumentation=_value_from_json(data, "instruments", fallback.instrumentation, "instrumentation"),
+            loop_length=_value_from_json(data, "loop_length", fallback.loop_length),
+            music_direction=_value_from_json(data, "music_direction", fallback.music_direction),
+            musicgen_prompt=_value_from_json(data, "musicgen_prompt", fallback.musicgen_prompt),
+            negative_notes=_value_from_json(data, "negative_notes", fallback.negative_notes),
+            usage_idea=_value_from_json(data, "usage_note", fallback.usage_idea, "usage_idea"),
+            source=source,
+        )
+    except Exception:
+        sections = _parse_sections(text)
+        if not sections:
+            raise
+        return MusicDirection(
+            mood=sections.get("mood", fallback.mood),
+            bpm=sections.get("bpm", fallback.bpm),
+            key=sections.get("key", fallback.key),
+            texture=sections.get("texture", fallback.texture),
+            instrumentation=sections.get("instruments", fallback.instrumentation),
+            loop_length=sections.get("loop_length", fallback.loop_length),
+            music_direction=sections.get("music_direction", fallback.music_direction),
+            musicgen_prompt=sections.get("musicgen_prompt", fallback.musicgen_prompt),
+            negative_notes=fallback.negative_notes,
+            usage_idea=sections.get("usage_idea", fallback.usage_idea),
+            source=source,
+        )
 
