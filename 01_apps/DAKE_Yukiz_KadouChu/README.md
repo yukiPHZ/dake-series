@@ -133,6 +133,18 @@ Phase 1.5では `nvidia-smi` が使える場合のみGPU名とVRAMを表示し�
 
 表示は `ONLINE`, `MISSING`, `UNAUTHORIZED`, `READY`, `UNAVAILABLE` を中心にしています。GitHub CLI / Wrangler は認証済みの場合 `AUTHORIZED`、未認証の場合 `UNAUTHORIZED` と表示します。未導入の道具があってもアプリは落ちません。
 
+## Phase 1.6 CLI導入補助モード
+
+System欄に `Open Install Guide`, `Copy Install Commands`, `Recheck System` を追加しました。
+
+- `Open Install Guide`: `data/outputs/system_check/install_guide.txt` を開きます。
+- `Copy Install Commands`: 不足しているCLIだけの導入候補コマンドをクリップボードへコピーします。
+- `Recheck System`: CLI / GPU / Ollama / NVENC / npm を再確認します。
+
+このアプリは自動インストールしません。`winget`, `npm`, `pip`, exe download などを勝手に実行しません。PATH変更、管理者権限、利用規約確認が絡むため、コマンドは必ず内容を確認してからユーザーが実行してください。
+
+WranglerにはNode.js / npm が必要です。npmがない場合は先にNode.jsを入れてから `npm install -g wrangler` を実行します。OllamaとGPUは、FFmpegなどのCLIより先に `READY` として認識される場合があります。
+
 ## Phase 2候補
 
 - YouTube LIVE URLからyt-dlpで本取得

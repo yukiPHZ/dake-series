@@ -17,6 +17,7 @@ CLI_TOOLS: dict[str, dict[str, str]] = {
     "yt-dlp": {"command": "yt-dlp", "label": "YT-DLP"},
     "gh": {"command": "gh", "label": "GH"},
     "wrangler": {"command": "wrangler", "label": "WRANGLER"},
+    "npm": {"command": "npm", "label": "NPM"},
     "ollama": {"command": "ollama", "label": "OLLAMA"},
 }
 
@@ -30,7 +31,27 @@ TOOL_PURPOSES = {
     "nvidia-smi": "GPU名とVRAM表示に使います。NVIDIAドライバに含まれる場合があります。",
 }
 
-SYSTEM_CHECK_KEYS = ["ffmpeg", "ffprobe", "yt-dlp", "gh", "wrangler", "ollama"]
+SYSTEM_CHECK_KEYS = ["ffmpeg", "ffprobe", "yt-dlp", "gh", "wrangler", "npm", "ollama"]
+INSTALL_TARGET_KEYS = ["ffmpeg", "ffprobe", "yt-dlp", "gh", "wrangler"]
+
+INSTALL_TOOL_PURPOSES = {
+    "ffmpeg": "動画情報取得、切り出し、NVENCエンコードに使います。",
+    "ffprobe": "動画の尺、解像度、fps、codec確認に使います。",
+    "yt-dlp": "YouTube LIVEアーカイブ等の取得補助に使います。",
+    "gh": "GitHub Releaseや認証状態確認に使います。",
+    "wrangler": "Cloudflare Pages / Workers 操作確認に使います。",
+    "npm": "WranglerにはNode.js / npmが必要です。",
+    "nvidia-smi": "GPU名とVRAM表示に使います。",
+    "nvenc": "NVIDIA GPUエンコード確認に使います。",
+}
+
+INSTALL_COMMANDS = {
+    "ffmpeg": "winget install Gyan.FFmpeg",
+    "yt-dlp": "winget install yt-dlp.yt-dlp",
+    "gh": "winget install GitHub.cli",
+    "nodejs": "winget install OpenJS.NodeJS.LTS",
+    "wrangler": "npm install -g wrangler",
+}
 
 
 def _creationflags() -> int:
@@ -210,67 +231,143 @@ def run_system_check() -> dict[str, Any]:
     ffmpeg_path = statuses.get("ffmpeg", {}).get("path")
     nvenc = check_nvenc(ffmpeg_path)
     gpu = check_gpu_info()
+    install_commands = get_install_commands(statuses)
     install_guide = write_install_guide(statuses, nvenc, gpu)
     return {
         "cli": statuses,
         "nvenc": nvenc,
         "gpu": gpu,
+        "install_commands": install_commands,
         "install_guide": str(install_guide) if install_guide else "",
     }
+
+
+def _state_of(statuses: dict[str, dict[str, str | None]], key: str) -> str:
+    return str(statuses.get(key, {}).get("state") or "UNKNOWN")
+
+
+def _detail_of(statuses: dict[str, dict[str, str | None]], key: str) -> str:
+    return str(statuses.get(key, {}).get("detail") or "")
+
+
+def _needs_install(state: str) -> bool:
+    return state in {"MISSING", "UNAVAILABLE"}
+
+
+def _status_line(label: str, state: str, detail: str = "") -> str:
+    if detail and state not in detail:
+        return f"- {label}: {state} / {detail}"
+    return f"- {label}: {state}"
+
+
+def get_install_commands(statuses: dict[str, dict[str, str | None]]) -> list[str]:
+    commands: list[str] = []
+    ffmpeg_state = _state_of(statuses, "ffmpeg")
+    ffprobe_state = _state_of(statuses, "ffprobe")
+    if _needs_install(ffmpeg_state) or _needs_install(ffprobe_state):
+        commands.append(INSTALL_COMMANDS["ffmpeg"])
+    if _needs_install(_state_of(statuses, "yt-dlp")):
+        commands.append(INSTALL_COMMANDS["yt-dlp"])
+    if _needs_install(_state_of(statuses, "gh")):
+        commands.append(INSTALL_COMMANDS["gh"])
+    if _needs_install(_state_of(statuses, "wrangler")):
+        if _needs_install(_state_of(statuses, "npm")):
+            commands.append(INSTALL_COMMANDS["nodejs"])
+        commands.append(INSTALL_COMMANDS["wrangler"])
+    return commands
 
 
 def write_install_guide(
     statuses: dict[str, dict[str, str | None]],
     nvenc: dict[str, str],
     gpu: dict[str, str],
-) -> Path | None:
-    missing = []
-    auth_needed = []
-    unavailable = []
-    for key in SYSTEM_CHECK_KEYS:
-        state = str(statuses.get(key, {}).get("state") or "")
-        if state == "MISSING":
-            missing.append(key)
-        elif state == "UNAUTHORIZED":
-            auth_needed.append(key)
-        elif state == "UNAVAILABLE":
-            unavailable.append(key)
-
-    if nvenc.get("state") == "UNAVAILABLE":
-        unavailable.append("nvenc")
-    if gpu.get("state") == "SKIPPED":
-        unavailable.append("nvidia-smi")
-
-    if not missing and not auth_needed and not unavailable:
-        return None
-
+) -> Path:
     guide_dir = outputs_dir() / "system_check"
     guide_dir.mkdir(parents=True, exist_ok=True)
     path = guide_dir / "install_guide.txt"
+    commands = get_install_commands(statuses)
+    gpu_state = gpu.get("state", "UNKNOWN")
+    gpu_detail = gpu.get("detail", "")
+    gpu_line = str(gpu_detail) if gpu_state == "READY" and gpu_detail else str(gpu_state)
+    ollama_state = _state_of(statuses, "ollama")
+    ollama_detail = _detail_of(statuses, "ollama")
+    memo = "OllamaとGPUは認識済みです。" if ollama_state == "READY" and gpu_state == "READY" else "OllamaとGPUは環境により認識状態が変わります。"
     lines = [
-        "Dakeユキズ稼働中 System Check Install Guide",
+        "# Dakeユキズ稼働中｜CLI導入補助",
         "",
-        "このアプリは未導入の道具があっても落ちません。",
-        "インストール後はアプリ再起動、またはPATHを確認してから Run System Check を実行してください。",
+        "## 現在の状態",
+        "",
+        f"- GPU: {gpu_line}",
+        _status_line("OLLAMA", ollama_state, ollama_detail),
+        _status_line("FFMPEG", _state_of(statuses, "ffmpeg"), _detail_of(statuses, "ffmpeg")),
+        _status_line("FFPROBE", _state_of(statuses, "ffprobe"), _detail_of(statuses, "ffprobe")),
+        _status_line("YT-DLP", _state_of(statuses, "yt-dlp"), _detail_of(statuses, "yt-dlp")),
+        _status_line("GH", _state_of(statuses, "gh"), _detail_of(statuses, "gh")),
+        _status_line("WRANGLER", _state_of(statuses, "wrangler"), _detail_of(statuses, "wrangler")),
+        _status_line("NPM", _state_of(statuses, "npm"), _detail_of(statuses, "npm")),
+        _status_line("NVENC", nvenc.get("state", "UNKNOWN"), nvenc.get("detail", "")),
+        "",
+        "## 入れるとできること",
+        "",
+        "### FFmpeg / FFprobe",
+        INSTALL_TOOL_PURPOSES["ffmpeg"],
+        "",
+        "### yt-dlp",
+        INSTALL_TOOL_PURPOSES["yt-dlp"],
+        "",
+        "### GitHub CLI",
+        INSTALL_TOOL_PURPOSES["gh"],
+        "",
+        "### Wrangler",
+        INSTALL_TOOL_PURPOSES["wrangler"],
+        "WranglerにはNode.js / npm が必要です。",
+        "npmがない場合は先にNode.jsを入れてください。",
+        "",
+        "## 推奨インストール方法",
+        "",
+        "※このアプリは自動インストールしません。",
+        "※実行前に内容を確認してください。",
+        "",
+        "### FFmpeg",
+        INSTALL_COMMANDS["ffmpeg"],
+        "",
+        "### yt-dlp",
+        INSTALL_COMMANDS["yt-dlp"],
+        "",
+        "### GitHub CLI",
+        INSTALL_COMMANDS["gh"],
+        "",
+        "### Node.js / npm",
+        INSTALL_COMMANDS["nodejs"],
+        "",
+        "### Wrangler",
+        INSTALL_COMMANDS["wrangler"],
+        "",
+        "## 今回コピーされる候補",
+        "",
+        *(commands if commands else ["不足している導入対象CLIはありません。"]),
+        "",
+        "## インストール後",
+        "",
+        "1. PowerShellを開き直す",
+        "2. Dakeユキズ稼働中を再起動する",
+        "3. Run System Check を押す",
+        "",
+        "## 確認コマンド",
+        "",
+        "ffmpeg -version",
+        "ffprobe -version",
+        "yt-dlp --version",
+        "gh --version",
+        "wrangler --version",
+        "npm --version",
+        "",
+        "## 補助脳メモ",
+        "",
+        memo,
+        "次はFFmpegがONLINEになると、動画解析とNVENC確認へ進めます。",
         "",
     ]
-    if missing:
-        lines.append("MISSING")
-        for key in missing:
-            lines.append(f"- {CLI_TOOLS.get(key, {}).get('label', key.upper())}: {TOOL_PURPOSES.get(key, '')}")
-        lines.append("")
-    if auth_needed:
-        lines.append("UNAUTHORIZED")
-        for key in auth_needed:
-            label = CLI_TOOLS.get(key, {}).get("label", key.upper())
-            lines.append(f"- {label}: {TOOL_PURPOSES.get(key, '')}")
-        lines.append("")
-    if unavailable:
-        lines.append("UNAVAILABLE / SKIPPED")
-        for key in unavailable:
-            label = key.upper().replace("-", "_")
-            lines.append(f"- {label}: {TOOL_PURPOSES.get(key, '環境依存のため利用できませんでした。')}")
-        lines.append("")
     path.write_text("\n".join(lines).strip() + "\n", encoding="utf-8")
     return path
 

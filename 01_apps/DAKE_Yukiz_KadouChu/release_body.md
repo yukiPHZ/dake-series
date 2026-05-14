@@ -31,3 +31,11 @@
 - Ollama localhost API とモデル一覧を確認
 - h264_nvenc / hevc_nvenc と nvidia-smi GPU表示を確認
 - 不足がある場合に `data/outputs/system_check/install_guide.txt` を生成
+
+## Phase 1.6
+
+- CLI導入補助モードを追加
+- Open Install Guide / Copy Install Commands / Recheck System を追加
+- 不足CLIだけの導入候補コマンドをコピー可能に変更
+- Wrangler用にNode.js / npm確認を追加
+- 自動インストールしない安全方針を明記

@@ -73,8 +73,15 @@ UI_TEXT = {
     "process": "PROCESS",
     "start": "Start Production Run",
     "run_system_check": "Run System Check",
+    "recheck_system": "Recheck System",
+    "open_install_guide": "Open Install Guide",
+    "copy_install_commands": "Copy Install Commands",
     "checking": "Checking...",
     "system_check_done": "System check completed.\n整っています。",
+    "no_install_guide": "Install guide is not ready yet.",
+    "install_guide_open_failed": "Could not open install guide.",
+    "install_commands_copied": "Install commands copied.",
+    "no_install_commands": "No missing CLI install commands.",
     "output": "OUTPUT",
     "open_output": "Open Output Folder",
     "system": "SYSTEM / CLI STATUS",
@@ -117,6 +124,8 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.cli_status: dict[str, dict[str, str | None]] = {}
         self.nvenc_status: dict[str, str] = {"state": "CHECKING", "detail": ""}
         self.gpu_status: dict[str, str] = {"state": "CHECKING", "detail": ""}
+        self.install_guide_path: Path | None = None
+        self.install_commands: list[str] = []
         self.worker_running = False
 
         self.file_var = ctk.StringVar(value="No video selected")
@@ -352,7 +361,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             text_color=COLORS["text"],
         )
         self.start_button.grid(row=8, column=0, sticky="ew", pady=(22, 8))
-        ctk.CTkButton(
+        self.process_system_check_button = ctk.CTkButton(
             body,
             text=UI_TEXT["run_system_check"],
             command=self._start_cli_check,
@@ -360,7 +369,8 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             fg_color=COLORS["button_secondary"],
             hover_color=COLORS["button_hover"],
             text_color=COLORS["text"],
-        ).grid(row=9, column=0, sticky="ew")
+        )
+        self.process_system_check_button.grid(row=9, column=0, sticky="ew")
 
         ctk.CTkLabel(
             body,
@@ -415,28 +425,50 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         body.grid_columnconfigure(0, weight=1)
         body.grid_columnconfigure(1, weight=1)
 
-        labels = ["FFMPEG", "FFPROBE", "YT-DLP", "GH", "WRANGLER", "OLLAMA", "NVENC", "GPU"]
+        labels = ["FFMPEG", "FFPROBE", "YT-DLP", "GH", "WRANGLER", "NPM", "OLLAMA", "NVENC", "GPU"]
         for index, label in enumerate(labels):
             pill = StatusPill(body, label)
             pill.grid(row=index // 2, column=index % 2, sticky="ew", padx=4, pady=4)
             self.cli_pills[label] = pill
         self.system_check_button = ctk.CTkButton(
             body,
-            text=UI_TEXT["run_system_check"],
+            text=UI_TEXT["recheck_system"],
             command=self._start_cli_check,
             height=32,
             fg_color=COLORS["button_secondary"],
             hover_color=COLORS["button_hover"],
             text_color=COLORS["text"],
         )
-        self.system_check_button.grid(row=4, column=0, columnspan=2, sticky="ew", padx=4, pady=(10, 4))
+        self.system_check_button.grid(row=5, column=0, columnspan=2, sticky="ew", padx=4, pady=(10, 4))
+        self.open_install_guide_button = ctk.CTkButton(
+            body,
+            text=UI_TEXT["open_install_guide"],
+            command=self._open_install_guide,
+            height=32,
+            fg_color=COLORS["button_secondary"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+            state="disabled",
+        )
+        self.open_install_guide_button.grid(row=6, column=0, sticky="ew", padx=4, pady=4)
+        self.copy_install_commands_button = ctk.CTkButton(
+            body,
+            text=UI_TEXT["copy_install_commands"],
+            command=self._copy_install_commands,
+            height=32,
+            fg_color=COLORS["button_secondary"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+            state="disabled",
+        )
+        self.copy_install_commands_button.grid(row=6, column=1, sticky="ew", padx=4, pady=4)
         ctk.CTkLabel(
             body,
             textvariable=self.system_check_status_var,
             font=ctk.CTkFont(family=FONT_FAMILY, size=11),
             text_color=COLORS["muted"],
             justify="left",
-        ).grid(row=5, column=0, columnspan=2, sticky="w", padx=4, pady=(2, 0))
+        ).grid(row=7, column=0, columnspan=2, sticky="w", padx=4, pady=(2, 0))
         return panel
 
     def _build_log_panel(self, parent: ctk.CTkFrame) -> ctk.CTkFrame:
@@ -497,8 +529,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
     def _start_cli_check(self) -> None:
         self._log(LOG_TEXT["system_check_start"])
         self.system_check_status_var.set(UI_TEXT["checking"])
-        if hasattr(self, "system_check_button"):
-            self.system_check_button.configure(state="disabled")
+        self._set_system_action_buttons("disabled")
         for pill in self.cli_pills.values():
             pill.set_state("CHECKING")
 
@@ -512,6 +543,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                         "nvenc": system["nvenc"],
                         "gpu": system["gpu"],
                         "install_guide": system["install_guide"],
+                        "install_commands": system["install_commands"],
                     }
                 )
             except Exception as exc:
@@ -690,6 +722,32 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         except Exception as exc:
             messagebox.showerror(APP_NAME, f"Could not open output folder.\n{exc}")
 
+    def _open_install_guide(self) -> None:
+        if self.install_guide_path is None or not self.install_guide_path.exists():
+            messagebox.showinfo(APP_NAME, UI_TEXT["no_install_guide"])
+            return
+        try:
+            os.startfile(str(self.install_guide_path))  # type: ignore[attr-defined]
+            self._log(LOG_TEXT["install_guide_opened"])
+        except Exception as exc:
+            messagebox.showerror(APP_NAME, f"{UI_TEXT['install_guide_open_failed']}\n{exc}")
+
+    def _copy_install_commands(self) -> None:
+        if not self.install_commands:
+            self.system_check_status_var.set(UI_TEXT["no_install_commands"])
+            return
+        text = "\n".join(self.install_commands)
+        self.clipboard_clear()
+        self.clipboard_append(text)
+        self.system_check_status_var.set(UI_TEXT["install_commands_copied"])
+        self._log(LOG_TEXT["install_commands_copied"])
+
+    def _set_system_action_buttons(self, state: str) -> None:
+        for name in ["system_check_button", "process_system_check_button"]:
+            button = getattr(self, name, None)
+            if button is not None:
+                button.configure(state=state)
+
     def _drain_events(self) -> None:
         while True:
             try:
@@ -709,11 +767,11 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 event.get("nvenc", {}),
                 event.get("gpu", {}),
                 str(event.get("install_guide", "")),
+                event.get("install_commands", []),
             )
         elif event_type == "cli_error":
             self.system_check_status_var.set(f"System check failed: {event.get('message', '')}")
-            if hasattr(self, "system_check_button"):
-                self.system_check_button.configure(state="normal")
+            self._set_system_action_buttons("normal")
             self._log(str(event.get("message", "")))
         elif event_type == "media":
             info = event.get("info")
@@ -753,13 +811,22 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             self.status_var.set(UI_TEXT["error"])
             messagebox.showerror(APP_NAME, str(event.get("message", "Unknown error")))
 
-    def _apply_cli_status(self, statuses: object, nvenc: object, gpu: object, install_guide: str = "") -> None:
+    def _apply_cli_status(
+        self,
+        statuses: object,
+        nvenc: object,
+        gpu: object,
+        install_guide: str = "",
+        install_commands: object = None,
+    ) -> None:
         if isinstance(statuses, dict):
             self.cli_status = statuses  # type: ignore[assignment]
         if isinstance(nvenc, dict):
             self.nvenc_status = nvenc  # type: ignore[assignment]
         if isinstance(gpu, dict):
             self.gpu_status = gpu  # type: ignore[assignment]
+        self.install_guide_path = Path(install_guide) if install_guide else None
+        self.install_commands = [str(item) for item in install_commands] if isinstance(install_commands, list) else []
 
         for key, spec in CLI_TOOLS.items():
             label = spec["label"]
@@ -775,11 +842,17 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.cli_pills["NVENC"].set_state(self.nvenc_status.get("state", "UNKNOWN"), self.nvenc_status.get("detail", ""))
         self.cli_pills["GPU"].set_state(self.gpu_status.get("state", "UNKNOWN"), self.gpu_status.get("detail", ""))
         self.system_check_status_var.set(UI_TEXT["system_check_done"])
-        if hasattr(self, "system_check_button"):
-            self.system_check_button.configure(state="normal")
+        self._set_system_action_buttons("normal")
+        if hasattr(self, "open_install_guide_button"):
+            self.open_install_guide_button.configure(state="normal" if self.install_guide_path else "disabled")
+        if hasattr(self, "copy_install_commands_button"):
+            self.copy_install_commands_button.configure(state="normal" if self.install_commands else "disabled")
         self._log(LOG_TEXT["system_check_complete"])
         if self._has_system_issues():
             self._log(LOG_TEXT["tools_missing"])
+        if self.install_commands:
+            self._log(LOG_TEXT["cli_disconnected"])
+            self._log(LOG_TEXT["install_candidates_ready"])
         if self.cli_status.get("gh", {}).get("state") == "UNAUTHORIZED":
             self._log(LOG_TEXT["github_unauthorized"])
         if self.cli_status.get("wrangler", {}).get("state") == "UNAUTHORIZED":
@@ -832,6 +905,7 @@ def run_launch_check() -> int:
         "nvenc": system["nvenc"],
         "gpu": system["gpu"],
         "install_guide": system["install_guide"],
+        "install_commands": system["install_commands"],
         "faster_whisper": is_faster_whisper_available(),
     }
     print(json.dumps(result, ensure_ascii=False, indent=2))
