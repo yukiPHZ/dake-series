@@ -20,6 +20,13 @@ class DocumentRecord:
     indexed_at: str
     hash: str
     content: str
+    source_label: str = ""
+    conversation_id: str = ""
+    conversation_title: str = ""
+    role: str = ""
+    message_index: int = -1
+    source_created_at: str = ""
+    source_updated_at: str = ""
 
 
 @dataclass(frozen=True)
@@ -33,6 +40,24 @@ class SearchResult:
     content: str
     snippet: str
     score: float
+    source_label: str = ""
+    conversation_id: str = ""
+    conversation_title: str = ""
+    role: str = ""
+    message_index: int = -1
+    source_created_at: str = ""
+    source_updated_at: str = ""
+
+
+DOCUMENT_METADATA_COLUMNS = {
+    "source_label": "TEXT NOT NULL DEFAULT ''",
+    "conversation_id": "TEXT NOT NULL DEFAULT ''",
+    "conversation_title": "TEXT NOT NULL DEFAULT ''",
+    "role": "TEXT NOT NULL DEFAULT ''",
+    "message_index": "INTEGER NOT NULL DEFAULT -1",
+    "source_created_at": "TEXT NOT NULL DEFAULT ''",
+    "source_updated_at": "TEXT NOT NULL DEFAULT ''",
+}
 
 
 class BrainzDatabase:
@@ -62,7 +87,14 @@ class BrainzDatabase:
                     modified_at TEXT NOT NULL,
                     indexed_at TEXT NOT NULL,
                     hash TEXT NOT NULL,
-                    content TEXT NOT NULL
+                    content TEXT NOT NULL,
+                    source_label TEXT NOT NULL DEFAULT '',
+                    conversation_id TEXT NOT NULL DEFAULT '',
+                    conversation_title TEXT NOT NULL DEFAULT '',
+                    role TEXT NOT NULL DEFAULT '',
+                    message_index INTEGER NOT NULL DEFAULT -1,
+                    source_created_at TEXT NOT NULL DEFAULT '',
+                    source_updated_at TEXT NOT NULL DEFAULT ''
                 );
 
                 CREATE TABLE IF NOT EXISTS chunks (
@@ -72,6 +104,14 @@ class BrainzDatabase:
                     content TEXT NOT NULL,
                     summary TEXT NOT NULL DEFAULT '',
                     embedding_status TEXT NOT NULL DEFAULT 'pending',
+                    source_type TEXT NOT NULL DEFAULT '',
+                    source_label TEXT NOT NULL DEFAULT '',
+                    conversation_id TEXT NOT NULL DEFAULT '',
+                    conversation_title TEXT NOT NULL DEFAULT '',
+                    role TEXT NOT NULL DEFAULT '',
+                    message_index INTEGER NOT NULL DEFAULT -1,
+                    source_created_at TEXT NOT NULL DEFAULT '',
+                    source_updated_at TEXT NOT NULL DEFAULT '',
                     FOREIGN KEY(document_id) REFERENCES documents(id) ON DELETE CASCADE
                 );
 
@@ -98,7 +138,19 @@ class BrainzDatabase:
                 );
                 """
             )
+            self._ensure_columns(conn, "documents", DOCUMENT_METADATA_COLUMNS)
+            chunk_columns = {"source_type": "TEXT NOT NULL DEFAULT ''", **DOCUMENT_METADATA_COLUMNS}
+            self._ensure_columns(conn, "chunks", chunk_columns)
             conn.commit()
+
+    def _ensure_columns(self, conn: sqlite3.Connection, table: str, columns: dict[str, str]) -> None:
+        existing = {
+            str(row["name"])
+            for row in conn.execute(f"PRAGMA table_info({table})").fetchall()
+        }
+        for name, definition in columns.items():
+            if name not in existing:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {definition}")
 
     def upsert_document(self, record: DocumentRecord, chunks: Iterable[str]) -> tuple[int, bool]:
         self.ensure_schema()
@@ -110,25 +162,35 @@ class BrainzDatabase:
             if old and old["hash"] == record.hash:
                 return int(old["id"]), False
 
+            values = (
+                record.title,
+                record.source_type,
+                record.created_at,
+                record.modified_at,
+                record.indexed_at,
+                record.hash,
+                record.content,
+                record.source_label,
+                record.conversation_id,
+                record.conversation_title,
+                record.role,
+                int(record.message_index),
+                record.source_created_at,
+                record.source_updated_at,
+            )
+
             if old:
                 document_id = int(old["id"])
                 conn.execute(
                     """
                     UPDATE documents
                     SET title = ?, source_type = ?, created_at = ?, modified_at = ?,
-                        indexed_at = ?, hash = ?, content = ?
+                        indexed_at = ?, hash = ?, content = ?, source_label = ?,
+                        conversation_id = ?, conversation_title = ?, role = ?,
+                        message_index = ?, source_created_at = ?, source_updated_at = ?
                     WHERE id = ?
                     """,
-                    (
-                        record.title,
-                        record.source_type,
-                        record.created_at,
-                        record.modified_at,
-                        record.indexed_at,
-                        record.hash,
-                        record.content,
-                        document_id,
-                    ),
+                    (*values, document_id),
                 )
                 conn.execute("DELETE FROM chunks WHERE document_id = ?", (document_id,))
                 conn.execute("DELETE FROM documents_fts WHERE rowid = ?", (document_id,))
@@ -136,29 +198,42 @@ class BrainzDatabase:
                 cursor = conn.execute(
                     """
                     INSERT INTO documents
-                    (path, title, source_type, created_at, modified_at, indexed_at, hash, content)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
                     (
-                        record.path,
-                        record.title,
-                        record.source_type,
-                        record.created_at,
-                        record.modified_at,
-                        record.indexed_at,
-                        record.hash,
-                        record.content,
-                    ),
+                        title, source_type, created_at, modified_at, indexed_at, hash,
+                        content, source_label, conversation_id, conversation_title, role,
+                        message_index, source_created_at, source_updated_at, path
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (*values, record.path),
                 )
                 document_id = int(cursor.lastrowid)
 
             for index, chunk in enumerate(chunks):
                 conn.execute(
                     """
-                    INSERT INTO chunks (document_id, chunk_index, content, embedding_status)
-                    VALUES (?, ?, ?, ?)
+                    INSERT INTO chunks
+                    (
+                        document_id, chunk_index, content, embedding_status, source_type,
+                        source_label, conversation_id, conversation_title, role, message_index,
+                        source_created_at, source_updated_at
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
-                    (document_id, index, chunk, "pending"),
+                    (
+                        document_id,
+                        index,
+                        chunk,
+                        "pending",
+                        record.source_type,
+                        record.source_label,
+                        record.conversation_id,
+                        record.conversation_title,
+                        record.role,
+                        int(record.message_index),
+                        record.source_created_at,
+                        record.source_updated_at,
+                    ),
                 )
 
             conn.execute(
@@ -190,7 +265,10 @@ class BrainzDatabase:
         with self._lock, self.connect() as conn:
             row = conn.execute(
                 """
-                SELECT id, path, title, source_type, modified_at, indexed_at, content
+                SELECT
+                    id, path, title, source_type, modified_at, indexed_at, content,
+                    source_label, conversation_id, conversation_title, role, message_index,
+                    source_created_at, source_updated_at
                 FROM documents
                 WHERE id = ?
                 """,
@@ -198,17 +276,7 @@ class BrainzDatabase:
             ).fetchone()
         if row is None:
             return None
-        return SearchResult(
-            id=int(row["id"]),
-            path=row["path"],
-            title=row["title"],
-            source_type=row["source_type"],
-            modified_at=row["modified_at"],
-            indexed_at=row["indexed_at"],
-            content=row["content"],
-            snippet=make_snippet(row["content"], ""),
-            score=0.0,
-        )
+        return row_to_result(row, snippet=make_snippet(row["content"], ""), score=0.0)
 
     def search(self, query: str, limit: int = 40) -> list[SearchResult]:
         self.ensure_schema()
@@ -246,6 +314,13 @@ class BrainzDatabase:
                     d.modified_at,
                     d.indexed_at,
                     d.content,
+                    d.source_label,
+                    d.conversation_id,
+                    d.conversation_title,
+                    d.role,
+                    d.message_index,
+                    d.source_created_at,
+                    d.source_updated_at,
                     snippet(documents_fts, 2, '[', ']', ' ... ', 28) AS snippet,
                     bm25(documents_fts) AS rank
                 FROM documents_fts
@@ -261,14 +336,8 @@ class BrainzDatabase:
         for row in rows:
             rank = float(row["rank"] or 0.0)
             results.append(
-                SearchResult(
-                    id=int(row["id"]),
-                    path=row["path"],
-                    title=row["title"],
-                    source_type=row["source_type"],
-                    modified_at=row["modified_at"],
-                    indexed_at=row["indexed_at"],
-                    content=row["content"],
+                row_to_result(
+                    row,
                     snippet=row["snippet"] or make_snippet(row["content"], original_query),
                     score=100.0 - rank,
                 )
@@ -288,7 +357,10 @@ class BrainzDatabase:
             params.extend([pattern, pattern, pattern])
 
         sql = f"""
-            SELECT id, path, title, source_type, modified_at, indexed_at, content
+            SELECT
+                id, path, title, source_type, modified_at, indexed_at, content,
+                source_label, conversation_id, conversation_title, role, message_index,
+                source_created_at, source_updated_at
             FROM documents
             WHERE {' OR '.join(where_parts)}
             ORDER BY indexed_at DESC
@@ -301,20 +373,29 @@ class BrainzDatabase:
         results: list[SearchResult] = []
         for row in rows:
             score = like_score(row["title"], row["path"], row["content"], terms)
-            results.append(
-                SearchResult(
-                    id=int(row["id"]),
-                    path=row["path"],
-                    title=row["title"],
-                    source_type=row["source_type"],
-                    modified_at=row["modified_at"],
-                    indexed_at=row["indexed_at"],
-                    content=row["content"],
-                    snippet=make_snippet(row["content"], query),
-                    score=score,
-                )
-            )
+            results.append(row_to_result(row, snippet=make_snippet(row["content"], query), score=score))
         return results
+
+
+def row_to_result(row: sqlite3.Row, snippet: str, score: float) -> SearchResult:
+    return SearchResult(
+        id=int(row["id"]),
+        path=row["path"],
+        title=row["title"],
+        source_type=row["source_type"],
+        modified_at=row["modified_at"],
+        indexed_at=row["indexed_at"],
+        content=row["content"],
+        snippet=snippet,
+        score=score,
+        source_label=row["source_label"] or "",
+        conversation_id=row["conversation_id"] or "",
+        conversation_title=row["conversation_title"] or "",
+        role=row["role"] or "",
+        message_index=int(row["message_index"] if row["message_index"] is not None else -1),
+        source_created_at=row["source_created_at"] or "",
+        source_updated_at=row["source_updated_at"] or "",
+    )
 
 
 def build_fts_query(query: str) -> str:

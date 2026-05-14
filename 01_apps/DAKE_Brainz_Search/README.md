@@ -123,6 +123,24 @@ build.bat
 
 PyInstallerで `dist/DakeBrainz_Search.exe` を作成します。exeアイコンは `../../02_assets/dake_icon.ico` を参照します。PEAKHEADZロゴはアプリ内表示用で、`assets/peakheadz_logo.png` が存在する場合のみ表示します。
 
+
+
+## Phase 2: ChatGPT export取り込み
+
+補助脳BRAINZ v0.2.0 では、ChatGPTの公式Export zipまたは展開済みフォルダから `conversations.json` を検出して取り込めます。
+
+- ChatGPT公式Export zipに対応
+- 展開済みフォルダに対応
+- `conversations.json` をローカルで解析
+- 会話タイトル・発言者・本文をindex化
+- 取り込んだ会話は `source_type=chatgpt_export` として検索可能
+- 同じexportを再取り込みしても重複を避ける
+- 元zip・元フォルダ・元JSONは編集しない
+- OpenAI APIは使わない
+- APIキー入力欄は追加しない
+
+BRAINZはChatGPTの代替ではありません。ChatGPTの会話履歴を、ローカル記憶として再接続するための検索補助脳です。
+
 ## DAKE_META
 
 ```json
@@ -133,7 +151,7 @@ PyInstallerで `dist/DakeBrainz_Search.exe` を作成します。exeアイコン
   "launcher_description": "ローカルの会話・仕様・メモを忘れず探すための記憶検索アプリです。",
   "site_title": "補助脳BRAINZ",
   "site_description": "ChatGPT、Codex、Claude、Geminiのやり取りをローカル記憶として再接続する検索補助脳です。",
-  "update_summary": "補助脳BRAINZ v0.1 を追加しました。",
+  "update_summary": "ChatGPT export取り込みに対応しました。",
   "folder_name": "DAKE_Brainz_Search",
   "exe_name": "DakeBrainz_Search.exe",
   "release_url": "",

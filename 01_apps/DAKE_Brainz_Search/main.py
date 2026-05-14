@@ -6,6 +6,8 @@ import json
 import queue
 import tempfile
 import threading
+import time
+import zipfile
 from pathlib import Path
 
 
@@ -23,6 +25,7 @@ UI_TEXT = {
     "button_index": "Index",
     "button_cancel": "Cancel",
     "button_choose": "Choose",
+    "button_import_chatgpt_export": "ChatGPT exportを取り込む",
     "button_chatgpt": "ChatGPTまとめ",
     "button_codex": "Codex素材",
     "memory_title": "Memory Folder",
@@ -43,12 +46,31 @@ UI_TEXT = {
     "dialog_memory_missing": "記憶フォルダを選択してください",
     "dialog_no_results": "検索結果がありません",
     "dialog_export_done": "ファイルを生成しました",
+    "dialog_select_chatgpt_export": "ChatGPT export zipを選択（キャンセルでフォルダ選択）",
+    "dialog_select_chatgpt_export_folder": "展開済みChatGPT exportフォルダを選択",
+    "filetype_zip": "zipファイル",
+    "filetype_all": "すべてのファイル",
+    "status_importing_chatgpt": "CHATGPT EXPORT IMPORTING...",
+    "status_chatgpt_import_complete": "CHATGPT EXPORT IMPORT COMPLETE",
+    "error_conversations_json_not_found": "conversations.json が見つかりませんでした。zipまたは展開済みフォルダを確認してください。",
+    "error_chatgpt_import_failed": "ChatGPT exportを取り込めませんでした。",
+    "log_chatgpt_export_detected": "ChatGPT export detected.",
+    "log_conversations_json_found": "conversations.json found: {path}",
+    "log_chatgpt_import_complete": "{conversations} conversations imported. {messages} messages indexed. Skipped duplicates: {skipped}. Errors: {errors}.",
+    "log_chatgpt_memory_imported": "補助脳：ChatGPTの記憶を取り込みました。",
+    "log_chatgpt_import_file": "IMPORT LOG: {path}",
     "smoke_markdown": "# quiet workflow\n\n補助脳BRAINZは静かな青の検索脳。Codexに投げたやつを忘れない。",
     "smoke_text": "DAKEのGitルール: git status, add, commit, push。UIを止めない。",
     "smoke_json_name": "補助脳BRAINZ",
     "smoke_query_memory": "静かな青 Codexに投げたやつ",
     "smoke_query_git": "DAKEのGitルール",
     "smoke_json_role": "local memory bridge",
+    "smoke_chatgpt_zip_title": "補助脳BRAINZの話",
+    "smoke_chatgpt_folder_title": "Cloudflare Pages整理",
+    "smoke_chatgpt_user_text": "ChatGPT export zipから補助脳BRAINZの記憶を取り込みたい。",
+    "smoke_chatgpt_assistant_text": "BRAINZは会話タイトル、role、本文をsource_type=chatgpt_exportとして検索できます。",
+    "smoke_chatgpt_folder_text": "展開済みフォルダのconversations.jsonもローカルで解析します。",
+    "smoke_chatgpt_query": "source_type chatgpt_export 補助脳BRAINZ",
     "log_ready": "READY: SQLite memory layer initialized",
     "log_folder_set": "MEMORY FOLDER: {folder}",
     "log_index_started": "INDEX START: {folder}",
@@ -71,8 +93,9 @@ UI_TEXT = {
     "status_ollama_ready": "OLLAMA LOCAL READY",
     "status_ollama_not_running": "OLLAMA NOT RUNNING",
     "status_docs": "DOCS {documents} / CHUNKS {chunks}",
-    "preview_template": "PATH: {path}\nTYPE: {source_type}\nMODIFIED: {modified_at}\nINDEXED: {indexed_at}\nSCORE: {score:.2f}\n\n{content}",
+    "preview_template": "PATH: {path}\nSOURCE: {source_type}\nLABEL: {source_label}\nCONVERSATION: {conversation_title}\nROLE: {role}\nMESSAGE INDEX: {message_index}\nMODIFIED: {modified_at}\nINDEXED: {indexed_at}\nSCORE: {score:.2f}\n\n{content}",
     "result_meta": "{source_type} | score {score:.1f}",
+    "result_meta_chatgpt": "{source_label} | score {score:.1f}",
     "handoff_preview": "query: {query}\nresults: {count}\n\n{items}",
     "launch_check_ok": "LAUNCH CHECK OK",
 }
@@ -80,6 +103,7 @@ UI_TEXT = {
 
 def run_smoke_test() -> int:
     from core.app_config import ensure_app_dirs
+    from core.chatgpt_importer import import_chatgpt_export
     from core.db import BrainzDatabase
     from core.gpu_checker import check_gpu
     from core.handoff_writer import write_chatgpt_handoff, write_codex_handoff
@@ -112,13 +136,59 @@ def run_smoke_test() -> int:
         if final_progress.errors:
             raise RuntimeError(f"index errors: {final_progress.errors}")
 
-    engine = SearchEngine(database)
-    results = engine.search(UI_TEXT["smoke_query_memory"], limit=10)
-    if not results:
-        raise RuntimeError("search returned no results")
+        unique_suffix = str(time.time_ns())
+        zip_export = root / "chatgpt_export_zip"
+        folder_export = root / "chatgpt_export_folder"
+        zip_export.mkdir()
+        folder_export.mkdir()
 
-    chatgpt_path = write_chatgpt_handoff(UI_TEXT["smoke_query_memory"], results)
-    codex_path = write_codex_handoff(UI_TEXT["smoke_query_git"], results)
+        zip_conversations = sample_conversations(
+            f"brainz_zip_{unique_suffix}",
+            UI_TEXT["smoke_chatgpt_zip_title"],
+            UI_TEXT["smoke_chatgpt_user_text"],
+            UI_TEXT["smoke_chatgpt_assistant_text"],
+        )
+        folder_conversations = sample_conversations(
+            f"brainz_folder_{unique_suffix}",
+            UI_TEXT["smoke_chatgpt_folder_title"],
+            UI_TEXT["smoke_chatgpt_folder_text"],
+            UI_TEXT["smoke_chatgpt_assistant_text"],
+        )
+        (zip_export / "conversations.json").write_text(json.dumps(zip_conversations, ensure_ascii=False), encoding="utf-8")
+        (folder_export / "conversations.json").write_text(json.dumps(folder_conversations, ensure_ascii=False), encoding="utf-8")
+
+        zip_path = root / "chatgpt_export.zip"
+        with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+            archive.write(zip_export / "conversations.json", "chatgpt_export/conversations.json")
+
+        zip_result = import_chatgpt_export(zip_path, database)
+        folder_result = import_chatgpt_export(folder_export, database)
+        duplicate_result = import_chatgpt_export(zip_path, database)
+
+        if zip_result.messages_indexed < 2:
+            raise RuntimeError("zip import did not index messages")
+        if folder_result.messages_indexed < 2:
+            raise RuntimeError("folder import did not index messages")
+        if duplicate_result.skipped_duplicates < 2:
+            raise RuntimeError("duplicate import was not skipped")
+
+    engine = SearchEngine(database)
+    file_results = engine.search(UI_TEXT["smoke_query_memory"], limit=10)
+    if not file_results:
+        raise RuntimeError("file search returned no results")
+
+    chatgpt_results = engine.search(UI_TEXT["smoke_chatgpt_query"], limit=10)
+    chatgpt_match = next((result for result in chatgpt_results if result.source_type == "chatgpt_export"), None)
+    if chatgpt_match is None:
+        raise RuntimeError("chatgpt_export search returned no result")
+    if not chatgpt_match.conversation_title or not chatgpt_match.role:
+        raise RuntimeError("chatgpt metadata was not stored")
+
+    chatgpt_path = write_chatgpt_handoff(UI_TEXT["smoke_chatgpt_query"], chatgpt_results)
+    codex_path = write_codex_handoff(UI_TEXT["smoke_query_git"], chatgpt_results + file_results)
+    chatgpt_text = chatgpt_path.read_text(encoding="utf-8")
+    if chatgpt_match.conversation_title not in chatgpt_text or chatgpt_match.role not in chatgpt_text:
+        raise RuntimeError("chatgpt handoff did not include conversation metadata")
     if not chatgpt_path.exists() or not codex_path.exists():
         raise RuntimeError("handoff export failed")
 
@@ -127,12 +197,40 @@ def run_smoke_test() -> int:
     stats = database.stats()
     print("SMOKE OK")
     print(f"documents={stats['documents']} chunks={stats['chunks']}")
-    print(f"results={len(results)}")
-    print(f"chatgpt={chatgpt_path}")
-    print(f"codex={codex_path}")
+    print(f"file_results={len(file_results)}")
+    print(f"chatgpt_results={len(chatgpt_results)}")
+    print(f"chatgpt_handoff={chatgpt_path}")
+    print(f"codex_handoff={codex_path}")
     print(f"ollama_available={ollama_status.available}")
     print(f"gpu_detected={gpu_status.gpu_detected}")
     return 0
+
+
+def sample_conversations(conversation_id: str, title: str, user_text: str, assistant_text: str) -> list[dict[str, object]]:
+    return [
+        {
+            "id": conversation_id,
+            "title": title,
+            "create_time": 1767225600.0,
+            "update_time": 1767225660.0,
+            "mapping": {
+                "user-node": {
+                    "message": {
+                        "author": {"role": "user"},
+                        "create_time": 1767225601.0,
+                        "content": {"content_type": "text", "parts": [user_text]},
+                    }
+                },
+                "assistant-node": {
+                    "message": {
+                        "author": {"role": "assistant"},
+                        "create_time": 1767225602.0,
+                        "content": {"content_type": "text", "parts": [assistant_text]},
+                    }
+                },
+            },
+        }
+    ]
 
 
 def run_gui(launch_check: bool = False) -> int:
@@ -141,13 +239,13 @@ def run_gui(launch_check: bool = False) -> int:
     from tkinter import filedialog, messagebox
 
     from core.app_config import (
-        AppConfig,
         ConfigStore,
         common_icon_path,
         ensure_app_dirs,
         open_path,
         peakheadz_logo_path,
     )
+    from core.chatgpt_importer import ConversationsJsonNotFound, ChatGPTImportResult, import_chatgpt_export
     from core.db import BrainzDatabase, SearchResult
     from core.gpu_checker import check_gpu
     from core.handoff_writer import write_chatgpt_handoff, write_codex_handoff
@@ -179,6 +277,7 @@ def run_gui(launch_check: bool = False) -> int:
             self.cancel_event = threading.Event()
             self.index_thread: threading.Thread | None = None
             self.search_thread: threading.Thread | None = None
+            self.import_thread: threading.Thread | None = None
             self.current_results: list[SearchResult] = []
             self.current_query = self.config_data.last_query
             self.logo_image = None
@@ -281,22 +380,31 @@ def run_gui(launch_check: bool = False) -> int:
                 fg_color=COLORS["panel_soft"],
                 hover_color=COLORS["accent_soft"],
                 command=self._choose_memory_folder,
-            ).grid(row=2, column=0, sticky="ew", padx=14, pady=(0, 16))
+            ).grid(row=2, column=0, sticky="ew", padx=14, pady=(0, 10))
+            self.import_button = ctk.CTkButton(
+                left,
+                text=UI_TEXT["button_import_chatgpt_export"],
+                height=34,
+                fg_color=COLORS["panel_soft"],
+                hover_color=COLORS["accent_soft"],
+                command=self._choose_chatgpt_export,
+            )
+            self.import_button.grid(row=3, column=0, sticky="ew", padx=14, pady=(0, 16))
 
-            self._section_title(left, UI_TEXT["index_title"], 3)
+            self._section_title(left, UI_TEXT["index_title"], 4)
             self.index_status_var = ctk.StringVar(value=UI_TEXT["index_idle"])
             ctk.CTkLabel(
                 left,
                 textvariable=self.index_status_var,
                 text_color=COLORS["text"],
                 font=(self.font_family, 13, "bold"),
-            ).grid(row=4, column=0, sticky="w", padx=14, pady=(0, 8))
+            ).grid(row=5, column=0, sticky="w", padx=14, pady=(0, 8))
             self.progress = ctk.CTkProgressBar(left, height=10, progress_color=COLORS["accent"])
             self.progress.set(0)
-            self.progress.grid(row=5, column=0, sticky="ew", padx=14, pady=(0, 12))
+            self.progress.grid(row=6, column=0, sticky="ew", padx=14, pady=(0, 12))
 
             button_row = ctk.CTkFrame(left, fg_color="transparent")
-            button_row.grid(row=6, column=0, sticky="ew", padx=14, pady=(0, 18))
+            button_row.grid(row=7, column=0, sticky="ew", padx=14, pady=(0, 18))
             button_row.grid_columnconfigure((0, 1), weight=1)
             self.index_button = ctk.CTkButton(
                 button_row,
@@ -318,13 +426,13 @@ def run_gui(launch_check: bool = False) -> int:
             )
             self.cancel_button.grid(row=0, column=1, sticky="ew", padx=(6, 0))
 
-            self._section_title(left, UI_TEXT["system_title"], 7)
+            self._section_title(left, UI_TEXT["system_title"], 8)
             self.sqlite_var = ctk.StringVar(value=UI_TEXT["status_sqlite_ready"])
             self.cuda_var = ctk.StringVar(value=UI_TEXT["status_cuda_unavailable"])
             self.gpu_var = ctk.StringVar(value=UI_TEXT["status_gpu_missing"])
             self.ollama_var = ctk.StringVar(value=UI_TEXT["status_ollama_not_running"])
             self.docs_var = ctk.StringVar(value=UI_TEXT["status_docs"].format(documents=0, chunks=0))
-            for index, variable in enumerate((self.sqlite_var, self.cuda_var, self.gpu_var, self.ollama_var, self.docs_var), start=8):
+            for index, variable in enumerate((self.sqlite_var, self.cuda_var, self.gpu_var, self.ollama_var, self.docs_var), start=9):
                 ctk.CTkLabel(
                     left,
                     textvariable=variable,
@@ -467,6 +575,39 @@ def run_gui(launch_check: bool = False) -> int:
             if folder:
                 self._set_memory_folder(folder)
 
+        def _choose_chatgpt_export(self) -> None:
+            file_path = filedialog.askopenfilename(
+                title=UI_TEXT["dialog_select_chatgpt_export"],
+                filetypes=[
+                    (UI_TEXT["filetype_zip"], "*.zip"),
+                    (UI_TEXT["filetype_all"], "*.*"),
+                ],
+            )
+            selected = file_path
+            if not selected:
+                selected = filedialog.askdirectory(title=UI_TEXT["dialog_select_chatgpt_export_folder"])
+            if selected:
+                self._start_chatgpt_import(Path(selected))
+
+        def _start_chatgpt_import(self, source_path: Path) -> None:
+            if self.import_thread and self.import_thread.is_alive():
+                return
+            self.import_button.configure(state="disabled")
+            self.index_status_var.set(UI_TEXT["status_importing_chatgpt"])
+            self.progress.set(0)
+            self._append_log(UI_TEXT["log_chatgpt_export_detected"])
+            self.import_thread = threading.Thread(target=self._chatgpt_import_worker, args=(source_path,), daemon=True)
+            self.import_thread.start()
+
+        def _chatgpt_import_worker(self, source_path: Path) -> None:
+            try:
+                result = import_chatgpt_export(source_path, self.database)
+                self.events.put(("chatgpt_import_done", result))
+            except ConversationsJsonNotFound as exc:
+                self.events.put(("chatgpt_import_missing", str(exc)))
+            except Exception as exc:
+                self.events.put(("chatgpt_import_error", str(exc)))
+
         def _start_index(self) -> None:
             folder = self.config_data.memory_folder
             if not folder:
@@ -529,7 +670,7 @@ def run_gui(launch_check: bool = False) -> int:
                 item.grid_columnconfigure(0, weight=1)
                 title = ctk.CTkButton(
                     item,
-                    text=result.title,
+                    text=self._result_title(result),
                     anchor="w",
                     fg_color="transparent",
                     hover_color=COLORS["accent_soft"],
@@ -540,7 +681,7 @@ def run_gui(launch_check: bool = False) -> int:
                 title.grid(row=0, column=0, sticky="ew", padx=8, pady=(8, 2))
                 ctk.CTkLabel(
                     item,
-                    text=UI_TEXT["result_meta"].format(source_type=result.source_type, score=result.score),
+                    text=self._result_meta(result),
                     text_color=COLORS["muted"],
                     font=(self.font_family, 11),
                     anchor="w",
@@ -555,10 +696,24 @@ def run_gui(launch_check: bool = False) -> int:
                     anchor="w",
                 ).grid(row=2, column=0, sticky="ew", padx=12, pady=(3, 10))
 
+        def _result_title(self, result: SearchResult) -> str:
+            badge = "chatgpt_export" if result.source_type == "chatgpt_export" else "file"
+            return f"[{badge}] {result.conversation_title or result.title}"
+
+        def _result_meta(self, result: SearchResult) -> str:
+            if result.source_type == "chatgpt_export":
+                label = result.source_label or f"ChatGPT / {result.conversation_title or result.title} / {result.role}"
+                return UI_TEXT["result_meta_chatgpt"].format(source_label=label, score=result.score)
+            return UI_TEXT["result_meta"].format(source_type=result.source_type, score=result.score)
+
         def _select_result(self, result: SearchResult) -> None:
             preview = UI_TEXT["preview_template"].format(
                 path=result.path,
                 source_type=result.source_type,
+                source_label=result.source_label,
+                conversation_title=result.conversation_title,
+                role=result.role,
+                message_index=result.message_index,
                 modified_at=result.modified_at,
                 indexed_at=result.indexed_at,
                 score=result.score,
@@ -568,14 +723,20 @@ def run_gui(launch_check: bool = False) -> int:
             self.tags_var.set(self._tags_for_result(result))
 
         def _tags_for_result(self, result: SearchResult) -> str:
-            tags = [result.source_type, Path(result.path).parent.name, Path(result.path).stem]
+            tags = [
+                result.source_type,
+                result.role,
+                result.conversation_title,
+                Path(result.path).parent.name,
+                Path(result.path).stem,
+            ]
             for part in self.current_query.split():
                 if part not in tags:
                     tags.append(part)
             return " / ".join(tag for tag in tags if tag)
 
         def _update_handoff_preview(self) -> None:
-            items = "\n".join(f"- {result.title}" for result in self.current_results[:6])
+            items = "\n".join(f"- {self._result_title(result)}" for result in self.current_results[:6])
             text = UI_TEXT["handoff_preview"].format(
                 query=self.current_query,
                 count=len(self.current_results),
@@ -631,6 +792,12 @@ def run_gui(launch_check: bool = False) -> int:
                 elif event == "system_status":
                     gpu, ollama = payload
                     self._handle_system_status(gpu, ollama)
+                elif event == "chatgpt_import_done":
+                    self._handle_chatgpt_import_done(payload)
+                elif event == "chatgpt_import_missing":
+                    self._handle_chatgpt_import_missing()
+                elif event == "chatgpt_import_error":
+                    self._handle_chatgpt_import_error(str(payload))
 
             self.after(100, self._poll_events)
 
@@ -667,8 +834,41 @@ def run_gui(launch_check: bool = False) -> int:
         def _handle_index_error(self, error_text: str) -> None:
             self.index_button.configure(state="normal")
             self.cancel_button.configure(state="disabled")
+            self.import_button.configure(state="normal")
             self.index_status_var.set(UI_TEXT["index_idle"])
             self._append_log(UI_TEXT["log_index_error"].format(error=error_text))
+
+        def _handle_chatgpt_import_done(self, result: ChatGPTImportResult) -> None:
+            self.import_button.configure(state="normal")
+            self.index_status_var.set(UI_TEXT["status_chatgpt_import_complete"])
+            self.progress.set(1)
+            self._refresh_stats()
+            self._append_log(UI_TEXT["log_conversations_json_found"].format(path=result.conversations_json_path))
+            self._append_log(
+                UI_TEXT["log_chatgpt_import_complete"].format(
+                    conversations=result.conversations_imported,
+                    messages=result.messages_indexed,
+                    skipped=result.skipped_duplicates,
+                    errors=result.errors,
+                )
+            )
+            self._append_log(UI_TEXT["log_chatgpt_memory_imported"])
+            self._append_log(UI_TEXT["log_chatgpt_import_file"].format(path=result.log_path))
+            messagebox.showinfo(UI_TEXT["dialog_title"], UI_TEXT["status_chatgpt_import_complete"])
+
+        def _handle_chatgpt_import_missing(self) -> None:
+            self.import_button.configure(state="normal")
+            self.index_status_var.set(UI_TEXT["index_idle"])
+            self.progress.set(0)
+            self._append_log(UI_TEXT["error_conversations_json_not_found"])
+            messagebox.showwarning(UI_TEXT["dialog_title"], UI_TEXT["error_conversations_json_not_found"])
+
+        def _handle_chatgpt_import_error(self, error_text: str) -> None:
+            self.import_button.configure(state="normal")
+            self.index_status_var.set(UI_TEXT["index_idle"])
+            self.progress.set(0)
+            self._append_log(f"{UI_TEXT['error_chatgpt_import_failed']} {error_text}")
+            messagebox.showwarning(UI_TEXT["dialog_title"], f"{UI_TEXT['error_chatgpt_import_failed']}\n{error_text}")
 
         def _handle_search_done(self, query_text: str, results: list[SearchResult]) -> None:
             self.current_results = results
