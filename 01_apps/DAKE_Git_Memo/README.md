@@ -79,7 +79,7 @@ build.bat
   "exe_name": "DakeGit_Memo.exe",
   "release_url": "",
   "screenshot_path": "assets/screenshot.webp",
-  "status": "public",
+  "status": "available",
   "show_in_launcher": true,
   "show_on_site": true
 }

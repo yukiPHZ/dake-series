@@ -83,7 +83,7 @@ build.bat
   "exe_name": "DakeTwoPerson_Memo.exe",
   "release_url": "",
   "screenshot_path": "assets/screenshot.webp",
-  "status": "draft",
+  "status": "available",
   "show_in_launcher": true,
   "show_on_site": true
 }
@@ -92,10 +92,12 @@ build.bat
 ## RELEASE_BODY
 
 ```text
-# Dake二人メモ v1.0.0
-
-右の人、左の人。
-2人で使う、ぶつからない共同メモです。
+- 2人で使う、ぶつからない共同メモです。
+- 左右それぞれのメモブロックを追加できます。
+- 相手の本文は編集せず、確認だけを残せます。
+- 同じLAN内で簡易同期できます。
+- Windows向けexeです。
+```
 
 ## できること
 
