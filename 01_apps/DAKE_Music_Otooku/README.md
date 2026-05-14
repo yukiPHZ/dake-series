@@ -125,7 +125,17 @@ Shorts / Long / Ambient / Work 用に分類し、補助脳が使用イメージ�
 
 これは編集機能ではなく、生成された音素材をその場で確認するためのPreviewです。
 
-`pygame` が利用できる場合はアプリ内再生を試します。未導入の場合、wavはWindows標準の `winsound`、mp3は既定プレイヤーで開きます。既定プレイヤーで開いた場合、停止はプレイヤー側で行います。
+生成後は `generated_preview.wav` を優先して再生対象にします。
+
+`pygame` が利用できる場合は mp3 / wav をアプリ内で再生できます。`pygame` がない場合は wav をWindows標準の `winsound` で優先再生し、mp3は同名wavがある場合はそちらを再生します。既定プレイヤーで開くのは最後のfallbackです。
+
+FFmpeg / FFprobe の実行時は、Windowsで黒いコンソールウィンドウが出にくいよう `CREATE_NO_WINDOW` を指定しています。
+
+## 補助脳シリーズUI
+
+音を置く は、BRAINZ / Dakeユキズ稼働中 と同じ補助脳シリーズとして、ブラックトーンのUIへ寄せています。
+
+dark background / thin border / blue-purple accent を基調にし、ログは小さく、音素材生成の状態だけを確認できるようにしています。
 
 ## Tiny Ambient Generator
 

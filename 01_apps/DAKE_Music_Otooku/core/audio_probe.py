@@ -2,11 +2,11 @@
 from __future__ import annotations
 
 import json
-import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
 from .app_config import resolve_tool_command
+from .subprocess_utils import run_hidden
 
 @dataclass(frozen=True)
 class AudioInfo:
@@ -30,7 +30,7 @@ class AudioInfo:
 def _run_ffprobe(audio_path: Path, ffprobe_command: str = "ffprobe") -> dict | None:
     resolved_ffprobe = resolve_tool_command(ffprobe_command) or ffprobe_command
     try:
-        result = subprocess.run(
+        result = run_hidden(
             [
                 resolved_ffprobe,
                 "-v",

@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
-import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 import re
 
 from .app_config import resolve_tool_command
 from .audio_probe import probe_duration
+from .subprocess_utils import run_hidden
 
 
 @dataclass
@@ -38,7 +38,7 @@ class LoopPackResult:
 
 def _run(command: list[str], timeout: int = 120) -> tuple[bool, str]:
     try:
-        result = subprocess.run(
+        result = run_hidden(
             command,
             capture_output=True,
             text=True,

@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import math
 import struct
-import subprocess
 import wave
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -11,6 +10,7 @@ from pathlib import Path
 from .app_config import resolve_tool_command
 from .presets import MusicPreset
 from .prompt_builder import MusicDirection
+from .subprocess_utils import run_hidden
 
 
 @dataclass(frozen=True)
@@ -80,15 +80,15 @@ def plan_tiny_ambient(user_text: str, direction: MusicDirection, preset: MusicPr
     lowpass = 1350 if color == "white" else 900 if color == "pink" else 620
     pulse_filter = ",tremolo=f=1.15:d=0.22" if pulse else ""
     filter_text = (
-        f"[0:a]volume=0.18[a0];"
-        f"[1:a]volume=0.07[a1];"
-        f"[2:a]lowpass=f={lowpass},volume=0.045[a2];"
+        f"[0:a]volume=0.24[a0];"
+        f"[1:a]volume=0.10[a1];"
+        f"[2:a]lowpass=f={lowpass},volume=0.060[a2];"
         f"[a0][a1][a2]amix=inputs=3:duration=longest,"
         f"highpass=f=35,lowpass=f={lowpass + 500},"
         f"aecho=0.55:0.45:80:0.20{pulse_filter},"
         f"afade=t=in:st=0:d=1.20,"
         f"afade=t=out:st={fade_out_start:.2f}:d=2.20,"
-        f"volume=0.82[out]"
+        f"volume=0.95[out]"
     )
     return TinyAmbientPlan(
         duration=duration,
@@ -101,7 +101,7 @@ def plan_tiny_ambient(user_text: str, direction: MusicDirection, preset: MusicPr
 
 def _run(command: list[str], timeout: int = 60) -> tuple[bool, str]:
     try:
-        result = subprocess.run(
+        result = run_hidden(
             command,
             capture_output=True,
             text=True,
@@ -131,8 +131,8 @@ def _write_python_fallback_wav(path: Path, plan: TinyAmbientPlan) -> None:
             envelope = max(0.0, min(fade_in, fade_out))
             pulse = 0.72 + 0.28 * math.sin(2.0 * math.pi * 1.15 * t) if plan.pulse else 1.0
             value = (
-                math.sin(2.0 * math.pi * frequency * t) * 0.12
-                + math.sin(2.0 * math.pi * frequency * 1.5 * t) * 0.04
+                math.sin(2.0 * math.pi * frequency * t) * 0.16
+                + math.sin(2.0 * math.pi * frequency * 1.5 * t) * 0.06
             )
             sample = int(32767 * value * envelope * pulse)
             packed = struct.pack("<hh", sample, sample)

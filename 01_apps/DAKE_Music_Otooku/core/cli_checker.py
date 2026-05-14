@@ -2,11 +2,11 @@
 from __future__ import annotations
 
 import importlib.util
-import subprocess
 from dataclasses import dataclass
 from typing import Iterable
 
 from .app_config import OLLAMA_BASE_URL, load_ollama_model_name, resolve_tool_command
+from .subprocess_utils import run_hidden
 
 
 @dataclass(frozen=True)
@@ -42,7 +42,7 @@ def _command_version(command: str) -> str:
     if not resolved:
         return ""
     try:
-        result = subprocess.run(
+        result = run_hidden(
             [resolved, "-version"],
             capture_output=True,
             text=True,

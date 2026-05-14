@@ -70,6 +70,7 @@ UI_TEXT = {
     "button_open_output": "出力フォルダを開く",
     "button_video_bgm_pack": "Video BGM Pack を作る",
     "button_preview_play": "Play",
+    "button_preview_playing": "Playing...",
     "button_preview_stop": "Stop",
     "button_preview_refresh": "Refresh",
     "button_favorite_add": "Add to Favorite",
@@ -102,7 +103,7 @@ UI_TEXT = {
     "tag_shrine": "shrine",
     "tag_borinef": "borinef",
     "output_none": "出力先: 未作成",
-    "output_ready": "出力先: {path}",
+    "output_ready": "Output:\n{path}\n\nGenerated:\n{files}",
     "status_idle": "稼働中。",
     "status_checking": "環境を確認しています。",
     "status_processing": "音を置いています。",
@@ -131,10 +132,11 @@ UI_TEXT = {
     "preview_ready": "Preview ready.",
     "preview_no_output": "No output folder.",
     "preview_no_audio": "No mp3 / wav found.",
-    "preview_playing": "Playing: {name}",
+    "preview_playing": "Preview playing: {name}",
+    "preview_playing_start": "Playing preview...",
     "preview_stopped": "Preview stopped.",
     "preview_external": "Opened in default player. Stop in player.",
-    "preview_failed": "再生できませんでした。",
+    "preview_failed": "Preview could not play. Try generated_preview.wav.",
     "favorite_saved": "Favorite saved.",
     "favorite_no_audio": "Favorite target is not selected.",
     "favorite_failed": "Favorite save failed.",
@@ -199,9 +201,9 @@ UI_TEXT = {
     "log_video_failed": "Video BGM Pack export failed.",
     "log_preview_ready_brain": "補助脳：音を確認できます。",
     "log_preview_ready": "Preview ready.",
-    "log_preview_playing": "Playing audio...",
+    "log_preview_playing": "Playing preview...",
     "log_preview_stopped": "Preview stopped.",
-    "log_preview_failed": "再生できませんでした。",
+    "log_preview_failed": "Preview could not play. Try generated_preview.wav.",
     "log_preview_external": "既定プレイヤーで開きました。停止はプレイヤー側です。",
     "log_favorite_brain": "補助脳：お気に入りへ置きました。",
     "log_favorite_saved": "Favorite saved.",
@@ -283,6 +285,27 @@ def open_output_folder(path: Path, dry_run: bool = False) -> bool:
         return False
 
 
+def short_display_path(path: Path) -> str:
+    try:
+        return "~/" + path.resolve().relative_to(Path.home().resolve()).as_posix()
+    except Exception:
+        return path.name
+
+
+def generated_file_summary(output_folder: Path) -> str:
+    names = []
+    for relative_path in (
+        Path("audio") / "generated_preview.wav",
+        Path("audio") / "generated_preview.mp3",
+        Path("audio") / "generated.wav",
+        Path("audio") / "generated.mp3",
+        Path("audio") / "loop_preview.mp3",
+    ):
+        if (output_folder / relative_path).exists():
+            names.append(relative_path.name)
+    return "\n".join(names[:5]) if names else "--"
+
+
 def write_generate_check_wav(path: Path, duration_seconds: float = 2.0) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     sample_rate = 44100
@@ -301,6 +324,7 @@ class MusicOtookuApp:
         ensure_data_dirs()
         self.root = root
         self.root.title(WINDOW_TITLE)
+        self.root.configure(bg=COLORS["background"])
         self.root.geometry(WINDOW_SIZE)
         self.root.minsize(*WINDOW_MIN_SIZE)
         self._apply_icon()
@@ -326,6 +350,7 @@ class MusicOtookuApp:
         self.last_preset: MusicPreset | None = None
         self.preview_player = AudioPreviewPlayer()
         self.preview_items: list[AudioPreviewItem] = []
+        self.preview_playing = False
         self.favorite_choices: list[FavoriteChoice] = []
         self.favorite_choices_by_label: dict[str, FavoriteChoice] = {}
         self.last_project_folder: Path | None = None
@@ -472,11 +497,18 @@ class MusicOtookuApp:
             bg=COLORS["surface_soft"],
             fg=COLORS["text"],
             activebackground=COLORS["secondary_hover"],
+            activeforeground=COLORS["text"],
             relief="flat",
             bd=0,
             font=self.fonts["small"],
             highlightthickness=1,
             highlightbackground=COLORS["border"],
+        )
+        self.preset_menu["menu"].configure(
+            bg=COLORS["surface_soft"],
+            fg=COLORS["text"],
+            activebackground=COLORS["select"],
+            activeforeground=COLORS["select_text"],
         )
         self.preset_menu.pack(side="left")
 
@@ -487,6 +519,7 @@ class MusicOtookuApp:
             fg=COLORS["text"],
             insertbackground=COLORS["text"],
             selectbackground=COLORS["select"],
+            selectforeground=COLORS["select_text"],
             font=self.fonts["body"],
             wrap="word",
             relief="flat",
@@ -610,7 +643,7 @@ class MusicOtookuApp:
             self.open_current_output,
             COLORS,
             self.fonts["button"],
-            primary=False,
+            primary=True,
         )
         self.open_button.grid(row=4, column=0, sticky="ew", padx=16, pady=(0, 14))
         self.open_button.configure(state="disabled")
@@ -645,10 +678,13 @@ class MusicOtookuApp:
             bg=COLORS["surface_soft"],
             fg=COLORS["text"],
             selectbackground=COLORS["select"],
+            selectforeground=COLORS["select_text"],
             font=self.fonts["small"],
             relief="flat",
             bd=0,
             activestyle="none",
+            highlightthickness=1,
+            highlightbackground=COLORS["border"],
         )
         self.preview_listbox.grid(row=1, column=0, sticky="ew")
         self.preview_listbox.bind("<<ListboxSelect>>", self._on_preview_select)
@@ -740,6 +776,7 @@ class MusicOtookuApp:
             textvariable=self.bridge_project_name_var,
             bg=COLORS["surface_soft"],
             fg=COLORS["text"],
+            insertbackground=COLORS["text"],
             font=self.fonts["small"],
             relief="flat",
         )
@@ -761,11 +798,18 @@ class MusicOtookuApp:
             bg=COLORS["surface_soft"],
             fg=COLORS["text"],
             activebackground=COLORS["secondary_hover"],
+            activeforeground=COLORS["text"],
             relief="flat",
             bd=0,
             font=self.fonts["small"],
             highlightthickness=1,
             highlightbackground=COLORS["border"],
+        )
+        self.bridge_favorite_menu["menu"].configure(
+            bg=COLORS["surface_soft"],
+            fg=COLORS["text"],
+            activebackground=COLORS["select"],
+            activeforeground=COLORS["select_text"],
         )
         self.bridge_favorite_menu.grid(row=2, column=1, sticky="ew")
 
@@ -822,6 +866,8 @@ class MusicOtookuApp:
                 bg=COLORS["surface"],
                 fg=COLORS["text"],
                 activebackground=COLORS["surface"],
+                activeforeground=COLORS["text"],
+                selectcolor=COLORS["surface_soft"],
                 font=self.fonts["small"],
                 bd=0,
                 padx=2,
@@ -850,6 +896,7 @@ class MusicOtookuApp:
             width=5,
             bg=COLORS["surface_soft"],
             fg=COLORS["text"],
+            insertbackground=COLORS["text"],
             font=self.fonts["small"],
             relief="flat",
         ).pack(side="left", padx=(3, 8))
@@ -866,6 +913,7 @@ class MusicOtookuApp:
             width=5,
             bg=COLORS["surface_soft"],
             fg=COLORS["text"],
+            insertbackground=COLORS["text"],
             font=self.fonts["small"],
             relief="flat",
         ).pack(side="left", padx=(3, 12))
@@ -881,11 +929,18 @@ class MusicOtookuApp:
             bg=COLORS["surface_soft"],
             fg=COLORS["text"],
             activebackground=COLORS["secondary_hover"],
+            activeforeground=COLORS["text"],
             relief="flat",
             bd=0,
             font=self.fonts["small"],
             highlightthickness=1,
             highlightbackground=COLORS["border"],
+        )
+        volume_menu["menu"].configure(
+            bg=COLORS["surface_soft"],
+            fg=COLORS["text"],
+            activebackground=COLORS["select"],
+            activeforeground=COLORS["select_text"],
         )
         volume_menu.pack(side="left")
 
@@ -906,6 +961,8 @@ class MusicOtookuApp:
                 bg=COLORS["surface"],
                 fg=COLORS["text"],
                 activebackground=COLORS["surface"],
+                activeforeground=COLORS["text"],
+                selectcolor=COLORS["surface_soft"],
                 font=self.fonts["small"],
                 bd=0,
                 padx=2,
@@ -953,6 +1010,9 @@ class MusicOtookuApp:
             height=5,
             bg=COLORS["surface_soft"],
             fg=COLORS["text"],
+            insertbackground=COLORS["text"],
+            selectbackground=COLORS["select"],
+            selectforeground=COLORS["select_text"],
             font=self.fonts["small"],
             wrap="word",
             relief="flat",
@@ -1037,8 +1097,11 @@ class MusicOtookuApp:
             return
         has_output = bool(self.output_folder)
         has_items = bool(self.preview_items)
-        play_state = "normal" if has_items and not self.processing else "disabled"
+        play_state = "normal" if has_items and not self.processing and not self.preview_playing else "disabled"
         refresh_state = "normal" if has_output and not self.processing else "disabled"
+        self.preview_play_button.configure(
+            text=UI_TEXT["button_preview_playing"] if self.preview_playing else UI_TEXT["button_preview_play"]
+        )
         self.preview_play_button.configure(state=play_state)
         self.preview_refresh_button.configure(state=refresh_state)
         self.preview_stop_button.configure(state="normal" if has_items else "disabled")
@@ -1349,7 +1412,13 @@ class MusicOtookuApp:
                     else:
                         folder_payload, status_payload = payload, UI_TEXT["status_complete"]
                     self.output_folder = Path(folder_payload)
-                    self.output_var.set(UI_TEXT["output_ready"].format(path=self.output_folder))
+                    self.output_var.set(
+                        UI_TEXT["output_ready"].format(
+                            path=short_display_path(self.output_folder),
+                            files=generated_file_summary(self.output_folder),
+                        )
+                    )
+                    self._append_log(str(self.output_folder))
                     self.open_button.configure(state="normal")
                     self._sync_video_bgm_button()
                     self.refresh_audio_preview(log_ready=True)
@@ -1448,6 +1517,9 @@ class MusicOtookuApp:
         if not item:
             self.preview_status_var.set(UI_TEXT["preview_no_audio"])
             return
+        self.preview_status_var.set(UI_TEXT["preview_playing_start"])
+        self.preview_play_button.configure(text=UI_TEXT["button_preview_playing"], state="disabled")
+        self.root.update_idletasks()
         result = self.preview_player.play(item.path)
         if result.success:
             self.preview_status_var.set(UI_TEXT["preview_playing"].format(name=item.path.name))
@@ -1455,13 +1527,18 @@ class MusicOtookuApp:
             if result.mode == "external":
                 self.preview_status_var.set(UI_TEXT["preview_external"])
                 self._append_log(UI_TEXT["log_preview_external"])
+                self.preview_playing = False
+            else:
+                self.preview_playing = True
         else:
             self.preview_status_var.set(UI_TEXT["preview_failed"])
             self._append_log(UI_TEXT["log_preview_failed"])
+            self.preview_playing = False
         self._sync_preview_controls()
 
     def stop_preview(self) -> None:
         result = self.preview_player.stop()
+        self.preview_playing = False
         if result.success:
             if result.mode == "external":
                 self.preview_status_var.set(UI_TEXT["preview_external"])
@@ -1685,6 +1762,8 @@ def run_smoke_test() -> int:
         preview_items = find_audio_preview_items(paths.root)
         if not preview_items:
             raise AssertionError("preview audio list was not populated")
+        if preview_items[0].label != "audio/generated_preview.wav":
+            raise AssertionError("generated_preview.wav was not prioritized in preview list")
         preview_player = AudioPreviewPlayer()
         play_result = preview_player.play(preview_wav)
         if not play_result.success:
@@ -1852,6 +1931,8 @@ def run_generate_check() -> int:
         preview_items = find_audio_preview_items(paths.root)
         if not preview_items:
             raise AssertionError("preview audio list was not populated")
+        if preview_items[0].label != "audio/generated_preview.wav":
+            raise AssertionError("generated_preview.wav was not prioritized in preview list")
     print(paths.root)
     print(f"preset: {preset.name}")
     if response_time is None:

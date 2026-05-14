@@ -8,6 +8,12 @@ from pathlib import Path
 
 
 AUDIO_PREVIEW_EXTENSIONS = {".mp3", ".wav"}
+PREVIEW_PRIORITY = (
+    Path("audio") / "generated_preview.wav",
+    Path("audio") / "generated.wav",
+    Path("audio") / "loop_preview.wav",
+    Path("audio") / "generated_preview.mp3",
+)
 PREVIEW_SEARCH_DIRS = (
     Path("audio"),
     Path("audio") / "loop_pack",
@@ -51,7 +57,15 @@ def find_audio_preview_items(project_root: Path) -> list[AudioPreviewItem]:
             except ValueError:
                 label = path.name
             items.append(AudioPreviewItem(path=path, label=label))
-    return items
+    priority = {item.as_posix(): index for index, item in enumerate(PREVIEW_PRIORITY)}
+    return sorted(
+        items,
+        key=lambda item: (
+            priority.get(item.label, len(priority)),
+            0 if item.path.suffix.lower() == ".wav" else 1,
+            item.label.lower(),
+        ),
+    )
 
 
 class AudioPreviewPlayer:
@@ -103,6 +117,13 @@ class AudioPreviewPlayer:
                 return PreviewResult(True, "winsound", "playing with winsound")
             except Exception as exc:
                 pygame_error = f"{pygame_error}; winsound failed: {exc}"
+
+        if path.suffix.lower() == ".mp3":
+            sibling_wav = path.with_suffix(".wav")
+            generated_wav = path.parent / "generated_preview.wav"
+            for wav_candidate in (sibling_wav, generated_wav):
+                if wav_candidate.exists():
+                    return self.play(wav_candidate)
 
         try:
             if os.name == "nt":

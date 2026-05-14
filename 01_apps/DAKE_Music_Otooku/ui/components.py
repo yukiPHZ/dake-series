@@ -22,8 +22,8 @@ def make_button(
     font,
     primary: bool = False,
 ) -> tk.Button:
-    bg = colors["accent"] if primary else colors["surface"]
-    fg = colors["surface"] if primary else colors["text"]
+    bg = colors["accent"] if primary else colors["surface_soft"]
+    fg = colors["text"]
     hover = colors["accent_hover"] if primary else colors["secondary_hover"]
     border = colors["accent"] if primary else colors["border"]
     button = tk.Button(
@@ -52,4 +52,3 @@ def make_button(
 def _hover(button: tk.Button, color: str) -> None:
     if str(button.cget("state")) != "disabled":
         button.configure(bg=color)
-
