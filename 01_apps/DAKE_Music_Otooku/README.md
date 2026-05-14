@@ -97,6 +97,8 @@ setup_needed.txt
 
 `generated.wav`、`generated.mp3`、`loop_preview.mp3` は、MusicGen生成または参照音源があり、FFmpeg整形まで進めた場合に作成されます。MusicGenやFFmpegがない場合も、`music_direction.txt` と `musicgen_prompt.txt` は保存します。
 
+プリセットを選択した場合は、`music_direction.txt`、`musicgen_prompt.txt`、`usage_note.txt`、`loop_notes.txt`、`video_bgm_pack/notes/usage_note.txt` にプリセット名とタグを追記します。
+
 ## 参照音源の整形
 
 FFmpeg が導入されている場合、既存の音源ファイルを選択して、wav / mp3 / loop_preview.mp3 を出力できます。
@@ -114,6 +116,20 @@ MusicGen未導入でも、手持ちのBGMや効果音を素材として整える
 Loop Pack を、動画制作向けの用途別素材棚として整理できます。
 
 Shorts / Long / Ambient / Work 用に分類し、補助脳が使用イメージを生成します。
+
+## Preset System
+
+音を置く は、入力文だけでなく、BORINEF / holiday-jinja / YUKIZ稼働中 などのプリセットを使って、音の方向性を揃えることができます。
+
+プリセットは固定命令ではなく、補助脳に渡す空気のメモとして扱います。
+
+プリセット定義は `data/presets/music_presets.json` に置き、Phase 7では以下の5つのみを初期登録しています。
+
+- BORINEF
+- holiday-jinja
+- YUKIZ稼働中
+- quiet work
+- blue memory
 
 ## AudioCraft / MusicGen について
 

@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Callable
 
 from .app_config import OLLAMA_BASE_URL, load_ollama_model_name
+from .presets import MusicPreset
 from .prompt_builder import MusicDirection
 
 
@@ -132,6 +133,7 @@ def fallback_video_suggestion(direction: MusicDirection, error: str = "") -> Vid
 def generate_video_bgm_suggestion(
     direction: MusicDirection,
     available_models: tuple[str, ...] = (),
+    preset: MusicPreset | None = None,
     base_url: str = OLLAMA_BASE_URL,
     timeout: int = 60,
 ) -> VideoBgmSuggestion:
@@ -158,6 +160,8 @@ def generate_video_bgm_suggestion(
         f"Instruments: {direction.instrumentation}\n"
         f"Usage Idea: {direction.usage_idea}\n"
     )
+    if preset:
+        prompt += "\nSelected preset:\n" + preset.to_prompt_context() + "\n"
     payload = {
         "model": model,
         "prompt": prompt,
@@ -233,17 +237,21 @@ def _write_video_notes(
     copied_files: list[Path],
     messages: list[str],
     errors: list[str],
+    preset: MusicPreset | None = None,
 ) -> None:
     notes_dir = pack_root / "notes"
-    _write_note(
-        notes_dir / "usage_note.txt",
+    usage_lines = [
+        "Mood:",
+        direction.mood,
+        "",
+        "Texture:",
+        direction.texture,
+        "",
+    ]
+    if preset:
+        usage_lines.extend([*preset.to_note_lines(), ""])
+    usage_lines.extend(
         [
-            "Mood:",
-            direction.mood,
-            "",
-            "Texture:",
-            direction.texture,
-            "",
             "Suggested Use:",
             *suggestion.scenes,
             "",
@@ -251,8 +259,9 @@ def _write_video_notes(
             suggestion.atmosphere,
             "",
             f"Source: {suggestion.source}",
-        ],
+        ]
     )
+    _write_note(notes_dir / "usage_note.txt", usage_lines)
     _write_note(notes_dir / "shorts_ideas.txt", [f"- {line}" for line in suggestion.shorts_ideas])
     _write_note(notes_dir / "long_video_ideas.txt", [f"- {line}" for line in suggestion.long_ideas])
 
@@ -280,6 +289,7 @@ def export_video_bgm_pack(
     project_root: Path,
     direction: MusicDirection,
     available_models: tuple[str, ...] = (),
+    preset: MusicPreset | None = None,
 ) -> VideoBgmPackResult:
     project_root = Path(project_root)
     pack_root = project_root / "video_bgm_pack"
@@ -290,14 +300,14 @@ def export_video_bgm_pack(
         (bgm_root / category).mkdir(parents=True, exist_ok=True)
     (pack_root / "notes").mkdir(parents=True, exist_ok=True)
 
-    suggestion = generate_video_bgm_suggestion(direction, available_models)
+    suggestion = generate_video_bgm_suggestion(direction, available_models, preset)
     result.suggestion = suggestion
 
     loop_dir = project_root / "audio" / "loop_pack"
     files = _loop_files(loop_dir)
     if not files:
         result.errors.append("loop_pack folder has no mp3/wav files")
-        _write_video_notes(pack_root, direction, suggestion, result.copied_files, result.messages, result.errors)
+        _write_video_notes(pack_root, direction, suggestion, result.copied_files, result.messages, result.errors, preset)
         return result
 
     _copy_category(
@@ -331,5 +341,5 @@ def export_video_bgm_pack(
 
     result.messages.append("Loop Pack copied into video BGM categories")
     result.success = bool(result.copied_files)
-    _write_video_notes(pack_root, direction, suggestion, result.copied_files, result.messages, result.errors)
+    _write_video_notes(pack_root, direction, suggestion, result.copied_files, result.messages, result.errors, preset)
     return result

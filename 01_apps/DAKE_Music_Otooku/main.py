@@ -22,6 +22,13 @@ from core.cli_checker import EnvironmentReport, check_environment
 from core.ffmpeg_audio import LoopPackOptions, export_audio_material, export_loop_pack
 from core.musicgen_runner import generate_music
 from core.ollama_client import generate_direction
+from core.presets import (
+    MusicPreset,
+    fallback_direction_with_preset,
+    find_preset,
+    load_music_presets,
+    merge_preset_tags,
+)
 from core.project_writer import (
     create_project,
     make_project_name,
@@ -44,6 +51,8 @@ UI_TEXT = {
     "main_description": "言葉から、動画や配信用の小さな音素材を作ります。",
     "prompt_label": "PROMPT",
     "prompt_hint": "例：深夜、コード、ミシン、静かな稼働",
+    "preset_label": "Preset:",
+    "preset_custom": "Custom",
     "output_label": "OUTPUT / STATUS",
     "system_label": "SYSTEM",
     "log_label": "補助脳ログ",
@@ -117,6 +126,8 @@ UI_TEXT = {
     "log_brain_start": "補助脳：音の方向性を考えています。",
     "log_brain_ollama": "補助脳：Ollamaで音設計を作成しました。",
     "log_brain_template": "補助脳：固定テンプレートで音設計を作成しました。",
+    "log_preset_loaded": "補助脳：{name}プリセットを読み込みました。",
+    "log_preset_reflected": "補助脳：選択した空気を音の方向へ反映しました。",
     "log_bpm": "補助脳：BPMを{bpm}に設定しました。",
     "log_project": "SYSTEM：出力フォルダを作成しました。",
     "log_musicgen_start": "MUSICGEN：短い音源生成を試します。",
@@ -250,6 +261,9 @@ class MusicOtookuApp:
         self.reference_audio_path: Path | None = None
         self.output_folder: Path | None = None
         self.last_direction: MusicDirection | None = None
+        self.last_preset: MusicPreset | None = None
+        self.music_presets = load_music_presets()
+        self.music_presets_by_name = {preset.name: preset for preset in self.music_presets}
         self.log_lines: list[str] = []
         self.status_vars: dict[str, tk.StringVar] = {}
 
@@ -258,6 +272,7 @@ class MusicOtookuApp:
         self.reference_info_var = tk.StringVar(value=UI_TEXT["reference_probe_waiting"])
         self.output_var = tk.StringVar(value=UI_TEXT["output_none"])
         self.brain_response_var = tk.StringVar(value=UI_TEXT["local_brain_idle"])
+        self.preset_var = tk.StringVar(value=UI_TEXT["preset_custom"])
         self.loop_duration_vars = {
             duration: tk.BooleanVar(value=True)
             for duration, _text_key in LOOP_DURATION_OPTIONS
@@ -355,18 +370,48 @@ class MusicOtookuApp:
         prompt_panel.grid_rowconfigure(1, weight=1)
         prompt_panel.grid_columnconfigure(0, weight=1)
 
+        prompt_header = tk.Frame(prompt_panel, bg=COLORS["surface"])
+        prompt_header.grid(row=0, column=0, sticky="ew", padx=16, pady=(14, 8))
+        prompt_header.grid_columnconfigure(0, weight=1)
         tk.Label(
-            prompt_panel,
+            prompt_header,
             text=UI_TEXT["prompt_label"],
             bg=COLORS["surface"],
             fg=COLORS["text"],
             font=self.fonts["label"],
             anchor="w",
-        ).grid(row=0, column=0, sticky="ew", padx=16, pady=(14, 8))
+        ).grid(row=0, column=0, sticky="w")
+
+        preset_row = tk.Frame(prompt_header, bg=COLORS["surface"])
+        preset_row.grid(row=0, column=1, sticky="e")
+        tk.Label(
+            preset_row,
+            text=UI_TEXT["preset_label"],
+            bg=COLORS["surface"],
+            fg=COLORS["muted"],
+            font=self.fonts["small"],
+        ).pack(side="left", padx=(0, 6))
+        self.preset_menu = tk.OptionMenu(
+            preset_row,
+            self.preset_var,
+            UI_TEXT["preset_custom"],
+            *(preset.name for preset in self.music_presets),
+        )
+        self.preset_menu.configure(
+            bg=COLORS["surface_soft"],
+            fg=COLORS["text"],
+            activebackground=COLORS["secondary_hover"],
+            relief="flat",
+            bd=0,
+            font=self.fonts["small"],
+            highlightthickness=1,
+            highlightbackground=COLORS["border"],
+        )
+        self.preset_menu.pack(side="left")
 
         self.prompt_text = tk.Text(
             prompt_panel,
-            height=10,
+            height=9,
             bg=COLORS["surface_soft"],
             fg=COLORS["text"],
             insertbackground=COLORS["text"],
@@ -723,6 +768,8 @@ class MusicOtookuApp:
             self.clear_reference_button,
         ):
             button.configure(state=state)
+        if hasattr(self, "preset_menu"):
+            self.preset_menu.configure(state=state)
         if hasattr(self, "video_bgm_button"):
             if busy:
                 self.video_bgm_button.configure(state="disabled")
@@ -805,6 +852,12 @@ class MusicOtookuApp:
             return default
         return max(0.0, min(value, 20.0))
 
+    def _selected_preset(self) -> MusicPreset | None:
+        name = self.preset_var.get()
+        if name == UI_TEXT["preset_custom"]:
+            return None
+        return self.music_presets_by_name.get(name)
+
     def _loop_options_from_ui(self) -> LoopPackOptions:
         durations = tuple(
             duration
@@ -839,12 +892,21 @@ class MusicOtookuApp:
             self.status_var.set(UI_TEXT["status_no_prompt"])
             return
         loop_options = self._loop_options_from_ui()
+        selected_preset = self._selected_preset()
+        if selected_preset:
+            loop_options = LoopPackOptions(
+                durations=loop_options.durations,
+                fade_in=loop_options.fade_in,
+                fade_out=loop_options.fade_out,
+                volume_mode=loop_options.volume_mode,
+                tags=merge_preset_tags(loop_options.tags, selected_preset),
+            )
         reference_audio_path = self.reference_audio_path
         self._set_busy(True)
         self.status_var.set(UI_TEXT["status_processing"])
         thread = threading.Thread(
             target=self._place_sound_worker,
-            args=(prompt, loop_options, reference_audio_path),
+            args=(prompt, loop_options, reference_audio_path, selected_preset),
             daemon=True,
         )
         thread.start()
@@ -854,6 +916,7 @@ class MusicOtookuApp:
         prompt: str,
         loop_options: LoopPackOptions,
         reference_audio_path: Path | None,
+        selected_preset: MusicPreset | None,
     ) -> None:
         process_log: list[str] = []
         final_status = UI_TEXT["status_complete"]
@@ -864,6 +927,8 @@ class MusicOtookuApp:
 
         try:
             log(UI_TEXT["log_brain_received"])
+            if selected_preset:
+                log(UI_TEXT["log_preset_loaded"].format(name=selected_preset.name))
             log(UI_TEXT["log_brain_thinking"])
             self.worker_queue.put(("brain_response", UI_TEXT["local_brain_measuring"]))
             report = self.environment_report or check_environment()
@@ -872,17 +937,20 @@ class MusicOtookuApp:
 
             try:
                 started_at = time.perf_counter()
-                direction = generate_direction(prompt, report.ollama_models)
+                direction = generate_direction(prompt, report.ollama_models, selected_preset)
                 elapsed = time.perf_counter() - started_at
                 self.worker_queue.put(("brain_response", UI_TEXT["local_brain_online"].format(seconds=elapsed)))
                 log(UI_TEXT["log_brain_ollama"])
                 log(UI_TEXT["log_brain_low_temp"])
             except Exception:
-                direction = fallback_direction(prompt)
+                direction = fallback_direction_with_preset(prompt, selected_preset)
                 self.worker_queue.put(("brain_response", UI_TEXT["local_brain_offline"]))
                 log(UI_TEXT["log_brain_template"])
 
             self.worker_queue.put(("direction", direction))
+            self.worker_queue.put(("preset", selected_preset))
+            if selected_preset:
+                log(UI_TEXT["log_preset_reflected"])
             log(UI_TEXT["log_brain_arranged"])
             log(UI_TEXT["log_bpm"].format(bpm=direction.bpm))
             project_name = make_project_name(prompt)
@@ -942,6 +1010,7 @@ class MusicOtookuApp:
                                 loop_options.fade_out,
                                 loop_options.volume_mode,
                                 loop_result.files,
+                                selected_preset,
                             )
                         if loop_result.success:
                             log(UI_TEXT["log_loop_exported"])
@@ -966,7 +1035,7 @@ class MusicOtookuApp:
                     write_setup_needed(project_paths, "FFmpeg is required for audio export")
 
             log(UI_TEXT["log_complete"])
-            write_project_files(project_paths, prompt, direction, process_log)
+            write_project_files(project_paths, prompt, direction, process_log, selected_preset)
             self.worker_queue.put(("done", (project_paths.root, final_status)))
         except Exception as exc:
             process_log.append(str(exc))
@@ -1004,6 +1073,8 @@ class MusicOtookuApp:
                     self.brain_response_var.set(str(payload))
                 elif event == "direction":
                     self.last_direction = payload
+                elif event == "preset":
+                    self.last_preset = payload
                 elif event == "reference_info":
                     self.reference_info_var.set(str(payload))
         except queue.Empty:
@@ -1030,17 +1101,23 @@ class MusicOtookuApp:
         prompt = self.prompt_text.get("1.0", "end").strip()
         if not prompt or prompt == UI_TEXT["prompt_hint"]:
             prompt = ""
-        direction = self.last_direction or fallback_direction(prompt)
+        selected_preset = self.last_preset or self._selected_preset()
+        direction = self.last_direction or fallback_direction_with_preset(prompt, selected_preset)
         self._set_busy(True)
         self.status_var.set(UI_TEXT["status_video_bgm_processing"])
         thread = threading.Thread(
             target=self._video_bgm_pack_worker,
-            args=(self.output_folder, direction),
+            args=(self.output_folder, direction, selected_preset),
             daemon=True,
         )
         thread.start()
 
-    def _video_bgm_pack_worker(self, output_folder: Path, direction: MusicDirection) -> None:
+    def _video_bgm_pack_worker(
+        self,
+        output_folder: Path,
+        direction: MusicDirection,
+        selected_preset: MusicPreset | None,
+    ) -> None:
         def log(message: str) -> None:
             self.worker_queue.put(("log", message))
 
@@ -1050,7 +1127,9 @@ class MusicOtookuApp:
                 self.worker_queue.put(("environment", report))
 
             log(UI_TEXT["log_video_brain"])
-            result = export_video_bgm_pack(output_folder, direction, report.ollama_models)
+            if selected_preset:
+                log(UI_TEXT["log_preset_loaded"].format(name=selected_preset.name))
+            result = export_video_bgm_pack(output_folder, direction, report.ollama_models, selected_preset)
             if result.suggestion and result.suggestion.response_time is not None:
                 self.worker_queue.put(
                     ("brain_response", UI_TEXT["local_brain_online"].format(seconds=result.suggestion.response_time))
@@ -1104,6 +1183,28 @@ def run_smoke_test() -> int:
         for path in required:
             if not path.exists():
                 raise AssertionError(f"missing {path.name}")
+        if "Preset:\n" in (paths.prompts / "music_direction.txt").read_text(encoding="utf-8"):
+            raise AssertionError("custom output unexpectedly contains preset metadata")
+
+        borinef = find_preset("BORINEF")
+        if not borinef:
+            raise AssertionError("BORINEF preset missing")
+        borinef_paths = create_project("smoke_borinef", base_output_dir=Path(temp_dir))
+        borinef_direction = fallback_direction_with_preset(prompt, borinef)
+        write_project_files(borinef_paths, prompt, borinef_direction, log_lines, borinef)
+        if "Preset:\nBORINEF" not in (borinef_paths.prompts / "music_direction.txt").read_text(encoding="utf-8"):
+            raise AssertionError("BORINEF preset was not written to music_direction.txt")
+        if "Preset Tags:\nborinef, quiet, ember" not in (borinef_paths.prompts / "musicgen_prompt.txt").read_text(encoding="utf-8"):
+            raise AssertionError("BORINEF preset tags were not written to musicgen_prompt.txt")
+
+        yukiz = find_preset("YUKIZ稼働中")
+        if not yukiz:
+            raise AssertionError("YUKIZ稼働中 preset missing")
+        yukiz_paths = create_project("smoke_yukiz", base_output_dir=Path(temp_dir))
+        yukiz_direction = fallback_direction_with_preset(prompt, yukiz)
+        write_project_files(yukiz_paths, prompt, yukiz_direction, log_lines, yukiz)
+        if "Preset:\nYUKIZ稼働中" not in (yukiz_paths.notes / "usage_note.txt").read_text(encoding="utf-8"):
+            raise AssertionError("YUKIZ稼働中 preset was not written to usage_note.txt")
         if not open_output_folder(paths.root, dry_run=True):
             raise AssertionError("open output folder check failed")
         missing_ffmpeg = export_audio_material(paths.root / "missing.wav", paths.audio, ffmpeg_command="__missing_ffmpeg__")
@@ -1116,25 +1217,30 @@ def run_smoke_test() -> int:
 
 def run_generate_check() -> int:
     prompt = "深夜、コード、ミシン、静かな稼働"
+    preset = find_preset("BORINEF")
+    if not preset:
+        raise AssertionError("BORINEF preset missing")
     report = check_environment()
     paths = create_project(make_project_name(prompt))
     log_lines = [
         UI_TEXT["log_brain_received"],
+        UI_TEXT["log_preset_loaded"].format(name=preset.name),
         UI_TEXT["log_brain_thinking"],
     ]
     response_time: float | None = None
     try:
         started_at = time.perf_counter()
-        direction = generate_direction(prompt, report.ollama_models)
+        direction = generate_direction(prompt, report.ollama_models, preset)
         response_time = time.perf_counter() - started_at
         log_lines.append(UI_TEXT["log_brain_ollama"])
         log_lines.append(UI_TEXT["log_brain_low_temp"])
     except Exception:
-        direction = fallback_direction(prompt)
+        direction = fallback_direction_with_preset(prompt, preset)
         log_lines.append(UI_TEXT["log_brain_template"])
 
     log_lines.extend(
         [
+            UI_TEXT["log_preset_reflected"],
             UI_TEXT["log_brain_arranged"],
             UI_TEXT["log_bpm"].format(bpm=direction.bpm),
             UI_TEXT["log_project"],
@@ -1143,7 +1249,7 @@ def run_generate_check() -> int:
         ]
     )
     write_setup_needed(paths, "generate check")
-    write_project_files(paths, prompt, direction, log_lines)
+    write_project_files(paths, prompt, direction, log_lines, preset)
     required = (
         paths.prompts / "music_direction.txt",
         paths.prompts / "musicgen_prompt.txt",
@@ -1153,12 +1259,16 @@ def run_generate_check() -> int:
     for path in required:
         if not path.exists():
             raise AssertionError(f"missing {path}")
+    if "Preset:\nBORINEF" not in (paths.prompts / "music_direction.txt").read_text(encoding="utf-8"):
+        raise AssertionError("BORINEF preset was not written to music_direction.txt")
+    if "Preset Tags:\nborinef, quiet, ember" not in (paths.notes / "usage_note.txt").read_text(encoding="utf-8"):
+        raise AssertionError("BORINEF preset tags were not written to usage_note.txt")
     ffmpeg_status = report.status_for("ffmpeg")
     video_result = None
     if ffmpeg_status and ffmpeg_status.state == "ONLINE":
         source_wav = paths.audio / "_generate_check_source.wav"
         write_generate_check_wav(source_wav)
-        loop_options = LoopPackOptions(tags=("quiet", "midnight"))
+        loop_options = LoopPackOptions(tags=merge_preset_tags(("quiet", "midnight"), preset))
         loop_result = export_loop_pack(source_wav, paths.audio, loop_options)
         if not loop_result.success:
             raise AssertionError(f"loop pack failed: {loop_result.errors}")
@@ -1171,8 +1281,9 @@ def run_generate_check() -> int:
             loop_options.fade_out,
             loop_options.volume_mode,
             loop_result.files,
+            preset,
         )
-        video_result = export_video_bgm_pack(paths.root, direction, report.ollama_models)
+        video_result = export_video_bgm_pack(paths.root, direction, report.ollama_models, preset)
         if not video_result.success:
             raise AssertionError(f"video bgm pack failed: {video_result.errors}")
         required_video = (
@@ -1189,7 +1300,10 @@ def run_generate_check() -> int:
         for path in required_video:
             if not path.exists():
                 raise AssertionError(f"missing {path}")
+        if "Preset:\nBORINEF" not in (paths.root / "video_bgm_pack" / "notes" / "usage_note.txt").read_text(encoding="utf-8"):
+            raise AssertionError("BORINEF preset was not written to video bgm usage_note.txt")
     print(paths.root)
+    print(f"preset: {preset.name}")
     if response_time is None:
         print("local brain: fallback")
     else:

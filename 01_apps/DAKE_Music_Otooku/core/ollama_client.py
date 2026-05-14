@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from .app_config import OLLAMA_BASE_URL, load_ollama_model_name
+from .presets import MusicPreset, build_brain_input
 from .prompt_builder import MusicDirection, parse_direction_response
 
 
@@ -14,6 +15,7 @@ def pick_model(available_models: tuple[str, ...]) -> str:
 def generate_direction(
     user_text: str,
     available_models: tuple[str, ...],
+    preset: MusicPreset | None = None,
     base_url: str = OLLAMA_BASE_URL,
     timeout: int = 90,
 ) -> MusicDirection:
@@ -30,6 +32,8 @@ def generate_direction(
         "under video, work scenes, streams, websites, or Shorts. Avoid over-designed ideas, "
         "vocals, famous melodies, copyrighted songs, and artist imitation. "
         "Prefer midnight feeling, air, low temperature, texture, and '置ける音'. "
+        "If a selected preset is provided, use it as supplemental atmosphere only. "
+        "Prioritize the user's input words over the preset. "
         "Output must be concise. No markdown. No long explanation. "
         "Return exactly these labels, one per section:\n"
         "Mood:\n"
@@ -42,7 +46,7 @@ def generate_direction(
         "MusicGen Prompt:\n"
         "Usage Idea:"
     )
-    prompt = f"{system_prompt}\n\nInput words:\n{user_text.strip()}"
+    prompt = f"{system_prompt}\n\nInput words:\n{build_brain_input(user_text, preset)}"
     payload = {
         "model": model,
         "prompt": prompt,

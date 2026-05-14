@@ -1,0 +1,44 @@
+{
+  "presets": [
+    {
+      "name": "BORINEF",
+      "mood": "ember / quiet / low heat",
+      "bpm": "60-72",
+      "texture": "low drone, soft noise, distant warmth",
+      "tags": ["borinef", "quiet", "ember"],
+      "use": "静かな余熱、夜、内省、長尺背景"
+    },
+    {
+      "name": "holiday-jinja",
+      "mood": "shrine / morning / air",
+      "bpm": "64-80",
+      "texture": "light bell, air pad, soft field ambience",
+      "tags": ["shrine", "quiet", "morning"],
+      "use": "神社、空、朝、短い映像"
+    },
+    {
+      "name": "YUKIZ稼働中",
+      "mood": "work / code / sewing / midnight",
+      "bpm": "68-88",
+      "texture": "machine hum, soft beat, quiet focus",
+      "tags": ["work", "midnight", "yukiz"],
+      "use": "作業動画、配信、Shorts、制作ログ"
+    },
+    {
+      "name": "quiet work",
+      "mood": "focus / simple / clean",
+      "bpm": "72-92",
+      "texture": "minimal pulse, soft pad",
+      "tags": ["work", "quiet"],
+      "use": "作業用BGM、説明動画、デスク作業"
+    },
+    {
+      "name": "blue memory",
+      "mood": "blue / memory / slow",
+      "bpm": "56-70",
+      "texture": "soft piano, airy pad, distance",
+      "tags": ["blue", "memory", "calm"],
+      "use": "Japan Memory Lane、静かな写真、余韻"
+    }
+  ]
+}

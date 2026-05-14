@@ -7,6 +7,7 @@ from datetime import datetime
 from pathlib import Path
 
 from .app_config import OUTPUTS_DIR
+from .presets import MusicPreset
 from .prompt_builder import MusicDirection
 
 
@@ -54,15 +55,25 @@ def write_text(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
+def _append_preset_section(text: str, preset: MusicPreset | None) -> str:
+    if not preset:
+        return text
+    return "\n".join([text.strip(), "", *preset.to_note_lines()]).strip() + "\n"
+
+
 def write_project_files(
     paths: ProjectPaths,
     user_text: str,
     direction: MusicDirection,
     log_lines: list[str],
+    preset: MusicPreset | None = None,
 ) -> None:
-    write_text(paths.prompts / "music_direction.txt", direction.to_direction_text(user_text))
-    write_text(paths.prompts / "musicgen_prompt.txt", direction.musicgen_prompt.strip() + "\n")
-    write_text(paths.notes / "usage_note.txt", direction.to_usage_note())
+    write_text(paths.prompts / "music_direction.txt", _append_preset_section(direction.to_direction_text(user_text), preset))
+    musicgen_lines = [direction.musicgen_prompt.strip()]
+    if preset:
+        musicgen_lines.extend(["", *preset.to_note_lines()])
+    write_text(paths.prompts / "musicgen_prompt.txt", "\n".join(musicgen_lines).strip() + "\n")
+    write_text(paths.notes / "usage_note.txt", _append_preset_section(direction.to_usage_note(), preset))
     write_text(paths.logs / "process_log.txt", "\n".join(log_lines).strip() + "\n")
 
 
@@ -75,6 +86,7 @@ def write_loop_notes(
     fade_out: float,
     volume_mode: str,
     files: list[Path],
+    preset: MusicPreset | None = None,
 ) -> None:
     lines = [
         "# Loop Pack Notes",
@@ -91,14 +103,20 @@ def write_loop_notes(
         "Suggested Use:",
         direction.usage_idea,
         "",
-        f"Tags: {', '.join(tags) if tags else 'quiet'}",
-        f"Durations: {', '.join(str(duration) + 's' for duration in durations)}",
-        f"Fade In: {fade_in:.1f}s",
-        f"Fade Out: {fade_out:.1f}s",
-        f"Volume: {volume_mode}",
-        "",
-        "Files:",
     ]
+    if preset:
+        lines.extend([*preset.to_note_lines(), ""])
+    lines.extend(
+        [
+            f"Tags: {', '.join(tags) if tags else 'quiet'}",
+            f"Durations: {', '.join(str(duration) + 's' for duration in durations)}",
+            f"Fade In: {fade_in:.1f}s",
+            f"Fade Out: {fade_out:.1f}s",
+            f"Volume: {volume_mode}",
+            "",
+            "Files:",
+        ]
+    )
     lines.extend(f"- {path.name}" for path in files)
     write_text(paths.notes / "loop_notes.txt", "\n".join(lines).strip() + "\n")
 
