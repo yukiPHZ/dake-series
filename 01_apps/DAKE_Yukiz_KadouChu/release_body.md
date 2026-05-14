@@ -80,3 +80,11 @@
 - NVENC優先、失敗時CPU `libx264` フォールバックに対応
 - 元比率のまま切り出し、9:16クロップは今後対応
 - 元動画変更とYouTube自動投稿は行わない
+
+## Phase 2.3
+
+- 9:16 Shorts Export を追加
+- `selected/short_vertical_1080x1920.mp4` と `short_vertical_log.txt` を出力
+- 背景ぼかし + 前景中央配置で 1080x1920 化
+- NVENC 優先、失敗時 CPU `libx264` フォールバックに対応
+- 音声 AAC 変換、自動投稿なし

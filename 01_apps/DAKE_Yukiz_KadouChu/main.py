@@ -56,7 +56,7 @@ from core.project_writer import (
     write_source_manifest,
 )
 from core.selected_outputs import export_selected_draft, read_selected_candidates
-from core.selected_preview import find_source_video_path, generate_selected_short_preview
+from core.selected_preview import find_source_video_path, generate_selected_short_preview, generate_vertical_short
 from core.shorts_analyzer import create_shorts_candidates, write_shorts_candidates
 from core.transcription import is_faster_whisper_available, transcribe_media
 from ui.theme import COLORS, FONT_FAMILY, setup_theme
@@ -145,6 +145,16 @@ UI_TEXT = {
     "preview_source_dialog": "Select source video for short preview",
     "encoder": "Encoder",
     "preview_output": "Output",
+    "vertical_short": "VERTICAL SHORT",
+    "generate_vertical_short": "Generate 9:16 Short",
+    "open_vertical_short": "Open 9:16 Short",
+    "vertical_short_ready_hint": "Generate a 1080x1920 vertical short from selected_short.json.",
+    "vertical_short_running": "Status: RUNNING",
+    "vertical_short_completed": "Completed",
+    "vertical_short_failed": "FAILED",
+    "vertical_short_unavailable": "9:16 short is not ready yet.",
+    "open_vertical_short_failed": "Could not open 9:16 short.",
+    "output_size": "Size",
     "transcription_short": "Transcription",
     "shorts": "Shorts",
     "ollama": "Ollama",
@@ -225,6 +235,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.review_file_path: Path | None = None
         self.selected_output_dir: Path | None = None
         self.short_preview_path: Path | None = None
+        self.vertical_short_path: Path | None = None
         self.preview_source_video_path: Path | None = None
         self.candidate_data: dict[str, object] = {}
         self.short_choice_touched = False
@@ -234,6 +245,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.review_running = False
         self.selected_export_running = False
         self.short_preview_running = False
+        self.vertical_short_running = False
         self.worker_running = False
 
         self.file_var = ctk.StringVar(value=UI_TEXT["no_video_selected"])
@@ -243,6 +255,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.review_summary_var = ctk.StringVar(value=UI_TEXT["review_ready_hint"])
         self.selected_summary_var = ctk.StringVar(value=UI_TEXT["selected_ready_hint"])
         self.short_preview_summary_var = ctk.StringVar(value=UI_TEXT["short_preview_ready_hint"])
+        self.vertical_short_summary_var = ctk.StringVar(value=UI_TEXT["vertical_short_ready_hint"])
         self.short_choice_var = ctk.StringVar(value=UI_TEXT["selected_none"])
         self.title_choice_var = ctk.StringVar(value=UI_TEXT["selected_none"])
         self.youtube_var = ctk.StringVar(value="")
@@ -772,6 +785,35 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             state="disabled",
         )
         self.open_short_preview_button.grid(row=6, column=1, sticky="ew", padx=(4, 12), pady=(0, 10))
+        ctk.CTkLabel(
+            selected_box,
+            textvariable=self.vertical_short_summary_var,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            text_color=COLORS["muted"],
+            wraplength=330,
+            justify="left",
+        ).grid(row=7, column=0, columnspan=2, sticky="ew", padx=12, pady=(0, 8))
+        self.generate_vertical_short_button = ctk.CTkButton(
+            selected_box,
+            text=UI_TEXT["generate_vertical_short"],
+            command=self._start_generate_vertical_short,
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+        )
+        self.generate_vertical_short_button.grid(row=8, column=0, sticky="ew", padx=(12, 4), pady=(0, 10))
+        self.open_vertical_short_button = ctk.CTkButton(
+            selected_box,
+            text=UI_TEXT["open_vertical_short"],
+            command=self._open_vertical_short,
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+            state="disabled",
+        )
+        self.open_vertical_short_button.grid(row=8, column=1, sticky="ew", padx=(4, 12), pady=(0, 10))
 
         self.open_button = ctk.CTkButton(
             body,
@@ -878,8 +920,10 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.open_review_button.configure(state="disabled")
         self.open_selected_button.configure(state="disabled")
         self.open_short_preview_button.configure(state="disabled")
+        self.open_vertical_short_button.configure(state="disabled")
         self.selected_output_dir = None
         self.short_preview_path = None
+        self.vertical_short_path = None
         self.preview_source_video_path = None
         self.candidate_data = {}
         self.short_choice_touched = False
@@ -890,6 +934,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.review_summary_var.set(UI_TEXT["review_ready_hint"])
         self.selected_summary_var.set(UI_TEXT["selected_ready_hint"])
         self.short_preview_summary_var.set(UI_TEXT["short_preview_ready_hint"])
+        self.vertical_short_summary_var.set(UI_TEXT["vertical_short_ready_hint"])
         self._log(LOG_TEXT["source_detected"])
         self._probe_selected_video()
 
@@ -1206,6 +1251,59 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.events.put({"type": "short_preview_result", "result": result})
             except Exception as exc:
                 self.events.put({"type": "short_preview_error", "message": str(exc)})
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _start_generate_vertical_short(self) -> None:
+        if self.vertical_short_running:
+            return
+        package_dir = self._resolve_package_for_review()
+        if package_dir is None:
+            messagebox.showinfo(APP_NAME, UI_TEXT["selected_requires_package"])
+            return
+        source_video = self._resolve_preview_source_video(package_dir)
+
+        self.vertical_short_running = True
+        self.generate_vertical_short_button.configure(state="disabled")
+        self.open_vertical_short_button.configure(state="disabled")
+        self.status_var.set(UI_TEXT["running"])
+        self.progress_var.set(0.10)
+        self._set_eta(90)
+        self.vertical_short_summary_var.set(
+            "\n".join(
+                [
+                    UI_TEXT["vertical_short"],
+                    UI_TEXT["vertical_short_running"],
+                    f"{UI_TEXT['output_size']}: 1080x1920",
+                    f"{UI_TEXT['package']}: {package_dir}",
+                ]
+            )
+        )
+
+        def worker() -> None:
+            try:
+                system = run_system_check()
+                self.events.put(
+                    {
+                        "type": "cli",
+                        "statuses": system["cli"],
+                        "nvenc": system["nvenc"],
+                        "gpu": system["gpu"],
+                        "install_guide": system["install_guide"],
+                        "install_commands": system["install_commands"],
+                    }
+                )
+                statuses = system["cli"]
+                result = generate_vertical_short(
+                    package_dir=package_dir,
+                    ffmpeg_path=statuses.get("ffmpeg", {}).get("path"),
+                    nvenc_online=system["nvenc"].get("state") == "ONLINE",
+                    source_video_path=source_video,
+                    log=lambda message: self.events.put({"type": "log", "message": message}),
+                )
+                self.events.put({"type": "vertical_short_result", "result": result})
+            except Exception as exc:
+                self.events.put({"type": "vertical_short_error", "message": str(exc)})
 
         threading.Thread(target=worker, daemon=True).start()
 
@@ -1526,6 +1624,21 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         except Exception as exc:
             messagebox.showerror(APP_NAME, f"{UI_TEXT['open_short_preview_failed']}\n{exc}")
 
+    def _open_vertical_short(self) -> None:
+        vertical_path = self.vertical_short_path
+        if vertical_path is None:
+            package_dir = self._resolve_package_for_review()
+            if package_dir is not None:
+                candidate = package_dir / "selected" / "short_vertical_1080x1920.mp4"
+                vertical_path = candidate if candidate.exists() else None
+        if vertical_path is None or not vertical_path.exists():
+            messagebox.showinfo(APP_NAME, UI_TEXT["vertical_short_unavailable"])
+            return
+        try:
+            os.startfile(str(vertical_path))  # type: ignore[attr-defined]
+        except Exception as exc:
+            messagebox.showerror(APP_NAME, f"{UI_TEXT['open_vertical_short_failed']}\n{exc}")
+
     def _open_test_output(self) -> None:
         output_dir = self.test_output_dir or first_video_test_dir()
         if not output_dir.exists():
@@ -1689,6 +1802,18 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             ]
         )
 
+    def _format_vertical_short_summary(self, result: dict[str, object]) -> str:
+        output_path = str(result.get("output_path") or "")
+        return "\n".join(
+            [
+                UI_TEXT["vertical_short"],
+                f"{UI_TEXT['package_status']}: {result.get('status', UI_TEXT['vertical_short_failed'])}",
+                f"{UI_TEXT['output_size']}: {result.get('size', '1080x1920')}",
+                f"{UI_TEXT['encoder']}: {result.get('encoder', 'unavailable')}",
+                f"{UI_TEXT['preview_output']}: {output_path or '--'}",
+            ]
+        )
+
     def _drain_events(self) -> None:
         while True:
             try:
@@ -1766,6 +1891,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.open_selected_button.configure(state="disabled")
                 self.selected_output_dir = None
                 self.short_preview_path = None
+                self.vertical_short_path = None
                 self.candidate_data = {}
                 self.short_choice_touched = False
                 self.title_choice_touched = False
@@ -1776,6 +1902,8 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.selected_summary_var.set(UI_TEXT["selected_ready_hint"])
                 self.short_preview_summary_var.set(UI_TEXT["short_preview_ready_hint"])
                 self.open_short_preview_button.configure(state="disabled")
+                self.vertical_short_summary_var.set(UI_TEXT["vertical_short_ready_hint"])
+                self.open_vertical_short_button.configure(state="disabled")
                 self.open_button.configure(state="normal")
                 self.progress_var.set(1.0)
                 status = str(result.get("status") or "")
@@ -1833,6 +1961,9 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.short_preview_path = None
                 self.open_short_preview_button.configure(state="disabled")
                 self.short_preview_summary_var.set(UI_TEXT["short_preview_ready_hint"])
+                self.vertical_short_path = None
+                self.open_vertical_short_button.configure(state="disabled")
+                self.vertical_short_summary_var.set(UI_TEXT["vertical_short_ready_hint"])
                 self.output_var.set(str(selected_dir))
                 self.progress_var.set(1.0)
                 self.status_var.set(UI_TEXT["complete"])
@@ -1871,6 +2002,32 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             self.generate_short_preview_button.configure(state="normal")
             self.status_var.set(UI_TEXT["error"])
             self.short_preview_summary_var.set(str(event.get("message", "")))
+        elif event_type == "vertical_short_result":
+            result = event.get("result", {})
+            if isinstance(result, dict):
+                output_path = Path(str(result.get("output_path") or ""))
+                selected_dir = Path(str(result.get("selected_dir") or ""))
+                package_dir = Path(str(result.get("package_dir") or packages_dir()))
+                self.package_output_dir = package_dir
+                self.selected_output_dir = selected_dir if selected_dir.exists() else None
+                self.vertical_short_path = output_path if output_path.exists() else None
+                self.vertical_short_summary_var.set(self._format_vertical_short_summary(result))
+                self.open_selected_button.configure(state="normal" if self.selected_output_dir else "disabled")
+                self.open_vertical_short_button.configure(state="normal" if self.vertical_short_path else "disabled")
+                self.progress_var.set(1.0)
+                if result.get("status") == "COMPLETED":
+                    self.status_var.set(UI_TEXT["complete"])
+                    self.eta_var.set(UI_TEXT["vertical_short_completed"])
+                    self.finish_var.set(UI_TEXT["complete"])
+                else:
+                    self.status_var.set(UI_TEXT["error"])
+            self.vertical_short_running = False
+            self.generate_vertical_short_button.configure(state="normal")
+        elif event_type == "vertical_short_error":
+            self.vertical_short_running = False
+            self.generate_vertical_short_button.configure(state="normal")
+            self.status_var.set(UI_TEXT["error"])
+            self.vertical_short_summary_var.set(str(event.get("message", "")))
         elif event_type == "youtube":
             self.youtube_status_var.set(str(event.get("message", "")))
         elif event_type == "progress":

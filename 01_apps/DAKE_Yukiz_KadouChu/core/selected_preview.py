@@ -11,6 +11,9 @@ from core.cli_checker import run_command
 
 LogCallback = Callable[[str], None]
 
+VERTICAL_SIZE = "1080x1920"
+VERTICAL_POLICY = "background blur + foreground centered"
+
 
 def _read_json(path: Path) -> Any:
     if not path.exists() or not path.is_file():
@@ -182,6 +185,82 @@ def _write_preview_log(
     return path
 
 
+def _write_vertical_log(
+    selected_dir: Path,
+    source_video: Path | None,
+    short: dict[str, Any],
+    encoder: str,
+    nvenc_used: bool,
+    fallback: bool,
+    output_path: Path,
+    error: str,
+) -> Path:
+    start, end, duration = _range_seconds(short)
+    lines = [
+        f"executed_at: {datetime.now().isoformat(timespec='seconds')}",
+        f"source_video: {source_video or ''}",
+        f"start: {start:.3f}",
+        f"end: {end:.3f}",
+        f"duration: {duration:.3f}",
+        f"output_size: {VERTICAL_SIZE}",
+        f"crop_pad_policy: {VERTICAL_POLICY}",
+        f"encoder: {encoder}",
+        f"nvenc_used: {str(nvenc_used).lower()}",
+        f"fallback: {str(fallback).lower()}",
+        f"output_path: {output_path}",
+        f"error: {error}",
+    ]
+    path = selected_dir / "short_vertical_log.txt"
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return path
+
+
+def _vertical_args(
+    ffmpeg_path: str,
+    source_video: Path,
+    output_path: Path,
+    start: float,
+    duration: float,
+    encoder: str,
+) -> list[str]:
+    video_codec_args = (
+        ["-c:v", "h264_nvenc", "-preset", "p4", "-cq", "23"]
+        if encoder == "h264_nvenc"
+        else ["-c:v", "libx264", "-preset", "veryfast", "-crf", "23"]
+    )
+    filter_complex = (
+        "[0:v]split=2[bg][fg];"
+        "[bg]scale=1080:1920:force_original_aspect_ratio=increase,"
+        "crop=1080:1920,boxblur=30:1[bgout];"
+        "[fg]scale=1080:1920:force_original_aspect_ratio=decrease[fgout];"
+        "[bgout][fgout]overlay=(W-w)/2:(H-h)/2,format=yuv420p[v]"
+    )
+    return [
+        ffmpeg_path,
+        "-y",
+        "-ss",
+        f"{max(0.0, start):.3f}",
+        "-i",
+        str(source_video),
+        "-t",
+        f"{max(1.0, duration):.3f}",
+        "-filter_complex",
+        filter_complex,
+        "-map",
+        "[v]",
+        "-map",
+        "0:a?",
+        *video_codec_args,
+        "-c:a",
+        "aac",
+        "-b:a",
+        "192k",
+        "-movflags",
+        "+faststart",
+        str(output_path),
+    ]
+
+
 def generate_selected_short_preview(
     package_dir: Path,
     ffmpeg_path: str | None,
@@ -301,4 +380,133 @@ def generate_selected_short_preview(
         "fallback": fallback,
         "used_default": used_default,
         "message": error_text or "Short preview generation failed.",
+    }
+
+
+def generate_vertical_short(
+    package_dir: Path,
+    ffmpeg_path: str | None,
+    nvenc_online: bool,
+    source_video_path: Path | None = None,
+    log: LogCallback | None = None,
+) -> dict[str, Any]:
+    selected_dir = package_dir / "selected"
+    selected_dir.mkdir(parents=True, exist_ok=True)
+    output_path = selected_dir / "short_vertical_1080x1920.mp4"
+
+    def emit(message: str) -> None:
+        if log:
+            log(message)
+
+    emit(LOG_TEXT["vertical_short_start"])
+    selected_short, used_default = ensure_selected_short(package_dir, log=log)
+    start, end, duration = _range_seconds(selected_short)
+    source_video = source_video_path or find_source_video_path(package_dir)
+
+    if source_video is None or not source_video.exists():
+        emit(LOG_TEXT["selected_preview_source_missing"])
+        _write_vertical_log(selected_dir, source_video, selected_short, "unavailable", False, False, output_path, "source video missing")
+        return {
+            "status": "FAILED",
+            "package_dir": str(package_dir),
+            "selected_dir": str(selected_dir),
+            "output_path": str(output_path),
+            "size": VERTICAL_SIZE,
+            "encoder": "unavailable",
+            "nvenc_used": False,
+            "fallback": False,
+            "used_default": used_default,
+            "message": "Source video is required.",
+        }
+    if not ffmpeg_path:
+        emit(LOG_TEXT["selected_preview_ffmpeg_missing"])
+        _write_vertical_log(selected_dir, source_video, selected_short, "unavailable", False, False, output_path, "ffmpeg missing")
+        return {
+            "status": "FAILED",
+            "package_dir": str(package_dir),
+            "selected_dir": str(selected_dir),
+            "output_path": str(output_path),
+            "size": VERTICAL_SIZE,
+            "encoder": "unavailable",
+            "nvenc_used": False,
+            "fallback": False,
+            "used_default": used_default,
+            "message": "FFmpeg is required for vertical short export.",
+        }
+    if duration <= 0:
+        emit(LOG_TEXT["vertical_short_failed"])
+        _write_vertical_log(selected_dir, source_video, selected_short, "unavailable", False, False, output_path, "invalid selected short range")
+        return {
+            "status": "FAILED",
+            "package_dir": str(package_dir),
+            "selected_dir": str(selected_dir),
+            "output_path": str(output_path),
+            "size": VERTICAL_SIZE,
+            "encoder": "unavailable",
+            "nvenc_used": False,
+            "fallback": False,
+            "used_default": used_default,
+            "message": "Selected short range is unavailable.",
+        }
+
+    emit(LOG_TEXT["vertical_short_layout"])
+    if output_path.exists():
+        output_path.unlink()
+
+    errors: list[str] = []
+    fallback = False
+    if nvenc_online:
+        completed = run_command(_vertical_args(ffmpeg_path, source_video, output_path, start, duration, "h264_nvenc"), timeout=360)
+        if completed.returncode == 0 and output_path.exists():
+            emit(LOG_TEXT["vertical_short_nvenc"])
+            emit(LOG_TEXT["vertical_short_created"])
+            _write_vertical_log(selected_dir, source_video, selected_short, "h264_nvenc", True, False, output_path, "")
+            return {
+                "status": "COMPLETED",
+                "package_dir": str(package_dir),
+                "selected_dir": str(selected_dir),
+                "output_path": str(output_path),
+                "size": VERTICAL_SIZE,
+                "encoder": "h264_nvenc",
+                "nvenc_used": True,
+                "fallback": False,
+                "used_default": used_default,
+                "message": LOG_TEXT["vertical_short_created"],
+            }
+        errors.append((completed.stderr or completed.stdout or "h264_nvenc failed").strip()[-1000:])
+        fallback = True
+        emit(LOG_TEXT["vertical_short_fallback"])
+
+    completed = run_command(_vertical_args(ffmpeg_path, source_video, output_path, start, duration, "libx264"), timeout=360)
+    if completed.returncode == 0 and output_path.exists():
+        emit(LOG_TEXT["vertical_short_created"])
+        _write_vertical_log(selected_dir, source_video, selected_short, "libx264", False, fallback, output_path, "")
+        return {
+            "status": "COMPLETED",
+            "package_dir": str(package_dir),
+            "selected_dir": str(selected_dir),
+            "output_path": str(output_path),
+            "size": VERTICAL_SIZE,
+            "encoder": "libx264",
+            "nvenc_used": False,
+            "fallback": fallback,
+            "used_default": used_default,
+            "message": LOG_TEXT["vertical_short_created"],
+        }
+
+    errors.append((completed.stderr or completed.stdout or "libx264 failed").strip()[-1000:])
+    emit(LOG_TEXT["vertical_short_failed"])
+    error_text = "\n".join(error for error in errors if error)
+    _write_vertical_log(selected_dir, source_video, selected_short, "unavailable", False, fallback, output_path, error_text)
+    return {
+        "status": "FAILED",
+        "package_dir": str(package_dir),
+        "selected_dir": str(selected_dir),
+        "output_path": str(output_path),
+        "size": VERTICAL_SIZE,
+        "encoder": "unavailable",
+        "nvenc_used": False,
+        "fallback": fallback,
+        "used_default": used_default,
+        "message": error_text or "Vertical short export failed.",
     }

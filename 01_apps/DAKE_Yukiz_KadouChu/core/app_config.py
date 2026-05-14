@@ -86,6 +86,12 @@ LOG_TEXT = {
     "selected_preview_ffmpeg_missing": "補助脳：FFmpegが必要です。CLI導入補助を確認してください。",
     "selected_preview_source_missing": "補助脳：元動画の場所を確認できませんでした。",
     "selected_preview_failed": "補助脳：Shortsプレビュー作成に失敗しました。",
+    "vertical_short_start": "補助脳：縦動画を書き出しています。",
+    "vertical_short_layout": "補助脳：1080x1920に整えています。",
+    "vertical_short_nvenc": "補助脳：NVENCで縦Shortsを書き出しました。",
+    "vertical_short_created": "補助脳：縦Shortsが出せる形になりました。",
+    "vertical_short_fallback": "補助脳：NVENCで試しましたが、CPUへ切り替えました。",
+    "vertical_short_failed": "補助脳：縦Shortsの書き出しに失敗しました。",
 }
 
 SHORTS_REASON_TEXT = {

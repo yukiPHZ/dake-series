@@ -248,6 +248,26 @@ FFmpegが利用できる場合は `short_preview.mp4` を生成します。NVENC
 
 この機能もYouTubeへ自動投稿せず、自動公開もしません。元動画は変更せず、出力と上書きはpackage内の `selected/` 配下だけに限定します。
 
+## Phase 2.3 9:16 Shorts Export
+
+`Generate 9:16 Short`, `Open 9:16 Short` を追加しました。`selected/selected_short.json` から選択区間を読み取り、YouTube Shorts向けの縦動画 `selected/short_vertical_1080x1920.mp4` を作成します。
+
+出力:
+
+```text
+selected/
+├ short_vertical_1080x1920.mp4
+└ short_vertical_log.txt
+```
+
+Phase 2.3では高度な人物追跡や自動中心検出は行いません。安定性を優先し、FFmpegの `filter_complex` で「背景ぼかし + 前景中央配置」を行います。
+
+- 背景: 元動画を1080x1920に拡大、中央crop、blur
+- 前景: 元動画を1080x1920内に収めて中央配置
+- 音声: AAC 192kbpsへ変換
+
+NVENCがONLINEの場合は `h264_nvenc` を優先します。失敗した場合はCPU `libx264` へフォールバックします。9:16出力でもYouTubeへ自動投稿せず、自動公開もしません。元動画は変更せず、出力と上書きはpackage内の `selected/` 配下だけに限定します。
+
 ## Phase 2候補
 
 - YouTube LIVE URLからyt-dlpで本取得
