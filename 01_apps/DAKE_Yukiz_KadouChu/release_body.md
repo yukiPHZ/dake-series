@@ -122,3 +122,12 @@
 - SYSTEM / VIDEO / OUTPUT / PROJECT BRIDGE / MEMORY のまとまりへUIを整理
 - 補助脳ログの画面表示を最新20件に整理
 - 既存の処理ロジック、非自動投稿、安全方針は維持
+
+## Phase 3.3
+
+- SEQUENCE BUILDER を追加
+- 複数動画の並びを `selected/sequence.json` に保存
+- ffmpeg concatで `selected/horizontal_edit.mp4` を生成
+- NVENC優先、失敗時は `libx264` へフォールバック
+- Ollama READY時は横編集前に短い構成提案を試行
+- タイムライン編集ソフト化はせず、静かな構成に限定

@@ -378,6 +378,19 @@ Phase 3.1までに増えた機能を、迷わず使えるように上部ダッ�
 
 NEXT ACTION は、System Check、動画選択、Posting Package、Assistant Review、Selected Draft、9:16 Short、Memory、Recommendation の順に不足している工程を見て更新します。すべて揃っている場合は「整っています。」を表示します。
 
+## Phase 3.3 Sequence Builder
+
+`SEQUENCE BUILDER` を追加しました。複数の動画素材を順番に並べ、`selected/sequence.json` に構成だけを保存し、横動画 `selected/horizontal_edit.mp4` と `selected/horizontal_edit_log.txt` を出力できます。
+
+- `Add Sequence Video` で mp4 / mov / mkv / webm を複数追加
+- `Remove Selected`, `Move Up`, `Move Down` で並びだけを調整
+- `Generate Horizontal Edit` で ffmpeg concat を使った横編集版を書き出し
+- NVENCが使える場合は `h264_nvenc` を優先し、失敗時は `libx264` へフォールバック
+- 音声はAACへ統一
+- Ollama READY時は、書き出し前に補助脳が短い構成提案を試行
+
+これはPremiereやDaVinciのようなタイムライン編集ではありません。多トラック、波形編集、キーフレーム、秒単位GUI編集は行わず、素材を置き、流れを整え、止まらず外へ出すための静かな構成機能です。元動画は変更せず、出力はpackage内の `selected/` に限定します。
+
 ## Phase 2候補
 
 - YouTube LIVE URLからyt-dlpで本取得

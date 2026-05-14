@@ -78,6 +78,12 @@ from core.project_writer import (
 )
 from core.selected_outputs import export_selected_draft, read_selected_candidates
 from core.selected_preview import find_source_video_path, generate_selected_short_preview, generate_vertical_short
+from core.sequence_builder import (
+    generate_horizontal_edit,
+    read_sequence,
+    sequence_total_duration,
+    write_sequence,
+)
 from core.shorts_analyzer import create_shorts_candidates, write_shorts_candidates
 from core.transcription import is_faster_whisper_available, transcribe_media
 from ui.theme import COLORS, FONT_FAMILY, setup_theme
@@ -190,6 +196,28 @@ UI_TEXT = {
     "vertical_short_unavailable": "9:16 short is not ready yet.",
     "open_vertical_short_failed": "Could not open 9:16 short.",
     "output_size": "Size",
+    "sequence_builder": "SEQUENCE BUILDER",
+    "sequence": "SEQUENCE",
+    "add_sequence_video": "Add Sequence Video",
+    "remove_selected": "Remove Selected",
+    "move_up": "Move Up",
+    "move_down": "Move Down",
+    "generate_horizontal_edit": "Generate Horizontal Edit",
+    "open_horizontal_edit": "Open Horizontal Edit",
+    "horizontal_edit": "HORIZONTAL EDIT",
+    "horizontal_edit_ready_hint": "Add videos, then generate a quiet horizontal edit.",
+    "horizontal_edit_running": "Status: RUNNING",
+    "horizontal_edit_completed": "Completed",
+    "horizontal_edit_failed": "FAILED",
+    "horizontal_edit_unavailable": "Horizontal edit is not ready yet.",
+    "open_horizontal_edit_failed": "Could not open horizontal edit.",
+    "sequence_requires_package": "Select or generate a posting package first.",
+    "sequence_empty": "No sequence videos",
+    "sequence_no_selection": "Select a sequence video first.",
+    "sequence_duration": "Duration",
+    "sequence_videos": "Videos",
+    "sequence_recommendation": "Recommendation",
+    "sequence_log_arranging": "補助脳：素材を並べています。",
     "project_bridge": "PROJECT BRIDGE",
     "refresh_projects": "Refresh Projects",
     "no_project_boxes": "No Project Boxes Found",
@@ -319,7 +347,9 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.selected_output_dir: Path | None = None
         self.short_preview_path: Path | None = None
         self.vertical_short_path: Path | None = None
+        self.horizontal_edit_path: Path | None = None
         self.preview_source_video_path: Path | None = None
+        self.sequence_items: list[dict[str, object]] = []
         self.project_bridge_boxes: list[dict[str, str]] = []
         self.project_bridge_data: dict[str, object] = {}
         self.project_bridge_metadata_path: Path | None = None
@@ -336,6 +366,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.selected_export_running = False
         self.short_preview_running = False
         self.vertical_short_running = False
+        self.sequence_running = False
         self.project_bridge_running = False
         self.memory_running = False
         self.recommendation_running = False
@@ -351,11 +382,13 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.selected_summary_var = ctk.StringVar(value=UI_TEXT["selected_ready_hint"])
         self.short_preview_summary_var = ctk.StringVar(value=UI_TEXT["short_preview_ready_hint"])
         self.vertical_short_summary_var = ctk.StringVar(value=UI_TEXT["vertical_short_ready_hint"])
+        self.sequence_summary_var = ctk.StringVar(value=UI_TEXT["horizontal_edit_ready_hint"])
         self.project_bridge_summary_var = ctk.StringVar(value=UI_TEXT["project_bridge_ready_hint"])
         self.memory_summary_var = ctk.StringVar(value=UI_TEXT["memory_ready_hint"])
         self.recommendation_summary_var = ctk.StringVar(value=UI_TEXT["recommend_ready_hint"])
         self.short_choice_var = ctk.StringVar(value=UI_TEXT["selected_none"])
         self.title_choice_var = ctk.StringVar(value=UI_TEXT["selected_none"])
+        self.sequence_choice_var = ctk.StringVar(value=UI_TEXT["sequence_empty"])
         self.project_choice_var = ctk.StringVar(value=UI_TEXT["no_project_boxes"])
         self.project_bgm_choice_var = ctk.StringVar(value=UI_TEXT["bgm_none"])
         self.youtube_var = ctk.StringVar(value="")
@@ -990,8 +1023,99 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         )
         self.open_vertical_short_button.grid(row=8, column=1, sticky="ew", padx=(4, 12), pady=(0, 10))
 
+        sequence_box = ctk.CTkFrame(body, fg_color=COLORS["panel_alt"], border_width=1, border_color=COLORS["line"], corner_radius=8)
+        sequence_box.grid(row=5, column=0, sticky="ew", pady=(12, 0))
+        sequence_box.grid_columnconfigure(0, weight=1)
+        sequence_box.grid_columnconfigure(1, weight=1)
+        ctk.CTkLabel(
+            sequence_box,
+            text=UI_TEXT["sequence_builder"],
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
+            text_color=COLORS["accent_soft"],
+        ).grid(row=0, column=0, columnspan=2, sticky="w", padx=12, pady=(10, 4))
+        ctk.CTkLabel(
+            sequence_box,
+            textvariable=self.sequence_summary_var,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            text_color=COLORS["text"],
+            wraplength=330,
+            justify="left",
+        ).grid(row=1, column=0, columnspan=2, sticky="ew", padx=12, pady=(0, 8))
+        self.sequence_choice_menu = ctk.CTkOptionMenu(
+            sequence_box,
+            variable=self.sequence_choice_var,
+            values=[UI_TEXT["sequence_empty"]],
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            button_color=COLORS["button"],
+            button_hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+        )
+        self.sequence_choice_menu.grid(row=2, column=0, columnspan=2, sticky="ew", padx=12, pady=4)
+        self.add_sequence_button = ctk.CTkButton(
+            sequence_box,
+            text=UI_TEXT["add_sequence_video"],
+            command=self._add_sequence_videos,
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+        )
+        self.add_sequence_button.grid(row=3, column=0, sticky="ew", padx=(12, 4), pady=4)
+        self.remove_sequence_button = ctk.CTkButton(
+            sequence_box,
+            text=UI_TEXT["remove_selected"],
+            command=self._remove_selected_sequence_video,
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+        )
+        self.remove_sequence_button.grid(row=3, column=1, sticky="ew", padx=(4, 12), pady=4)
+        self.move_sequence_up_button = ctk.CTkButton(
+            sequence_box,
+            text=UI_TEXT["move_up"],
+            command=self._move_sequence_up,
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+        )
+        self.move_sequence_up_button.grid(row=4, column=0, sticky="ew", padx=(12, 4), pady=4)
+        self.move_sequence_down_button = ctk.CTkButton(
+            sequence_box,
+            text=UI_TEXT["move_down"],
+            command=self._move_sequence_down,
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+        )
+        self.move_sequence_down_button.grid(row=4, column=1, sticky="ew", padx=(4, 12), pady=4)
+        self.generate_horizontal_edit_button = ctk.CTkButton(
+            sequence_box,
+            text=UI_TEXT["generate_horizontal_edit"],
+            command=self._start_generate_horizontal_edit,
+            height=30,
+            fg_color=COLORS["button"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+        )
+        self.generate_horizontal_edit_button.grid(row=5, column=0, sticky="ew", padx=(12, 4), pady=(4, 10))
+        self.open_horizontal_edit_button = ctk.CTkButton(
+            sequence_box,
+            text=UI_TEXT["open_horizontal_edit"],
+            command=self._open_horizontal_edit,
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+            state="disabled",
+        )
+        self.open_horizontal_edit_button.grid(row=5, column=1, sticky="ew", padx=(4, 12), pady=(4, 10))
+
         bridge_box = ctk.CTkFrame(body, fg_color=COLORS["panel_alt"], border_width=1, border_color=COLORS["line"], corner_radius=8)
-        bridge_box.grid(row=5, column=0, sticky="ew", pady=(12, 0))
+        bridge_box.grid(row=6, column=0, sticky="ew", pady=(12, 0))
         bridge_box.grid_columnconfigure(0, weight=1)
         bridge_box.grid_columnconfigure(1, weight=1)
         ctk.CTkLabel(
@@ -1083,7 +1207,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.generate_bridge_metadata_button.grid(row=5, column=0, columnspan=2, sticky="ew", padx=12, pady=(4, 10))
 
         memory_box = ctk.CTkFrame(body, fg_color=COLORS["panel_alt"], border_width=1, border_color=COLORS["line"], corner_radius=8)
-        memory_box.grid(row=6, column=0, sticky="ew", pady=(12, 0))
+        memory_box.grid(row=7, column=0, sticky="ew", pady=(12, 0))
         memory_box.grid_columnconfigure(0, weight=1)
         memory_box.grid_columnconfigure(1, weight=1)
         ctk.CTkLabel(
@@ -1132,7 +1256,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.generate_memory_summary_button.grid(row=3, column=0, columnspan=2, sticky="ew", padx=12, pady=(4, 10))
 
         recommend_box = ctk.CTkFrame(body, fg_color=COLORS["panel_alt"], border_width=1, border_color=COLORS["line"], corner_radius=8)
-        recommend_box.grid(row=7, column=0, sticky="ew", pady=(12, 0))
+        recommend_box.grid(row=8, column=0, sticky="ew", pady=(12, 0))
         recommend_box.grid_columnconfigure(0, weight=1)
         recommend_box.grid_columnconfigure(1, weight=1)
         ctk.CTkLabel(
@@ -1191,7 +1315,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             text_color=COLORS["text"],
             state="disabled",
         )
-        self.open_button.grid(row=8, column=0, sticky="ew", pady=(12, 0))
+        self.open_button.grid(row=9, column=0, sticky="ew", pady=(12, 0))
         return panel
 
     def _build_system_panel(self, parent: ctk.CTkFrame) -> ctk.CTkFrame:
@@ -1393,8 +1517,10 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.selected_output_dir = None
         self.short_preview_path = None
         self.vertical_short_path = None
+        self.horizontal_edit_path = None
         self.recommendation_path = None
         self.preview_source_video_path = None
+        self.sequence_items = []
         self.candidate_data = {}
         self.short_choice_touched = False
         self.title_choice_touched = False
@@ -1405,6 +1531,10 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.selected_summary_var.set(UI_TEXT["selected_ready_hint"])
         self.short_preview_summary_var.set(UI_TEXT["short_preview_ready_hint"])
         self.vertical_short_summary_var.set(UI_TEXT["vertical_short_ready_hint"])
+        self.sequence_summary_var.set(UI_TEXT["horizontal_edit_ready_hint"])
+        self.sequence_choice_var.set(UI_TEXT["sequence_empty"])
+        self.sequence_choice_menu.configure(values=[UI_TEXT["sequence_empty"]])
+        self.open_horizontal_edit_button.configure(state="disabled")
         self.recommendation_summary_var.set(UI_TEXT["recommend_ready_hint"])
         self._log(LOG_TEXT["source_detected"])
         self._update_dashboard()
@@ -1463,6 +1593,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             )
         )
         self._refresh_selected_candidates()
+        self._load_sequence_for_package(package_dir)
         self._update_dashboard()
 
     def _start_first_video_test(self) -> None:
@@ -1624,6 +1755,226 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.selected_summary_var.set(self._format_selected_candidates_summary(data))
         self._log(LOG_TEXT["selected_candidates_refreshed"])
         self._update_dashboard()
+
+    def _sequence_labels(self) -> list[str]:
+        labels: list[str] = []
+        for index, item in enumerate(self.sequence_items, start=1):
+            name = Path(str(item.get("path") or "")).name or "--"
+            labels.append(f"#{index} {name}")
+        return labels
+
+    def _sequence_choice_index(self) -> int | None:
+        value = self.sequence_choice_var.get().strip()
+        if not value.startswith("#"):
+            return None
+        try:
+            return int(value.split(" ", 1)[0].lstrip("#")) - 1
+        except ValueError:
+            return None
+
+    def _format_sequence_summary(self, result: dict[str, object] | None = None) -> str:
+        labels = self._sequence_labels()
+        lines = [UI_TEXT["sequence"]]
+        if labels:
+            lines.extend(f"[{index}] {Path(str(item.get('path') or '')).name}" for index, item in enumerate(self.sequence_items, start=1))
+        else:
+            lines.append(UI_TEXT["sequence_empty"])
+        lines.extend(["", f"{UI_TEXT['sequence_duration']}: {format_duration(sequence_total_duration(self.sequence_items))}"])
+        if result:
+            lines.extend(
+                [
+                    "",
+                    UI_TEXT["horizontal_edit"],
+                    f"{UI_TEXT['package_status']}: {result.get('status', UI_TEXT['horizontal_edit_failed'])}",
+                    f"{UI_TEXT['encoder']}: {result.get('encoder', 'unavailable')}",
+                    f"{UI_TEXT['preview_output']}: {result.get('output_path', '--')}",
+                ]
+            )
+            recommendation = str(result.get("recommendation") or "")
+            if recommendation:
+                lines.extend(["", f"{UI_TEXT['sequence_recommendation']}: {recommendation}"])
+        return "\n".join(lines)
+
+    def _refresh_sequence_ui(self, result: dict[str, object] | None = None) -> None:
+        labels = self._sequence_labels()
+        values = labels if labels else [UI_TEXT["sequence_empty"]]
+        self.sequence_choice_menu.configure(values=values)
+        current = self.sequence_choice_var.get()
+        self.sequence_choice_var.set(current if current in values else values[0])
+        self.sequence_summary_var.set(self._format_sequence_summary(result))
+
+    def _load_sequence_for_package(self, package_dir: Path | None = None) -> None:
+        package = package_dir or self._dashboard_package_dir()
+        if package is None:
+            self.sequence_items = []
+            self.horizontal_edit_path = None
+            self.open_horizontal_edit_button.configure(state="disabled")
+            self._refresh_sequence_ui()
+            return
+        self.sequence_items = read_sequence(package)
+        candidate = package / "selected" / "horizontal_edit.mp4"
+        self.horizontal_edit_path = candidate if candidate.exists() else None
+        self.open_horizontal_edit_button.configure(state="normal" if self.horizontal_edit_path else "disabled")
+        self._refresh_sequence_ui()
+
+    def _save_sequence_for_package(self, package_dir: Path | None = None) -> Path | None:
+        package = package_dir or self._resolve_package_for_review()
+        if package is None:
+            messagebox.showinfo(APP_NAME, UI_TEXT["sequence_requires_package"])
+            return None
+        path = write_sequence(package, self.sequence_items)
+        self.selected_output_dir = path.parent
+        self.open_selected_button.configure(state="normal")
+        self._refresh_sequence_ui()
+        self._update_dashboard()
+        return path
+
+    def _add_sequence_videos(self) -> None:
+        package_dir = self._resolve_package_for_review()
+        if package_dir is None:
+            messagebox.showinfo(APP_NAME, UI_TEXT["sequence_requires_package"])
+            return
+        file_paths = filedialog.askopenfilenames(
+            title=UI_TEXT["add_sequence_video"],
+            filetypes=[(UI_TEXT["file_types"], "*.mp4 *.mov *.mkv *.webm"), ("All files", "*.*")],
+        )
+        if not file_paths:
+            return
+        new_indexes: list[int] = []
+        for file_path in file_paths:
+            path = Path(file_path)
+            if path.suffix.lower() not in VIDEO_EXTENSIONS:
+                continue
+            self.sequence_items.append({"path": str(path), "duration": 0.0, "audio_present": True})
+            new_indexes.append(len(self.sequence_items) - 1)
+        if not new_indexes:
+            messagebox.showwarning(APP_NAME, UI_TEXT["supported_files"])
+            return
+        self._save_sequence_for_package(package_dir)
+        self._log(UI_TEXT["sequence_log_arranging"])
+        self._probe_sequence_items(package_dir, new_indexes)
+
+    def _probe_sequence_items(self, package_dir: Path, indexes: list[int]) -> None:
+        sequence = [dict(item) for item in self.sequence_items]
+
+        def worker() -> None:
+            try:
+                system = run_system_check()
+                self.events.put(
+                    {
+                        "type": "cli",
+                        "statuses": system["cli"],
+                        "nvenc": system["nvenc"],
+                        "gpu": system["gpu"],
+                        "install_guide": system["install_guide"],
+                        "install_commands": system["install_commands"],
+                    }
+                )
+                ffprobe_path = system["cli"].get("ffprobe", {}).get("path")
+                if not ffprobe_path:
+                    return
+                for index in indexes:
+                    if index >= len(sequence):
+                        continue
+                    path = Path(str(sequence[index].get("path") or ""))
+                    try:
+                        info = probe_media(path, ffprobe_path)
+                    except Exception:
+                        continue
+                    sequence[index]["duration"] = info.duration
+                    sequence[index]["audio_present"] = info.audio_present
+                self.events.put({"type": "sequence_probe_result", "package_dir": str(package_dir), "sequence": sequence})
+            except Exception as exc:
+                self.events.put({"type": "log", "message": str(exc)})
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _remove_selected_sequence_video(self) -> None:
+        index = self._sequence_choice_index()
+        if index is None or not (0 <= index < len(self.sequence_items)):
+            messagebox.showinfo(APP_NAME, UI_TEXT["sequence_no_selection"])
+            return
+        del self.sequence_items[index]
+        self._save_sequence_for_package()
+
+    def _move_sequence_up(self) -> None:
+        index = self._sequence_choice_index()
+        if index is None or index <= 0 or index >= len(self.sequence_items):
+            return
+        self.sequence_items[index - 1], self.sequence_items[index] = self.sequence_items[index], self.sequence_items[index - 1]
+        self._save_sequence_for_package()
+        labels = self._sequence_labels()
+        if index - 1 < len(labels):
+            self.sequence_choice_var.set(labels[index - 1])
+
+    def _move_sequence_down(self) -> None:
+        index = self._sequence_choice_index()
+        if index is None or index < 0 or index >= len(self.sequence_items) - 1:
+            return
+        self.sequence_items[index + 1], self.sequence_items[index] = self.sequence_items[index], self.sequence_items[index + 1]
+        self._save_sequence_for_package()
+        labels = self._sequence_labels()
+        if index + 1 < len(labels):
+            self.sequence_choice_var.set(labels[index + 1])
+
+    def _start_generate_horizontal_edit(self) -> None:
+        if self.sequence_running:
+            return
+        package_dir = self._resolve_package_for_review()
+        if package_dir is None:
+            messagebox.showinfo(APP_NAME, UI_TEXT["sequence_requires_package"])
+            return
+        if not self.sequence_items:
+            self._load_sequence_for_package(package_dir)
+        if not self.sequence_items:
+            messagebox.showinfo(APP_NAME, UI_TEXT["sequence_empty"])
+            return
+
+        self.sequence_running = True
+        self.generate_horizontal_edit_button.configure(state="disabled")
+        self.open_horizontal_edit_button.configure(state="disabled")
+        self.status_var.set(UI_TEXT["running"])
+        self.progress_var.set(0.12)
+        self._set_eta(max(45, sequence_total_duration(self.sequence_items) * 0.35 + 45))
+        self.sequence_summary_var.set(
+            "\n".join(
+                [
+                    UI_TEXT["sequence_builder"],
+                    UI_TEXT["horizontal_edit_running"],
+                    f"{UI_TEXT['sequence_videos']}: {len(self.sequence_items)}",
+                    f"{UI_TEXT['sequence_duration']}: {format_duration(sequence_total_duration(self.sequence_items))}",
+                ]
+            )
+        )
+        sequence = [dict(item) for item in self.sequence_items]
+
+        def worker() -> None:
+            try:
+                system = run_system_check()
+                self.events.put(
+                    {
+                        "type": "cli",
+                        "statuses": system["cli"],
+                        "nvenc": system["nvenc"],
+                        "gpu": system["gpu"],
+                        "install_guide": system["install_guide"],
+                        "install_commands": system["install_commands"],
+                    }
+                )
+                statuses = system["cli"]
+                result = generate_horizontal_edit(
+                    package_dir=package_dir,
+                    sequence=sequence,
+                    ffmpeg_path=statuses.get("ffmpeg", {}).get("path"),
+                    nvenc_online=system["nvenc"].get("state") == "ONLINE",
+                    ollama_ready=statuses.get("ollama", {}).get("state") == "READY",
+                    log=lambda message: self.events.put({"type": "log", "message": message}),
+                )
+                self.events.put({"type": "horizontal_edit_result", "result": result})
+            except Exception as exc:
+                self.events.put({"type": "horizontal_edit_error", "message": str(exc)})
+
+        threading.Thread(target=worker, daemon=True).start()
 
     def _project_bridge_root_for_name(self, project_name: str) -> Path | None:
         for box in self.project_bridge_boxes:
@@ -2463,6 +2814,21 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         except Exception as exc:
             messagebox.showerror(APP_NAME, f"{UI_TEXT['open_vertical_short_failed']}\n{exc}")
 
+    def _open_horizontal_edit(self) -> None:
+        horizontal_path = self.horizontal_edit_path
+        if horizontal_path is None:
+            package_dir = self._resolve_package_for_review()
+            if package_dir is not None:
+                candidate = package_dir / "selected" / "horizontal_edit.mp4"
+                horizontal_path = candidate if candidate.exists() else None
+        if horizontal_path is None or not horizontal_path.exists():
+            messagebox.showinfo(APP_NAME, UI_TEXT["horizontal_edit_unavailable"])
+            return
+        try:
+            os.startfile(str(horizontal_path))  # type: ignore[attr-defined]
+        except Exception as exc:
+            messagebox.showerror(APP_NAME, f"{UI_TEXT['open_horizontal_edit_failed']}\n{exc}")
+
     def _open_memory_folder(self) -> None:
         try:
             output_dir = ensure_memory_dirs()
@@ -2844,6 +3210,12 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.open_short_preview_button.configure(state="disabled")
                 self.vertical_short_summary_var.set(UI_TEXT["vertical_short_ready_hint"])
                 self.open_vertical_short_button.configure(state="disabled")
+                self.sequence_items = []
+                self.horizontal_edit_path = None
+                self.sequence_summary_var.set(UI_TEXT["horizontal_edit_ready_hint"])
+                self.sequence_choice_var.set(UI_TEXT["sequence_empty"])
+                self.sequence_choice_menu.configure(values=[UI_TEXT["sequence_empty"]])
+                self.open_horizontal_edit_button.configure(state="disabled")
                 self.recommendation_summary_var.set(UI_TEXT["recommend_ready_hint"])
                 self.open_recommendation_button.configure(state="disabled")
                 self.open_button.configure(state="normal")
@@ -2973,6 +3345,40 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             self.generate_vertical_short_button.configure(state="normal")
             self.status_var.set(UI_TEXT["error"])
             self.vertical_short_summary_var.set(str(event.get("message", "")))
+        elif event_type == "sequence_probe_result":
+            package_dir = Path(str(event.get("package_dir") or ""))
+            sequence = event.get("sequence", [])
+            if isinstance(sequence, list) and self.package_output_dir and package_dir == self.package_output_dir:
+                self.sequence_items = [dict(item) for item in sequence if isinstance(item, dict)]
+                write_sequence(package_dir, self.sequence_items)
+                self._refresh_sequence_ui()
+        elif event_type == "horizontal_edit_result":
+            result = event.get("result", {})
+            if isinstance(result, dict):
+                output_path = Path(str(result.get("output_path") or ""))
+                selected_dir = Path(str(result.get("selected_dir") or ""))
+                package_dir = Path(str(result.get("package_dir") or packages_dir()))
+                self.package_output_dir = package_dir
+                self.selected_output_dir = selected_dir if selected_dir.exists() else None
+                self.horizontal_edit_path = output_path if output_path.exists() else None
+                self.sequence_items = read_sequence(package_dir)
+                self.sequence_summary_var.set(self._format_sequence_summary(result))
+                self.open_selected_button.configure(state="normal" if self.selected_output_dir else "disabled")
+                self.open_horizontal_edit_button.configure(state="normal" if self.horizontal_edit_path else "disabled")
+                self.progress_var.set(1.0)
+                if result.get("status") == "COMPLETED":
+                    self.status_var.set(UI_TEXT["complete"])
+                    self.eta_var.set(UI_TEXT["horizontal_edit_completed"])
+                    self.finish_var.set(UI_TEXT["complete"])
+                else:
+                    self.status_var.set(UI_TEXT["error"])
+            self.sequence_running = False
+            self.generate_horizontal_edit_button.configure(state="normal")
+        elif event_type == "horizontal_edit_error":
+            self.sequence_running = False
+            self.generate_horizontal_edit_button.configure(state="normal")
+            self.status_var.set(UI_TEXT["error"])
+            self.sequence_summary_var.set(str(event.get("message", "")))
         elif event_type == "project_bridge_copy_result":
             result = event.get("result", {})
             if isinstance(result, dict):
