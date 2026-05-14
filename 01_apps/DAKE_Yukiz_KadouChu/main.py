@@ -5,8 +5,10 @@ import json
 import os
 import queue
 import sys
+import tempfile
 import threading
 import traceback
+import wave
 from datetime import datetime, timedelta
 from pathlib import Path
 from tkinter import filedialog, messagebox
@@ -33,6 +35,14 @@ from core.app_config import (
     format_duration,
     human_size,
     seconds_to_timecode,
+)
+from core.audio_preview import AudioPreviewPlayer
+from core.project_bridge import (
+    BRIDGE_TEXT,
+    add_bgm_to_video_box,
+    generate_bridge_metadata_draft,
+    list_project_boxes,
+    read_project_box,
 )
 from core.cli_checker import (
     CLI_TOOLS,
@@ -155,6 +165,28 @@ UI_TEXT = {
     "vertical_short_unavailable": "9:16 short is not ready yet.",
     "open_vertical_short_failed": "Could not open 9:16 short.",
     "output_size": "Size",
+    "project_bridge": "PROJECT BRIDGE",
+    "refresh_projects": "Refresh Projects",
+    "no_project_boxes": "No Project Boxes Found",
+    "selected_project": "Selected Project",
+    "preset": "Preset",
+    "suggested_use": "Suggested Use",
+    "bgm": "BGM",
+    "bgm_none": "No BGM found",
+    "preview_start": "Preview Start",
+    "stop_preview": "Stop Preview",
+    "add_to_video_box": "Add to Current Video Box",
+    "generate_upload_metadata": "Generate Upload Metadata",
+    "project_bridge_ready_hint": "Refresh Project Boxes from DAKE_Music_Otooku.",
+    "project_notes_unavailable": "Project notes unavailable.",
+    "project_bridge_requires_package": "Select or generate a posting package first.",
+    "project_bridge_requires_project": "Select a Project Box first.",
+    "project_bridge_requires_bgm": "Select a BGM file first.",
+    "project_bridge_copy_completed": "BGM added to selected/bgm.",
+    "project_bridge_metadata_completed": "metadata_draft.txt generated.",
+    "preview_failed": "Preview failed.",
+    "preview_stopped": "Preview stopped.",
+    "metadata": "Metadata",
     "transcription_short": "Transcription",
     "shorts": "Shorts",
     "ollama": "Ollama",
@@ -237,6 +269,10 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.short_preview_path: Path | None = None
         self.vertical_short_path: Path | None = None
         self.preview_source_video_path: Path | None = None
+        self.project_bridge_boxes: list[dict[str, str]] = []
+        self.project_bridge_data: dict[str, object] = {}
+        self.project_bridge_metadata_path: Path | None = None
+        self.audio_preview = AudioPreviewPlayer()
         self.candidate_data: dict[str, object] = {}
         self.short_choice_touched = False
         self.title_choice_touched = False
@@ -246,6 +282,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.selected_export_running = False
         self.short_preview_running = False
         self.vertical_short_running = False
+        self.project_bridge_running = False
         self.worker_running = False
 
         self.file_var = ctk.StringVar(value=UI_TEXT["no_video_selected"])
@@ -256,8 +293,11 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.selected_summary_var = ctk.StringVar(value=UI_TEXT["selected_ready_hint"])
         self.short_preview_summary_var = ctk.StringVar(value=UI_TEXT["short_preview_ready_hint"])
         self.vertical_short_summary_var = ctk.StringVar(value=UI_TEXT["vertical_short_ready_hint"])
+        self.project_bridge_summary_var = ctk.StringVar(value=UI_TEXT["project_bridge_ready_hint"])
         self.short_choice_var = ctk.StringVar(value=UI_TEXT["selected_none"])
         self.title_choice_var = ctk.StringVar(value=UI_TEXT["selected_none"])
+        self.project_choice_var = ctk.StringVar(value=UI_TEXT["no_project_boxes"])
+        self.project_bgm_choice_var = ctk.StringVar(value=UI_TEXT["bgm_none"])
         self.youtube_var = ctk.StringVar(value="")
         self.youtube_status_var = ctk.StringVar(value=UI_TEXT["metadata_fetch_optional"])
         self.system_check_status_var = ctk.StringVar(value=UI_TEXT["system_check_not_run"])
@@ -273,6 +313,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self._build_ui()
         self._log(LOG_TEXT["startup"])
         self._log(LOG_TEXT["running"])
+        self._refresh_project_bridge(silent=True)
         self._start_cli_check()
         self.after(100, self._drain_events)
 
@@ -569,6 +610,11 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
     def _build_output_panel(self, parent: ctk.CTkFrame) -> ctk.CTkFrame:
         panel, body = make_panel(parent, UI_TEXT["output"])
         body.grid_columnconfigure(0, weight=1)
+        body.grid_rowconfigure(0, weight=1)
+        scroll_body = ctk.CTkScrollableFrame(body, fg_color="transparent")
+        scroll_body.grid(row=0, column=0, sticky="nsew")
+        body = scroll_body
+        body.grid_columnconfigure(0, weight=1)
         body.grid_rowconfigure(1, weight=1)
 
         ctk.CTkLabel(
@@ -815,6 +861,98 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         )
         self.open_vertical_short_button.grid(row=8, column=1, sticky="ew", padx=(4, 12), pady=(0, 10))
 
+        bridge_box = ctk.CTkFrame(body, fg_color=COLORS["panel_alt"], border_width=1, border_color=COLORS["line"], corner_radius=8)
+        bridge_box.grid(row=5, column=0, sticky="ew", pady=(12, 0))
+        bridge_box.grid_columnconfigure(0, weight=1)
+        bridge_box.grid_columnconfigure(1, weight=1)
+        ctk.CTkLabel(
+            bridge_box,
+            text=UI_TEXT["project_bridge"],
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
+            text_color=COLORS["accent_soft"],
+        ).grid(row=0, column=0, columnspan=2, sticky="w", padx=12, pady=(10, 4))
+        ctk.CTkLabel(
+            bridge_box,
+            textvariable=self.project_bridge_summary_var,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            text_color=COLORS["text"],
+            wraplength=330,
+            justify="left",
+        ).grid(row=1, column=0, columnspan=2, sticky="ew", padx=12, pady=(0, 8))
+        self.project_choice_menu = ctk.CTkOptionMenu(
+            bridge_box,
+            variable=self.project_choice_var,
+            values=[UI_TEXT["no_project_boxes"]],
+            command=self._on_project_bridge_choice,
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            button_color=COLORS["button"],
+            button_hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+        )
+        self.project_choice_menu.grid(row=2, column=0, sticky="ew", padx=(12, 4), pady=4)
+        self.project_bgm_menu = ctk.CTkOptionMenu(
+            bridge_box,
+            variable=self.project_bgm_choice_var,
+            values=[UI_TEXT["bgm_none"]],
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            button_color=COLORS["button"],
+            button_hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+        )
+        self.project_bgm_menu.grid(row=2, column=1, sticky="ew", padx=(4, 12), pady=4)
+        self.refresh_projects_button = ctk.CTkButton(
+            bridge_box,
+            text=UI_TEXT["refresh_projects"],
+            command=self._refresh_project_bridge,
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+        )
+        self.refresh_projects_button.grid(row=3, column=0, sticky="ew", padx=(12, 4), pady=4)
+        self.preview_project_bgm_button = ctk.CTkButton(
+            bridge_box,
+            text=UI_TEXT["preview_start"],
+            command=self._start_project_bgm_preview,
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+        )
+        self.preview_project_bgm_button.grid(row=3, column=1, sticky="ew", padx=(4, 12), pady=4)
+        self.stop_project_preview_button = ctk.CTkButton(
+            bridge_box,
+            text=UI_TEXT["stop_preview"],
+            command=self._stop_project_bgm_preview,
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+        )
+        self.stop_project_preview_button.grid(row=4, column=0, sticky="ew", padx=(12, 4), pady=4)
+        self.add_project_bgm_button = ctk.CTkButton(
+            bridge_box,
+            text=UI_TEXT["add_to_video_box"],
+            command=self._start_add_project_bgm,
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+        )
+        self.add_project_bgm_button.grid(row=4, column=1, sticky="ew", padx=(4, 12), pady=4)
+        self.generate_bridge_metadata_button = ctk.CTkButton(
+            bridge_box,
+            text=UI_TEXT["generate_upload_metadata"],
+            command=self._start_generate_bridge_metadata,
+            height=30,
+            fg_color=COLORS["button"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+        )
+        self.generate_bridge_metadata_button.grid(row=5, column=0, columnspan=2, sticky="ew", padx=12, pady=(4, 10))
+
         self.open_button = ctk.CTkButton(
             body,
             text=UI_TEXT["open_output"],
@@ -825,7 +963,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             text_color=COLORS["text"],
             state="disabled",
         )
-        self.open_button.grid(row=5, column=0, sticky="ew", pady=(12, 0))
+        self.open_button.grid(row=6, column=0, sticky="ew", pady=(12, 0))
         return panel
 
     def _build_system_panel(self, parent: ctk.CTkFrame) -> ctk.CTkFrame:
@@ -1146,6 +1284,188 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.open_selected_button.configure(state="normal" if self.selected_output_dir else "disabled")
         self.selected_summary_var.set(self._format_selected_candidates_summary(data))
         self._log(LOG_TEXT["selected_candidates_refreshed"])
+
+    def _project_bridge_root_for_name(self, project_name: str) -> Path | None:
+        for box in self.project_bridge_boxes:
+            if box.get("name") == project_name:
+                root = Path(str(box.get("root") or ""))
+                return root if root.exists() else None
+        return None
+
+    def _refresh_project_bridge(self, silent: bool = False) -> None:
+        try:
+            self.project_bridge_boxes = list_project_boxes()
+        except Exception as exc:
+            self.project_bridge_boxes = []
+            self.project_bridge_data = {}
+            self.project_bridge_summary_var.set(str(exc))
+            return
+
+        if not self.project_bridge_boxes:
+            self.project_bridge_data = {}
+            self.project_choice_menu.configure(values=[UI_TEXT["no_project_boxes"]])
+            self.project_bgm_menu.configure(values=[UI_TEXT["bgm_none"]])
+            self.project_choice_var.set(UI_TEXT["no_project_boxes"])
+            self.project_bgm_choice_var.set(UI_TEXT["bgm_none"])
+            self.project_bridge_summary_var.set(UI_TEXT["no_project_boxes"])
+            if not silent:
+                self._log(LOG_TEXT["project_bridge_missing"])
+            return
+
+        values = [str(box["name"]) for box in self.project_bridge_boxes]
+        self.project_choice_menu.configure(values=values)
+        current = self.project_choice_var.get()
+        chosen = current if current in values else values[0]
+        self.project_choice_var.set(chosen)
+        self._load_project_bridge(chosen, silent=silent)
+
+    def _on_project_bridge_choice(self, value: str) -> None:
+        self._load_project_bridge(value)
+
+    def _load_project_bridge(self, project_name: str, silent: bool = False) -> None:
+        if project_name == UI_TEXT["no_project_boxes"]:
+            self.project_bridge_data = {}
+            self.project_bridge_summary_var.set(UI_TEXT["no_project_boxes"])
+            return
+        project_root = self._project_bridge_root_for_name(project_name)
+        if project_root is None:
+            self.project_bridge_data = {}
+            self.project_bridge_summary_var.set(UI_TEXT["project_bridge_requires_project"])
+            return
+        try:
+            data = read_project_box(project_root)
+        except Exception as exc:
+            self.project_bridge_data = {}
+            self.project_bridge_summary_var.set(str(exc))
+            return
+
+        self.project_bridge_data = data
+        bgm_names = [str(item.get("name")) for item in data.get("bgm_files", []) if isinstance(item, dict) and item.get("name")]
+        if not bgm_names:
+            bgm_names = [UI_TEXT["bgm_none"]]
+        self.project_bgm_menu.configure(values=bgm_names)
+        selected_bgm = str(data.get("selected_bgm") or "")
+        self.project_bgm_choice_var.set(selected_bgm if selected_bgm in bgm_names else bgm_names[0])
+        self.project_bridge_summary_var.set(self._format_project_bridge_summary(data))
+        if not silent:
+            self._log(LOG_TEXT["project_box_loaded"])
+
+    def _selected_project_bgm_path(self) -> Path | None:
+        if not self.project_bridge_data:
+            self._load_project_bridge(self.project_choice_var.get(), silent=True)
+        selected = self.project_bgm_choice_var.get()
+        if selected == UI_TEXT["bgm_none"]:
+            return None
+        for item in self.project_bridge_data.get("bgm_files", []):
+            if isinstance(item, dict) and item.get("name") == selected:
+                path = Path(str(item.get("path") or ""))
+                return path if path.exists() else None
+        return None
+
+    def _start_project_bgm_preview(self) -> None:
+        bgm_path = self._selected_project_bgm_path()
+        if bgm_path is None:
+            messagebox.showinfo(APP_NAME, UI_TEXT["project_bridge_requires_bgm"])
+            return
+        self._log(LOG_TEXT["project_bgm_bridge"])
+        result = self.audio_preview.play(bgm_path)
+        if result.success:
+            self._log(LOG_TEXT["project_preview_started"])
+            self.project_bridge_summary_var.set(
+                self._format_project_bridge_summary(self.project_bridge_data, extra=f"Preview: {result.backend}")
+            )
+        else:
+            self.project_bridge_summary_var.set(f"{UI_TEXT['preview_failed']}\n{result.message}")
+
+    def _stop_project_bgm_preview(self) -> None:
+        result = self.audio_preview.stop()
+        if result.success:
+            self._log(LOG_TEXT["project_preview_stopped"])
+            if self.project_bridge_data:
+                self.project_bridge_summary_var.set(
+                    self._format_project_bridge_summary(self.project_bridge_data, extra=UI_TEXT["preview_stopped"])
+                )
+        else:
+            self.project_bridge_summary_var.set(f"{UI_TEXT['preview_failed']}\n{result.message}")
+
+    def _start_add_project_bgm(self) -> None:
+        if self.project_bridge_running:
+            return
+        package_dir = self._resolve_package_for_review()
+        if package_dir is None:
+            messagebox.showinfo(APP_NAME, UI_TEXT["project_bridge_requires_package"])
+            return
+        bgm_path = self._selected_project_bgm_path()
+        if bgm_path is None:
+            messagebox.showinfo(APP_NAME, UI_TEXT["project_bridge_requires_bgm"])
+            return
+
+        self.project_bridge_running = True
+        self.add_project_bgm_button.configure(state="disabled")
+        self.status_var.set(UI_TEXT["running"])
+        self.progress_var.set(0.18)
+
+        def worker() -> None:
+            try:
+                self.events.put({"type": "log", "message": LOG_TEXT["project_bgm_bridge"]})
+                result = add_bgm_to_video_box(
+                    package_dir=package_dir,
+                    bgm_path=bgm_path,
+                    log=lambda _message: self.events.put({"type": "log", "message": LOG_TEXT["project_bgm_added"]}),
+                )
+                self.events.put({"type": "project_bridge_copy_result", "result": result})
+            except Exception as exc:
+                self.events.put({"type": "project_bridge_error", "message": str(exc)})
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _start_generate_bridge_metadata(self) -> None:
+        if self.project_bridge_running:
+            return
+        package_dir = self._resolve_package_for_review()
+        if package_dir is None:
+            messagebox.showinfo(APP_NAME, UI_TEXT["project_bridge_requires_package"])
+            return
+        if not self.project_bridge_data:
+            self._load_project_bridge(self.project_choice_var.get(), silent=True)
+        if not self.project_bridge_data:
+            messagebox.showinfo(APP_NAME, UI_TEXT["project_bridge_requires_project"])
+            return
+        bgm_path = self._selected_project_bgm_path()
+
+        self.project_bridge_running = True
+        self.generate_bridge_metadata_button.configure(state="disabled")
+        self.status_var.set(UI_TEXT["running"])
+        self.progress_var.set(0.20)
+        self._set_eta(30)
+
+        project = dict(self.project_bridge_data)
+
+        def worker() -> None:
+            try:
+                system = run_system_check()
+                self.events.put(
+                    {
+                        "type": "cli",
+                        "statuses": system["cli"],
+                        "nvenc": system["nvenc"],
+                        "gpu": system["gpu"],
+                        "install_guide": system["install_guide"],
+                        "install_commands": system["install_commands"],
+                    }
+                )
+                statuses = system["cli"]
+                result = generate_bridge_metadata_draft(
+                    package_dir=package_dir,
+                    project=project,
+                    bgm_path=bgm_path,
+                    ollama_ready=statuses.get("ollama", {}).get("state") == "READY",
+                )
+                self.events.put({"type": "project_bridge_metadata_result", "result": result})
+            except Exception as exc:
+                self.events.put({"type": "project_bridge_error", "message": str(exc)})
+
+        threading.Thread(target=worker, daemon=True).start()
 
     def _start_export_selected_draft(self) -> None:
         if self.selected_export_running:
@@ -1814,6 +2134,45 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             ]
         )
 
+    def _format_project_bridge_summary(self, data: dict[str, object], extra: str = "") -> str:
+        suggested_use = [str(item) for item in data.get("suggested_use", []) if str(item)]
+        bgm_files = [item for item in data.get("bgm_files", []) if isinstance(item, dict)]
+        notes_line = "" if data.get("notes_available") else UI_TEXT["project_notes_unavailable"]
+        lines = [
+            UI_TEXT["project_bridge"],
+            f"{UI_TEXT['selected_project']}: {data.get('name', '--')}",
+            f"{UI_TEXT['preset']}: {data.get('preset', '--')}",
+            f"{UI_TEXT['suggested_use']}: {', '.join(suggested_use[:3]) if suggested_use else '--'}",
+            f"{UI_TEXT['bgm']}: {len(bgm_files)}",
+        ]
+        if notes_line:
+            lines.append(notes_line)
+        if extra:
+            lines.append(extra)
+        return "\n".join(lines)
+
+    def _format_project_bridge_result_summary(self, result: dict[str, object]) -> str:
+        copied_bgm = str(result.get("copied_bgm") or "")
+        metadata_path = str(result.get("metadata_path") or "")
+        lines = [
+            UI_TEXT["project_bridge"],
+            f"{UI_TEXT['package_status']}: {result.get('status', 'UNKNOWN')}",
+            f"{UI_TEXT['selected_project']}: {result.get('project', self.project_choice_var.get())}",
+        ]
+        if result.get("preset"):
+            lines.append(f"{UI_TEXT['preset']}: {result.get('preset')}")
+        if result.get("bgm") or copied_bgm:
+            lines.append(f"{UI_TEXT['bgm']}: {result.get('bgm') or Path(copied_bgm).name}")
+        if copied_bgm:
+            lines.append(f"{UI_TEXT['preview_output']}: {copied_bgm}")
+        if metadata_path:
+            lines.append(f"{UI_TEXT['metadata']}: {metadata_path}")
+            lines.append(f"{UI_TEXT['ollama']}: {UI_TEXT['used'] if result.get('used_ollama') else UI_TEXT['template_fallback']}")
+        message = str(result.get("message") or "")
+        if message:
+            lines.append(message)
+        return "\n".join(lines)
+
     def _drain_events(self) -> None:
         while True:
             try:
@@ -2028,6 +2387,55 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             self.generate_vertical_short_button.configure(state="normal")
             self.status_var.set(UI_TEXT["error"])
             self.vertical_short_summary_var.set(str(event.get("message", "")))
+        elif event_type == "project_bridge_copy_result":
+            result = event.get("result", {})
+            if isinstance(result, dict):
+                package_dir = Path(str(result.get("package_dir") or packages_dir()))
+                selected_dir = Path(str(result.get("selected_dir") or package_dir / "selected"))
+                self.package_output_dir = package_dir
+                self.selected_output_dir = selected_dir if selected_dir.exists() else None
+                self.current_project = ProjectPaths.from_root(package_dir)
+                self.output_var.set(str(selected_dir))
+                self.open_selected_button.configure(state="normal" if self.selected_output_dir else "disabled")
+                self.open_button.configure(state="normal")
+                self.project_bridge_summary_var.set(self._format_project_bridge_result_summary(result))
+                self.progress_var.set(1.0)
+                self.status_var.set(UI_TEXT["complete"] if result.get("status") == "COMPLETED" else UI_TEXT["error"])
+                if result.get("status") == "COMPLETED":
+                    self._log(LOG_TEXT["project_box_connected"])
+                    self._log(LOG_TEXT["project_bridge_ready"])
+            self.project_bridge_running = False
+            self.add_project_bgm_button.configure(state="normal")
+        elif event_type == "project_bridge_metadata_result":
+            result = event.get("result", {})
+            if isinstance(result, dict):
+                package_dir = Path(str(result.get("package_dir") or packages_dir()))
+                selected_dir = Path(str(result.get("selected_dir") or package_dir / "selected"))
+                metadata_path = Path(str(result.get("metadata_path") or ""))
+                self.package_output_dir = package_dir
+                self.selected_output_dir = selected_dir if selected_dir.exists() else None
+                self.project_bridge_metadata_path = metadata_path if metadata_path.exists() else None
+                self.current_project = ProjectPaths.from_root(package_dir)
+                self.output_var.set(str(metadata_path))
+                self.open_selected_button.configure(state="normal" if self.selected_output_dir else "disabled")
+                self.open_button.configure(state="normal")
+                self.project_bridge_summary_var.set(self._format_project_bridge_result_summary(result))
+                self.progress_var.set(1.0)
+                self.status_var.set(UI_TEXT["complete"])
+                self.eta_var.set(UI_TEXT["project_bridge_metadata_completed"])
+                self.finish_var.set(UI_TEXT["complete"])
+                self._log(LOG_TEXT["project_metadata_ready"])
+                if not result.get("used_ollama"):
+                    self._log(LOG_TEXT["project_ollama_fallback"])
+                self._log(LOG_TEXT["project_bridge_ready"])
+            self.project_bridge_running = False
+            self.generate_bridge_metadata_button.configure(state="normal")
+        elif event_type == "project_bridge_error":
+            self.project_bridge_running = False
+            self.add_project_bgm_button.configure(state="normal")
+            self.generate_bridge_metadata_button.configure(state="normal")
+            self.status_var.set(UI_TEXT["error"])
+            self.project_bridge_summary_var.set(str(event.get("message", "")))
         elif event_type == "youtube":
             self.youtube_status_var.set(str(event.get("message", "")))
         elif event_type == "progress":
@@ -2163,14 +2571,163 @@ def run_launch_check() -> int:
     return 0
 
 
+def _write_smoke_wav(path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with wave.open(str(path), "wb") as wav:
+        wav.setnchannels(1)
+        wav.setsampwidth(2)
+        wav.setframerate(8000)
+        wav.writeframes(b"\x00\x00" * 800)
+
+
+def _write_smoke_project_box(project_root: Path) -> Path:
+    bgm_path = project_root / "bgm" / "smoke_bridge.wav"
+    _write_smoke_wav(bgm_path)
+    notes_dir = project_root / "notes"
+    notes_dir.mkdir(parents=True, exist_ok=True)
+    (notes_dir / "project_notes.txt").write_text(
+        "\n".join(
+            [
+                "Project:",
+                project_root.name,
+                "",
+                "Selected Preset:",
+                "BORINEF",
+                "",
+                "BGM:",
+                bgm_path.name,
+                "",
+                "Suggested Title:",
+                "深夜、まだ作ってる。",
+                "",
+                "Mood:",
+                "quiet midnight work",
+                "",
+                "Suggested Use:",
+                "静かな余熱",
+                "Shorts背景",
+                "深夜のコード作業",
+                "",
+                "Shorts Direction:",
+                "静かなタイピング",
+                "深夜の机",
+                "まだ作ってる。",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    for name in ["raw", "shorts", "thumbnails", "export", "upload"]:
+        (project_root / name).mkdir(parents=True, exist_ok=True)
+    return bgm_path
+
+
+def run_smoke_test() -> int:
+    ensure_app_dirs()
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_root = Path(temp_dir)
+        projects_root = temp_root / "projects"
+        project_root = projects_root / "smoke_project_box"
+        bgm_path = _write_smoke_project_box(project_root)
+        boxes = list_project_boxes(projects_root)
+        if not boxes:
+            raise AssertionError("Project Box list was not populated.")
+        project = read_project_box(Path(boxes[0]["root"]))
+        if project.get("preset") != "BORINEF":
+            raise AssertionError("project_notes.txt preset was not read.")
+        if not project.get("bgm_files"):
+            raise AssertionError("BGM list was not populated.")
+        package_dir = temp_root / "package"
+        copy_result = add_bgm_to_video_box(package_dir, bgm_path)
+        copied_bgm = Path(str(copy_result.get("copied_bgm") or ""))
+        if not copied_bgm.exists():
+            raise AssertionError("BGM copy failed.")
+        metadata_result = generate_bridge_metadata_draft(package_dir, project, copied_bgm, ollama_ready=False)
+        metadata_path = Path(str(metadata_result.get("metadata_path") or ""))
+        if not metadata_path.exists():
+            raise AssertionError("metadata_draft.txt was not created.")
+        preview = AudioPreviewPlayer(allow_startfile=False)
+        preview_result = preview.play(bgm_path)
+        stop_result = preview.stop()
+        if not stop_result.success:
+            raise AssertionError(f"preview stop failed: {stop_result.message}")
+        result = {
+            "project_boxes": len(boxes),
+            "project": project.get("name"),
+            "preset": project.get("preset"),
+            "bgm": copied_bgm.name,
+            "metadata": metadata_path.name,
+            "preview_backend": preview_result.backend,
+            "preview_success": preview_result.success,
+        }
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0
+
+
+def run_generate_check() -> int:
+    ensure_app_dirs()
+    boxes = list_project_boxes()
+    result: dict[str, object] = {
+        "project_boxes": len(boxes),
+        "projects_root": str(Path(boxes[0]["root"]).parent if boxes else BRIDGE_TEXT["no_project_boxes"]),
+    }
+    if boxes:
+        project = read_project_box(Path(boxes[0]["root"]))
+        bgm_items = project.get("bgm_files", [])
+        bgm_path = None
+        if isinstance(bgm_items, list) and bgm_items:
+            first = bgm_items[0]
+            if isinstance(first, dict):
+                bgm_path = Path(str(first.get("path") or ""))
+        package_dir = packages_dir() / f"project_bridge_generate_check_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        package_dir.mkdir(parents=True, exist_ok=True)
+        copied = add_bgm_to_video_box(package_dir, bgm_path) if bgm_path else {}
+        copied_value = str(copied.get("copied_bgm") or "") if copied else ""
+        copied_bgm = Path(copied_value) if copied_value else None
+        system = run_system_check()
+        metadata = generate_bridge_metadata_draft(
+            package_dir=package_dir,
+            project=project,
+            bgm_path=copied_bgm if copied_bgm and copied_bgm.exists() else bgm_path,
+            ollama_ready=system["cli"].get("ollama", {}).get("state") == "READY",
+        )
+        result.update(
+            {
+                "project": project.get("name"),
+                "preset": project.get("preset"),
+                "bgm_count": len(bgm_items) if isinstance(bgm_items, list) else 0,
+                "copied_bgm": copied.get("copied_bgm", "") if copied else "",
+                "metadata_path": metadata.get("metadata_path"),
+                "used_ollama": metadata.get("used_ollama"),
+                "ollama_model": metadata.get("ollama_model", ""),
+            }
+        )
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=APP_NAME)
     parser.add_argument("--launch-check", action="store_true", help="Run startup checks without opening the GUI.")
+    parser.add_argument("--generate-check", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument("--smoke-test", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--gui-smoke-seconds", type=float, default=0.0, help=argparse.SUPPRESS)
     args = parser.parse_args()
 
     if args.launch_check:
         return run_launch_check()
+    if args.generate_check:
+        return run_generate_check()
+    if args.smoke_test:
+        return run_smoke_test()
 
     if ctk is None:
         message = "customtkinter is not installed. Run: pip install -r requirements.txt"

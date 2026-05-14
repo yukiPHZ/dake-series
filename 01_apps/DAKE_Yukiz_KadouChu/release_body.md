@@ -88,3 +88,12 @@
 - 背景ぼかし + 前景中央配置で 1080x1920 化
 - NVENC 優先、失敗時 CPU `libx264` フォールバックに対応
 - 音声 AAC 変換、自動投稿なし
+
+## Phase 2.4
+
+- DAKE_Music_Otooku の Project Box 読み取りを追加
+- Project Box の Preset / Suggested Use / BGM 一覧を表示
+- BGM Preview Start / Stop Preview を追加
+- 選択BGMを `selected/bgm/` へ上書きなしでコピー
+- `selected/upload/metadata_draft.txt` を生成
+- Ollama READY時は補助脳提案を追記、失敗時はテンプレートで継続

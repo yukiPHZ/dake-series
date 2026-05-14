@@ -92,6 +92,16 @@ LOG_TEXT = {
     "vertical_short_created": "補助脳：縦Shortsが出せる形になりました。",
     "vertical_short_fallback": "補助脳：NVENCで試しましたが、CPUへ切り替えました。",
     "vertical_short_failed": "補助脳：縦Shortsの書き出しに失敗しました。",
+    "project_box_loaded": "補助脳：Project Box を読み込みました。",
+    "project_bgm_bridge": "補助脳：BGMを橋渡ししています。",
+    "project_box_connected": "補助脳：制作箱へ接続しました。",
+    "project_bgm_added": "補助脳：BGMを制作箱へ追加しました。",
+    "project_metadata_ready": "補助脳：アップロード用メタデータを整えました。",
+    "project_bridge_ready": "整いました。",
+    "project_bridge_missing": "補助脳：Project Box はまだ見つかりません。",
+    "project_preview_started": "補助脳：BGMプレビューを開始しました。",
+    "project_preview_stopped": "補助脳：BGMプレビューを停止しました。",
+    "project_ollama_fallback": "補助脳：ローカル補助脳の応答がないため、固定テンプレートで整えました。",
 }
 
 SHORTS_REASON_TEXT = {

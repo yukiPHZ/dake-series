@@ -268,6 +268,42 @@ Phase 2.3では高度な人物追跡や自動中心検出は行いません。�
 
 NVENCがONLINEの場合は `h264_nvenc` を優先します。失敗した場合はCPU `libx264` へフォールバックします。9:16出力でもYouTubeへ自動投稿せず、自動公開もしません。元動画は変更せず、出力と上書きはpackage内の `selected/` 配下だけに限定します。
 
+## Phase 2.4 音を置く 連携
+
+DAKE_Music_Otooku（音を置く）で生成した Project Box を読み込み、BGM素材や補助脳提案を、現在の動画制作へ橋渡しできます。これは編集機能ではなく、制作箱を整えるための接続機能です。
+
+読み取り対象:
+
+```text
+DAKE_Music_Otooku/data/outputs/projects/
+```
+
+`PROJECT BRIDGE` では、Project Box一覧、Selected Project、Preset、Suggested Use、BGM一覧を表示します。`notes/project_notes.txt` がある場合は `Selected Preset` と `Suggested Use` を読み込みます。存在しない場合もアプリは落ちず、`Project notes unavailable.` と表示します。
+
+Previewは必要最小限です。優先は `pygame`、fallbackは `winsound`、最後に `os.startfile` です。複数同時再生はせず、`Preview Start` の前に既存プレビューを停止します。高機能プレイヤー化、波形編集、タイムライン編集は行いません。
+
+`Add to Current Video Box` は、選択BGMを現在の投稿package内へコピーします。
+
+```text
+package/
+└ selected/
+  └ bgm/
+    └ selected_bgm.mp3
+```
+
+同名ファイルがある場合は上書きせず、`filename_01.mp3` のように連番で回避します。元音源は変更しません。
+
+`Generate Upload Metadata` は以下を作成します。
+
+```text
+package/
+└ selected/
+  └ upload/
+    └ metadata_draft.txt
+```
+
+OllamaがREADYの場合は、Project BoxのPreset、BGM、Suggested Use、Shorts Directionをローカル補助脳へ渡し、`editing_mood`、`suggested_scene`、`shorts_direction`、`title_direction` の提案を追記します。Ollamaが使えない場合や失敗した場合は固定テンプレートで継続します。YouTube自動投稿、自動公開、元動画や元音源の変更は行いません。
+
 ## Phase 2候補
 
 - YouTube LIVE URLからyt-dlpで本取得
