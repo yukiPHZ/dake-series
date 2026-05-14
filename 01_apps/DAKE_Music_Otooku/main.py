@@ -17,6 +17,7 @@ import tkinter as tk
 from tkinter import filedialog, font as tkfont, messagebox
 
 from core.app_config import DEFAULT_DURATION_SECONDS, ensure_data_dirs
+from core.audio_preview import AudioPreviewItem, AudioPreviewPlayer, find_audio_preview_items
 from core.audio_probe import probe_audio_info
 from core.cli_checker import EnvironmentReport, check_environment
 from core.ffmpeg_audio import LoopPackOptions, export_audio_material, export_loop_pack
@@ -60,6 +61,9 @@ UI_TEXT = {
     "button_reference": "参照音源を選ぶ",
     "button_open_output": "出力フォルダを開く",
     "button_video_bgm_pack": "Video BGM Pack を作る",
+    "button_preview_play": "Play",
+    "button_preview_stop": "Stop",
+    "button_preview_refresh": "Refresh",
     "button_check": "環境チェック",
     "button_clear_reference": "参照を解除",
     "reference_none": "参照音源: なし",
@@ -109,6 +113,15 @@ UI_TEXT = {
     "local_brain_measuring": "Response Time: measuring...",
     "local_brain_online": "Response Time: {seconds:.1f}s",
     "local_brain_offline": "LOCAL BRAIN OFFLINE / Fallback direction generated.",
+    "preview_label": "Audio Preview",
+    "preview_empty": "Preview files: --",
+    "preview_ready": "Preview ready.",
+    "preview_no_output": "No output folder.",
+    "preview_no_audio": "No mp3 / wav found.",
+    "preview_playing": "Playing: {name}",
+    "preview_stopped": "Preview stopped.",
+    "preview_external": "Opened in default player. Stop in player.",
+    "preview_failed": "再生できませんでした。",
     "status_tool_ffmpeg": "FFMPEG",
     "status_tool_ffprobe": "FFPROBE",
     "status_tool_ollama": "OLLAMA",
@@ -150,6 +163,12 @@ UI_TEXT = {
     "log_video_file": "Video BGM Pack：{name} を配置しました。",
     "log_video_exported": "Video BGM Pack exported.",
     "log_video_failed": "Video BGM Pack export failed.",
+    "log_preview_ready_brain": "補助脳：音を確認できます。",
+    "log_preview_ready": "Preview ready.",
+    "log_preview_playing": "Playing audio...",
+    "log_preview_stopped": "Preview stopped.",
+    "log_preview_failed": "再生できませんでした。",
+    "log_preview_external": "既定プレイヤーで開きました。停止はプレイヤー側です。",
     "log_complete": "整っています。",
     "dialog_error_title": "確認",
     "dialog_open_error": "出力フォルダを開けませんでした。",
@@ -262,6 +281,8 @@ class MusicOtookuApp:
         self.output_folder: Path | None = None
         self.last_direction: MusicDirection | None = None
         self.last_preset: MusicPreset | None = None
+        self.preview_player = AudioPreviewPlayer()
+        self.preview_items: list[AudioPreviewItem] = []
         self.music_presets = load_music_presets()
         self.music_presets_by_name = {preset.name: preset for preset in self.music_presets}
         self.log_lines: list[str] = []
@@ -272,6 +293,7 @@ class MusicOtookuApp:
         self.reference_info_var = tk.StringVar(value=UI_TEXT["reference_probe_waiting"])
         self.output_var = tk.StringVar(value=UI_TEXT["output_none"])
         self.brain_response_var = tk.StringVar(value=UI_TEXT["local_brain_idle"])
+        self.preview_status_var = tk.StringVar(value=UI_TEXT["preview_empty"])
         self.preset_var = tk.StringVar(value=UI_TEXT["preset_custom"])
         self.loop_duration_vars = {
             duration: tk.BooleanVar(value=True)
@@ -555,6 +577,75 @@ class MusicOtookuApp:
         self.video_bgm_button.grid(row=5, column=0, sticky="ew", padx=16, pady=(0, 14))
         self.video_bgm_button.configure(state="disabled")
 
+        preview_panel = tk.Frame(output_panel, bg=COLORS["surface"])
+        preview_panel.grid(row=6, column=0, sticky="ew", padx=16, pady=(0, 14))
+        preview_panel.grid_columnconfigure(0, weight=1)
+
+        tk.Label(
+            preview_panel,
+            text=UI_TEXT["preview_label"],
+            bg=COLORS["surface"],
+            fg=COLORS["text"],
+            font=self.fonts["label"],
+            anchor="w",
+        ).grid(row=0, column=0, sticky="ew", pady=(0, 6))
+
+        self.preview_listbox = tk.Listbox(
+            preview_panel,
+            height=5,
+            bg=COLORS["surface_soft"],
+            fg=COLORS["text"],
+            selectbackground=COLORS["select"],
+            font=self.fonts["small"],
+            relief="flat",
+            bd=0,
+            activestyle="none",
+        )
+        self.preview_listbox.grid(row=1, column=0, sticky="ew")
+        self.preview_listbox.bind("<<ListboxSelect>>", self._on_preview_select)
+
+        preview_button_row = tk.Frame(preview_panel, bg=COLORS["surface"])
+        preview_button_row.grid(row=2, column=0, sticky="ew", pady=(8, 0))
+        self.preview_play_button = make_button(
+            preview_button_row,
+            UI_TEXT["button_preview_play"],
+            self.play_selected_preview,
+            COLORS,
+            self.fonts["button"],
+            primary=False,
+        )
+        self.preview_play_button.pack(side="left")
+        self.preview_stop_button = make_button(
+            preview_button_row,
+            UI_TEXT["button_preview_stop"],
+            self.stop_preview,
+            COLORS,
+            self.fonts["button"],
+            primary=False,
+        )
+        self.preview_stop_button.pack(side="left", padx=(8, 0))
+        self.preview_refresh_button = make_button(
+            preview_button_row,
+            UI_TEXT["button_preview_refresh"],
+            self.refresh_audio_preview,
+            COLORS,
+            self.fonts["button"],
+            primary=False,
+        )
+        self.preview_refresh_button.pack(side="left", padx=(8, 0))
+
+        tk.Label(
+            preview_panel,
+            textvariable=self.preview_status_var,
+            bg=COLORS["surface"],
+            fg=COLORS["muted"],
+            font=self.fonts["small"],
+            anchor="w",
+            wraplength=320,
+            justify="left",
+        ).grid(row=3, column=0, sticky="ew", pady=(8, 0))
+        self._sync_preview_controls()
+
     def _build_loop_controls(self, parent: tk.Widget) -> None:
         panel = tk.Frame(parent, bg=COLORS["surface"])
         panel.grid(row=5, column=0, sticky="ew", padx=16, pady=(0, 14))
@@ -775,6 +866,12 @@ class MusicOtookuApp:
                 self.video_bgm_button.configure(state="disabled")
             else:
                 self._sync_video_bgm_button()
+        if hasattr(self, "preview_play_button"):
+            if busy:
+                self.preview_play_button.configure(state="disabled")
+                self.preview_refresh_button.configure(state="disabled")
+            else:
+                self._sync_preview_controls()
 
     def _sync_video_bgm_button(self) -> None:
         if not hasattr(self, "video_bgm_button"):
@@ -782,6 +879,17 @@ class MusicOtookuApp:
         loop_pack = self.output_folder / "audio" / "loop_pack" if self.output_folder else None
         enabled = bool(loop_pack and loop_pack.exists() and not self.processing)
         self.video_bgm_button.configure(state="normal" if enabled else "disabled")
+
+    def _sync_preview_controls(self) -> None:
+        if not hasattr(self, "preview_play_button"):
+            return
+        has_output = bool(self.output_folder)
+        has_items = bool(self.preview_items)
+        play_state = "normal" if has_items and not self.processing else "disabled"
+        refresh_state = "normal" if has_output and not self.processing else "disabled"
+        self.preview_play_button.configure(state=play_state)
+        self.preview_refresh_button.configure(state=refresh_state)
+        self.preview_stop_button.configure(state="normal" if has_items else "disabled")
 
     def _start_environment_check(self) -> None:
         if self.processing:
@@ -1062,6 +1170,7 @@ class MusicOtookuApp:
                     self.output_var.set(UI_TEXT["output_ready"].format(path=self.output_folder))
                     self.open_button.configure(state="normal")
                     self._sync_video_bgm_button()
+                    self.refresh_audio_preview(log_ready=False)
                     self.status_var.set(str(status_payload))
                 elif event == "error":
                     self.status_var.set(UI_TEXT["status_error"])
@@ -1086,6 +1195,73 @@ class MusicOtookuApp:
             return
         if not open_output_folder(self.output_folder):
             messagebox.showinfo(UI_TEXT["dialog_error_title"], UI_TEXT["dialog_open_error"])
+
+    def refresh_audio_preview(self, log_ready: bool = True) -> None:
+        if not hasattr(self, "preview_listbox"):
+            return
+        self.preview_items = []
+        self.preview_listbox.delete(0, "end")
+        if not self.output_folder:
+            self.preview_status_var.set(UI_TEXT["preview_no_output"])
+            self._sync_preview_controls()
+            return
+
+        self.preview_items = find_audio_preview_items(self.output_folder)
+        for item in self.preview_items:
+            self.preview_listbox.insert("end", item.label)
+
+        if self.preview_items:
+            self.preview_listbox.selection_set(0)
+            self.preview_status_var.set(UI_TEXT["preview_ready"])
+            if log_ready:
+                self._append_log(UI_TEXT["log_preview_ready_brain"])
+                self._append_log(UI_TEXT["log_preview_ready"])
+        else:
+            self.preview_status_var.set(UI_TEXT["preview_no_audio"])
+        self._sync_preview_controls()
+
+    def _selected_preview_item(self) -> AudioPreviewItem | None:
+        if not self.preview_items:
+            return None
+        selection = self.preview_listbox.curselection() if hasattr(self, "preview_listbox") else ()
+        index = selection[0] if selection else 0
+        if index < 0 or index >= len(self.preview_items):
+            return None
+        return self.preview_items[index]
+
+    def _on_preview_select(self, _event: tk.Event) -> None:
+        self._sync_preview_controls()
+
+    def play_selected_preview(self) -> None:
+        item = self._selected_preview_item()
+        if not item:
+            self.preview_status_var.set(UI_TEXT["preview_no_audio"])
+            return
+        result = self.preview_player.play(item.path)
+        if result.success:
+            self.preview_status_var.set(UI_TEXT["preview_playing"].format(name=item.path.name))
+            self._append_log(UI_TEXT["log_preview_playing"])
+            if result.mode == "external":
+                self.preview_status_var.set(UI_TEXT["preview_external"])
+                self._append_log(UI_TEXT["log_preview_external"])
+        else:
+            self.preview_status_var.set(UI_TEXT["preview_failed"])
+            self._append_log(UI_TEXT["log_preview_failed"])
+        self._sync_preview_controls()
+
+    def stop_preview(self) -> None:
+        result = self.preview_player.stop()
+        if result.success:
+            if result.mode == "external":
+                self.preview_status_var.set(UI_TEXT["preview_external"])
+                self._append_log(UI_TEXT["log_preview_external"])
+            else:
+                self.preview_status_var.set(UI_TEXT["preview_stopped"])
+                self._append_log(UI_TEXT["log_preview_stopped"])
+        else:
+            self.preview_status_var.set(UI_TEXT["preview_failed"])
+            self._append_log(UI_TEXT["log_preview_failed"])
+        self._sync_preview_controls()
 
     def start_video_bgm_pack(self) -> None:
         if self.processing:
@@ -1205,6 +1381,21 @@ def run_smoke_test() -> int:
         write_project_files(yukiz_paths, prompt, yukiz_direction, log_lines, yukiz)
         if "Preset:\nYUKIZ稼働中" not in (yukiz_paths.notes / "usage_note.txt").read_text(encoding="utf-8"):
             raise AssertionError("YUKIZ稼働中 preset was not written to usage_note.txt")
+        preview_wav = paths.audio / "preview_check.wav"
+        write_generate_check_wav(preview_wav, duration_seconds=0.2)
+        preview_items = find_audio_preview_items(paths.root)
+        if not preview_items:
+            raise AssertionError("preview audio list was not populated")
+        preview_player = AudioPreviewPlayer()
+        play_result = preview_player.play(preview_wav)
+        if not play_result.success:
+            raise AssertionError(f"preview wav did not play safely: {play_result.message}")
+        stop_result = preview_player.stop()
+        if not stop_result.success:
+            raise AssertionError(f"preview stop failed: {stop_result.message}")
+        missing_preview = preview_player.play(paths.audio / "missing_preview.mp3")
+        if missing_preview.success:
+            raise AssertionError("missing preview audio unexpectedly played")
         if not open_output_folder(paths.root, dry_run=True):
             raise AssertionError("open output folder check failed")
         missing_ffmpeg = export_audio_material(paths.root / "missing.wav", paths.audio, ffmpeg_command="__missing_ffmpeg__")
@@ -1302,6 +1493,9 @@ def run_generate_check() -> int:
                 raise AssertionError(f"missing {path}")
         if "Preset:\nBORINEF" not in (paths.root / "video_bgm_pack" / "notes" / "usage_note.txt").read_text(encoding="utf-8"):
             raise AssertionError("BORINEF preset was not written to video bgm usage_note.txt")
+        preview_items = find_audio_preview_items(paths.root)
+        if not preview_items:
+            raise AssertionError("preview audio list was not populated")
     print(paths.root)
     print(f"preset: {preset.name}")
     if response_time is None:
@@ -1316,6 +1510,7 @@ def run_generate_check() -> int:
         print(f"video bgm pack: {video_result.root}")
     else:
         print("video bgm pack: skipped")
+    print(f"preview files: {len(find_audio_preview_items(paths.root))}")
     return 0
 
 

@@ -8,3 +8,5 @@ pillow
 # torchaudio
 # audiocraft
 
+# Optional in-app audio preview backend.
+# pygame
