@@ -1,0 +1,174 @@
+# 補助脳BRAINZ
+
+補助脳BRAINZ は、ローカルの会話・仕様・メモ・README・Codex結果を忘れず探すための記憶検索アプリです。
+
+BRAINZはChatGPTやCodexの代替AIではありません。ローカルに置いた記憶を読み込み、全文検索とうろ覚え検索で、過去の思考や作業結果へ再接続するための検索層・橋渡し係です。
+
+## 思想
+
+補助脳が提案し続ける。  
+菊田が選び続け、決め続ける。  
+補助脳が決定を反映し続ける。
+
+BRAINZの役割は、忘れない、探せる、関連づく、再投入できる、ChatGPT / Codex / Claude / Gemini の橋渡しをすることです。
+
+## Phase 1でできること
+
+- ローカル記憶フォルダの指定
+- `.txt` / `.md` / `.json` の読み込み
+- SQLite `brainz.db` への保存
+- SQLite FTS5 による全文検索
+- うろ覚え検索
+- Ollama接続チェック
+- CUDA / GPUチェック表示
+- 検索結果一覧
+- 結果詳細表示
+- ChatGPTに貼る用まとめ生成
+- Codexに貼る用指示素材生成
+- index更新ログ保存
+
+## Phase 1でやらないこと
+
+- ChatGPT API接続
+- OpenAI API接続
+- OpenAI APIキー入力欄
+- 自動でChatGPT / Codexへ投稿
+- Claude / Gemini自動ログイン
+- ブラウザ操作自動化
+- 人格AI化
+- 自動判断
+- クラウド同期
+- 自動削除
+- 勝手なファイル移動
+
+## OpenAI APIについて
+
+Phase 1ではOpenAI APIを使いません。APIキー入力欄もありません。
+
+基本方針は完全ローカル優先です。Ollamaがあれば接続状態を確認し、将来のローカルembeddingに備えます。Ollamaがなくても SQLite FTS5 による全文検索とうろ覚え検索は動きます。
+
+## ローカル記憶フォルダ
+
+ユーザーが自由に指定できます。初期案は次のような構成です。
+
+```text
+brainz_memory/
+├ chatgpt/
+├ codex/
+├ claude/
+├ gemini/
+├ ideas/
+├ specs/
+├ README/
+├ logs/
+└ thoughts/
+```
+
+Phase 1の読み込み対象は `.txt` / `.md` / `.json` です。原本ファイルは編集しません。削除もしません。BRAINZは内容を読み取り、SQLiteに索引として保存します。
+
+## 検索
+
+全文検索は SQLite FTS5 を使います。うろ覚え検索は、全文検索に加えて `LIKE` と検索語の分割で拾います。
+
+例:
+
+- 静かな青
+- 補助脳
+- Codexに投げたやつ
+- DAKEのGitルール
+- quiet workflow
+
+## Ollama / GPU
+
+起動時に可能な範囲で `nvidia-smi`、CUDA相当のGPU検出、Ollamaのローカル接続を確認します。
+
+表示例:
+
+- CUDA ONLINE
+- GPU DETECTED
+- OLLAMA LOCAL READY
+- SQLITE READY
+
+未検出でもアプリは落ちません。
+
+## ChatGPT / Codex / Claude / Gemini との関係
+
+BRAINZは自動送信しません。検索結果から、ChatGPTに貼る用まとめとCodexに貼る用素材をMarkdownとして生成するだけです。Claude / Gemini についてもPhase 1では自動連携しません。
+
+## 将来対応候補
+
+- `.html`
+- ChatGPT export zip
+- `conversations.json` parser
+- Claudeコピー
+- Codex結果ログ
+- PDF OCR
+- 音声Whisper
+- Ollama embedding本実装
+- FAISS検索
+- FAISS GPU対応
+- 関連タグ自動生成
+- 選択履歴 / 決定履歴
+- ChatGPT投入用プロンプト生成強化
+- Codex指示書生成強化
+- Git差分連携
+- PEAKHEADZロゴ起動画面
+- 処理完了通知
+
+## ビルド
+
+```bat
+build.bat
+```
+
+PyInstallerで `dist/DakeBrainz_Search.exe` を作成します。exeアイコンは `../../02_assets/dake_icon.ico` を参照します。PEAKHEADZロゴはアプリ内表示用で、`assets/peakheadz_logo.png` が存在する場合のみ表示します。
+
+## DAKE_META
+
+```json
+{
+  "app_key": "DAKE_Brainz_Search",
+  "display_name": "補助脳BRAINZ",
+  "launcher_title": "補助脳BRAINZ",
+  "launcher_description": "ローカルの会話・仕様・メモを忘れず探すための記憶検索アプリです。",
+  "site_title": "補助脳BRAINZ",
+  "site_description": "ChatGPT、Codex、Claude、Geminiのやり取りをローカル記憶として再接続する検索補助脳です。",
+  "update_summary": "補助脳BRAINZ v0.1 を追加しました。",
+  "folder_name": "DAKE_Brainz_Search",
+  "exe_name": "DakeBrainz_Search.exe",
+  "release_url": "",
+  "screenshot_path": "assets/screenshot.webp",
+  "status": "draft",
+  "show_in_launcher": false,
+  "show_on_site": false
+}
+```
+
+## RELEASE_BODY
+
+```markdown
+# 補助脳BRAINZ v0.1
+
+ローカルの会話・仕様・メモを忘れず探すための記憶検索アプリです。
+
+## できること
+
+- ローカルフォルダのtxt / md / json取り込み
+- SQLiteによる記憶DB作成
+- 全文検索
+- うろ覚え検索
+- Ollama / CUDA / GPU状態チェック
+- ChatGPT用まとめ生成
+- Codex用素材生成
+- 検索ログ保存
+
+## まだやらないこと
+
+- OpenAI API接続
+- 自動投稿
+- ChatGPT / Codexへの自動送信
+- Claude / Gemini自動連携
+- PDF OCR
+- 音声文字起こし
+- クラウド同期
+```

@@ -1,0 +1,10 @@
+build/
+dist/
+*.spec
+*_config.json
+__pycache__/
+*.pyc
+data/brainz.db
+data/logs/
+data/exports/
+outputs/
