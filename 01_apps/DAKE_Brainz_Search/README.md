@@ -141,6 +141,22 @@ PyInstallerで `dist/DakeBrainz_Search.exe` を作成します。exeアイコン
 
 BRAINZはChatGPTの代替ではありません。ChatGPTの会話履歴を、ローカル記憶として再接続するための検索補助脳です。
 
+## Phase 3: Codex結果ログ取り込み
+
+補助脳BRAINZ v0.3.0 では、Codexの完了報告・修正結果・commit / push結果を、貼り付けまたは `.txt` / `.md` ファイルから取り込めます。
+
+- Codexの完了報告を貼り付けで取り込み
+- `.txt` / `.md` ファイルから取り込み
+- commit hash / 修正ファイル / 確認結果 / push結果を可能な範囲で抽出
+- `source_type=codex_result` として検索可能
+- ChatGPT用handoff / Codex用handoffに実装履歴を反映
+- 同じCodex結果の再取り込み時は重複を避ける
+- Codexを自動操作しない
+- 外部送信しない
+- OpenAI APIは使わない
+
+BRAINZは、Codexが実際に何を作成・修正・確認・commit / pushしたかをローカル記憶として保存します。ChatGPTで仕様検討し、Codexが実装し、BRAINZが覚えて橋渡しするための履歴層です。
+
 ## DAKE_META
 
 ```json
@@ -151,7 +167,7 @@ BRAINZはChatGPTの代替ではありません。ChatGPTの会話履歴を、ロ
   "launcher_description": "ローカルの会話・仕様・メモを忘れず探すための記憶検索アプリです。",
   "site_title": "補助脳BRAINZ",
   "site_description": "ChatGPT、Codex、Claude、Geminiのやり取りをローカル記憶として再接続する検索補助脳です。",
-  "update_summary": "ChatGPT export取り込みに対応しました。",
+  "update_summary": "Codex結果ログ取り込みに対応しました。",
   "folder_name": "DAKE_Brainz_Search",
   "exe_name": "DakeBrainz_Search.exe",
   "release_url": "",

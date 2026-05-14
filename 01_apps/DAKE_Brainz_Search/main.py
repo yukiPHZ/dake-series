@@ -26,6 +26,7 @@ UI_TEXT = {
     "button_cancel": "Cancel",
     "button_choose": "Choose",
     "button_import_chatgpt_export": "ChatGPT exportを取り込む",
+    "button_import_codex_result": "Codex結果を取り込む",
     "button_chatgpt": "ChatGPTまとめ",
     "button_codex": "Codex素材",
     "memory_title": "Memory Folder",
@@ -48,17 +49,34 @@ UI_TEXT = {
     "dialog_export_done": "ファイルを生成しました",
     "dialog_select_chatgpt_export": "ChatGPT export zipを選択（キャンセルでフォルダ選択）",
     "dialog_select_chatgpt_export_folder": "展開済みChatGPT exportフォルダを選択",
+    "dialog_import_codex_result": "Codex結果を取り込む",
+    "dialog_select_codex_result_file": "Codex結果ファイルを選択",
+    "label_codex_result_input": "Codexの完了報告・修正結果・commit/push結果を貼り付け",
+    "button_import_pasted_codex": "貼り付けを取り込む",
+    "button_import_codex_file": "txt / md を選択",
+    "button_close": "閉じる",
     "filetype_zip": "zipファイル",
+    "filetype_text_markdown": "txt / md",
     "filetype_all": "すべてのファイル",
     "status_importing_chatgpt": "CHATGPT EXPORT IMPORTING...",
     "status_chatgpt_import_complete": "CHATGPT EXPORT IMPORT COMPLETE",
+    "status_importing_codex": "CODEX RESULT IMPORTING...",
+    "status_codex_import_complete": "CODEX RESULT IMPORT COMPLETE",
     "error_conversations_json_not_found": "conversations.json が見つかりませんでした。zipまたは展開済みフォルダを確認してください。",
     "error_chatgpt_import_failed": "ChatGPT exportを取り込めませんでした。",
+    "error_codex_result_empty": "Codex結果が空です。テキストを貼り付けるか、txt / md ファイルを選択してください。",
+    "error_codex_import_failed": "Codex結果を取り込めませんでした。",
     "log_chatgpt_export_detected": "ChatGPT export detected.",
     "log_conversations_json_found": "conversations.json found: {path}",
     "log_chatgpt_import_complete": "{conversations} conversations imported. {messages} messages indexed. Skipped duplicates: {skipped}. Errors: {errors}.",
     "log_chatgpt_memory_imported": "補助脳：ChatGPTの記憶を取り込みました。",
     "log_chatgpt_import_file": "IMPORT LOG: {path}",
+    "log_codex_result_detected": "Codex result detected.",
+    "log_codex_commit_found": "Commit hash found: {commit_hash}",
+    "log_codex_import_complete": "Changed files: {changed_files}. Skipped duplicate: {skipped}.",
+    "log_codex_memory_imported": "補助脳：Codexの実装結果を記憶しました。",
+    "log_codex_import_file": "IMPORT LOG: {path}",
+    "codex_source_paste": "Codex result paste",
     "smoke_markdown": "# quiet workflow\n\n補助脳BRAINZは静かな青の検索脳。Codexに投げたやつを忘れない。",
     "smoke_text": "DAKEのGitルール: git status, add, commit, push。UIを止めない。",
     "smoke_json_name": "補助脳BRAINZ",
@@ -71,6 +89,12 @@ UI_TEXT = {
     "smoke_chatgpt_assistant_text": "BRAINZは会話タイトル、role、本文をsource_type=chatgpt_exportとして検索できます。",
     "smoke_chatgpt_folder_text": "展開済みフォルダのconversations.jsonもローカルで解析します。",
     "smoke_chatgpt_query": "source_type chatgpt_export 補助脳BRAINZ",
+    "smoke_codex_title": "Add Codex result import to Brainz",
+    "smoke_codex_text": "# Add Codex result import to Brainz\n\n完了しました。\n\n主な変更:\n- 追加: core/codex_importer.py\n- 更新: main.py, core/db.py, core/handoff_writer.py, README.md\n\n確認結果:\n- python main.py --launch-check: OK\n- python main.py --smoke-test: OK\n- build.bat: OK\n- dist/DakeBrainz_Search.exe --launch-check: OK\n\nGit:\n- commit: `abc1234def567890abc1234def567890abc1234d`\n- push: `origin/main` 成功\n- git status clean\n\nPhase 4候補: 関連タグ自動生成",
+    "smoke_codex_file_text": "Codex実装結果\n\n変更済みファイル: core/search_engine.py README.md\n確認済みテスト: smoke-test OK\ncommit: `def5678abc1234def5678abc1234def5678abc12`\npush: origin/main 成功",
+    "smoke_codex_query": "Add Codex result import Brainz abc1234",
+    "smoke_codex_chatgpt_heading": "過去のCodex実装結果",
+    "smoke_codex_codex_heading": "既存実装履歴",
     "log_ready": "READY: SQLite memory layer initialized",
     "log_folder_set": "MEMORY FOLDER: {folder}",
     "log_index_started": "INDEX START: {folder}",
@@ -93,9 +117,10 @@ UI_TEXT = {
     "status_ollama_ready": "OLLAMA LOCAL READY",
     "status_ollama_not_running": "OLLAMA NOT RUNNING",
     "status_docs": "DOCS {documents} / CHUNKS {chunks}",
-    "preview_template": "PATH: {path}\nSOURCE: {source_type}\nLABEL: {source_label}\nCONVERSATION: {conversation_title}\nROLE: {role}\nMESSAGE INDEX: {message_index}\nMODIFIED: {modified_at}\nINDEXED: {indexed_at}\nSCORE: {score:.2f}\n\n{content}",
+    "preview_template": "PATH: {path}\nSOURCE: {source_type}\nLABEL: {source_label}\nCONVERSATION: {conversation_title}\nROLE: {role}\nMESSAGE INDEX: {message_index}\nCOMMIT: {commit_hash}\nCHANGED FILES: {changed_files}\nTEST RESULTS: {test_results}\nBUILD RESULTS: {build_results}\nPUSH: {push_result}\nGIT STATUS: {git_status}\nMODIFIED: {modified_at}\nINDEXED: {indexed_at}\nSCORE: {score:.2f}\n\n{content}",
     "result_meta": "{source_type} | score {score:.1f}",
     "result_meta_chatgpt": "{source_label} | score {score:.1f}",
+    "result_meta_codex": "commit {commit_hash} | score {score:.1f}",
     "handoff_preview": "query: {query}\nresults: {count}\n\n{items}",
     "launch_check_ok": "LAUNCH CHECK OK",
 }
@@ -104,6 +129,7 @@ UI_TEXT = {
 def run_smoke_test() -> int:
     from core.app_config import ensure_app_dirs
     from core.chatgpt_importer import import_chatgpt_export
+    from core.codex_importer import import_codex_file, import_codex_text
     from core.db import BrainzDatabase
     from core.gpu_checker import check_gpu
     from core.handoff_writer import write_chatgpt_handoff, write_codex_handoff
@@ -172,6 +198,29 @@ def run_smoke_test() -> int:
         if duplicate_result.skipped_duplicates < 2:
             raise RuntimeError("duplicate import was not skipped")
 
+        unique_commit_a = (f"{time.time_ns():x}" * 4)[:40]
+        unique_commit_b = (f"{time.time_ns() + 1:x}" * 4)[:40]
+        codex_text = UI_TEXT["smoke_codex_text"].replace(
+            "abc1234def567890abc1234def567890abc1234d",
+            unique_commit_a,
+        )
+        codex_file_text = UI_TEXT["smoke_codex_file_text"].replace(
+            "def5678abc1234def5678abc1234def5678abc12",
+            unique_commit_b,
+        )
+        codex_query = f"{UI_TEXT['smoke_codex_query']} {unique_commit_a[:7]}"
+        codex_result = import_codex_text(codex_text, database, UI_TEXT["codex_source_paste"])
+        codex_duplicate = import_codex_text(codex_text, database, UI_TEXT["codex_source_paste"])
+        codex_file = root / "codex_result.md"
+        codex_file.write_text(codex_file_text, encoding="utf-8")
+        codex_file_result = import_codex_file(codex_file, database)
+        if not codex_result.changed:
+            raise RuntimeError("codex paste import did not index")
+        if not codex_duplicate.skipped_duplicate:
+            raise RuntimeError("codex duplicate import was not skipped")
+        if not codex_file_result.changed:
+            raise RuntimeError("codex file import did not index")
+
     engine = SearchEngine(database)
     file_results = engine.search(UI_TEXT["smoke_query_memory"], limit=10)
     if not file_results:
@@ -192,6 +241,19 @@ def run_smoke_test() -> int:
     if not chatgpt_path.exists() or not codex_path.exists():
         raise RuntimeError("handoff export failed")
 
+    codex_results = engine.search(codex_query, limit=10)
+    codex_match = next((result for result in codex_results if result.source_type == "codex_result"), None)
+    if codex_match is None:
+        raise RuntimeError("codex_result search returned no result")
+    if not codex_match.commit_hash or not codex_match.changed_files_json:
+        raise RuntimeError("codex metadata was not stored")
+    codex_chatgpt_path = write_chatgpt_handoff(codex_query, codex_results)
+    codex_codex_path = write_codex_handoff(codex_query, codex_results)
+    if UI_TEXT["smoke_codex_chatgpt_heading"] not in codex_chatgpt_path.read_text(encoding="utf-8"):
+        raise RuntimeError("chatgpt handoff did not include codex history")
+    if UI_TEXT["smoke_codex_codex_heading"] not in codex_codex_path.read_text(encoding="utf-8"):
+        raise RuntimeError("codex handoff did not include implementation history")
+
     ollama_status = check_ollama()
     gpu_status = check_gpu()
     stats = database.stats()
@@ -199,8 +261,11 @@ def run_smoke_test() -> int:
     print(f"documents={stats['documents']} chunks={stats['chunks']}")
     print(f"file_results={len(file_results)}")
     print(f"chatgpt_results={len(chatgpt_results)}")
+    print(f"codex_results={len(codex_results)}")
     print(f"chatgpt_handoff={chatgpt_path}")
     print(f"codex_handoff={codex_path}")
+    print(f"codex_chatgpt_handoff={codex_chatgpt_path}")
+    print(f"codex_codex_handoff={codex_codex_path}")
     print(f"ollama_available={ollama_status.available}")
     print(f"gpu_detected={gpu_status.gpu_detected}")
     return 0
@@ -246,6 +311,7 @@ def run_gui(launch_check: bool = False) -> int:
         peakheadz_logo_path,
     )
     from core.chatgpt_importer import ConversationsJsonNotFound, ChatGPTImportResult, import_chatgpt_export
+    from core.codex_importer import CodexImportResult, import_codex_file, import_codex_text
     from core.db import BrainzDatabase, SearchResult
     from core.gpu_checker import check_gpu
     from core.handoff_writer import write_chatgpt_handoff, write_codex_handoff
@@ -390,21 +456,30 @@ def run_gui(launch_check: bool = False) -> int:
                 command=self._choose_chatgpt_export,
             )
             self.import_button.grid(row=3, column=0, sticky="ew", padx=14, pady=(0, 16))
+            self.codex_import_button = ctk.CTkButton(
+                left,
+                text=UI_TEXT["button_import_codex_result"],
+                height=34,
+                fg_color=COLORS["panel_soft"],
+                hover_color=COLORS["accent_soft"],
+                command=self._open_codex_import_dialog,
+            )
+            self.codex_import_button.grid(row=4, column=0, sticky="ew", padx=14, pady=(0, 16))
 
-            self._section_title(left, UI_TEXT["index_title"], 4)
+            self._section_title(left, UI_TEXT["index_title"], 5)
             self.index_status_var = ctk.StringVar(value=UI_TEXT["index_idle"])
             ctk.CTkLabel(
                 left,
                 textvariable=self.index_status_var,
                 text_color=COLORS["text"],
                 font=(self.font_family, 13, "bold"),
-            ).grid(row=5, column=0, sticky="w", padx=14, pady=(0, 8))
+            ).grid(row=6, column=0, sticky="w", padx=14, pady=(0, 8))
             self.progress = ctk.CTkProgressBar(left, height=10, progress_color=COLORS["accent"])
             self.progress.set(0)
-            self.progress.grid(row=6, column=0, sticky="ew", padx=14, pady=(0, 12))
+            self.progress.grid(row=7, column=0, sticky="ew", padx=14, pady=(0, 12))
 
             button_row = ctk.CTkFrame(left, fg_color="transparent")
-            button_row.grid(row=7, column=0, sticky="ew", padx=14, pady=(0, 18))
+            button_row.grid(row=8, column=0, sticky="ew", padx=14, pady=(0, 18))
             button_row.grid_columnconfigure((0, 1), weight=1)
             self.index_button = ctk.CTkButton(
                 button_row,
@@ -426,13 +501,13 @@ def run_gui(launch_check: bool = False) -> int:
             )
             self.cancel_button.grid(row=0, column=1, sticky="ew", padx=(6, 0))
 
-            self._section_title(left, UI_TEXT["system_title"], 8)
+            self._section_title(left, UI_TEXT["system_title"], 9)
             self.sqlite_var = ctk.StringVar(value=UI_TEXT["status_sqlite_ready"])
             self.cuda_var = ctk.StringVar(value=UI_TEXT["status_cuda_unavailable"])
             self.gpu_var = ctk.StringVar(value=UI_TEXT["status_gpu_missing"])
             self.ollama_var = ctk.StringVar(value=UI_TEXT["status_ollama_not_running"])
             self.docs_var = ctk.StringVar(value=UI_TEXT["status_docs"].format(documents=0, chunks=0))
-            for index, variable in enumerate((self.sqlite_var, self.cuda_var, self.gpu_var, self.ollama_var, self.docs_var), start=9):
+            for index, variable in enumerate((self.sqlite_var, self.cuda_var, self.gpu_var, self.ollama_var, self.docs_var), start=10):
                 ctk.CTkLabel(
                     left,
                     textvariable=variable,
@@ -592,7 +667,7 @@ def run_gui(launch_check: bool = False) -> int:
         def _start_chatgpt_import(self, source_path: Path) -> None:
             if self.import_thread and self.import_thread.is_alive():
                 return
-            self.import_button.configure(state="disabled")
+            self._set_import_buttons_state("disabled")
             self.index_status_var.set(UI_TEXT["status_importing_chatgpt"])
             self.progress.set(0)
             self._append_log(UI_TEXT["log_chatgpt_export_detected"])
@@ -607,6 +682,123 @@ def run_gui(launch_check: bool = False) -> int:
                 self.events.put(("chatgpt_import_missing", str(exc)))
             except Exception as exc:
                 self.events.put(("chatgpt_import_error", str(exc)))
+
+        def _open_codex_import_dialog(self) -> None:
+            dialog = ctk.CTkToplevel(self)
+            dialog.title(UI_TEXT["dialog_import_codex_result"])
+            dialog.geometry("720x520")
+            dialog.transient(self)
+            dialog.grab_set()
+            dialog.grid_columnconfigure(0, weight=1)
+            dialog.grid_rowconfigure(1, weight=1)
+
+            ctk.CTkLabel(
+                dialog,
+                text=UI_TEXT["label_codex_result_input"],
+                text_color=COLORS["text"],
+                font=(self.font_family, 14, "bold"),
+            ).grid(row=0, column=0, sticky="w", padx=14, pady=(14, 8))
+            input_box = ctk.CTkTextbox(
+                dialog,
+                fg_color=COLORS["input"],
+                border_color=COLORS["border"],
+                border_width=1,
+                text_color=COLORS["text"],
+                font=(self.font_family, 12),
+                wrap="word",
+            )
+            input_box.grid(row=1, column=0, sticky="nsew", padx=14, pady=(0, 12))
+
+            button_row = ctk.CTkFrame(dialog, fg_color="transparent")
+            button_row.grid(row=2, column=0, sticky="ew", padx=14, pady=(0, 14))
+            button_row.grid_columnconfigure((0, 1, 2), weight=1)
+
+            def import_paste() -> None:
+                text_value = input_box.get("1.0", "end").strip()
+                if not text_value:
+                    messagebox.showwarning(UI_TEXT["dialog_title"], UI_TEXT["error_codex_result_empty"])
+                    return
+                dialog.destroy()
+                self._start_codex_import_text(text_value)
+
+            def import_file() -> None:
+                path = filedialog.askopenfilename(
+                    title=UI_TEXT["dialog_select_codex_result_file"],
+                    filetypes=[
+                        (UI_TEXT["filetype_text_markdown"], "*.txt *.md"),
+                        (UI_TEXT["filetype_all"], "*.*"),
+                    ],
+                )
+                if path:
+                    dialog.destroy()
+                    self._start_codex_import_file(Path(path))
+
+            ctk.CTkButton(
+                button_row,
+                text=UI_TEXT["button_import_pasted_codex"],
+                height=34,
+                fg_color=COLORS["accent"],
+                hover_color=COLORS["accent_hover"],
+                command=import_paste,
+            ).grid(row=0, column=0, sticky="ew", padx=(0, 6))
+            ctk.CTkButton(
+                button_row,
+                text=UI_TEXT["button_import_codex_file"],
+                height=34,
+                fg_color=COLORS["panel_soft"],
+                hover_color=COLORS["accent_soft"],
+                command=import_file,
+            ).grid(row=0, column=1, sticky="ew", padx=6)
+            ctk.CTkButton(
+                button_row,
+                text=UI_TEXT["button_close"],
+                height=34,
+                fg_color=COLORS["panel_soft"],
+                hover_color=COLORS["accent_soft"],
+                command=dialog.destroy,
+            ).grid(row=0, column=2, sticky="ew", padx=(6, 0))
+
+        def _set_import_buttons_state(self, state: str) -> None:
+            self.import_button.configure(state=state)
+            self.codex_import_button.configure(state=state)
+
+        def _start_codex_import_text(self, text_value: str) -> None:
+            if self.import_thread and self.import_thread.is_alive():
+                return
+            self._set_import_buttons_state("disabled")
+            self.index_status_var.set(UI_TEXT["status_importing_codex"])
+            self.progress.set(0)
+            self._append_log(UI_TEXT["log_codex_result_detected"])
+            self.import_thread = threading.Thread(target=self._codex_import_text_worker, args=(text_value,), daemon=True)
+            self.import_thread.start()
+
+        def _start_codex_import_file(self, source_path: Path) -> None:
+            if self.import_thread and self.import_thread.is_alive():
+                return
+            self._set_import_buttons_state("disabled")
+            self.index_status_var.set(UI_TEXT["status_importing_codex"])
+            self.progress.set(0)
+            self._append_log(UI_TEXT["log_codex_result_detected"])
+            self.import_thread = threading.Thread(target=self._codex_import_file_worker, args=(source_path,), daemon=True)
+            self.import_thread.start()
+
+        def _codex_import_text_worker(self, text_value: str) -> None:
+            try:
+                result = import_codex_text(text_value, self.database, UI_TEXT["codex_source_paste"])
+                self.events.put(("codex_import_done", result))
+            except ValueError as exc:
+                self.events.put(("codex_import_empty", str(exc)))
+            except Exception as exc:
+                self.events.put(("codex_import_error", str(exc)))
+
+        def _codex_import_file_worker(self, source_path: Path) -> None:
+            try:
+                result = import_codex_file(source_path, self.database)
+                self.events.put(("codex_import_done", result))
+            except ValueError as exc:
+                self.events.put(("codex_import_empty", str(exc)))
+            except Exception as exc:
+                self.events.put(("codex_import_error", str(exc)))
 
         def _start_index(self) -> None:
             folder = self.config_data.memory_folder
@@ -697,13 +889,20 @@ def run_gui(launch_check: bool = False) -> int:
                 ).grid(row=2, column=0, sticky="ew", padx=12, pady=(3, 10))
 
         def _result_title(self, result: SearchResult) -> str:
-            badge = "chatgpt_export" if result.source_type == "chatgpt_export" else "file"
-            return f"[{badge}] {result.conversation_title or result.title}"
+            if result.source_type == "chatgpt_export":
+                return f"[chatgpt_export] {result.conversation_title or result.title}"
+            if result.source_type == "codex_result":
+                suffix = f" / {result.commit_hash[:7]}" if result.commit_hash else ""
+                return f"[codex_result] {result.title}{suffix}"
+            return f"[file] {result.title}"
 
         def _result_meta(self, result: SearchResult) -> str:
             if result.source_type == "chatgpt_export":
                 label = result.source_label or f"ChatGPT / {result.conversation_title or result.title} / {result.role}"
                 return UI_TEXT["result_meta_chatgpt"].format(source_label=label, score=result.score)
+            if result.source_type == "codex_result":
+                commit_hash = result.commit_hash[:12] if result.commit_hash else "-"
+                return UI_TEXT["result_meta_codex"].format(commit_hash=commit_hash, score=result.score)
             return UI_TEXT["result_meta"].format(source_type=result.source_type, score=result.score)
 
         def _select_result(self, result: SearchResult) -> None:
@@ -714,6 +913,12 @@ def run_gui(launch_check: bool = False) -> int:
                 conversation_title=result.conversation_title,
                 role=result.role,
                 message_index=result.message_index,
+                commit_hash=result.commit_hash,
+                changed_files=result.changed_files_json,
+                test_results=result.test_results,
+                build_results=result.build_results,
+                push_result=result.push_result,
+                git_status=result.git_status,
                 modified_at=result.modified_at,
                 indexed_at=result.indexed_at,
                 score=result.score,
@@ -727,6 +932,7 @@ def run_gui(launch_check: bool = False) -> int:
                 result.source_type,
                 result.role,
                 result.conversation_title,
+                result.commit_hash,
                 Path(result.path).parent.name,
                 Path(result.path).stem,
             ]
@@ -798,6 +1004,12 @@ def run_gui(launch_check: bool = False) -> int:
                     self._handle_chatgpt_import_missing()
                 elif event == "chatgpt_import_error":
                     self._handle_chatgpt_import_error(str(payload))
+                elif event == "codex_import_done":
+                    self._handle_codex_import_done(payload)
+                elif event == "codex_import_empty":
+                    self._handle_codex_import_empty()
+                elif event == "codex_import_error":
+                    self._handle_codex_import_error(str(payload))
 
             self.after(100, self._poll_events)
 
@@ -834,12 +1046,12 @@ def run_gui(launch_check: bool = False) -> int:
         def _handle_index_error(self, error_text: str) -> None:
             self.index_button.configure(state="normal")
             self.cancel_button.configure(state="disabled")
-            self.import_button.configure(state="normal")
+            self._set_import_buttons_state("normal")
             self.index_status_var.set(UI_TEXT["index_idle"])
             self._append_log(UI_TEXT["log_index_error"].format(error=error_text))
 
         def _handle_chatgpt_import_done(self, result: ChatGPTImportResult) -> None:
-            self.import_button.configure(state="normal")
+            self._set_import_buttons_state("normal")
             self.index_status_var.set(UI_TEXT["status_chatgpt_import_complete"])
             self.progress.set(1)
             self._refresh_stats()
@@ -857,18 +1069,48 @@ def run_gui(launch_check: bool = False) -> int:
             messagebox.showinfo(UI_TEXT["dialog_title"], UI_TEXT["status_chatgpt_import_complete"])
 
         def _handle_chatgpt_import_missing(self) -> None:
-            self.import_button.configure(state="normal")
+            self._set_import_buttons_state("normal")
             self.index_status_var.set(UI_TEXT["index_idle"])
             self.progress.set(0)
             self._append_log(UI_TEXT["error_conversations_json_not_found"])
             messagebox.showwarning(UI_TEXT["dialog_title"], UI_TEXT["error_conversations_json_not_found"])
 
         def _handle_chatgpt_import_error(self, error_text: str) -> None:
-            self.import_button.configure(state="normal")
+            self._set_import_buttons_state("normal")
             self.index_status_var.set(UI_TEXT["index_idle"])
             self.progress.set(0)
             self._append_log(f"{UI_TEXT['error_chatgpt_import_failed']} {error_text}")
             messagebox.showwarning(UI_TEXT["dialog_title"], f"{UI_TEXT['error_chatgpt_import_failed']}\n{error_text}")
+
+        def _handle_codex_import_done(self, result: CodexImportResult) -> None:
+            self._set_import_buttons_state("normal")
+            self.index_status_var.set(UI_TEXT["status_codex_import_complete"])
+            self.progress.set(1)
+            self._refresh_stats()
+            self._append_log(UI_TEXT["log_codex_commit_found"].format(commit_hash=result.commit_hash))
+            self._append_log(
+                UI_TEXT["log_codex_import_complete"].format(
+                    changed_files=result.changed_files_count,
+                    skipped=result.skipped_duplicate,
+                )
+            )
+            self._append_log(UI_TEXT["log_codex_memory_imported"])
+            self._append_log(UI_TEXT["log_codex_import_file"].format(path=result.log_path))
+            messagebox.showinfo(UI_TEXT["dialog_title"], UI_TEXT["status_codex_import_complete"])
+
+        def _handle_codex_import_empty(self) -> None:
+            self._set_import_buttons_state("normal")
+            self.index_status_var.set(UI_TEXT["index_idle"])
+            self.progress.set(0)
+            self._append_log(UI_TEXT["error_codex_result_empty"])
+            messagebox.showwarning(UI_TEXT["dialog_title"], UI_TEXT["error_codex_result_empty"])
+
+        def _handle_codex_import_error(self, error_text: str) -> None:
+            self._set_import_buttons_state("normal")
+            self.index_status_var.set(UI_TEXT["index_idle"])
+            self.progress.set(0)
+            self._append_log(f"{UI_TEXT['error_codex_import_failed']} {error_text}")
+            messagebox.showwarning(UI_TEXT["dialog_title"], f"{UI_TEXT['error_codex_import_failed']}\n{error_text}")
 
         def _handle_search_done(self, query_text: str, results: list[SearchResult]) -> None:
             self.current_results = results

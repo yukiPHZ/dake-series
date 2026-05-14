@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 import sqlite3
 from dataclasses import dataclass
@@ -27,6 +28,15 @@ class DocumentRecord:
     message_index: int = -1
     source_created_at: str = ""
     source_updated_at: str = ""
+    codex_summary: str = ""
+    changed_files_json: str = ""
+    created_files_json: str = ""
+    test_results: str = ""
+    build_results: str = ""
+    commit_hash: str = ""
+    push_result: str = ""
+    git_status: str = ""
+    phase_notes: str = ""
 
 
 @dataclass(frozen=True)
@@ -47,6 +57,15 @@ class SearchResult:
     message_index: int = -1
     source_created_at: str = ""
     source_updated_at: str = ""
+    codex_summary: str = ""
+    changed_files_json: str = ""
+    created_files_json: str = ""
+    test_results: str = ""
+    build_results: str = ""
+    commit_hash: str = ""
+    push_result: str = ""
+    git_status: str = ""
+    phase_notes: str = ""
 
 
 DOCUMENT_METADATA_COLUMNS = {
@@ -57,6 +76,18 @@ DOCUMENT_METADATA_COLUMNS = {
     "message_index": "INTEGER NOT NULL DEFAULT -1",
     "source_created_at": "TEXT NOT NULL DEFAULT ''",
     "source_updated_at": "TEXT NOT NULL DEFAULT ''",
+}
+
+CODEX_METADATA_COLUMNS = {
+    "codex_summary": "TEXT NOT NULL DEFAULT ''",
+    "changed_files_json": "TEXT NOT NULL DEFAULT ''",
+    "created_files_json": "TEXT NOT NULL DEFAULT ''",
+    "test_results": "TEXT NOT NULL DEFAULT ''",
+    "build_results": "TEXT NOT NULL DEFAULT ''",
+    "commit_hash": "TEXT NOT NULL DEFAULT ''",
+    "push_result": "TEXT NOT NULL DEFAULT ''",
+    "git_status": "TEXT NOT NULL DEFAULT ''",
+    "phase_notes": "TEXT NOT NULL DEFAULT ''",
 }
 
 
@@ -94,7 +125,16 @@ class BrainzDatabase:
                     role TEXT NOT NULL DEFAULT '',
                     message_index INTEGER NOT NULL DEFAULT -1,
                     source_created_at TEXT NOT NULL DEFAULT '',
-                    source_updated_at TEXT NOT NULL DEFAULT ''
+                    source_updated_at TEXT NOT NULL DEFAULT '',
+                    codex_summary TEXT NOT NULL DEFAULT '',
+                    changed_files_json TEXT NOT NULL DEFAULT '',
+                    created_files_json TEXT NOT NULL DEFAULT '',
+                    test_results TEXT NOT NULL DEFAULT '',
+                    build_results TEXT NOT NULL DEFAULT '',
+                    commit_hash TEXT NOT NULL DEFAULT '',
+                    push_result TEXT NOT NULL DEFAULT '',
+                    git_status TEXT NOT NULL DEFAULT '',
+                    phase_notes TEXT NOT NULL DEFAULT ''
                 );
 
                 CREATE TABLE IF NOT EXISTS chunks (
@@ -112,7 +152,35 @@ class BrainzDatabase:
                     message_index INTEGER NOT NULL DEFAULT -1,
                     source_created_at TEXT NOT NULL DEFAULT '',
                     source_updated_at TEXT NOT NULL DEFAULT '',
+                    codex_summary TEXT NOT NULL DEFAULT '',
+                    changed_files_json TEXT NOT NULL DEFAULT '',
+                    created_files_json TEXT NOT NULL DEFAULT '',
+                    test_results TEXT NOT NULL DEFAULT '',
+                    build_results TEXT NOT NULL DEFAULT '',
+                    commit_hash TEXT NOT NULL DEFAULT '',
+                    push_result TEXT NOT NULL DEFAULT '',
+                    git_status TEXT NOT NULL DEFAULT '',
+                    phase_notes TEXT NOT NULL DEFAULT '',
                     FOREIGN KEY(document_id) REFERENCES documents(id) ON DELETE CASCADE
+                );
+
+                CREATE TABLE IF NOT EXISTS codex_results (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title TEXT NOT NULL,
+                    summary TEXT NOT NULL DEFAULT '',
+                    changed_files_json TEXT NOT NULL DEFAULT '',
+                    created_files_json TEXT NOT NULL DEFAULT '',
+                    test_results TEXT NOT NULL DEFAULT '',
+                    build_results TEXT NOT NULL DEFAULT '',
+                    commit_hash TEXT NOT NULL DEFAULT '',
+                    push_result TEXT NOT NULL DEFAULT '',
+                    git_status TEXT NOT NULL DEFAULT '',
+                    phase_notes TEXT NOT NULL DEFAULT '',
+                    raw_text TEXT NOT NULL,
+                    content_hash TEXT NOT NULL,
+                    import_key TEXT NOT NULL UNIQUE,
+                    document_path TEXT NOT NULL,
+                    imported_at TEXT NOT NULL
                 );
 
                 CREATE TABLE IF NOT EXISTS search_logs (
@@ -138,8 +206,8 @@ class BrainzDatabase:
                 );
                 """
             )
-            self._ensure_columns(conn, "documents", DOCUMENT_METADATA_COLUMNS)
-            chunk_columns = {"source_type": "TEXT NOT NULL DEFAULT ''", **DOCUMENT_METADATA_COLUMNS}
+            self._ensure_columns(conn, "documents", {**DOCUMENT_METADATA_COLUMNS, **CODEX_METADATA_COLUMNS})
+            chunk_columns = {"source_type": "TEXT NOT NULL DEFAULT ''", **DOCUMENT_METADATA_COLUMNS, **CODEX_METADATA_COLUMNS}
             self._ensure_columns(conn, "chunks", chunk_columns)
             conn.commit()
 
@@ -177,6 +245,15 @@ class BrainzDatabase:
                 int(record.message_index),
                 record.source_created_at,
                 record.source_updated_at,
+                record.codex_summary,
+                record.changed_files_json,
+                record.created_files_json,
+                record.test_results,
+                record.build_results,
+                record.commit_hash,
+                record.push_result,
+                record.git_status,
+                record.phase_notes,
             )
 
             if old:
@@ -187,7 +264,10 @@ class BrainzDatabase:
                     SET title = ?, source_type = ?, created_at = ?, modified_at = ?,
                         indexed_at = ?, hash = ?, content = ?, source_label = ?,
                         conversation_id = ?, conversation_title = ?, role = ?,
-                        message_index = ?, source_created_at = ?, source_updated_at = ?
+                        message_index = ?, source_created_at = ?, source_updated_at = ?,
+                        codex_summary = ?, changed_files_json = ?, created_files_json = ?,
+                        test_results = ?, build_results = ?, commit_hash = ?,
+                        push_result = ?, git_status = ?, phase_notes = ?
                     WHERE id = ?
                     """,
                     (*values, document_id),
@@ -201,9 +281,11 @@ class BrainzDatabase:
                     (
                         title, source_type, created_at, modified_at, indexed_at, hash,
                         content, source_label, conversation_id, conversation_title, role,
-                        message_index, source_created_at, source_updated_at, path
+                        message_index, source_created_at, source_updated_at, codex_summary,
+                        changed_files_json, created_files_json, test_results, build_results,
+                        commit_hash, push_result, git_status, phase_notes, path
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (*values, record.path),
                 )
@@ -216,9 +298,11 @@ class BrainzDatabase:
                     (
                         document_id, chunk_index, content, embedding_status, source_type,
                         source_label, conversation_id, conversation_title, role, message_index,
-                        source_created_at, source_updated_at
+                        source_created_at, source_updated_at, codex_summary, changed_files_json,
+                        created_files_json, test_results, build_results, commit_hash, push_result,
+                        git_status, phase_notes
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         document_id,
@@ -233,6 +317,15 @@ class BrainzDatabase:
                         int(record.message_index),
                         record.source_created_at,
                         record.source_updated_at,
+                        record.codex_summary,
+                        record.changed_files_json,
+                        record.created_files_json,
+                        record.test_results,
+                        record.build_results,
+                        record.commit_hash,
+                        record.push_result,
+                        record.git_status,
+                        record.phase_notes,
                     ),
                 )
 
@@ -242,6 +335,65 @@ class BrainzDatabase:
             )
             conn.commit()
             return document_id, True
+
+    def upsert_codex_result(self, parsed: object, document_path: str) -> tuple[int, bool]:
+        self.ensure_schema()
+        commit_hash = str(getattr(parsed, "commit_hash", "") or "")
+        content_hash = str(getattr(parsed, "content_hash", "") or "")
+        import_key = commit_hash or content_hash
+        with self._lock, self.connect() as conn:
+            old = conn.execute(
+                "SELECT id, content_hash FROM codex_results WHERE import_key = ?",
+                (import_key,),
+            ).fetchone()
+            values = (
+                str(getattr(parsed, "title", "") or ""),
+                str(getattr(parsed, "summary", "") or ""),
+                json.dumps(getattr(parsed, "changed_files", []) or [], ensure_ascii=False),
+                json.dumps(getattr(parsed, "created_files", []) or [], ensure_ascii=False),
+                str(getattr(parsed, "test_results", "") or ""),
+                str(getattr(parsed, "build_results", "") or ""),
+                commit_hash,
+                str(getattr(parsed, "push_result", "") or ""),
+                str(getattr(parsed, "git_status", "") or ""),
+                str(getattr(parsed, "phase_notes", "") or ""),
+                str(getattr(parsed, "raw_text", "") or ""),
+                content_hash,
+                import_key,
+                document_path,
+                str(getattr(parsed, "imported_at", "") or now_iso()),
+            )
+            if old:
+                result_id = int(old["id"])
+                if old["content_hash"] == content_hash:
+                    return result_id, False
+                conn.execute(
+                    """
+                    UPDATE codex_results
+                    SET title = ?, summary = ?, changed_files_json = ?, created_files_json = ?,
+                        test_results = ?, build_results = ?, commit_hash = ?, push_result = ?,
+                        git_status = ?, phase_notes = ?, raw_text = ?, content_hash = ?,
+                        import_key = ?, document_path = ?, imported_at = ?
+                    WHERE id = ?
+                    """,
+                    (*values, result_id),
+                )
+            else:
+                cursor = conn.execute(
+                    """
+                    INSERT INTO codex_results
+                    (
+                        title, summary, changed_files_json, created_files_json, test_results,
+                        build_results, commit_hash, push_result, git_status, phase_notes,
+                        raw_text, content_hash, import_key, document_path, imported_at
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    values,
+                )
+                result_id = int(cursor.lastrowid)
+            conn.commit()
+            return result_id, True
 
     def log_search(self, query: str, result_count: int) -> None:
         self.ensure_schema()
@@ -268,7 +420,9 @@ class BrainzDatabase:
                 SELECT
                     id, path, title, source_type, modified_at, indexed_at, content,
                     source_label, conversation_id, conversation_title, role, message_index,
-                    source_created_at, source_updated_at
+                    source_created_at, source_updated_at, codex_summary, changed_files_json,
+                    created_files_json, test_results, build_results, commit_hash, push_result,
+                    git_status, phase_notes
                 FROM documents
                 WHERE id = ?
                 """,
@@ -321,6 +475,15 @@ class BrainzDatabase:
                     d.message_index,
                     d.source_created_at,
                     d.source_updated_at,
+                    d.codex_summary,
+                    d.changed_files_json,
+                    d.created_files_json,
+                    d.test_results,
+                    d.build_results,
+                    d.commit_hash,
+                    d.push_result,
+                    d.git_status,
+                    d.phase_notes,
                     snippet(documents_fts, 2, '[', ']', ' ... ', 28) AS snippet,
                     bm25(documents_fts) AS rank
                 FROM documents_fts
@@ -360,7 +523,9 @@ class BrainzDatabase:
             SELECT
                 id, path, title, source_type, modified_at, indexed_at, content,
                 source_label, conversation_id, conversation_title, role, message_index,
-                source_created_at, source_updated_at
+                source_created_at, source_updated_at, codex_summary, changed_files_json,
+                created_files_json, test_results, build_results, commit_hash, push_result,
+                git_status, phase_notes
             FROM documents
             WHERE {' OR '.join(where_parts)}
             ORDER BY indexed_at DESC
@@ -395,6 +560,15 @@ def row_to_result(row: sqlite3.Row, snippet: str, score: float) -> SearchResult:
         message_index=int(row["message_index"] if row["message_index"] is not None else -1),
         source_created_at=row["source_created_at"] or "",
         source_updated_at=row["source_updated_at"] or "",
+        codex_summary=row["codex_summary"] or "",
+        changed_files_json=row["changed_files_json"] or "",
+        created_files_json=row["created_files_json"] or "",
+        test_results=row["test_results"] or "",
+        build_results=row["build_results"] or "",
+        commit_hash=row["commit_hash"] or "",
+        push_result=row["push_result"] or "",
+        git_status=row["git_status"] or "",
+        phase_notes=row["phase_notes"] or "",
     )
 
 
