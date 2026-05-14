@@ -133,6 +133,14 @@ Favorite は `data/favorites` に保存されます。これは音楽管理ソ�
 
 保存時は音源を `data/favorites/audio/` にコピーし、`favorite_index.json` と `notes/favorite_note.txt` に出どころ、日時、プリセット、タグ、尺を残します。同名ファイルがある場合は上書きせず、日時付きの名前で保存します。
 
+## Project Bridge
+
+Favorite音源を、動画制作向けフォルダへ橋渡しできます。
+
+これは動画編集ではなく、「制作箱」を準備するための機能です。
+
+制作箱は `data/outputs/projects/{project_name}/` に作成し、`raw` / `bgm` / `shorts` / `notes` / `thumbnails` / `export` / `upload` を用意します。選択したFavorite音源は `bgm/` へコピーし、`notes/project_notes.txt` と `export_log.txt` を保存します。
+
 ## Preset System
 
 音を置く は、入力文だけでなく、BORINEF / holiday-jinja / YUKIZ稼働中 などのプリセットを使って、音の方向性を揃えることができます。

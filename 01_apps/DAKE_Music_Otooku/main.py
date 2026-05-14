@@ -32,6 +32,11 @@ from core.presets import (
     load_music_presets,
     merge_preset_tags,
 )
+from core.project_bridge import (
+    FavoriteChoice,
+    create_project_box,
+    load_favorite_choices,
+)
 from core.project_writer import (
     create_project,
     make_project_name,
@@ -68,6 +73,8 @@ UI_TEXT = {
     "button_preview_refresh": "Refresh",
     "button_favorite_add": "Add to Favorite",
     "button_favorite_open": "Open Favorites",
+    "button_project_create": "Create Project Box",
+    "button_project_open": "Open Project Folder",
     "button_check": "環境チェック",
     "button_clear_reference": "参照を解除",
     "reference_none": "参照音源: なし",
@@ -131,6 +138,16 @@ UI_TEXT = {
     "favorite_failed": "Favorite save failed.",
     "favorite_opened": "Favorite folder opened.",
     "favorite_open_failed": "Favorite folder could not be opened.",
+    "project_bridge_label": "Project Bridge",
+    "project_name_label": "Project Name",
+    "project_favorite_label": "Favorite",
+    "project_default_name": "midnight_work_2026_05",
+    "project_no_favorite": "Favorite: --",
+    "project_processing": "Project Bridge processing...",
+    "project_created": "Project box created.",
+    "project_failed": "Project bridge failed.",
+    "project_opened": "Project folder opened.",
+    "project_open_failed": "Project folder could not be opened.",
     "status_tool_ffmpeg": "FFMPEG",
     "status_tool_ffprobe": "FFPROBE",
     "status_tool_ollama": "OLLAMA",
@@ -182,6 +199,11 @@ UI_TEXT = {
     "log_favorite_saved": "Favorite saved.",
     "log_favorite_opened": "Favorite folder opened.",
     "log_favorite_failed": "Favorite save failed.",
+    "log_project_bridge_brain": "補助脳：制作箱を準備しています。",
+    "log_project_bridge_copy": "Favoriteを橋渡ししています。",
+    "log_project_bridge_created": "Project box created.",
+    "log_project_bridge_failed": "Project bridge failed.",
+    "log_project_bridge_opened": "Project folder opened.",
     "log_complete": "整っています。",
     "dialog_error_title": "確認",
     "dialog_open_error": "出力フォルダを開けませんでした。",
@@ -296,6 +318,9 @@ class MusicOtookuApp:
         self.last_preset: MusicPreset | None = None
         self.preview_player = AudioPreviewPlayer()
         self.preview_items: list[AudioPreviewItem] = []
+        self.favorite_choices: list[FavoriteChoice] = []
+        self.favorite_choices_by_label: dict[str, FavoriteChoice] = {}
+        self.last_project_folder: Path | None = None
         self.music_presets = load_music_presets()
         self.music_presets_by_name = {preset.name: preset for preset in self.music_presets}
         self.log_lines: list[str] = []
@@ -308,6 +333,8 @@ class MusicOtookuApp:
         self.brain_response_var = tk.StringVar(value=UI_TEXT["local_brain_idle"])
         self.preview_status_var = tk.StringVar(value=UI_TEXT["preview_empty"])
         self.preset_var = tk.StringVar(value=UI_TEXT["preset_custom"])
+        self.bridge_project_name_var = tk.StringVar(value=UI_TEXT["project_default_name"])
+        self.bridge_favorite_var = tk.StringVar(value=UI_TEXT["project_no_favorite"])
         self.loop_duration_vars = {
             duration: tk.BooleanVar(value=True)
             for duration, _text_key in LOOP_DURATION_OPTIONS
@@ -321,6 +348,7 @@ class MusicOtookuApp:
         }
 
         self._build_ui()
+        self.refresh_favorite_choices()
         self._append_log(UI_TEXT["log_ready"])
         self._start_environment_check()
         self.root.after(100, self._poll_queue)
@@ -678,6 +706,81 @@ class MusicOtookuApp:
             wraplength=320,
             justify="left",
         ).grid(row=4, column=0, sticky="ew", pady=(8, 0))
+
+        bridge_panel = tk.Frame(preview_panel, bg=COLORS["surface"])
+        bridge_panel.grid(row=5, column=0, sticky="ew", pady=(12, 0))
+        bridge_panel.grid_columnconfigure(1, weight=1)
+
+        tk.Label(
+            bridge_panel,
+            text=UI_TEXT["project_bridge_label"],
+            bg=COLORS["surface"],
+            fg=COLORS["text"],
+            font=self.fonts["label"],
+            anchor="w",
+        ).grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 6))
+
+        tk.Label(
+            bridge_panel,
+            text=UI_TEXT["project_name_label"],
+            bg=COLORS["surface"],
+            fg=COLORS["muted"],
+            font=self.fonts["small"],
+        ).grid(row=1, column=0, sticky="w", padx=(0, 8), pady=(0, 6))
+        self.bridge_project_entry = tk.Entry(
+            bridge_panel,
+            textvariable=self.bridge_project_name_var,
+            bg=COLORS["surface_soft"],
+            fg=COLORS["text"],
+            font=self.fonts["small"],
+            relief="flat",
+        )
+        self.bridge_project_entry.grid(row=1, column=1, sticky="ew", pady=(0, 6))
+
+        tk.Label(
+            bridge_panel,
+            text=UI_TEXT["project_favorite_label"],
+            bg=COLORS["surface"],
+            fg=COLORS["muted"],
+            font=self.fonts["small"],
+        ).grid(row=2, column=0, sticky="w", padx=(0, 8))
+        self.bridge_favorite_menu = tk.OptionMenu(
+            bridge_panel,
+            self.bridge_favorite_var,
+            UI_TEXT["project_no_favorite"],
+        )
+        self.bridge_favorite_menu.configure(
+            bg=COLORS["surface_soft"],
+            fg=COLORS["text"],
+            activebackground=COLORS["secondary_hover"],
+            relief="flat",
+            bd=0,
+            font=self.fonts["small"],
+            highlightthickness=1,
+            highlightbackground=COLORS["border"],
+        )
+        self.bridge_favorite_menu.grid(row=2, column=1, sticky="ew")
+
+        bridge_button_row = tk.Frame(bridge_panel, bg=COLORS["surface"])
+        bridge_button_row.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(8, 0))
+        self.project_create_button = make_button(
+            bridge_button_row,
+            UI_TEXT["button_project_create"],
+            self.create_project_bridge_box,
+            COLORS,
+            self.fonts["button"],
+            primary=False,
+        )
+        self.project_create_button.pack(side="left")
+        self.project_open_button = make_button(
+            bridge_button_row,
+            UI_TEXT["button_project_open"],
+            self.open_project_folder,
+            COLORS,
+            self.fonts["button"],
+            primary=False,
+        )
+        self.project_open_button.pack(side="left", padx=(8, 0))
         self._sync_preview_controls()
 
     def _build_loop_controls(self, parent: tk.Widget) -> None:
@@ -906,6 +1009,11 @@ class MusicOtookuApp:
                 self.preview_refresh_button.configure(state="disabled")
                 self.favorite_add_button.configure(state="disabled")
                 self.favorite_open_button.configure(state="disabled")
+                if hasattr(self, "project_create_button"):
+                    self.project_create_button.configure(state="disabled")
+                    self.project_open_button.configure(state="disabled")
+                    self.bridge_project_entry.configure(state="disabled")
+                    self.bridge_favorite_menu.configure(state="disabled")
             else:
                 self._sync_preview_controls()
 
@@ -929,6 +1037,12 @@ class MusicOtookuApp:
         if hasattr(self, "favorite_add_button"):
             self.favorite_add_button.configure(state=play_state)
             self.favorite_open_button.configure(state="normal" if not self.processing else "disabled")
+        if hasattr(self, "project_create_button"):
+            has_favorites = bool(self.favorite_choices)
+            self.project_create_button.configure(state="normal" if has_favorites and not self.processing else "disabled")
+            self.project_open_button.configure(state="normal" if self.last_project_folder and not self.processing else "disabled")
+            self.bridge_project_entry.configure(state="normal" if not self.processing else "disabled")
+            self.bridge_favorite_menu.configure(state="normal" if has_favorites and not self.processing else "disabled")
 
     def _start_environment_check(self) -> None:
         if self.processing:
@@ -1225,6 +1339,11 @@ class MusicOtookuApp:
                     self.last_preset = payload
                 elif event == "reference_info":
                     self.reference_info_var.set(str(payload))
+                elif event == "project_done":
+                    self.last_project_folder = Path(payload)
+                    self.preview_status_var.set(UI_TEXT["project_created"])
+                    self.status_var.set(UI_TEXT["status_complete"])
+                    self._sync_preview_controls()
         except queue.Empty:
             pass
         self.root.after(100, self._poll_queue)
@@ -1257,6 +1376,30 @@ class MusicOtookuApp:
                 self._append_log(UI_TEXT["log_preview_ready"])
         else:
             self.preview_status_var.set(UI_TEXT["preview_no_audio"])
+        self._sync_preview_controls()
+
+    def refresh_favorite_choices(self) -> None:
+        self.favorite_choices = list(load_favorite_choices())
+        self.favorite_choices_by_label = {choice.label: choice for choice in self.favorite_choices}
+        if not hasattr(self, "bridge_favorite_menu"):
+            return
+
+        menu = self.bridge_favorite_menu["menu"]
+        menu.delete(0, "end")
+        if not self.favorite_choices:
+            self.bridge_favorite_var.set(UI_TEXT["project_no_favorite"])
+            menu.add_command(
+                label=UI_TEXT["project_no_favorite"],
+                command=tk._setit(self.bridge_favorite_var, UI_TEXT["project_no_favorite"]),
+            )
+        else:
+            for choice in self.favorite_choices:
+                menu.add_command(
+                    label=choice.label,
+                    command=tk._setit(self.bridge_favorite_var, choice.label),
+                )
+            if self.bridge_favorite_var.get() not in self.favorite_choices_by_label:
+                self.bridge_favorite_var.set(self.favorite_choices[0].label)
         self._sync_preview_controls()
 
     def _selected_preview_item(self) -> AudioPreviewItem | None:
@@ -1312,6 +1455,7 @@ class MusicOtookuApp:
             self.preview_status_var.set(UI_TEXT["favorite_saved"])
             self._append_log(UI_TEXT["log_favorite_brain"])
             self._append_log(UI_TEXT["log_favorite_saved"])
+            self.refresh_favorite_choices()
         else:
             self.preview_status_var.set(UI_TEXT["favorite_failed"])
             self._append_log(UI_TEXT["log_favorite_failed"])
@@ -1327,6 +1471,62 @@ class MusicOtookuApp:
         else:
             self.preview_status_var.set(UI_TEXT["favorite_open_failed"])
             self._append_log(UI_TEXT["favorite_open_failed"])
+
+    def _selected_favorite_choice(self) -> FavoriteChoice | None:
+        return self.favorite_choices_by_label.get(self.bridge_favorite_var.get())
+
+    def create_project_bridge_box(self) -> None:
+        if self.processing:
+            return
+        self.refresh_favorite_choices()
+        choice = self._selected_favorite_choice()
+        if not choice:
+            self.preview_status_var.set(UI_TEXT["favorite_no_audio"])
+            return
+        project_name = self.bridge_project_name_var.get().strip() or UI_TEXT["project_default_name"]
+        self._set_busy(True)
+        self.preview_status_var.set(UI_TEXT["project_processing"])
+        thread = threading.Thread(
+            target=self._project_bridge_worker,
+            args=(project_name, choice),
+            daemon=True,
+        )
+        thread.start()
+
+    def _project_bridge_worker(self, project_name: str, choice: FavoriteChoice) -> None:
+        try:
+            report = self.environment_report or check_environment()
+            if self.environment_report is None:
+                self.worker_queue.put(("environment", report))
+            self.worker_queue.put(("log", UI_TEXT["log_project_bridge_brain"]))
+            self.worker_queue.put(("log", UI_TEXT["log_project_bridge_copy"]))
+            result = create_project_box(project_name, choice.record, report.ollama_models)
+            if result.success and result.project_root:
+                self.worker_queue.put(("log", UI_TEXT["log_project_bridge_created"]))
+                self.worker_queue.put(("log", UI_TEXT["log_complete"]))
+                self.worker_queue.put(("project_done", result.project_root))
+                if result.suggestion and result.suggestion.response_time is not None:
+                    self.worker_queue.put(
+                        ("brain_response", UI_TEXT["local_brain_online"].format(seconds=result.suggestion.response_time))
+                    )
+            else:
+                self.worker_queue.put(("log", UI_TEXT["log_project_bridge_failed"]))
+                if result.error:
+                    self.worker_queue.put(("log", result.error))
+                self.worker_queue.put(("status", UI_TEXT["project_failed"]))
+        except Exception as exc:
+            self.worker_queue.put(("error", str(exc)))
+        finally:
+            self.worker_queue.put(("busy", False))
+
+    def open_project_folder(self) -> None:
+        if not self.last_project_folder:
+            return
+        if open_output_folder(self.last_project_folder):
+            self.preview_status_var.set(UI_TEXT["project_opened"])
+            self._append_log(UI_TEXT["log_project_bridge_opened"])
+        else:
+            self.preview_status_var.set(UI_TEXT["project_open_failed"])
 
     def start_video_bgm_pack(self) -> None:
         if self.processing:
@@ -1484,6 +1684,34 @@ def run_smoke_test() -> int:
         ensure_favorites_dirs(favorite_dir)
         if not open_output_folder(favorite_dir, dry_run=True):
             raise AssertionError("open favorites folder check failed")
+        project_base = Path(temp_dir) / "projects"
+        bridge_result = create_project_box(
+            "midnight_work_2026_05",
+            first_favorite.record,
+            base_projects_dir=project_base,
+            use_local_brain=False,
+        )
+        bridge_result_again = create_project_box(
+            "midnight_work_2026_05",
+            first_favorite.record,
+            base_projects_dir=project_base,
+            use_local_brain=False,
+        )
+        if not bridge_result.success or not bridge_result.project_root or not bridge_result.copied_bgm:
+            raise AssertionError(f"project bridge failed: {bridge_result.error}")
+        if not bridge_result_again.success or not bridge_result_again.project_root:
+            raise AssertionError(f"second project bridge failed: {bridge_result_again.error}")
+        if bridge_result.project_root == bridge_result_again.project_root:
+            raise AssertionError("duplicate project bridge overwrote the existing folder")
+        for subdir in ("raw", "bgm", "shorts", "notes", "thumbnails", "export", "upload"):
+            if not (bridge_result.project_root / subdir).exists():
+                raise AssertionError(f"missing project subdir: {subdir}")
+        if not (bridge_result.project_root / "notes" / "project_notes.txt").exists():
+            raise AssertionError("project_notes.txt was not created")
+        if not (bridge_result.project_root / "export_log.txt").exists():
+            raise AssertionError("project export_log.txt was not created")
+        if not open_output_folder(bridge_result.project_root, dry_run=True):
+            raise AssertionError("open project folder check failed")
         if not open_output_folder(paths.root, dry_run=True):
             raise AssertionError("open output folder check failed")
         missing_ffmpeg = export_audio_material(paths.root / "missing.wav", paths.audio, ffmpeg_command="__missing_ffmpeg__")
@@ -1606,6 +1834,28 @@ def run_generate_check() -> int:
         if not favorite_result.success or not favorite_result.record:
             raise AssertionError(f"favorite save failed: {favorite_result.error}")
         print(f"favorite saved: {favorite_result.record.favorite_path}")
+        bridge_result = create_project_box("midnight_work_2026_05", favorite_result.record, report.ollama_models)
+        if not bridge_result.success or not bridge_result.project_root:
+            raise AssertionError(f"project bridge failed: {bridge_result.error}")
+        required_project = (
+            bridge_result.project_root / "raw",
+            bridge_result.project_root / "bgm",
+            bridge_result.project_root / "shorts",
+            bridge_result.project_root / "notes",
+            bridge_result.project_root / "thumbnails",
+            bridge_result.project_root / "export",
+            bridge_result.project_root / "upload",
+            bridge_result.project_root / "notes" / "project_notes.txt",
+            bridge_result.project_root / "export_log.txt",
+        )
+        for path in required_project:
+            if not path.exists():
+                raise AssertionError(f"missing project bridge path: {path}")
+        print(f"project bridge: {bridge_result.project_root}")
+        if bridge_result.suggestion and bridge_result.suggestion.response_time is not None:
+            print(f"project brain: {bridge_result.suggestion.source} {bridge_result.suggestion.response_time:.2f}s")
+        elif bridge_result.suggestion:
+            print(f"project brain: {bridge_result.suggestion.source}")
     return 0
 
 
