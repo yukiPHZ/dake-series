@@ -36,6 +36,17 @@
 - audiocraft / MusicGen: ローカル音生成
 - torch / CUDA: MusicGen利用時のGPU確認
 
+## 次に入れるもの
+
+1. requests
+   - Ollama補助脳接続に使用
+
+2. FFmpeg
+   - wav / mp3変換、ループ整形に使用
+
+3. Ollama
+   - ローカル補助脳として、音の方向性を生成
+
 ## 使い方
 
 1. `python main.py` で起動します。
@@ -98,6 +109,8 @@ FFmpegが利用可能な場合、生成音源または参照音源に対して�
 
 FFmpegがない場合は、`FFmpeg is required for audio export` を表示し、アプリは落としません。
 
+FFmpegを入れると wav/mp3変換やループ整形が使えます。未導入でもプロンプト生成は使えます。Phase 2ではFFmpeg / FFprobe未導入でも落ちず、画面上に `FFmpeg is offline. Prompt output is still available.` と表示します。
+
 ## 著作権・利用上の注意
 
 このアプリは、動画やサイト用のオリジナル音素材を作る補助ツールです。既存楽曲や特定アーティストの権利を侵害する目的で使用しないでください。
@@ -149,4 +162,3 @@ FFmpegがない場合は、`FFmpeg is required for audio export` を表示し、
 - MIDI編集
 - 自動公開
 - 有料API連携
-

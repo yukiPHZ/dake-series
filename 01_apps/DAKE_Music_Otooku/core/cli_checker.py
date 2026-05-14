@@ -7,7 +7,7 @@ import subprocess
 from dataclasses import dataclass
 from typing import Iterable
 
-from .app_config import OLLAMA_BASE_URL
+from .app_config import OLLAMA_BASE_URL, load_ollama_model_name
 
 
 @dataclass(frozen=True)
@@ -65,20 +65,23 @@ def _check_ollama(base_url: str = OLLAMA_BASE_URL) -> tuple[ToolStatus, tuple[st
     except Exception:
         return ToolStatus("ollama", "OLLAMA", "UNAVAILABLE", "requests import failed"), ()
 
+    model_name = load_ollama_model_name()
+    payload = {
+        "model": model_name,
+        "prompt": "Return only: ok",
+        "stream": False,
+        "options": {
+            "num_predict": 4,
+            "temperature": 0,
+        },
+    }
     try:
-        response = requests.get(f"{base_url.rstrip('/')}/api/tags", timeout=1.5)
+        response = requests.post(f"{base_url.rstrip('/')}/api/generate", json=payload, timeout=4)
         if response.status_code != 200:
-            return ToolStatus("ollama", "OLLAMA", "LOCAL OFFLINE", f"HTTP {response.status_code}"), ()
-        data = response.json()
-        models = tuple(
-            item.get("name", "")
-            for item in data.get("models", [])
-            if isinstance(item, dict) and item.get("name")
-        )
-        detail = ", ".join(models[:3])
-        return ToolStatus("ollama", "OLLAMA", "LOCAL READY", detail), models
+            return ToolStatus("ollama", "OLLAMA", "LOCAL OFFLINE", f"{model_name}: HTTP {response.status_code}"), ()
+        return ToolStatus("ollama", "OLLAMA", "LOCAL READY", model_name), (model_name,)
     except Exception as exc:
-        return ToolStatus("ollama", "OLLAMA", "LOCAL OFFLINE", str(exc)), ()
+        return ToolStatus("ollama", "OLLAMA", "LOCAL OFFLINE", f"{model_name}: {exc}"), ()
 
 
 def _check_audiocraft() -> ToolStatus:

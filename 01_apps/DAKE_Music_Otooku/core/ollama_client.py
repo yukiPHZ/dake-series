@@ -1,18 +1,14 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
-from .app_config import OLLAMA_BASE_URL, OLLAMA_MODEL_CANDIDATES
+from .app_config import OLLAMA_BASE_URL, load_ollama_model_name
 from .prompt_builder import MusicDirection, parse_direction_response
 
 
-def pick_model(available_models: tuple[str, ...]) -> str | None:
-    if not available_models:
-        return None
-    for candidate in OLLAMA_MODEL_CANDIDATES:
-        for model in available_models:
-            if model == candidate or model.startswith(candidate):
-                return model
-    return available_models[0]
+def pick_model(available_models: tuple[str, ...]) -> str:
+    if available_models:
+        return available_models[0]
+    return load_ollama_model_name()
 
 
 def generate_direction(
@@ -27,15 +23,12 @@ def generate_direction(
         raise RuntimeError("requests import failed") from exc
 
     model = pick_model(available_models)
-    if not model:
-        raise RuntimeError("Ollama model was not found")
-
     system_prompt = (
         "You are a local assistant for a DAKE desktop app called 音を置く. "
         "Create a compact sound-material direction from the user's Japanese words. "
         "This is not a DAW and not a full song request. "
-        "Return only one JSON object with keys: mood, bpm, key, instrumentation, "
-        "loop_length, musicgen_prompt, negative_notes, usage_idea. "
+        "Return only one JSON object with keys: mood, bpm, key, instruments, "
+        "loop_length, musicgen_prompt, usage_note. "
         "Avoid copyrighted songs, famous artists, imitation, vocals, and publishing advice. "
         "The musicgen_prompt must be in concise English for an original short BGM loop."
     )

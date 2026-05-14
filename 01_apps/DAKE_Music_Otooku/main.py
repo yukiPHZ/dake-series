@@ -56,10 +56,15 @@ UI_TEXT = {
     "status_error": "処理を止めました。",
     "status_no_prompt": "言葉を入力してください。",
     "env_unknown": "CHECK WAITING",
+    "status_ffmpeg_offline_hint": "OFFLINE - FFmpeg is offline. Prompt output is still available.",
+    "status_ffprobe_offline_hint": "OFFLINE - FFprobe is offline. Prompt output is still available.",
     "log_ready": "補助脳：稼働中です。",
     "log_check_start": "SYSTEM：環境チェックを開始しました。",
     "log_check_done": "SYSTEM：環境チェックが完了しました。",
-    "log_brain_start": "補助脳：空気を読み取っています。",
+    "log_brain_received": "補助脳：言葉を受け取りました。",
+    "log_brain_thinking": "補助脳：音の方向性を考えています。",
+    "log_brain_arranged": "補助脳：音の置き方を整えました。",
+    "log_brain_start": "補助脳：音の方向性を考えています。",
     "log_brain_ollama": "補助脳：Ollamaで音設計を作成しました。",
     "log_brain_template": "補助脳：固定テンプレートで音設計を作成しました。",
     "log_bpm": "補助脳：BPMを{bpm}に設定しました。",
@@ -348,6 +353,8 @@ class MusicOtookuApp:
                 fg=COLORS["text"],
                 font=self.fonts["mono"],
                 anchor="e",
+                justify="right",
+                wraplength=260,
             ).grid(row=row, column=1, sticky="e", pady=3)
 
         tk.Label(
@@ -471,6 +478,13 @@ class MusicOtookuApp:
             status = report.status_for(key)
             if status is None:
                 self.status_vars[key].set(UI_TEXT["env_unknown"])
+                continue
+            if key == "ffmpeg" and status.state == "OFFLINE":
+                self.status_vars[key].set(UI_TEXT["status_ffmpeg_offline_hint"])
+            elif key == "ffprobe" and status.state == "OFFLINE":
+                self.status_vars[key].set(UI_TEXT["status_ffprobe_offline_hint"])
+            elif status.detail and key in {"ollama", "cuda", "uvr"}:
+                self.status_vars[key].set(f"{status.state} - {status.detail}")
             else:
                 self.status_vars[key].set(status.state)
 
@@ -513,7 +527,8 @@ class MusicOtookuApp:
             self.worker_queue.put(("log", message))
 
         try:
-            log(UI_TEXT["log_brain_start"])
+            log(UI_TEXT["log_brain_received"])
+            log(UI_TEXT["log_brain_thinking"])
             report = self.environment_report or check_environment()
             if self.environment_report is None:
                 self.worker_queue.put(("environment", report))
@@ -530,6 +545,7 @@ class MusicOtookuApp:
                 direction = fallback_direction(prompt)
                 log(UI_TEXT["log_brain_template"])
 
+            log(UI_TEXT["log_brain_arranged"])
             log(UI_TEXT["log_bpm"].format(bpm=direction.bpm))
             project_name = make_project_name(prompt)
             project_paths = create_project(project_name)
@@ -619,8 +635,10 @@ def run_smoke_test() -> int:
         direction = fallback_direction(prompt)
         paths = create_project("smoke_otooku", base_output_dir=Path(temp_dir))
         log_lines = [
-            UI_TEXT["log_brain_start"],
+            UI_TEXT["log_brain_received"],
+            UI_TEXT["log_brain_thinking"],
             UI_TEXT["log_brain_template"],
+            UI_TEXT["log_brain_arranged"],
             UI_TEXT["log_bpm"].format(bpm=direction.bpm),
             UI_TEXT["log_project"],
             UI_TEXT["log_musicgen_unavailable"],
@@ -653,8 +671,10 @@ def run_generate_check() -> int:
     direction = fallback_direction(prompt)
     paths = create_project(make_project_name(prompt))
     log_lines = [
-        UI_TEXT["log_brain_start"],
+        UI_TEXT["log_brain_received"],
+        UI_TEXT["log_brain_thinking"],
         UI_TEXT["log_brain_template"],
+        UI_TEXT["log_brain_arranged"],
         UI_TEXT["log_bpm"].format(bpm=direction.bpm),
         UI_TEXT["log_project"],
         UI_TEXT["log_musicgen_unavailable"],

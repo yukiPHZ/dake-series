@@ -27,8 +27,8 @@ class MusicDirection:
             "",
             f"mood: {self.mood}",
             f"BPM: {self.bpm}",
-            f"key候補: {self.key}",
-            f"instrumentation: {self.instrumentation}",
+            f"key: {self.key}",
+            f"instruments: {self.instrumentation}",
             f"loop length: {self.loop_length}",
             "",
             "musicgen prompt:",
@@ -37,7 +37,7 @@ class MusicDirection:
             "negative notes:",
             self.negative_notes,
             "",
-            "usage idea:",
+            "usage note:",
             self.usage_idea,
         ]
         return "\n".join(lines).strip() + "\n"
@@ -107,8 +107,15 @@ def parse_direction_response(text: str, user_text: str, source: str = "ollama") 
     data = json.loads(_extract_json_object(text))
     fallback = fallback_direction(user_text)
 
-    def value(key: str, default: str) -> str:
-        raw = data.get(key, default)
+    def value(key: str, default: str, *aliases: str) -> str:
+        raw = data.get(key)
+        if raw is None:
+            for alias in aliases:
+                raw = data.get(alias)
+                if raw is not None:
+                    break
+        if raw is None:
+            raw = default
         if isinstance(raw, (list, tuple)):
             return ", ".join(str(item) for item in raw if item)
         return str(raw).strip() or default
@@ -117,11 +124,11 @@ def parse_direction_response(text: str, user_text: str, source: str = "ollama") 
         mood=value("mood", fallback.mood),
         bpm=value("bpm", fallback.bpm),
         key=value("key", fallback.key),
-        instrumentation=value("instrumentation", fallback.instrumentation),
+        instrumentation=value("instruments", fallback.instrumentation, "instrumentation"),
         loop_length=value("loop_length", fallback.loop_length),
         musicgen_prompt=value("musicgen_prompt", fallback.musicgen_prompt),
         negative_notes=value("negative_notes", fallback.negative_notes),
-        usage_idea=value("usage_idea", fallback.usage_idea),
+        usage_idea=value("usage_note", fallback.usage_idea, "usage_idea"),
         source=source,
     )
 
