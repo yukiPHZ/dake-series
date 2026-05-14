@@ -25,6 +25,7 @@ from core.app_config import (
     APP_NAME,
     COPYRIGHT,
     EXE_NAME,
+    LOG_TEXT,
     WINDOW_TITLE,
     app_root,
     ensure_app_dirs,
@@ -35,8 +36,8 @@ from core.app_config import (
 from core.cli_checker import (
     CLI_TOOLS,
     check_cli_environment,
-    check_nvenc,
     fetch_youtube_metadata,
+    run_system_check,
 )
 from core.ffmpeg_runner import create_preview_clip
 from core.media_probe import MediaInfo, probe_media
@@ -71,7 +72,9 @@ UI_TEXT = {
     "fetch_metadata": "Fetch Metadata",
     "process": "PROCESS",
     "start": "Start Production Run",
-    "refresh_cli": "Refresh CLI",
+    "run_system_check": "Run System Check",
+    "checking": "Checking...",
+    "system_check_done": "System check completed.\n整っています。",
     "output": "OUTPUT",
     "open_output": "Open Output Folder",
     "system": "SYSTEM / CLI STATUS",
@@ -92,6 +95,7 @@ UI_TEXT = {
     "done": "DONE",
     "working": "WORKING",
     "skipped": "SKIPPED",
+    "beside": "側に。",
 }
 
 
@@ -112,11 +116,13 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.current_media_info: MediaInfo | None = None
         self.cli_status: dict[str, dict[str, str | None]] = {}
         self.nvenc_status: dict[str, str] = {"state": "CHECKING", "detail": ""}
+        self.gpu_status: dict[str, str] = {"state": "CHECKING", "detail": ""}
         self.worker_running = False
 
         self.file_var = ctk.StringVar(value="No video selected")
         self.youtube_var = ctk.StringVar(value="")
         self.youtube_status_var = ctk.StringVar(value="Metadata fetch is optional in Phase 1.")
+        self.system_check_status_var = ctk.StringVar(value="System check has not run yet.")
         self.eta_var = ctk.StringVar(value="ETA --")
         self.finish_var = ctk.StringVar(value="Expected Finish --")
         self.output_var = ctk.StringVar(value="No output yet")
@@ -127,8 +133,8 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.cli_pills: dict[str, StatusPill] = {}
 
         self._build_ui()
-        self._log("補助脳：起動しました。")
-        self._log("稼働中。")
+        self._log(LOG_TEXT["startup"])
+        self._log(LOG_TEXT["running"])
         self._start_cli_check()
         self.after(100, self._drain_events)
 
@@ -288,7 +294,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
 
         ctk.CTkLabel(
             body,
-            text="側に。",
+            text=UI_TEXT["beside"],
             font=ctk.CTkFont(family=FONT_FAMILY, size=16, weight="bold"),
             text_color=COLORS["accent_soft"],
         ).grid(row=6, column=0, sticky="w", pady=(24, 0))
@@ -348,7 +354,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.start_button.grid(row=8, column=0, sticky="ew", pady=(22, 8))
         ctk.CTkButton(
             body,
-            text=UI_TEXT["refresh_cli"],
+            text=UI_TEXT["run_system_check"],
             command=self._start_cli_check,
             height=32,
             fg_color=COLORS["button_secondary"],
@@ -409,11 +415,28 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         body.grid_columnconfigure(0, weight=1)
         body.grid_columnconfigure(1, weight=1)
 
-        labels = ["FFMPEG", "FFPROBE", "YT-DLP", "GH", "WRANGLER", "OLLAMA", "NVENC", "CUDA"]
+        labels = ["FFMPEG", "FFPROBE", "YT-DLP", "GH", "WRANGLER", "OLLAMA", "NVENC", "GPU"]
         for index, label in enumerate(labels):
             pill = StatusPill(body, label)
             pill.grid(row=index // 2, column=index % 2, sticky="ew", padx=4, pady=4)
             self.cli_pills[label] = pill
+        self.system_check_button = ctk.CTkButton(
+            body,
+            text=UI_TEXT["run_system_check"],
+            command=self._start_cli_check,
+            height=32,
+            fg_color=COLORS["button_secondary"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+        )
+        self.system_check_button.grid(row=4, column=0, columnspan=2, sticky="ew", padx=4, pady=(10, 4))
+        ctk.CTkLabel(
+            body,
+            textvariable=self.system_check_status_var,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            text_color=COLORS["muted"],
+            justify="left",
+        ).grid(row=5, column=0, columnspan=2, sticky="w", padx=4, pady=(2, 0))
         return panel
 
     def _build_log_panel(self, parent: ctk.CTkFrame) -> ctk.CTkFrame:
@@ -451,7 +474,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.current_project = None
         self.current_media_info = None
         self.open_button.configure(state="disabled")
-        self._log("補助脳：素材を検出しました。")
+        self._log(LOG_TEXT["source_detected"])
         self._probe_selected_video()
 
     def _probe_selected_video(self) -> None:
@@ -472,15 +495,27 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         threading.Thread(target=worker, daemon=True).start()
 
     def _start_cli_check(self) -> None:
-        self._log("補助脳：CLI環境を確認しています。")
+        self._log(LOG_TEXT["system_check_start"])
+        self.system_check_status_var.set(UI_TEXT["checking"])
+        if hasattr(self, "system_check_button"):
+            self.system_check_button.configure(state="disabled")
         for pill in self.cli_pills.values():
             pill.set_state("CHECKING")
 
         def worker() -> None:
-            statuses = check_cli_environment()
-            ffmpeg_path = statuses.get("ffmpeg", {}).get("path")
-            nvenc = check_nvenc(ffmpeg_path)
-            self.events.put({"type": "cli", "statuses": statuses, "nvenc": nvenc})
+            try:
+                system = run_system_check()
+                self.events.put(
+                    {
+                        "type": "cli",
+                        "statuses": system["cli"],
+                        "nvenc": system["nvenc"],
+                        "gpu": system["gpu"],
+                        "install_guide": system["install_guide"],
+                    }
+                )
+            except Exception as exc:
+                self.events.put({"type": "cli_error", "message": str(exc)})
 
         threading.Thread(target=worker, daemon=True).start()
 
@@ -545,7 +580,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             self.events.put({"type": "step", "label": label, "state": state})
 
         try:
-            emit_log("補助脳：制作パッケージを準備しています。")
+            emit_log(LOG_TEXT["package_prepare"])
             project = create_project(video_path)
             self.events.put({"type": "output", "path": project.root})
             write_source_manifest(project, video_path)
@@ -558,14 +593,14 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
 
             media_info: MediaInfo | None = None
             if ffprobe_path:
-                emit_log("補助脳：メディア情報を取得しています。")
+                emit_log(LOG_TEXT["media_probe"])
                 media_info = probe_media(video_path, ffprobe_path)
                 write_media_info(project, media_info)
                 self.events.put({"type": "media", "info": media_info})
                 self.events.put({"type": "eta", "seconds": estimate_processing_seconds(media_info.duration, is_faster_whisper_available())})
             else:
                 write_media_info(project, None, "FFprobe is missing. Media information is unavailable.")
-                emit_log("補助脳：FFprobeが見つかりません。解析を一部スキップします。")
+                emit_log(LOG_TEXT["ffprobe_missing"])
             self.events.put({"type": "progress", "value": 0.18})
 
             step(UI_TEXT["transcription"], UI_TEXT["working"])
@@ -578,14 +613,14 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             step(UI_TEXT["transcription"], UI_TEXT["done"] if transcript_result.available else UI_TEXT["skipped"])
 
             step(UI_TEXT["scene_analysis"], UI_TEXT["working"])
-            emit_log("補助脳：静かな場面を探しています。")
+            emit_log(LOG_TEXT["quiet_scene_search"])
             self.events.put({"type": "progress", "value": 0.52})
 
             step(UI_TEXT["shorts_candidates"], UI_TEXT["working"])
             duration = media_info.duration if media_info else 0
             candidates = create_shorts_candidates(duration, transcript_result.srt_path)
             write_shorts_candidates(project, candidates)
-            emit_log("補助脳：Shorts候補を抽出しました。")
+            emit_log(LOG_TEXT["shorts_extracted"])
             step(UI_TEXT["shorts_candidates"], UI_TEXT["done"])
             self.events.put({"type": "progress", "value": 0.66})
 
@@ -603,14 +638,14 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 )
                 preview_created = result.created
                 if result.created:
-                    emit_log("補助脳：プレビュークリップを作成しました。")
+                    emit_log(LOG_TEXT["preview_created"])
                 else:
                     write_preview_note(project, result.message)
-                    emit_log(f"補助脳：プレビュー作成をスキップしました。{result.message}")
+                    emit_log(f"{LOG_TEXT['preview_skipped']} {result.message}")
             else:
                 reason = "FFmpeg is required for preview clip generation." if not ffmpeg_path else "No candidate range was available."
                 write_preview_note(project, reason)
-                emit_log(f"補助脳：{reason}")
+                emit_log(f"{LOG_TEXT['preview_skipped']} {reason}")
             self.events.put({"type": "progress", "value": 0.78})
 
             step(UI_TEXT["export_package"], UI_TEXT["working"])
@@ -621,16 +656,16 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 transcript_path=transcript_result.transcript_path,
             )
             write_metadata_files(project, metadata, preview_created)
-            emit_log("補助脳：投稿用メタデータ雛形を整えました。")
+            emit_log(LOG_TEXT["metadata_ready"])
             step(UI_TEXT["export_package"], UI_TEXT["done"])
 
             write_log_files(project, log_entries)
             self.events.put({"type": "progress", "value": 1.0})
-            emit_log("整っています。")
-            emit_log("稼働中。")
+            emit_log(LOG_TEXT["complete"])
+            emit_log(LOG_TEXT["running"])
             self.events.put({"type": "complete", "path": project.root})
         except Exception as exc:
-            emit_log("補助脳：処理を停止しました。")
+            emit_log(LOG_TEXT["process_stopped"])
             emit_log(str(exc))
             if project is not None:
                 write_log_files(project, log_entries + [traceback.format_exc()])
@@ -672,7 +707,14 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             self._apply_cli_status(
                 event.get("statuses", {}),
                 event.get("nvenc", {}),
+                event.get("gpu", {}),
+                str(event.get("install_guide", "")),
             )
+        elif event_type == "cli_error":
+            self.system_check_status_var.set(f"System check failed: {event.get('message', '')}")
+            if hasattr(self, "system_check_button"):
+                self.system_check_button.configure(state="normal")
+            self._log(str(event.get("message", "")))
         elif event_type == "media":
             info = event.get("info")
             if isinstance(info, MediaInfo):
@@ -711,11 +753,13 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             self.status_var.set(UI_TEXT["error"])
             messagebox.showerror(APP_NAME, str(event.get("message", "Unknown error")))
 
-    def _apply_cli_status(self, statuses: object, nvenc: object) -> None:
+    def _apply_cli_status(self, statuses: object, nvenc: object, gpu: object, install_guide: str = "") -> None:
         if isinstance(statuses, dict):
             self.cli_status = statuses  # type: ignore[assignment]
         if isinstance(nvenc, dict):
             self.nvenc_status = nvenc  # type: ignore[assignment]
+        if isinstance(gpu, dict):
+            self.gpu_status = gpu  # type: ignore[assignment]
 
         for key, spec in CLI_TOOLS.items():
             label = spec["label"]
@@ -729,10 +773,33 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.cli_pills[label].set_state(state, detail)
 
         self.cli_pills["NVENC"].set_state(self.nvenc_status.get("state", "UNKNOWN"), self.nvenc_status.get("detail", ""))
-        self.cli_pills["CUDA"].set_state("CHECK SKIPPED", "Environment dependent")
-        self._log("補助脳：CLI環境確認が完了しました。")
+        self.cli_pills["GPU"].set_state(self.gpu_status.get("state", "UNKNOWN"), self.gpu_status.get("detail", ""))
+        self.system_check_status_var.set(UI_TEXT["system_check_done"])
+        if hasattr(self, "system_check_button"):
+            self.system_check_button.configure(state="normal")
+        self._log(LOG_TEXT["system_check_complete"])
+        if self._has_system_issues():
+            self._log(LOG_TEXT["tools_missing"])
+        if self.cli_status.get("gh", {}).get("state") == "UNAUTHORIZED":
+            self._log(LOG_TEXT["github_unauthorized"])
+        if self.cli_status.get("wrangler", {}).get("state") == "UNAUTHORIZED":
+            self._log(LOG_TEXT["wrangler_unauthorized"])
+        if self.cli_status.get("ollama", {}).get("state") == "MISSING":
+            self._log(LOG_TEXT["ollama_sleeping"])
+        if self.nvenc_status.get("state") == "ONLINE":
+            self._log(LOG_TEXT["gpu_encode_ready"])
+        if install_guide:
+            self._log(f"install_guide.txt: {install_guide}")
+        self._log(LOG_TEXT["complete"])
         if self.selected_file is not None:
             self._probe_selected_video()
+
+    def _has_system_issues(self) -> bool:
+        issue_states = {"MISSING", "UNAUTHORIZED", "UNAVAILABLE"}
+        for status in self.cli_status.values():
+            if str(status.get("state")) in issue_states:
+                return True
+        return self.nvenc_status.get("state") in {"UNAVAILABLE", "CHECK SKIPPED"}
 
     def _media_info_text(self, info: MediaInfo) -> str:
         lines = [
@@ -755,16 +822,16 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
 
 def run_launch_check() -> int:
     ensure_app_dirs()
-    statuses = check_cli_environment()
-    ffmpeg_path = statuses.get("ffmpeg", {}).get("path")
-    nvenc = check_nvenc(ffmpeg_path)
+    system = run_system_check()
     result = {
         "app": APP_NAME,
         "version": APP_VERSION,
         "exe_name": EXE_NAME,
         "app_root": str(app_root()),
-        "cli": statuses,
-        "nvenc": nvenc,
+        "cli": system["cli"],
+        "nvenc": system["nvenc"],
+        "gpu": system["gpu"],
+        "install_guide": system["install_guide"],
         "faster_whisper": is_faster_whisper_available(),
     }
     print(json.dumps(result, ensure_ascii=False, indent=2))
@@ -772,7 +839,7 @@ def run_launch_check() -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Dakeユキズ稼働中")
+    parser = argparse.ArgumentParser(description=APP_NAME)
     parser.add_argument("--launch-check", action="store_true", help="Run startup checks without opening the GUI.")
     parser.add_argument("--gui-smoke-seconds", type=float, default=0.0, help=argparse.SUPPRESS)
     args = parser.parse_args()

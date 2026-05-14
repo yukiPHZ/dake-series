@@ -113,11 +113,25 @@ Phase 1ではYouTube投稿、GitHub Release、Cloudflare deployを自動実行�
 
 起動時に `ffmpeg -encoders` を確認し、`h264_nvenc` が見つかれば `NVENC ONLINE` と表示します。NVIDIA GPU環境ではFFmpegのGPUエンコードが使える可能性がありますが、ドライバ・FFmpegビルド・GPU世代に依存します。使えない場合はCPUエンコードへフォールバックします。
 
-CUDAの詳細チェックはPhase 1では `CUDA CHECK SKIPPED` として扱います。
+Phase 1.5では `nvidia-smi` が使える場合のみGPU名とVRAMを表示します。`nvidia-smi` がない場合は `GPU SKIPPED` として扱い、必須にはしません。
 
 ## build
 
 `build.bat` はPyInstallerで `dist/DakeYukiz_KadouChu.exe` を作成します。共通アイコン `..\..\02_assets\dake_icon.ico` を使用します。`build/`, `dist/`, `*.spec`, `*.exe` はGit管理しません。
+
+## Phase 1.5 System Check
+
+制作基地の起動感を強めるため、`Run System Check` で以下を確認します。
+
+- FFmpeg / FFprobe / yt-dlp の導入状態
+- GitHub CLI `gh auth status` による認証確認
+- Wrangler `wrangler whoami` による認証確認
+- Ollama localhost API 接続確認とモデル名の簡易表示
+- FFmpeg encoders から `h264_nvenc` / `hevc_nvenc` を確認
+- `nvidia-smi` が使える場合のみGPU名とVRAMを表示
+- 不足がある場合の `data/outputs/system_check/install_guide.txt` 生成
+
+表示は `ONLINE`, `MISSING`, `UNAUTHORIZED`, `READY`, `UNAVAILABLE` を中心にしています。GitHub CLI / Wrangler は認証済みの場合 `AUTHORIZED`、未認証の場合 `UNAUTHORIZED` と表示します。未導入の道具があってもアプリは落ちません。
 
 ## Phase 2候補
 

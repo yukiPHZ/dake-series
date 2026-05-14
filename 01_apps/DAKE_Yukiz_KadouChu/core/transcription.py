@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
-from core.app_config import load_config
+from core.app_config import LOG_TEXT, load_config
 
 try:
     from faster_whisper import WhisperModel
@@ -59,7 +59,7 @@ def transcribe_media(
         progress(0.0)
     if WhisperModel is None:
         if log:
-            log("補助脳：faster-whisperが見つかりません。文字起こしをスキップします。")
+            log(LOG_TEXT["whisper_missing"])
         return _write_unavailable(project_dir, "faster-whisper is not installed.")
 
     config = load_config()
@@ -69,7 +69,7 @@ def transcribe_media(
 
     try:
         if log:
-            log(f"補助脳：文字起こしモデルを読み込んでいます。({model_name})")
+            log(f"{LOG_TEXT['whisper_loading']} ({model_name})")
         model = WhisperModel(model_name, device="auto")
         segments_iter, _info = model.transcribe(str(video_path), beam_size=5, vad_filter=True)
 
@@ -96,10 +96,10 @@ def transcribe_media(
         if progress:
             progress(1.0)
         if log:
-            log("補助脳：文字起こしを保存しました。")
+            log(LOG_TEXT["whisper_saved"])
         return TranscriptionResult(True, transcript_path, srt_path, None, "", count)
     except Exception as exc:
         reason = str(exc)
         if log:
-            log("補助脳：文字起こしが利用できませんでした。")
+            log(LOG_TEXT["whisper_unavailable"])
         return _write_unavailable(project_dir, reason)

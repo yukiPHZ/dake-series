@@ -23,3 +23,11 @@
 - PSD編集
 - BGM自動ミックス
 - 縦動画の高度な自動クロップ
+
+## Phase 1.5
+
+- Run System Check を追加
+- GitHub CLI / Wrangler の認証状態を確認
+- Ollama localhost API とモデル一覧を確認
+- h264_nvenc / hevc_nvenc と nvidia-smi GPU表示を確認
+- 不足がある場合に `data/outputs/system_check/install_guide.txt` を生成

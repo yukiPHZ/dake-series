@@ -20,6 +20,34 @@ DEFAULT_CONFIG = {
     "prefer_nvenc": True,
 }
 
+LOG_TEXT = {
+    "startup": "補助脳：起動しました。",
+    "running": "稼働中。",
+    "complete": "整っています。",
+    "beside": "側に。",
+    "source_detected": "補助脳：素材を検出しました。",
+    "system_check_start": "補助脳：制作基地を確認しています。",
+    "system_check_complete": "補助脳：制作基地を確認しました。",
+    "tools_missing": "補助脳：不足している道具があります。",
+    "gpu_encode_ready": "補助脳：GPUエンコードの準備ができています。",
+    "github_unauthorized": "補助脳：GitHub CLIはありますが、認証が必要です。",
+    "wrangler_unauthorized": "補助脳：Wranglerはありますが、認証が必要です。",
+    "ollama_sleeping": "補助脳：ローカル補助脳はまだ眠っています。",
+    "package_prepare": "補助脳：制作パッケージを準備しています。",
+    "media_probe": "補助脳：メディア情報を取得しています。",
+    "ffprobe_missing": "補助脳：FFprobeが見つかりません。解析を一部スキップします。",
+    "quiet_scene_search": "補助脳：静かな場面を探しています。",
+    "shorts_extracted": "補助脳：Shorts候補を抽出しました。",
+    "preview_created": "補助脳：プレビュークリップを作成しました。",
+    "preview_skipped": "補助脳：プレビュー作成をスキップしました。",
+    "metadata_ready": "補助脳：投稿用メタデータ雛形を整えました。",
+    "process_stopped": "補助脳：処理を停止しました。",
+    "whisper_missing": "補助脳：faster-whisperが見つかりません。文字起こしをスキップします。",
+    "whisper_loading": "補助脳：文字起こしモデルを読み込んでいます。",
+    "whisper_saved": "補助脳：文字起こしを保存しました。",
+    "whisper_unavailable": "補助脳：文字起こしが利用できませんでした。",
+}
+
 
 def app_root() -> Path:
     if getattr(sys, "frozen", False):

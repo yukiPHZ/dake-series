@@ -43,9 +43,9 @@ class StatusPill(ctk.CTkFrame):
     def set_state(self, state: str, detail: str = "") -> None:
         color = COLORS["muted"]
         state_upper = state.upper()
-        if any(token in state_upper for token in ["ONLINE", "READY"]):
+        if any(token in state_upper for token in ["ONLINE", "READY", "AUTHORIZED"]):
             color = COLORS["success"]
-        elif any(token in state_upper for token in ["MISSING", "UNAVAILABLE", "ERROR"]):
+        elif any(token in state_upper for token in ["MISSING", "UNAVAILABLE", "UNAUTHORIZED", "ERROR"]):
             color = COLORS["danger"]
         elif any(token in state_upper for token in ["SKIPPED", "FOUND", "CHECK"]):
             color = COLORS["warning"]
