@@ -77,7 +77,7 @@ build.bat
   "update_summary": "DakeGitメモ v1.0.0 を公開しました。",
   "folder_name": "DAKE_Git_Memo",
   "exe_name": "DakeGit_Memo.exe",
-  "release_url": "",
+  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Git_Memo_v1.0.0",
   "screenshot_path": "assets/screenshot.webp",
   "status": "available",
   "show_in_launcher": true,

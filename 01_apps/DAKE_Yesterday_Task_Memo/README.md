@@ -83,7 +83,7 @@ build.bat
   "update_summary": "前営業日のメモを左に表示し、今日のメモを右で整理できるアプリを追加しました。",
   "folder_name": "DAKE_Yesterday_Task_Memo",
   "exe_name": "DakeYesterday_Task_Memo.exe",
-  "release_url": "",
+  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Yesterday_Task_Memo_v1.0.0",
   "screenshot_path": "assets/screenshot.webp",
   "status": "available",
   "show_in_launcher": true,

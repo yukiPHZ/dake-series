@@ -74,7 +74,7 @@ build.bat
   "update_summary": "ウインドウを画像化してA4出力できるアプリを追加しました。",
   "folder_name": "DAKE_Image_PasteA4",
   "exe_name": "DakeImage_PasteA4.exe",
-  "release_url": "",
+  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_PasteA4_v1.0.0",
   "screenshot_path": "assets/screenshot.webp",
   "status": "available",
   "show_in_launcher": true,

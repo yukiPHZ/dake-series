@@ -65,7 +65,7 @@ build.bat
   "update_summary": "1本の長文メモを段組表示できるメモアプリを追加しました。",
   "folder_name": "DAKE_Column_Memo",
   "exe_name": "DakeColumn_Memo.exe",
-  "release_url": "",
+  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Column_Memo_v1.0.0",
   "screenshot_path": "assets/screenshot.webp",
   "status": "available",
   "show_in_launcher": true,
