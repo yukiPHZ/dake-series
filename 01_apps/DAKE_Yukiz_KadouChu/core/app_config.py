@@ -102,6 +102,10 @@ LOG_TEXT = {
     "project_preview_started": "補助脳：BGMプレビューを開始しました。",
     "project_preview_stopped": "補助脳：BGMプレビューを停止しました。",
     "project_ollama_fallback": "補助脳：ローカル補助脳の応答がないため、固定テンプレートで整えました。",
+    "memory_saved": "補助脳：制作記録を保存しました。",
+    "memory_organizing": "補助脳：過去の流れを整理しています。",
+    "memory_ready": "補助脳：次の制作に使える形で残しました。",
+    "memory_template_fallback": "補助脳：ローカル補助脳の応答がないため、メモリ要約を固定テンプレートで整えました。",
 }
 
 SHORTS_REASON_TEXT = {
@@ -129,6 +133,10 @@ def logs_dir() -> Path:
     return data_dir() / "logs"
 
 
+def memory_dir() -> Path:
+    return data_dir() / "memory"
+
+
 def config_path() -> Path:
     return data_dir() / "config.json"
 
@@ -144,6 +152,8 @@ def ensure_app_dirs() -> None:
         data_dir() / "templates" / "logos",
         outputs_dir(),
         logs_dir(),
+        memory_dir(),
+        memory_dir() / "projects",
     ]
     for directory in directories:
         directory.mkdir(parents=True, exist_ok=True)

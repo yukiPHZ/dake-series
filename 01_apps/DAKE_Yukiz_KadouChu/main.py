@@ -44,6 +44,12 @@ from core.project_bridge import (
     list_project_boxes,
     read_project_box,
 )
+from core.memory_store import (
+    ensure_memory_dirs,
+    generate_memory_summary,
+    memory_summary_path,
+    save_package_to_memory,
+)
 from core.cli_checker import (
     CLI_TOOLS,
     check_cli_environment,
@@ -187,6 +193,20 @@ UI_TEXT = {
     "preview_failed": "Preview failed.",
     "preview_stopped": "Preview stopped.",
     "metadata": "Metadata",
+    "memory": "MEMORY",
+    "save_to_memory": "Save to Memory",
+    "open_memory_folder": "Open Memory Folder",
+    "generate_memory_summary": "Generate Memory Summary",
+    "memory_ready_hint": "Save the current package into the assistant memory.",
+    "memory_status": "Status",
+    "memory_saved": "SAVED",
+    "memory_updated": "UPDATED",
+    "memory_requires_package": "Select or generate a posting package first.",
+    "memory_folder_unavailable": "Memory folder is not ready yet.",
+    "open_memory_failed": "Could not open memory folder.",
+    "memory_entries": "Entries",
+    "memory_record": "Record",
+    "memory_summary": "Summary",
     "transcription_short": "Transcription",
     "shorts": "Shorts",
     "ollama": "Ollama",
@@ -273,6 +293,8 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.project_bridge_data: dict[str, object] = {}
         self.project_bridge_metadata_path: Path | None = None
         self.audio_preview = AudioPreviewPlayer()
+        self.memory_output_dir: Path | None = None
+        self.memory_summary_file_path: Path | None = None
         self.candidate_data: dict[str, object] = {}
         self.short_choice_touched = False
         self.title_choice_touched = False
@@ -283,6 +305,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.short_preview_running = False
         self.vertical_short_running = False
         self.project_bridge_running = False
+        self.memory_running = False
         self.worker_running = False
 
         self.file_var = ctk.StringVar(value=UI_TEXT["no_video_selected"])
@@ -294,6 +317,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.short_preview_summary_var = ctk.StringVar(value=UI_TEXT["short_preview_ready_hint"])
         self.vertical_short_summary_var = ctk.StringVar(value=UI_TEXT["vertical_short_ready_hint"])
         self.project_bridge_summary_var = ctk.StringVar(value=UI_TEXT["project_bridge_ready_hint"])
+        self.memory_summary_var = ctk.StringVar(value=UI_TEXT["memory_ready_hint"])
         self.short_choice_var = ctk.StringVar(value=UI_TEXT["selected_none"])
         self.title_choice_var = ctk.StringVar(value=UI_TEXT["selected_none"])
         self.project_choice_var = ctk.StringVar(value=UI_TEXT["no_project_boxes"])
@@ -953,6 +977,55 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         )
         self.generate_bridge_metadata_button.grid(row=5, column=0, columnspan=2, sticky="ew", padx=12, pady=(4, 10))
 
+        memory_box = ctk.CTkFrame(body, fg_color=COLORS["panel_alt"], border_width=1, border_color=COLORS["line"], corner_radius=8)
+        memory_box.grid(row=6, column=0, sticky="ew", pady=(12, 0))
+        memory_box.grid_columnconfigure(0, weight=1)
+        memory_box.grid_columnconfigure(1, weight=1)
+        ctk.CTkLabel(
+            memory_box,
+            text=UI_TEXT["memory"],
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
+            text_color=COLORS["accent_soft"],
+        ).grid(row=0, column=0, columnspan=2, sticky="w", padx=12, pady=(10, 4))
+        ctk.CTkLabel(
+            memory_box,
+            textvariable=self.memory_summary_var,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            text_color=COLORS["text"],
+            wraplength=330,
+            justify="left",
+        ).grid(row=1, column=0, columnspan=2, sticky="ew", padx=12, pady=(0, 8))
+        self.save_memory_button = ctk.CTkButton(
+            memory_box,
+            text=UI_TEXT["save_to_memory"],
+            command=self._start_save_memory,
+            height=30,
+            fg_color=COLORS["button"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+        )
+        self.save_memory_button.grid(row=2, column=0, sticky="ew", padx=(12, 4), pady=4)
+        self.open_memory_button = ctk.CTkButton(
+            memory_box,
+            text=UI_TEXT["open_memory_folder"],
+            command=self._open_memory_folder,
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+        )
+        self.open_memory_button.grid(row=2, column=1, sticky="ew", padx=(4, 12), pady=4)
+        self.generate_memory_summary_button = ctk.CTkButton(
+            memory_box,
+            text=UI_TEXT["generate_memory_summary"],
+            command=self._start_generate_memory_summary,
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+        )
+        self.generate_memory_summary_button.grid(row=3, column=0, columnspan=2, sticky="ew", padx=12, pady=(4, 10))
+
         self.open_button = ctk.CTkButton(
             body,
             text=UI_TEXT["open_output"],
@@ -963,7 +1036,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             text_color=COLORS["text"],
             state="disabled",
         )
-        self.open_button.grid(row=6, column=0, sticky="ew", pady=(12, 0))
+        self.open_button.grid(row=7, column=0, sticky="ew", pady=(12, 0))
         return panel
 
     def _build_system_panel(self, parent: ctk.CTkFrame) -> ctk.CTkFrame:
@@ -1467,6 +1540,94 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
 
         threading.Thread(target=worker, daemon=True).start()
 
+    def _set_memory_buttons(self, state: str) -> None:
+        self.save_memory_button.configure(state=state)
+        self.generate_memory_summary_button.configure(state=state)
+
+    def _start_save_memory(self) -> None:
+        if self.memory_running:
+            return
+        package_dir = self._resolve_package_for_review()
+        if package_dir is None:
+            messagebox.showinfo(APP_NAME, UI_TEXT["memory_requires_package"])
+            return
+
+        self.memory_running = True
+        self._set_memory_buttons("disabled")
+        self.status_var.set(UI_TEXT["running"])
+        self.progress_var.set(0.18)
+        self._set_eta(30)
+        self.memory_summary_var.set(
+            "\n".join(
+                [
+                    UI_TEXT["memory"],
+                    f"{UI_TEXT['memory_status']}: {UI_TEXT['running']}",
+                    f"{UI_TEXT['package']}: {package_dir}",
+                ]
+            )
+        )
+
+        def worker() -> None:
+            try:
+                self.events.put({"type": "log", "message": LOG_TEXT["memory_organizing"]})
+                system = run_system_check()
+                self.events.put(
+                    {
+                        "type": "cli",
+                        "statuses": system["cli"],
+                        "nvenc": system["nvenc"],
+                        "gpu": system["gpu"],
+                        "install_guide": system["install_guide"],
+                        "install_commands": system["install_commands"],
+                    }
+                )
+                statuses = system["cli"]
+                result = save_package_to_memory(
+                    package_dir=package_dir,
+                    ollama_ready=statuses.get("ollama", {}).get("state") == "READY",
+                )
+                self.events.put({"type": "memory_save_result", "result": result})
+            except Exception as exc:
+                self.events.put({"type": "memory_error", "message": str(exc)})
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _start_generate_memory_summary(self) -> None:
+        if self.memory_running:
+            return
+        self.memory_running = True
+        self._set_memory_buttons("disabled")
+        self.status_var.set(UI_TEXT["running"])
+        self.progress_var.set(0.20)
+        self._set_eta(25)
+        self.memory_summary_var.set(
+            "\n".join([UI_TEXT["memory"], f"{UI_TEXT['memory_status']}: {UI_TEXT['running']}"])
+        )
+
+        def worker() -> None:
+            try:
+                self.events.put({"type": "log", "message": LOG_TEXT["memory_organizing"]})
+                system = run_system_check()
+                self.events.put(
+                    {
+                        "type": "cli",
+                        "statuses": system["cli"],
+                        "nvenc": system["nvenc"],
+                        "gpu": system["gpu"],
+                        "install_guide": system["install_guide"],
+                        "install_commands": system["install_commands"],
+                    }
+                )
+                statuses = system["cli"]
+                result = generate_memory_summary(
+                    ollama_ready=statuses.get("ollama", {}).get("state") == "READY",
+                )
+                self.events.put({"type": "memory_summary_result", "result": result})
+            except Exception as exc:
+                self.events.put({"type": "memory_error", "message": str(exc)})
+
+        threading.Thread(target=worker, daemon=True).start()
+
     def _start_export_selected_draft(self) -> None:
         if self.selected_export_running:
             return
@@ -1959,6 +2120,14 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         except Exception as exc:
             messagebox.showerror(APP_NAME, f"{UI_TEXT['open_vertical_short_failed']}\n{exc}")
 
+    def _open_memory_folder(self) -> None:
+        try:
+            output_dir = ensure_memory_dirs()
+            self.memory_output_dir = output_dir
+            os.startfile(str(output_dir))  # type: ignore[attr-defined]
+        except Exception as exc:
+            messagebox.showerror(APP_NAME, f"{UI_TEXT['open_memory_failed']}\n{exc}")
+
     def _open_test_output(self) -> None:
         output_dir = self.test_output_dir or first_video_test_dir()
         if not output_dir.exists():
@@ -2171,6 +2340,22 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         message = str(result.get("message") or "")
         if message:
             lines.append(message)
+        return "\n".join(lines)
+
+    def _format_memory_summary(self, result: dict[str, object]) -> str:
+        record = str(result.get("record_json") or "")
+        summary = str(result.get("summary_path") or "")
+        lines = [
+            UI_TEXT["memory"],
+            f"{UI_TEXT['memory_status']}: {result.get('status', UI_TEXT['ready'])}",
+            f"{UI_TEXT['memory_entries']}: {result.get('entries', 0)}",
+        ]
+        if record:
+            lines.append(f"{UI_TEXT['memory_record']}: {record}")
+        if summary:
+            lines.append(f"{UI_TEXT['memory_summary']}: {summary}")
+        if "used_ollama" in result:
+            lines.append(f"{UI_TEXT['ollama']}: {UI_TEXT['used'] if result.get('used_ollama') else UI_TEXT['template_fallback']}")
         return "\n".join(lines)
 
     def _drain_events(self) -> None:
@@ -2436,6 +2621,46 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             self.generate_bridge_metadata_button.configure(state="normal")
             self.status_var.set(UI_TEXT["error"])
             self.project_bridge_summary_var.set(str(event.get("message", "")))
+        elif event_type == "memory_save_result":
+            result = event.get("result", {})
+            if isinstance(result, dict):
+                self.memory_output_dir = Path(str(result.get("memory_dir") or ensure_memory_dirs()))
+                summary_path = Path(str(result.get("summary_path") or memory_summary_path()))
+                self.memory_summary_file_path = summary_path if summary_path.exists() else None
+                self.memory_summary_var.set(self._format_memory_summary(result))
+                self.output_var.set(str(self.memory_output_dir))
+                self.progress_var.set(1.0)
+                self.status_var.set(UI_TEXT["complete"])
+                self.eta_var.set(UI_TEXT["memory_saved"])
+                self.finish_var.set(UI_TEXT["complete"])
+                self._log(LOG_TEXT["memory_saved"])
+                if not result.get("used_ollama"):
+                    self._log(LOG_TEXT["memory_template_fallback"])
+                self._log(LOG_TEXT["memory_ready"])
+            self.memory_running = False
+            self._set_memory_buttons("normal")
+        elif event_type == "memory_summary_result":
+            result = event.get("result", {})
+            if isinstance(result, dict):
+                self.memory_output_dir = Path(str(result.get("memory_dir") or ensure_memory_dirs()))
+                summary_path = Path(str(result.get("summary_path") or memory_summary_path()))
+                self.memory_summary_file_path = summary_path if summary_path.exists() else None
+                self.memory_summary_var.set(self._format_memory_summary(result))
+                self.output_var.set(str(summary_path))
+                self.progress_var.set(1.0)
+                self.status_var.set(UI_TEXT["complete"])
+                self.eta_var.set(UI_TEXT["memory_updated"])
+                self.finish_var.set(UI_TEXT["complete"])
+                if not result.get("used_ollama"):
+                    self._log(LOG_TEXT["memory_template_fallback"])
+                self._log(LOG_TEXT["memory_ready"])
+            self.memory_running = False
+            self._set_memory_buttons("normal")
+        elif event_type == "memory_error":
+            self.memory_running = False
+            self._set_memory_buttons("normal")
+            self.status_var.set(UI_TEXT["error"])
+            self.memory_summary_var.set(str(event.get("message", "")))
         elif event_type == "youtube":
             self.youtube_status_var.set(str(event.get("message", "")))
         elif event_type == "progress":
@@ -2646,6 +2871,15 @@ def run_smoke_test() -> int:
         metadata_path = Path(str(metadata_result.get("metadata_path") or ""))
         if not metadata_path.exists():
             raise AssertionError("metadata_draft.txt was not created.")
+        memory_result = save_package_to_memory(package_dir, ollama_ready=False, base_dir=temp_root / "memory")
+        if not Path(str(memory_result.get("index_path") or "")).exists():
+            raise AssertionError("memory_index.json was not created.")
+        if not Path(str(memory_result.get("summary_path") or "")).exists():
+            raise AssertionError("memory_summary.md was not created.")
+        if not Path(str(memory_result.get("record_json") or "")).exists():
+            raise AssertionError("memory project json was not created.")
+        if not Path(str(memory_result.get("record_md") or "")).exists():
+            raise AssertionError("memory project md was not created.")
         preview = AudioPreviewPlayer(allow_startfile=False)
         preview_result = preview.play(bgm_path)
         stop_result = preview.stop()
@@ -2657,6 +2891,8 @@ def run_smoke_test() -> int:
             "preset": project.get("preset"),
             "bgm": copied_bgm.name,
             "metadata": metadata_path.name,
+            "memory_entries": memory_result.get("entries"),
+            "memory_used_ollama": memory_result.get("used_ollama"),
             "preview_backend": preview_result.backend,
             "preview_success": preview_result.success,
         }
@@ -2695,6 +2931,10 @@ def run_generate_check() -> int:
             bgm_path=copied_bgm if copied_bgm and copied_bgm.exists() else bgm_path,
             ollama_ready=system["cli"].get("ollama", {}).get("state") == "READY",
         )
+        memory = save_package_to_memory(
+            package_dir=package_dir,
+            ollama_ready=system["cli"].get("ollama", {}).get("state") == "READY",
+        )
         result.update(
             {
                 "project": project.get("name"),
@@ -2704,6 +2944,11 @@ def run_generate_check() -> int:
                 "metadata_path": metadata.get("metadata_path"),
                 "used_ollama": metadata.get("used_ollama"),
                 "ollama_model": metadata.get("ollama_model", ""),
+                "memory_index": memory.get("index_path"),
+                "memory_summary": memory.get("summary_path"),
+                "memory_record_json": memory.get("record_json"),
+                "memory_record_md": memory.get("record_md"),
+                "memory_used_ollama": memory.get("used_ollama"),
             }
         )
     try:

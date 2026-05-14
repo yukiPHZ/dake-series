@@ -19,6 +19,11 @@ data/outputs/*
 !data/outputs/.gitkeep
 data/logs/*
 !data/logs/.gitkeep
+data/memory/*
+!data/memory/.gitkeep
+!data/memory/projects/
+data/memory/projects/*
+!data/memory/projects/.gitkeep
 data/templates/thumbnails/*
 !data/templates/thumbnails/.gitkeep
 data/templates/logos/*

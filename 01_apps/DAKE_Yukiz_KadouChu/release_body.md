@@ -97,3 +97,12 @@
 - 選択BGMを `selected/bgm/` へ上書きなしでコピー
 - `selected/upload/metadata_draft.txt` を生成
 - Ollama READY時は補助脳提案を追記、失敗時はテンプレートで継続
+
+## Phase 3.0
+
+- 補助脳メモリを追加
+- `data/memory/memory_index.json` へ制作履歴を追記
+- `data/memory/memory_summary.md` を生成
+- packageごとの `projects/*.json` / `projects/*.md` を保存
+- 投稿package、selected、補助脳レビュー、Project Bridge結果を記録
+- Ollama READY時は過去制作傾向の要約を試し、失敗時はテンプレートで継続

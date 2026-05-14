@@ -304,6 +304,39 @@ package/
 
 OllamaがREADYの場合は、Project BoxのPreset、BGM、Suggested Use、Shorts Directionをローカル補助脳へ渡し、`editing_mood`、`suggested_scene`、`shorts_direction`、`title_direction` の提案を追記します。Ollamaが使えない場合や失敗した場合は固定テンプレートで継続します。YouTube自動投稿、自動公開、元動画や元音源の変更は行いません。
 
+## Phase 3.0 補助脳メモリ
+
+`MEMORY` セクションを追加しました。現在選択中の投稿package、補助脳レビュー、selected出力、Project Bridge結果を読み取り、制作履歴として `data/memory/` に保存できます。
+
+これはAI自動判断ではありません。補助脳が「過去の制作傾向」を静かに覚えるための記録層です。最終判断はユーザーが行います。
+
+出力:
+
+```text
+data/memory/
+├ memory_index.json
+├ memory_summary.md
+└ projects/
+  ├ {YYYYMMDD_HHMM}_{package_name}.json
+  └ {YYYYMMDD_HHMM}_{package_name}.md
+```
+
+`Save to Memory` は、現在のpackageから以下を存在する範囲で読み取ります。
+
+- package名
+- `source_video_path`
+- `selected_title.txt`
+- `selected_short.json`
+- `selected_summary.md`
+- `assistant_review.md`
+- `selected/upload/metadata_draft.txt`
+- `selected/bgm/` のBGMファイル名
+- Project BridgeのProject名 / Preset / editing_mood / suggested_scene / shorts_direction / title_direction
+
+`memory_index.json` は履歴配列として追記されます。`memory_summary.md` は全履歴から最近の制作傾向、よく使う言葉、最近のBGM、補助脳メモを短くまとめます。
+
+OllamaがREADYの場合は、`memory_index.json` と直近package情報をローカル補助脳に渡し、`memory_summary.md` の要約を試します。Ollamaが使えない場合や失敗した場合は固定テンプレートで継続します。OpenAI APIや外部APIは使いません。YouTube自動投稿、自動公開、元動画・元音源の変更も行いません。
+
 ## Phase 2候補
 
 - YouTube LIVE URLからyt-dlpで本取得
