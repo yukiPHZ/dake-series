@@ -14,6 +14,7 @@ import tkinter as tk
 from tkinter import filedialog, font as tkfont, messagebox
 
 from core.app_config import DEFAULT_DURATION_SECONDS, ensure_data_dirs
+from core.audio_probe import probe_audio_info
 from core.cli_checker import EnvironmentReport, check_environment
 from core.ffmpeg_audio import export_audio_material
 from core.musicgen_runner import generate_music
@@ -48,12 +49,18 @@ UI_TEXT = {
     "button_clear_reference": "参照を解除",
     "reference_none": "参照音源: なし",
     "reference_selected": "参照音源: {name}",
+    "reference_probe_waiting": "file name: --\nduration: --\ncodec: --\nsample rate: --\nchannels: --",
+    "reference_probe_running": "ffprobe info: checking...",
+    "reference_probe_failed": "ffprobe info: unavailable",
     "output_none": "出力先: 未作成",
     "output_ready": "出力先: {path}",
     "status_idle": "稼働中。",
     "status_checking": "環境を確認しています。",
     "status_processing": "音を置いています。",
     "status_complete": "整っています。",
+    "status_ffmpeg_processing": "FFmpeg processing...",
+    "status_audio_complete": "整いました。 Audio package created.",
+    "status_ffmpeg_failed": "FFmpeg failed. Prompt output is still available.",
     "status_error": "処理を止めました。",
     "status_no_prompt": "言葉を入力してください。",
     "env_unknown": "CHECK WAITING",
@@ -87,8 +94,12 @@ UI_TEXT = {
     "log_musicgen_done": "MUSICGEN：generated.wavを作成しました。",
     "log_musicgen_failed": "MUSICGEN：生成できなかったためsetup_needed.txtを保存しました。",
     "log_reference": "SYSTEM：参照音源を素材化します。",
+    "log_reference_probe": "FFPROBE：{info}",
     "log_ffmpeg_start": "FFMPEG：音量調整と変換を開始しました。",
     "log_ffmpeg_done": "FFMPEG：wav/mp3/loop previewを作成しました。",
+    "log_ffmpeg_file": "FFMPEG：{name} を作成しました。",
+    "log_ffmpeg_package": "FFMPEG：Audio package created.",
+    "log_ffmpeg_failed": "FFMPEG：FFmpeg failed. Prompt output is still available.",
     "log_ffmpeg_missing": "FFMPEG：FFmpeg is required for audio export",
     "log_complete": "整っています。",
     "dialog_error_title": "確認",
@@ -117,7 +128,7 @@ STATUS_LABEL_KEYS = {
     "uvr": "status_tool_uvr",
 }
 AUDIO_FILETYPES = (
-    ("Audio", "*.wav *.mp3 *.m4a *.aac *.flac *.ogg"),
+    ("Audio", "*.wav *.mp3 *.m4a *.flac *.ogg"),
     ("All", "*.*"),
 )
 
@@ -175,6 +186,7 @@ class MusicOtookuApp:
 
         self.status_var = tk.StringVar(value=UI_TEXT["status_idle"])
         self.reference_var = tk.StringVar(value=UI_TEXT["reference_none"])
+        self.reference_info_var = tk.StringVar(value=UI_TEXT["reference_probe_waiting"])
         self.output_var = tk.StringVar(value=UI_TEXT["output_none"])
         self.brain_response_var = tk.StringVar(value=UI_TEXT["local_brain_idle"])
 
@@ -320,6 +332,18 @@ class MusicOtookuApp:
             font=self.fonts["small"],
             anchor="w",
         ).grid(row=3, column=0, sticky="ew", padx=16, pady=(0, 14))
+
+        tk.Label(
+            prompt_panel,
+            textvariable=self.reference_info_var,
+            bg=COLORS["surface_soft"],
+            fg=COLORS["muted"],
+            font=self.fonts["mono"],
+            anchor="w",
+            justify="left",
+            padx=10,
+            pady=8,
+        ).grid(row=4, column=0, sticky="ew", padx=16, pady=(0, 14))
 
         output_panel = make_panel(body, COLORS)
         output_panel.grid(row=0, column=1, sticky="nsew")
@@ -530,10 +554,23 @@ class MusicOtookuApp:
             return
         self.reference_audio_path = Path(selected)
         self.reference_var.set(UI_TEXT["reference_selected"].format(name=self.reference_audio_path.name))
+        self.reference_info_var.set(UI_TEXT["reference_probe_running"])
+        thread = threading.Thread(target=self._probe_reference_worker, args=(self.reference_audio_path,), daemon=True)
+        thread.start()
 
     def clear_reference_audio(self) -> None:
         self.reference_audio_path = None
         self.reference_var.set(UI_TEXT["reference_none"])
+        self.reference_info_var.set(UI_TEXT["reference_probe_waiting"])
+
+    def _probe_reference_worker(self, path: Path) -> None:
+        info = probe_audio_info(path)
+        if info:
+            lines = info.display_lines()
+            self.worker_queue.put(("reference_info", "\n".join(lines)))
+            self.worker_queue.put(("log", UI_TEXT["log_reference_probe"].format(info=" / ".join(lines))))
+        else:
+            self.worker_queue.put(("reference_info", UI_TEXT["reference_probe_failed"]))
 
     def start_place_sound(self) -> None:
         if self.processing:
@@ -549,6 +586,7 @@ class MusicOtookuApp:
 
     def _place_sound_worker(self, prompt: str) -> None:
         process_log: list[str] = []
+        final_status = UI_TEXT["status_complete"]
 
         def log(message: str) -> None:
             process_log.append(message)
@@ -584,6 +622,9 @@ class MusicOtookuApp:
             if self.reference_audio_path:
                 source_audio = self.reference_audio_path
                 log(UI_TEXT["log_reference"])
+                audio_info = probe_audio_info(source_audio)
+                if audio_info:
+                    log(UI_TEXT["log_reference_probe"].format(info=" / ".join(audio_info.display_lines())))
             else:
                 musicgen_status = report.status_for("musicgen")
                 if musicgen_status and musicgen_status.state == "IMPORT READY":
@@ -606,21 +647,32 @@ class MusicOtookuApp:
             if source_audio:
                 ffmpeg_status = report.status_for("ffmpeg")
                 if ffmpeg_status and ffmpeg_status.state == "ONLINE":
+                    self.worker_queue.put(("status", UI_TEXT["status_ffmpeg_processing"]))
                     log(UI_TEXT["log_ffmpeg_start"])
-                    export_result = export_audio_material(source_audio, project_paths.audio)
+                    output_stem = "source_converted" if self.reference_audio_path else "generated"
+                    export_result = export_audio_material(source_audio, project_paths.audio, output_stem=output_stem)
                     if export_result.success:
+                        for file_path in export_result.files:
+                            log(UI_TEXT["log_ffmpeg_file"].format(name=file_path.name))
+                        log(UI_TEXT["log_ffmpeg_package"])
                         log(UI_TEXT["log_ffmpeg_done"])
+                        final_status = UI_TEXT["status_audio_complete"]
+                        self.worker_queue.put(("status", UI_TEXT["status_audio_complete"]))
                     else:
-                        log(UI_TEXT["log_ffmpeg_missing"])
+                        log(UI_TEXT["log_ffmpeg_failed"])
+                        final_status = UI_TEXT["status_ffmpeg_failed"]
+                        self.worker_queue.put(("status", UI_TEXT["status_ffmpeg_failed"]))
                         if export_result.errors:
                             write_setup_needed(project_paths, export_result.errors[0])
                 else:
-                    log(UI_TEXT["log_ffmpeg_missing"])
+                    log(UI_TEXT["log_ffmpeg_failed"])
+                    final_status = UI_TEXT["status_ffmpeg_failed"]
+                    self.worker_queue.put(("status", UI_TEXT["status_ffmpeg_failed"]))
                     write_setup_needed(project_paths, "FFmpeg is required for audio export")
 
             log(UI_TEXT["log_complete"])
             write_project_files(project_paths, prompt, direction, process_log)
-            self.worker_queue.put(("done", project_paths.root))
+            self.worker_queue.put(("done", (project_paths.root, final_status)))
         except Exception as exc:
             process_log.append(str(exc))
             self.worker_queue.put(("error", str(exc)))
@@ -638,10 +690,14 @@ class MusicOtookuApp:
                 elif event == "environment":
                     self._apply_environment_report(payload)
                 elif event == "done":
-                    self.output_folder = Path(payload)
+                    if isinstance(payload, tuple):
+                        folder_payload, status_payload = payload
+                    else:
+                        folder_payload, status_payload = payload, UI_TEXT["status_complete"]
+                    self.output_folder = Path(folder_payload)
                     self.output_var.set(UI_TEXT["output_ready"].format(path=self.output_folder))
                     self.open_button.configure(state="normal")
-                    self.status_var.set(UI_TEXT["status_complete"])
+                    self.status_var.set(str(status_payload))
                 elif event == "error":
                     self.status_var.set(UI_TEXT["status_error"])
                     self._append_log(str(payload))
@@ -649,6 +705,8 @@ class MusicOtookuApp:
                     self._set_busy(bool(payload))
                 elif event == "brain_response":
                     self.brain_response_var.set(str(payload))
+                elif event == "reference_info":
+                    self.reference_info_var.set(str(payload))
         except queue.Empty:
             pass
         self.root.after(100, self._poll_queue)

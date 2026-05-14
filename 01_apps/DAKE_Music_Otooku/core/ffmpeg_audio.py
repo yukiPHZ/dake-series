@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
-import shutil
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from .app_config import resolve_tool_command
 from .audio_probe import probe_duration
 
 
@@ -33,13 +33,10 @@ def _run(command: list[str], timeout: int = 120) -> tuple[bool, str]:
     return True, (result.stdout or result.stderr or "").strip()
 
 
-def _fade_filter(duration: float | None) -> str:
-    filters = [
-        "loudnorm=I=-16:TP=-1.5:LRA=11",
-        "afade=t=in:st=0:d=0.05",
-    ]
-    if duration and duration > 1.2:
-        filters.append(f"afade=t=out:st={max(duration - 0.8, 0):.2f}:d=0.8")
+def _fade_filter(duration: float | None, fade_in: float = 1.5, fade_out: float = 2.0) -> str:
+    filters = [f"afade=t=in:st=0:d={fade_in:.2f}"]
+    if duration and duration > 0.4:
+        filters.append(f"afade=t=out:st={max(duration - fade_out, 0):.2f}:d={fade_out:.2f}")
     return ",".join(filters)
 
 
@@ -48,22 +45,25 @@ def export_audio_material(
     audio_dir: Path,
     ffmpeg_command: str = "ffmpeg",
     ffprobe_command: str = "ffprobe",
+    output_stem: str = "generated",
 ) -> AudioExportResult:
     result = AudioExportResult(success=False)
-    if shutil.which(ffmpeg_command) is None:
+    resolved_ffmpeg = resolve_tool_command(ffmpeg_command)
+    if not resolved_ffmpeg:
         result.errors.append("FFmpeg is required for audio export")
         return result
+    resolved_ffprobe = resolve_tool_command(ffprobe_command)
 
     audio_dir.mkdir(parents=True, exist_ok=True)
     source_path = source_path.resolve()
-    wav_output = audio_dir / "generated.wav"
-    mp3_output = audio_dir / "generated.mp3"
+    wav_output = audio_dir / f"{output_stem}.wav"
+    mp3_output = audio_dir / f"{output_stem}.mp3"
     loop_output = audio_dir / "loop_preview.mp3"
-    work_wav = audio_dir / "_otooku_export.wav"
+    work_wav = audio_dir / f"_{output_stem}_export.wav"
 
-    duration = probe_duration(source_path, ffprobe_command) if shutil.which(ffprobe_command) else None
+    duration = probe_duration(source_path, resolved_ffprobe) if resolved_ffprobe else None
     wav_command = [
-        ffmpeg_command,
+        resolved_ffmpeg,
         "-y",
         "-i",
         str(source_path),
@@ -90,9 +90,10 @@ def export_audio_material(
         return result
 
     result.files.append(wav_output)
+    result.messages.append(f"wrote {wav_output.name}")
 
     mp3_command = [
-        ffmpeg_command,
+        resolved_ffmpeg,
         "-y",
         "-i",
         str(wav_output),
@@ -105,23 +106,26 @@ def export_audio_material(
     ok, message = _run(mp3_command)
     if ok:
         result.files.append(mp3_output)
+        result.messages.append(f"wrote {mp3_output.name}")
     else:
         result.errors.append(message or "mp3 export failed")
 
-    loop_seconds = 30.0
-    loop_fade_start = max(loop_seconds - 0.8, 0)
+    loop_seconds = min(duration, 30.0) if duration else 30.0
+    loop_fade_start = max(loop_seconds - 2.0, 0)
     loop_command = [
-        ffmpeg_command,
+        resolved_ffmpeg,
         "-y",
-        "-stream_loop",
-        "-1",
         "-i",
-        str(wav_output),
+        str(source_path),
         "-t",
         f"{loop_seconds:.2f}",
         "-vn",
+        "-ac",
+        "2",
+        "-ar",
+        "44100",
         "-af",
-        f"afade=t=in:st=0:d=0.05,afade=t=out:st={loop_fade_start:.2f}:d=0.8",
+        f"afade=t=in:st=0:d=1.50,afade=t=out:st={loop_fade_start:.2f}:d=2.00",
         "-codec:a",
         "libmp3lame",
         "-b:a",
@@ -131,10 +135,13 @@ def export_audio_material(
     ok, message = _run(loop_command)
     if ok:
         result.files.append(loop_output)
+        result.messages.append(f"wrote {loop_output.name}")
     else:
         result.errors.append(message or "loop preview export failed")
 
-    result.success = bool(result.files)
-    result.messages.append("audio export complete")
+    result.success = len(result.files) == 3
+    if result.success:
+        result.messages.append("audio package created")
+    elif not result.errors:
+        result.errors.append("audio package was incomplete")
     return result
-

@@ -2,12 +2,11 @@
 from __future__ import annotations
 
 import importlib.util
-import shutil
 import subprocess
 from dataclasses import dataclass
 from typing import Iterable
 
-from .app_config import OLLAMA_BASE_URL, load_ollama_model_name
+from .app_config import OLLAMA_BASE_URL, load_ollama_model_name, resolve_tool_command
 
 
 @dataclass(frozen=True)
@@ -35,13 +34,16 @@ class EnvironmentReport:
 
 
 def command_available(command: str) -> bool:
-    return shutil.which(command) is not None
+    return resolve_tool_command(command) is not None
 
 
 def _command_version(command: str) -> str:
+    resolved = resolve_tool_command(command)
+    if not resolved:
+        return ""
     try:
         result = subprocess.run(
-            [command, "-version"],
+            [resolved, "-version"],
             capture_output=True,
             text=True,
             timeout=4,
@@ -54,7 +56,8 @@ def _command_version(command: str) -> str:
 
 
 def _check_command(key: str, label: str, command: str) -> ToolStatus:
-    if not command_available(command):
+    resolved = resolve_tool_command(command)
+    if not resolved:
         return ToolStatus(key=key, label=label, state="OFFLINE")
     return ToolStatus(key=key, label=label, state="ONLINE", detail=_command_version(command))
 

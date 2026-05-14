@@ -63,6 +63,8 @@
 audio/
   generated.wav
   generated.mp3
+  source_converted.wav
+  source_converted.mp3
   loop_preview.mp3
 prompts/
   music_direction.txt
@@ -75,6 +77,12 @@ setup_needed.txt
 ```
 
 `generated.wav`、`generated.mp3`、`loop_preview.mp3` は、MusicGen生成または参照音源があり、FFmpeg整形まで進めた場合に作成されます。MusicGenやFFmpegがない場合も、`music_direction.txt` と `musicgen_prompt.txt` は保存します。
+
+## 参照音源の整形
+
+FFmpeg が導入されている場合、既存の音源ファイルを選択して、wav / mp3 / loop_preview.mp3 を出力できます。
+
+MusicGen未導入でも、手持ちのBGMや効果音を素材として整えることができます。
 
 ## AudioCraft / MusicGen について
 
