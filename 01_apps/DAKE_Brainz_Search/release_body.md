@@ -1,25 +1,22 @@
-# 補助脳BRAINZ v0.5.0
+# 補助脳BRAINZ v0.6.0
 
 ローカルの会話・仕様・Codex実装結果を忘れず探すための記憶検索アプリです。
 
 ## 追加
 
-- Related Timeline
-- Memory Flow
-- 記憶の前後関係表示
-- semantic類似による流れ接続
-- timeline item navigation
-- PEAKHEADZロゴのヘッダー表示
-- PEAKHEADZロゴのアプリアイコン化
-- フォント可読性改善
-- 検索中ステータス表示
+- Watch Folder
+- Auto Index
+- 新規/更新ファイル自動検出
+- polling監視
+- Auto Semantic Index
+- WATCHING状態表示
 
 ## 継続
 
 - Semantic Search
 - Related Memory
+- Memory Flow
 - ChatGPT export取り込み
 - Codex結果取り込み
-- SQLite FTS5検索
 - handoff生成
 - Ollama / CUDA / GPU状態チェック

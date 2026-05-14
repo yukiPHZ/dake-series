@@ -10,6 +10,8 @@ from threading import Event
 
 SUPPORTED_EXTENSIONS = {".txt", ".md", ".json"}
 MAX_FILE_BYTES = 10 * 1024 * 1024
+IGNORED_DIR_NAMES = {"build", "dist", "__pycache__", ".git", ".venv", "node_modules"}
+IGNORED_RELATIVE_PARTS = {("data", "logs"), ("data", "exports")}
 
 
 @dataclass(frozen=True)
@@ -27,6 +29,24 @@ def format_time(timestamp: float) -> str:
     return datetime.fromtimestamp(timestamp).isoformat(timespec="seconds")
 
 
+def is_ignored_path(root: Path, path: Path) -> bool:
+    try:
+        relative_parts = path.resolve().relative_to(root.resolve()).parts
+    except ValueError:
+        relative_parts = path.parts
+
+    lowered = tuple(part.lower() for part in relative_parts)
+    if any(part in IGNORED_DIR_NAMES for part in lowered):
+        return True
+
+    for ignored_parts in IGNORED_RELATIVE_PARTS:
+        ignored_length = len(ignored_parts)
+        for index in range(0, max(0, len(lowered) - ignored_length + 1)):
+            if lowered[index : index + ignored_length] == ignored_parts:
+                return True
+    return False
+
+
 def iter_supported_files(root: Path, cancel_event: Event | None = None) -> list[Path]:
     if not root.exists() or not root.is_dir():
         return []
@@ -36,6 +56,8 @@ def iter_supported_files(root: Path, cancel_event: Event | None = None) -> list[
         if cancel_event and cancel_event.is_set():
             break
         if not path.is_file():
+            continue
+        if is_ignored_path(root, path):
             continue
         if path.suffix.lower() not in SUPPORTED_EXTENSIONS:
             continue

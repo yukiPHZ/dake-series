@@ -21,6 +21,8 @@ DB_FILE_NAME = "brainz.db"
 @dataclass
 class AppConfig:
     memory_folder: str = ""
+    watch_folder: str = ""
+    auto_index_enabled: bool = False
     last_query: str = ""
     last_indexed_at: str = ""
 
@@ -109,6 +111,8 @@ class ConfigStore:
         data = read_json_file(self.path)
         return AppConfig(
             memory_folder=str(data.get("memory_folder", "") or ""),
+            watch_folder=str(data.get("watch_folder", "") or ""),
+            auto_index_enabled=bool(data.get("auto_index_enabled", False)),
             last_query=str(data.get("last_query", "") or ""),
             last_indexed_at=str(data.get("last_indexed_at", "") or ""),
         )

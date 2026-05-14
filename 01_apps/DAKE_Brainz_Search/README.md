@@ -205,6 +205,20 @@ BRAINZは単語を探すだけの検索ツールではなく、過去の記録�
 - Preview / Log / Search Results の文字サイズと行間を調整
 - 検索中ステータスとSearchボタンのSearching表示を追加
 
+## Phase 9: Watch Folder / Auto Index
+
+補助脳BRAINZは、指定したWatch Folderを静かに監視し、新規/更新された `.txt` / `.md` / `.json` を自動indexできます。
+
+- Watch Folderを設定可能
+- Auto Index ON/OFFに対応
+- polling方式で5〜10秒ごとにローカル確認
+- modified time / hashを利用して新規・更新ファイルを検出
+- `build/`、`dist/`、`__pycache__/`、`.git/`、`.venv/`、`node_modules/`、`data/logs/`、`data/exports/` は監視対象から除外
+- Semantic Searchが使える場合は新規indexにもembedding生成を試行
+- Ollama / embedding unavailableでもFTS検索と通常indexは継続
+- 完全ローカル処理
+- OpenAI API未使用
+
 ## DAKE_META
 
 ```json
@@ -215,7 +229,7 @@ BRAINZは単語を探すだけの検索ツールではなく、過去の記録�
   "launcher_description": "ローカルの会話・仕様・メモを忘れず探すための記憶検索アプリです。",
   "site_title": "補助脳BRAINZ",
   "site_description": "ChatGPT、Codex、Claude、Geminiのやり取りをローカル記憶として再接続する検索補助脳です。",
-  "update_summary": "Memory Flow / Related Timeline に対応しました。",
+  "update_summary": "Watch Folder / Auto Index に対応しました。",
   "folder_name": "DAKE_Brainz_Search",
   "exe_name": "DakeBrainz_Search.exe",
   "release_url": "",
@@ -229,25 +243,26 @@ BRAINZは単語を探すだけの検索ツールではなく、過去の記録�
 ## RELEASE_BODY
 
 ```markdown
-# 補助脳BRAINZ v0.5.0
+# 補助脳BRAINZ v0.6.0
 
 ローカルの会話・仕様・Codex実装結果を忘れず探すための記憶検索アプリです。
 
 ## 追加
 
-- Related Timeline
-- Memory Flow
-- 記憶の前後関係表示
-- semantic類似による流れ接続
-- timeline item navigation
+- Watch Folder
+- Auto Index
+- 新規/更新ファイル自動検出
+- polling監視
+- Auto Semantic Index
+- WATCHING状態表示
 
 ## 継続
 
 - Semantic Search
 - Related Memory
+- Memory Flow
 - ChatGPT export取り込み
 - Codex結果取り込み
-- SQLite FTS5検索
 - handoff生成
 - Ollama / CUDA / GPU状態チェック
 ```

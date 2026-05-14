@@ -32,6 +32,8 @@ UI_TEXT = {
     "button_chatgpt": "ChatGPTまとめ",
     "button_codex": "Codex素材",
     "memory_title": "Memory Folder",
+    "label_watch_folder": "Watch Folder",
+    "checkbox_auto_index": "Auto Index",
     "index_title": "Index Status",
     "system_title": "System Status",
     "results_title": "Search Results",
@@ -43,6 +45,7 @@ UI_TEXT = {
     "handoff_title": "Handoff Summary",
     "log_title": "BRAINZ Log",
     "empty_memory": "未選択",
+    "empty_watch_folder": "未選択",
     "empty_results": "検索結果はまだありません",
     "empty_preview": "結果を選ぶと詳細が表示されます",
     "empty_tags": "タグ候補なし",
@@ -125,6 +128,13 @@ UI_TEXT = {
     "log_no_results": "NO RESULTS: {query}",
     "phrase_searching_memory": "補助脳：関連する記憶を探しています。",
     "phrase_no_results": "補助脳：関連する記憶はまだ見つかりません。",
+    "log_watch_initialized": "Watch folder initialized.",
+    "log_watching_folder": "Watching: {folder}",
+    "log_new_memory_detected": "New memory detected: {path}",
+    "log_auto_index_complete": "Auto indexing complete.",
+    "log_watch_file": "WATCH LOG: {path}",
+    "log_auto_index_queued": "AUTO INDEX QUEUED: index is already running",
+    "phrase_memory_updated": "補助脳：記憶を更新しました。",
     "log_export": "EXPORT: {path}",
     "index_idle": "IDLE",
     "index_running": "RUNNING {current}/{total}",
@@ -134,6 +144,13 @@ UI_TEXT = {
     "status_searching": "SEARCHING...",
     "status_search_complete": "SEARCH COMPLETE / {count} results",
     "status_no_results": "NO RESULTS",
+    "status_watching": "WATCHING...",
+    "status_auto_index_on": "AUTO INDEX: ON",
+    "status_auto_index_off": "AUTO INDEX: OFF",
+    "status_new_memory_detected": "NEW MEMORY DETECTED",
+    "status_last_memory": "LAST MEMORY: {path}",
+    "status_last_index": "LAST INDEX: {time}",
+    "status_watch_folder_missing": "WATCH FOLDER NOT SET",
     "status_sqlite_ready": "SQLITE READY",
     "status_sqlite_error": "SQLITE ERROR",
     "status_cuda_online": "CUDA ONLINE",
@@ -172,6 +189,7 @@ def run_smoke_test() -> int:
     from core.ollama_client import check_ollama
     from core.ollama_embeddings import DEFAULT_EMBED_MODEL, check_embedding_status
     from core.search_engine import SearchEngine
+    from core.watch_folder import detect_changed_files
 
     ensure_app_dirs()
     database = BrainzDatabase()
@@ -197,6 +215,26 @@ def run_smoke_test() -> int:
         final_progress = Indexer(database).run(root, cancel_event)
         if final_progress.errors:
             raise RuntimeError(f"index errors: {final_progress.errors}")
+
+        watch_new_md = root / "ideas" / "auto_watch.md"
+        watch_new_txt = root / "auto_watch.txt"
+        watch_new_json = root / "auto_watch.json"
+        watch_new_md.write_text("Watch Folder auto index memory flow", encoding="utf-8")
+        watch_new_txt.write_text("Auto Index detects text memory", encoding="utf-8")
+        watch_new_json.write_text(json.dumps({"watch": "auto index"}, ensure_ascii=False), encoding="utf-8")
+        watch_detection = detect_changed_files(database, root)
+        if len(watch_detection.changed_files) < 3:
+            raise RuntimeError("watch folder did not detect new txt/md/json files")
+        auto_progress = Indexer(database).run(root, threading.Event())
+        if auto_progress.errors:
+            raise RuntimeError(f"auto index errors: {auto_progress.errors}")
+        watch_new_md.write_text("Watch Folder auto index memory flow updated", encoding="utf-8")
+        watch_update = detect_changed_files(database, root)
+        if str(watch_new_md.resolve()) not in watch_update.changed_files:
+            raise RuntimeError("watch folder did not detect updated md file")
+        auto_update_progress = Indexer(database).run(root, threading.Event())
+        if auto_update_progress.errors:
+            raise RuntimeError(f"auto update index errors: {auto_update_progress.errors}")
 
         unique_suffix = str(time.time_ns())
         zip_export = root / "chatgpt_export_zip"
@@ -352,6 +390,8 @@ def run_smoke_test() -> int:
     print(f"memory_flow_codex={len(flow_codex.items)}")
     print(f"memory_flow_file={len(flow_file.items)}")
     print(f"memory_flow_semantic={flow_semantic.semantic_available}")
+    print(f"watch_new_detected={len(watch_detection.changed_files)}")
+    print(f"watch_update_detected={len(watch_update.changed_files)}")
     print(f"gpu_detected={gpu_status.gpu_detected}")
     return 0
 
@@ -399,6 +439,7 @@ def run_gui(launch_check: bool = False) -> int:
     from core.app_config import (
         ConfigStore,
         ensure_app_dirs,
+        now_iso,
         open_path,
         peakheadz_icon_path,
         peakheadz_logo_path,
@@ -413,6 +454,7 @@ def run_gui(launch_check: bool = False) -> int:
     from core.ollama_client import check_ollama
     from core.ollama_embeddings import check_embedding_status
     from core.search_engine import SearchEngine, SearchResponse
+    from core.watch_folder import WatchScanResult, detect_changed_files, write_watch_log
     from ui.components import choose_font_family, set_textbox_text
     from ui.theme import COLORS, FONT_CANDIDATES, MONO_FONT_CANDIDATES, READING_FONT_CANDIDATES
 
@@ -432,6 +474,8 @@ def run_gui(launch_check: bool = False) -> int:
             self.mono_font_family = choose_font_family(self, MONO_FONT_CANDIDATES)
             self.config_store = ConfigStore()
             self.config_data = self.config_store.load()
+            if not self.config_data.watch_folder and self.config_data.memory_folder:
+                self.config_data.watch_folder = self.config_data.memory_folder
             self.database = BrainzDatabase()
             self.database.ensure_schema()
             self.search_engine = SearchEngine(self.database)
@@ -442,6 +486,7 @@ def run_gui(launch_check: bool = False) -> int:
             self.search_thread: threading.Thread | None = None
             self.import_thread: threading.Thread | None = None
             self.flow_thread: threading.Thread | None = None
+            self.watch_scan_thread: threading.Thread | None = None
             self.current_results: list[SearchResult] = []
             self.current_related_results: list[SearchResult] = []
             self.current_flow_items: list[MemoryFlowItem] = []
@@ -449,18 +494,28 @@ def run_gui(launch_check: bool = False) -> int:
             self.current_query = self.config_data.last_query
             self.semantic_available = True
             self.semantic_search_var = ctk.BooleanVar(value=True)
+            self.auto_index_var = ctk.BooleanVar(value=self.config_data.auto_index_enabled)
             self.flow_sort_ascending = True
             self.flow_request_id = 0
             self.flow_cache: dict[tuple[int, bool, bool], MemoryFlowResponse] = {}
             self.logo_image = None
+            self.auto_index_active = False
+            self.pending_auto_index_folder: Path | None = None
+            self.watch_poll_interval_ms = 8000
 
             self._apply_icon()
             self._build_ui()
             self._set_memory_folder(self.config_data.memory_folder, persist=False)
             self._append_log(UI_TEXT["log_ready"])
+            self._update_watch_status()
+            if self.config_data.watch_folder:
+                self._append_log(UI_TEXT["log_watch_initialized"])
+                self._append_log(UI_TEXT["log_watching_folder"].format(folder=self.config_data.watch_folder))
             self._refresh_stats()
             self._refresh_system_status()
             self.after(100, self._poll_events)
+            if not launch_check:
+                self.after(1500, self._poll_watch_folder)
             if launch_check:
                 self.after(1200, self._launch_check_finish)
 
@@ -584,20 +639,65 @@ def run_gui(launch_check: bool = False) -> int:
             )
             self.codex_import_button.grid(row=4, column=0, sticky="ew", padx=14, pady=(0, 16))
 
-            self._section_title(left, UI_TEXT["index_title"], 5)
+            self._section_title(left, UI_TEXT["label_watch_folder"], 5)
+            self.watch_folder_var = ctk.StringVar(value=UI_TEXT["empty_watch_folder"])
+            ctk.CTkLabel(
+                left,
+                textvariable=self.watch_folder_var,
+                text_color=COLORS["muted"],
+                font=(self.font_family, 12),
+                wraplength=238,
+                justify="left",
+            ).grid(row=6, column=0, sticky="ew", padx=14, pady=(0, 8))
+            ctk.CTkButton(
+                left,
+                text=UI_TEXT["button_choose"],
+                height=32,
+                fg_color=COLORS["panel_soft"],
+                hover_color=COLORS["accent_soft"],
+                command=self._choose_watch_folder,
+            ).grid(row=7, column=0, sticky="ew", padx=14, pady=(0, 8))
+            self.auto_index_checkbox = ctk.CTkCheckBox(
+                left,
+                text=UI_TEXT["checkbox_auto_index"],
+                variable=self.auto_index_var,
+                text_color=COLORS["muted"],
+                fg_color=COLORS["accent"],
+                hover_color=COLORS["accent_hover"],
+                border_color=COLORS["border"],
+                font=(self.reading_font_family, 13),
+                command=self._toggle_auto_index,
+            )
+            self.auto_index_checkbox.grid(row=8, column=0, sticky="w", padx=14, pady=(0, 8))
+            self.watch_status_var = ctk.StringVar(value=UI_TEXT["status_auto_index_off"])
+            self.last_memory_var = ctk.StringVar(value=UI_TEXT["status_last_memory"].format(path="-"))
+            self.last_index_var = ctk.StringVar(value=UI_TEXT["status_last_index"].format(time="-"))
+            for watch_index, variable in enumerate(
+                (self.watch_status_var, self.last_memory_var, self.last_index_var),
+                start=9,
+            ):
+                ctk.CTkLabel(
+                    left,
+                    textvariable=variable,
+                    text_color=COLORS["muted"],
+                    font=(self.font_family, 11),
+                    anchor="w",
+                ).grid(row=watch_index, column=0, sticky="ew", padx=14, pady=1)
+
+            self._section_title(left, UI_TEXT["index_title"], 12)
             self.index_status_var = ctk.StringVar(value=UI_TEXT["index_idle"])
             ctk.CTkLabel(
                 left,
                 textvariable=self.index_status_var,
                 text_color=COLORS["text"],
                 font=(self.font_family, 13, "bold"),
-            ).grid(row=6, column=0, sticky="w", padx=14, pady=(0, 8))
+            ).grid(row=13, column=0, sticky="w", padx=14, pady=(0, 8))
             self.progress = ctk.CTkProgressBar(left, height=10, progress_color=COLORS["accent"])
             self.progress.set(0)
-            self.progress.grid(row=7, column=0, sticky="ew", padx=14, pady=(0, 12))
+            self.progress.grid(row=14, column=0, sticky="ew", padx=14, pady=(0, 12))
 
             button_row = ctk.CTkFrame(left, fg_color="transparent")
-            button_row.grid(row=8, column=0, sticky="ew", padx=14, pady=(0, 18))
+            button_row.grid(row=15, column=0, sticky="ew", padx=14, pady=(0, 18))
             button_row.grid_columnconfigure((0, 1), weight=1)
             self.index_button = ctk.CTkButton(
                 button_row,
@@ -619,7 +719,7 @@ def run_gui(launch_check: bool = False) -> int:
             )
             self.cancel_button.grid(row=0, column=1, sticky="ew", padx=(6, 0))
 
-            self._section_title(left, UI_TEXT["system_title"], 9)
+            self._section_title(left, UI_TEXT["system_title"], 16)
             self.sqlite_var = ctk.StringVar(value=UI_TEXT["status_sqlite_ready"])
             self.cuda_var = ctk.StringVar(value=UI_TEXT["status_cuda_unavailable"])
             self.gpu_var = ctk.StringVar(value=UI_TEXT["status_gpu_missing"])
@@ -637,7 +737,7 @@ def run_gui(launch_check: bool = False) -> int:
                     self.semantic_status_var,
                     self.docs_var,
                 ),
-                start=10,
+                start=17,
             ):
                 ctk.CTkLabel(
                     left,
@@ -841,6 +941,8 @@ def run_gui(launch_check: bool = False) -> int:
             clean = str(folder or "")
             self.config_data.memory_folder = clean
             self.memory_var.set(clean if clean else UI_TEXT["empty_memory"])
+            if clean and not self.config_data.watch_folder:
+                self._set_watch_folder(clean, persist=False)
             if persist:
                 self.config_store.save(self.config_data)
                 if clean:
@@ -850,6 +952,44 @@ def run_gui(launch_check: bool = False) -> int:
             folder = filedialog.askdirectory(title=UI_TEXT["choose_memory_title"])
             if folder:
                 self._set_memory_folder(folder)
+
+        def _set_watch_folder(self, folder: str, persist: bool = True) -> None:
+            clean = str(folder or "")
+            self.config_data.watch_folder = clean
+            self.watch_folder_var.set(clean if clean else UI_TEXT["empty_watch_folder"])
+            self._update_watch_status()
+            if persist:
+                self.config_store.save(self.config_data)
+                if clean:
+                    self._append_log(UI_TEXT["log_watch_initialized"])
+                    self._append_log(UI_TEXT["log_watching_folder"].format(folder=clean))
+
+        def _choose_watch_folder(self) -> None:
+            folder = filedialog.askdirectory(title=UI_TEXT["label_watch_folder"])
+            if folder:
+                self._set_watch_folder(folder)
+
+        def _toggle_auto_index(self) -> None:
+            self.config_data.auto_index_enabled = bool(self.auto_index_var.get())
+            self.config_store.save(self.config_data)
+            self._update_watch_status()
+            if self.config_data.auto_index_enabled and self.config_data.watch_folder:
+                self._append_log(UI_TEXT["log_watch_initialized"])
+                self._append_log(UI_TEXT["log_watching_folder"].format(folder=self.config_data.watch_folder))
+
+        def _update_watch_status(self) -> None:
+            if not hasattr(self, "watch_folder_var"):
+                return
+            folder = self.config_data.watch_folder
+            self.watch_folder_var.set(folder if folder else UI_TEXT["empty_watch_folder"])
+            if not folder:
+                self.watch_status_var.set(UI_TEXT["status_watch_folder_missing"])
+            elif self.auto_index_var.get():
+                self.watch_status_var.set(f"{UI_TEXT['status_auto_index_on']} / {UI_TEXT['status_watching']}")
+            else:
+                self.watch_status_var.set(UI_TEXT["status_auto_index_off"])
+            last_indexed_at = self.config_data.last_indexed_at or "-"
+            self.last_index_var.set(UI_TEXT["status_last_index"].format(time=last_indexed_at))
 
         def _choose_chatgpt_export(self) -> None:
             file_path = filedialog.askopenfilename(
@@ -1028,6 +1168,51 @@ def run_gui(launch_check: bool = False) -> int:
                 self.indexer.run(memory_folder, self.cancel_event, lambda progress: self.events.put(("index_progress", progress)))
             except Exception as exc:
                 self.events.put(("index_error", str(exc)))
+
+        def _poll_watch_folder(self) -> None:
+            try:
+                if self.auto_index_var.get() and self.config_data.watch_folder:
+                    watch_folder = Path(self.config_data.watch_folder)
+                    if watch_folder.exists() and watch_folder.is_dir():
+                        if not self.watch_scan_thread or not self.watch_scan_thread.is_alive():
+                            self.watch_scan_thread = threading.Thread(
+                                target=self._watch_scan_worker,
+                                args=(watch_folder,),
+                                daemon=True,
+                            )
+                            self.watch_scan_thread.start()
+            finally:
+                self.after(self.watch_poll_interval_ms, self._poll_watch_folder)
+
+        def _watch_scan_worker(self, watch_folder: Path) -> None:
+            try:
+                result = detect_changed_files(self.database, watch_folder)
+                self.events.put(("watch_scan_done", result))
+            except Exception as exc:
+                self.events.put(("watch_scan_error", str(exc)))
+
+        def _start_auto_index(self, memory_folder: Path) -> None:
+            if self.index_thread and self.index_thread.is_alive():
+                self.pending_auto_index_folder = memory_folder
+                self._append_log(UI_TEXT["log_auto_index_queued"])
+                return
+            if not memory_folder.exists():
+                return
+            self.auto_index_active = True
+            self.cancel_event.clear()
+            self.progress.set(0)
+            self.index_button.configure(state="disabled")
+            self.cancel_button.configure(state="normal")
+            self.index_status_var.set(UI_TEXT["index_running"].format(current=0, total=0))
+            self.index_thread = threading.Thread(target=self._index_worker, args=(memory_folder,), daemon=True)
+            self.index_thread.start()
+
+        def _write_watch_event_log(self, lines: list[str]) -> None:
+            try:
+                path = write_watch_log(lines)
+            except OSError:
+                return
+            self._append_log(UI_TEXT["log_watch_file"].format(path=path))
 
         def _cancel_index(self) -> None:
             self.cancel_event.set()
@@ -1349,8 +1534,35 @@ def run_gui(launch_check: bool = False) -> int:
                     self._handle_codex_import_empty()
                 elif event == "codex_import_error":
                     self._handle_codex_import_error(str(payload))
+                elif event == "watch_scan_done":
+                    self._handle_watch_scan_done(payload)
+                elif event == "watch_scan_error":
+                    self._handle_watch_scan_error(str(payload))
 
             self.after(100, self._poll_events)
+
+        def _handle_watch_scan_done(self, result: WatchScanResult) -> None:
+            self._update_watch_status()
+            if not self.auto_index_var.get() or not result.changed_files:
+                return
+            first_path = Path(result.changed_files[0])
+            self.index_status_var.set(UI_TEXT["status_new_memory_detected"])
+            self.watch_status_var.set(f"{UI_TEXT['status_auto_index_on']} / {UI_TEXT['status_new_memory_detected']}")
+            self.last_memory_var.set(UI_TEXT["status_last_memory"].format(path=first_path.name))
+            for path_text in result.changed_files[:8]:
+                self._append_log(UI_TEXT["log_new_memory_detected"].format(path=path_text))
+            lines = [
+                UI_TEXT["log_watch_initialized"],
+                UI_TEXT["log_watching_folder"].format(folder=result.folder),
+                f"checked={result.checked}",
+                f"changed={len(result.changed_files)}",
+                *[UI_TEXT["log_new_memory_detected"].format(path=path) for path in result.changed_files],
+            ]
+            self._write_watch_event_log(lines)
+            self._start_auto_index(Path(result.folder))
+
+        def _handle_watch_scan_error(self, error_text: str) -> None:
+            self._append_log(UI_TEXT["log_index_error"].format(error=error_text))
 
         def _handle_index_progress(self, progress: IndexProgress) -> None:
             if progress.total:
@@ -1358,10 +1570,13 @@ def run_gui(launch_check: bool = False) -> int:
             else:
                 self.progress.set(0)
             if progress.done:
+                was_auto_index = self.auto_index_active
+                self.auto_index_active = False
                 self.index_button.configure(state="normal")
                 self.cancel_button.configure(state="disabled")
-                self.config_data.last_indexed_at = progress.message
+                self.config_data.last_indexed_at = now_iso()
                 self.config_store.save(self.config_data)
+                self._update_watch_status()
                 self._refresh_stats()
                 if progress.cancelled:
                     self.index_status_var.set(
@@ -1377,6 +1592,23 @@ def run_gui(launch_check: bool = False) -> int:
                     self._append_log(
                         UI_TEXT["log_index_done"].format(indexed=progress.indexed, skipped=progress.skipped, errors=progress.errors)
                     )
+                    if was_auto_index:
+                        self._append_log(UI_TEXT["log_auto_index_complete"])
+                        self._append_log(UI_TEXT["phrase_memory_updated"])
+                        self._write_watch_event_log(
+                            [
+                                UI_TEXT["log_auto_index_complete"],
+                                UI_TEXT["log_index_done"].format(
+                                    indexed=progress.indexed,
+                                    skipped=progress.skipped,
+                                    errors=progress.errors,
+                                ),
+                            ]
+                        )
+                if self.pending_auto_index_folder and not self.cancel_event.is_set():
+                    next_folder = self.pending_auto_index_folder
+                    self.pending_auto_index_folder = None
+                    self.after(200, lambda folder=next_folder: self._start_auto_index(folder))
             else:
                 if progress.message == "embedding_chunks":
                     self.index_status_var.set(UI_TEXT["index_embedding"])
@@ -1386,11 +1618,13 @@ def run_gui(launch_check: bool = False) -> int:
                     )
 
         def _handle_index_error(self, error_text: str) -> None:
+            self.auto_index_active = False
             self.index_button.configure(state="normal")
             self.cancel_button.configure(state="disabled")
             self._set_import_buttons_state("normal")
             self._set_search_running(False)
             self.index_status_var.set(UI_TEXT["index_idle"])
+            self._update_watch_status()
             self._append_log(UI_TEXT["log_index_error"].format(error=error_text))
 
         def _handle_chatgpt_import_done(self, result: ChatGPTImportResult) -> None:

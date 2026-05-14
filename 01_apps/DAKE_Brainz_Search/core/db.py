@@ -555,6 +555,24 @@ class BrainzDatabase:
             searches = conn.execute("SELECT COUNT(*) AS count FROM search_logs").fetchone()["count"]
         return {"documents": int(documents), "chunks": int(chunks), "searches": int(searches)}
 
+    def document_hashes_for_paths(self, paths: Iterable[str]) -> dict[str, str]:
+        self.ensure_schema()
+        unique_paths = sorted({str(path) for path in paths if str(path)})
+        if not unique_paths:
+            return {}
+
+        hashes: dict[str, str] = {}
+        with self._lock, self.connect() as conn:
+            for index in range(0, len(unique_paths), 400):
+                chunk = unique_paths[index : index + 400]
+                placeholders = ",".join("?" for _ in chunk)
+                rows = conn.execute(
+                    f"SELECT path, hash FROM documents WHERE path IN ({placeholders})",
+                    chunk,
+                ).fetchall()
+                hashes.update({str(row["path"]): str(row["hash"]) for row in rows})
+        return hashes
+
     def get_document(self, document_id: int) -> SearchResult | None:
         self.ensure_schema()
         with self._lock, self.connect() as conn:
