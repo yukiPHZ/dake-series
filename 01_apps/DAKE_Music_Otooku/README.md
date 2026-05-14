@@ -57,10 +57,12 @@
 
 ## 出力フォルダ構成
 
-`data/outputs/{project_name}/` に以下を作成します。
+`~/Music/Otooku/{project_name}/` に以下を作成します。
 
 ```text
 audio/
+  generated_preview.wav
+  generated_preview.mp3
   generated.wav
   generated.mp3
   source_converted.wav
@@ -95,7 +97,7 @@ logs/
 setup_needed.txt
 ```
 
-`generated.wav`、`generated.mp3`、`loop_preview.mp3` は、MusicGen生成または参照音源があり、FFmpeg整形まで進めた場合に作成されます。MusicGenやFFmpegがない場合も、`music_direction.txt` と `musicgen_prompt.txt` は保存します。
+`generated_preview.wav` は、MusicGen未導入でもFFmpegの簡易ambient生成で作成します。`generated.wav`、`generated.mp3`、`loop_preview.mp3` は、MusicGen生成・参照音源・Tiny Ambient生成をFFmpeg整形まで進めた場合に作成されます。
 
 プリセットを選択した場合は、`music_direction.txt`、`musicgen_prompt.txt`、`usage_note.txt`、`loop_notes.txt`、`video_bgm_pack/notes/usage_note.txt` にプリセット名とタグを追記します。
 
@@ -125,6 +127,14 @@ Shorts / Long / Ambient / Work 用に分類し、補助脳が使用イメージ�
 
 `pygame` が利用できる場合はアプリ内再生を試します。未導入の場合、wavはWindows標準の `winsound`、mp3は既定プレイヤーで開きます。既定プレイヤーで開いた場合、停止はプレイヤー側で行います。
 
+## Tiny Ambient Generator
+
+音を置く は、文章から小さなambient preview音を生成できます。
+
+これは完成曲制作ではなく、「空気を置く」ための最初の音生成です。
+
+MusicGen未導入でも、FFmpegだけでPreview音を生成します。生成後は `generated_preview.wav` と、可能なら `generated_preview.mp3` を作成し、Preview一覧へ自動反映します。
+
 ## Favorite
 
 Previewで確認した音源を、あとで使うための Favorite 棚へ保存できます。
@@ -139,7 +149,7 @@ Favorite音源を、動画制作向けフォルダへ橋渡しできます。
 
 これは動画編集ではなく、「制作箱」を準備するための機能です。
 
-制作箱は `data/outputs/projects/{project_name}/` に作成し、`raw` / `bgm` / `shorts` / `notes` / `thumbnails` / `export` / `upload` を用意します。選択したFavorite音源は `bgm/` へコピーし、`notes/project_notes.txt` と `export_log.txt` を保存します。
+制作箱は `~/Music/Otooku/projects/{project_name}/` に作成し、`raw` / `bgm` / `shorts` / `notes` / `thumbnails` / `export` / `upload` を用意します。選択したFavorite音源は `bgm/` へコピーし、`notes/project_notes.txt` と `export_log.txt` を保存します。
 
 ## Preset System
 

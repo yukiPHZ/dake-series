@@ -15,7 +15,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 PROMPTS_DIR = DATA_DIR / "prompts"
 REFERENCES_DIR = DATA_DIR / "references"
-OUTPUTS_DIR = DATA_DIR / "outputs"
+OUTPUTS_DIR = Path.home() / "Music" / "Otooku"
 LOGS_DIR = DATA_DIR / "logs"
 PRESETS_DIR = DATA_DIR / "presets"
 

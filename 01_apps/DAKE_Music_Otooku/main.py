@@ -44,6 +44,7 @@ from core.project_writer import (
     write_project_files,
     write_setup_needed,
 )
+from core.tiny_ambient import generate_tiny_ambient
 from core.prompt_builder import MusicDirection, fallback_direction
 from core.video_bgm_pack import export_video_bgm_pack
 from ui.components import make_button, make_panel
@@ -106,8 +107,9 @@ UI_TEXT = {
     "status_checking": "環境を確認しています。",
     "status_processing": "音を置いています。",
     "status_complete": "整っています。",
+    "status_preview_complete": "整いました。 Preview ready.",
     "status_ffmpeg_processing": "FFmpeg processing...",
-    "status_audio_complete": "整いました。 Audio package created.",
+    "status_audio_complete": "整いました。 Preview ready.",
     "status_video_bgm_processing": "Video BGM Pack processing...",
     "status_video_bgm_complete": "整いました。 Video BGM Pack exported.",
     "status_video_bgm_failed": "Video BGM Pack failed. Loop Pack output is still available.",
@@ -158,6 +160,7 @@ UI_TEXT = {
     "log_check_start": "SYSTEM：環境チェックを開始しました。",
     "log_check_done": "SYSTEM：環境チェックが完了しました。",
     "log_brain_received": "補助脳：言葉を受け取りました。",
+    "log_tiny_placing": "補助脳：音を置いています。",
     "log_brain_thinking": "補助脳：空気を解析しています。",
     "log_brain_low_temp": "補助脳：静かな低温構成を提案しました。",
     "log_brain_arranged": "補助脳：音の置き方を整えました。",
@@ -173,6 +176,11 @@ UI_TEXT = {
     "log_musicgen_unavailable": "MUSICGEN：未導入のためプロンプトと設計メモを保存しました。",
     "log_musicgen_done": "MUSICGEN：generated.wavを作成しました。",
     "log_musicgen_failed": "MUSICGEN：生成できなかったためsetup_needed.txtを保存しました。",
+    "log_tiny_start": "FFMPEG：小さなambient previewを生成しています。",
+    "log_tiny_file": "FFMPEG：{name} を作成しました。",
+    "log_tiny_filter": "FFMPEG filter：{filter}",
+    "log_tiny_fallback": "SYSTEM：FFmpeg生成に失敗したため簡易wavを作成しました。",
+    "log_tiny_failed": "SYSTEM：preview音源を作成できませんでした。",
     "log_reference": "SYSTEM：参照音源を素材化します。",
     "log_reference_probe": "FFPROBE：{info}",
     "log_ffmpeg_start": "FFMPEG：音量調整と変換を開始しました。",
@@ -1165,6 +1173,7 @@ class MusicOtookuApp:
         reference_audio_path = self.reference_audio_path
         self._set_busy(True)
         self.status_var.set(UI_TEXT["status_processing"])
+        self._append_log(UI_TEXT["log_tiny_placing"])
         thread = threading.Thread(
             target=self._place_sound_worker,
             args=(prompt, loop_options, reference_audio_path, selected_preset),
@@ -1188,6 +1197,7 @@ class MusicOtookuApp:
 
         try:
             log(UI_TEXT["log_brain_received"])
+            log(UI_TEXT["log_tiny_placing"])
             if selected_preset:
                 log(UI_TEXT["log_preset_loaded"].format(name=selected_preset.name))
             log(UI_TEXT["log_brain_thinking"])
@@ -1218,6 +1228,21 @@ class MusicOtookuApp:
             project_paths = create_project(project_name)
             log(UI_TEXT["log_project"])
 
+            log(UI_TEXT["log_tiny_start"])
+            tiny_result = generate_tiny_ambient(prompt, direction, project_paths.audio, selected_preset)
+            if tiny_result.success and tiny_result.wav_path:
+                log(UI_TEXT["log_tiny_file"].format(name=tiny_result.wav_path.name))
+                if tiny_result.mp3_path:
+                    log(UI_TEXT["log_tiny_file"].format(name=tiny_result.mp3_path.name))
+                if tiny_result.plan:
+                    log(UI_TEXT["log_tiny_filter"].format(filter=tiny_result.plan.filter_text))
+                if tiny_result.errors:
+                    log(UI_TEXT["log_tiny_fallback"])
+                final_status = UI_TEXT["status_preview_complete"]
+                self.worker_queue.put(("status", UI_TEXT["status_preview_complete"]))
+            else:
+                log(UI_TEXT["log_tiny_failed"])
+
             source_audio: Path | None = None
             if reference_audio_path:
                 source_audio = reference_audio_path
@@ -1240,9 +1265,13 @@ class MusicOtookuApp:
                     else:
                         write_setup_needed(project_paths, music_result.message or "MusicGen failed")
                         log(UI_TEXT["log_musicgen_failed"])
+                        if tiny_result.success and tiny_result.wav_path:
+                            source_audio = tiny_result.wav_path
                 else:
                     write_setup_needed(project_paths, "AudioCraft / MusicGen is not available")
                     log(UI_TEXT["log_musicgen_unavailable"])
+                    if tiny_result.success and tiny_result.wav_path:
+                        source_audio = tiny_result.wav_path
 
             if source_audio:
                 ffmpeg_status = report.status_for("ffmpeg")
@@ -1323,7 +1352,7 @@ class MusicOtookuApp:
                     self.output_var.set(UI_TEXT["output_ready"].format(path=self.output_folder))
                     self.open_button.configure(state="normal")
                     self._sync_video_bgm_button()
-                    self.refresh_audio_preview(log_ready=False)
+                    self.refresh_audio_preview(log_ready=True)
                     self.status_var.set(str(status_payload))
                 elif event == "error":
                     self.status_var.set(UI_TEXT["status_error"])
@@ -1626,6 +1655,11 @@ def run_smoke_test() -> int:
                 raise AssertionError(f"missing {path.name}")
         if "Preset:\n" in (paths.prompts / "music_direction.txt").read_text(encoding="utf-8"):
             raise AssertionError("custom output unexpectedly contains preset metadata")
+        tiny_result = generate_tiny_ambient(prompt, direction, paths.audio)
+        if not tiny_result.success or not tiny_result.wav_path or not tiny_result.wav_path.exists():
+            raise AssertionError("generated_preview.wav was not created")
+        if tiny_result.plan is None or "amix" not in tiny_result.plan.filter_text:
+            raise AssertionError("tiny ambient filter was not recorded")
 
         borinef = find_preset("BORINEF")
         if not borinef:
@@ -1770,11 +1804,17 @@ def run_generate_check() -> int:
         raise AssertionError("BORINEF preset was not written to music_direction.txt")
     if "Preset Tags:\nborinef, quiet, ember" not in (paths.notes / "usage_note.txt").read_text(encoding="utf-8"):
         raise AssertionError("BORINEF preset tags were not written to usage_note.txt")
+    tiny_result = generate_tiny_ambient(prompt, direction, paths.audio, preset)
+    if not tiny_result.success or not tiny_result.wav_path or not tiny_result.wav_path.exists():
+        raise AssertionError("generated_preview.wav was not created")
+    if not tiny_result.mp3_path or not tiny_result.mp3_path.exists():
+        raise AssertionError("generated_preview.mp3 was not created")
+    if not tiny_result.plan or "amix" not in tiny_result.plan.filter_text:
+        raise AssertionError("tiny ambient ffmpeg filter was not recorded")
     ffmpeg_status = report.status_for("ffmpeg")
     video_result = None
     if ffmpeg_status and ffmpeg_status.state == "ONLINE":
-        source_wav = paths.audio / "_generate_check_source.wav"
-        write_generate_check_wav(source_wav)
+        source_wav = tiny_result.wav_path
         loop_options = LoopPackOptions(tags=merge_preset_tags(("quiet", "midnight"), preset))
         loop_result = export_loop_pack(source_wav, paths.audio, loop_options)
         if not loop_result.success:
