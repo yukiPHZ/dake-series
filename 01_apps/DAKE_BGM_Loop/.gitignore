@@ -1,0 +1,6 @@
+outputs/
+favorites/
+metadata/
+__pycache__/
+*.pyc
+
