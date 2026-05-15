@@ -19,7 +19,7 @@ from tkinter import filedialog, font as tkfont, messagebox
 
 from core.app_config import DEFAULT_DURATION_SECONDS, ensure_data_dirs
 from core.audio_preview import AudioPreviewItem, AudioPreviewPlayer, find_audio_preview_items
-from core.audio_probe import probe_audio_info
+from core.audio_probe import probe_audio_info, probe_duration
 from core.cli_checker import EnvironmentReport, check_environment
 from core.favorites import FAVORITES_DIR, ensure_favorites_dirs, save_favorite_audio
 from core.ffmpeg_audio import LoopPackOptions, export_audio_material, export_loop_pack
@@ -205,6 +205,7 @@ UI_TEXT = {
     "log_preview_actual": "Preview actual: {path}",
     "log_preview_exists": "Preview path exists: {exists}",
     "log_preview_size": "Preview size: {size}",
+    "log_preview_duration": "Preview duration: {duration}",
     "log_preview_mode": "Playing via {mode}",
     "log_preview_playing": "Playing preview...",
     "log_preview_stopped": "Preview stopped.",
@@ -245,7 +246,7 @@ STATUS_LABEL_KEYS = {
     "cuda": "status_tool_cuda",
     "uvr": "status_tool_uvr",
 }
-VISIBLE_LOG_LIMIT = 8
+VISIBLE_LOG_LIMIT = 6
 AUDIO_FILETYPES = (
     ("Audio", "*.wav *.mp3 *.m4a *.flac *.ogg"),
     ("All", "*.*"),
@@ -331,6 +332,12 @@ def preview_size_text(path: Path) -> str:
     if size_kb >= 1024:
         return f"{size_kb / 1024:.1f} MB"
     return f"{size_kb:.1f} KB"
+
+
+def preview_duration_text(duration: float | None) -> str:
+    if duration is None:
+        return "--"
+    return f"{duration:.1f}s"
 
 
 def write_generate_check_wav(path: Path, duration_seconds: float = 2.0) -> None:
@@ -542,7 +549,7 @@ class MusicOtookuApp:
 
         self.prompt_text = tk.Text(
             prompt_panel,
-            height=6,
+            height=5,
             bg=COLORS["surface_soft"],
             fg=COLORS["text"],
             insertbackground=COLORS["text"],
@@ -702,7 +709,7 @@ class MusicOtookuApp:
 
         self.preview_listbox = tk.Listbox(
             preview_panel,
-            height=3,
+            height=2,
             bg=COLORS["surface_soft"],
             fg=COLORS["text"],
             selectbackground=COLORS["select"],
@@ -1571,16 +1578,24 @@ class MusicOtookuApp:
             return
         actual_path = item.path.resolve()
         exists_text = "yes" if actual_path.exists() else "no"
+        duration = probe_duration(actual_path) if actual_path.exists() else None
         self._write_preview_debug_log(
             [
                 f"Preview file: {item.label}",
                 f"Preview actual: {actual_path}",
                 f"Preview path exists: {exists_text}",
                 f"Preview size: {preview_size_text(actual_path)}",
+                f"Preview duration: {preview_duration_text(duration)}",
             ]
         )
         self._append_log(UI_TEXT["log_preview_file"].format(name=actual_path.name))
         self._append_log(UI_TEXT["log_preview_size"].format(size=preview_size_text(actual_path)))
+        self._append_log(UI_TEXT["log_preview_duration"].format(duration=preview_duration_text(duration)))
+        if duration is not None and duration <= 0:
+            self.preview_status_var.set(UI_TEXT["preview_failed"])
+            self._write_preview_debug_log(["Preview failed: duration is 0s"])
+            self._append_log(UI_TEXT["log_preview_failed"].format(reason="duration is 0s"))
+            return
         self.preview_status_var.set(UI_TEXT["preview_playing_start"])
         self.preview_play_button.configure(text=UI_TEXT["button_preview_playing"], state="disabled")
         self.root.update_idletasks()
@@ -1809,6 +1824,9 @@ def run_smoke_test() -> int:
         tiny_result = generate_tiny_ambient(prompt, direction, paths.audio)
         if not tiny_result.success or not tiny_result.wav_path or not tiny_result.wav_path.exists():
             raise AssertionError("generated_preview.wav was not created")
+        tiny_duration = probe_duration(tiny_result.wav_path)
+        if tiny_duration is None or tiny_duration <= 0:
+            raise AssertionError("generated_preview.wav duration was not positive")
         if tiny_result.plan is None or "amix" not in tiny_result.plan.filter_text:
             raise AssertionError("tiny ambient filter was not recorded")
 
@@ -1962,6 +1980,9 @@ def run_generate_check() -> int:
     tiny_result = generate_tiny_ambient(prompt, direction, paths.audio, preset)
     if not tiny_result.success or not tiny_result.wav_path or not tiny_result.wav_path.exists():
         raise AssertionError("generated_preview.wav was not created")
+    tiny_duration = probe_duration(tiny_result.wav_path)
+    if tiny_duration is None or tiny_duration <= 0:
+        raise AssertionError("generated_preview.wav duration was not positive")
     if not tiny_result.mp3_path or not tiny_result.mp3_path.exists():
         raise AssertionError("generated_preview.mp3 was not created")
     if not tiny_result.plan or "amix" not in tiny_result.plan.filter_text:
@@ -2025,6 +2046,7 @@ def run_generate_check() -> int:
         print("video bgm pack: skipped")
     preview_items = find_audio_preview_items(paths.root)
     print(f"preview files: {len(preview_items)}")
+    print(f"generated_preview duration: {preview_duration_text(probe_duration(paths.audio / 'generated_preview.wav'))}")
     if preview_items:
         favorite_source = next((item for item in preview_items if "loop_pack" in item.label), preview_items[0])
         favorite_result = save_favorite_audio(favorite_source.path, paths.root, preset)

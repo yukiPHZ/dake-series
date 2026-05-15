@@ -156,6 +156,11 @@ dark background / thin border / blue-purple accent を基調にし、ログは�
 
 MusicGen未導入でも、FFmpegだけでPreview音を生成します。生成後は `generated_preview.wav` と、可能なら `generated_preview.mp3` を作成し、Preview一覧へ自動反映します。
 
+## Audible Ambient
+
+Phase 15では、「ちゃんと聞こえるambient preview」を優先しています。
+高級な音作りより、まず音が生まれたと感じられることを重視します。
+
 ## Favorite
 
 Previewで確認した音源を、あとで使うための Favorite 棚へ保存できます。

@@ -51,44 +51,42 @@ def plan_tiny_ambient(user_text: str, direction: MusicDirection, preset: MusicPr
     ).lower()
 
     duration = 9.0
-    base_frequency = 92.0
+    base_frequency = 220.0
     color = "pink"
     pulse = False
 
     if _contains_any(source, ("borinef", "ember", "low heat", "余熱", "低温")):
         duration = 12.0
-        base_frequency = 54.0
-        color = "brown"
+        base_frequency = 165.0
+        color = "pink"
     elif _contains_any(source, ("yukiz", "稼働", "work", "code", "sewing", "ミシン", "コード")):
         duration = 10.0
-        base_frequency = 82.0
+        base_frequency = 220.0
         color = "pink"
         pulse = True
     elif _contains_any(source, ("朝", "morning", "shrine", "jinja", "神社", "holiday")):
         duration = 8.0
-        base_frequency = 164.0
+        base_frequency = 360.0
         color = "white"
     elif _contains_any(source, ("深夜", "midnight", "night", "夜", "blue", "memory")):
         duration = 11.0
-        base_frequency = 64.0
+        base_frequency = 145.0
         color = "pink"
 
-    hash_shift = sum(ord(char) for char in user_text) % 17
-    base_frequency += hash_shift - 8
-    base_frequency = max(45.0, min(base_frequency, 220.0))
-    fade_out_start = max(duration - 2.2, 0.0)
-    lowpass = 1350 if color == "white" else 900 if color == "pink" else 620
-    pulse_filter = ",tremolo=f=1.15:d=0.22" if pulse else ""
+    hash_shift = sum(ord(char) for char in user_text) % 31
+    base_frequency += hash_shift - 15
+    base_frequency = max(120.0, min(base_frequency, 600.0))
+    fade_out_start = max(duration - 1.8, 0.0)
+    noise_lowpass = 2600 if color == "white" else 1800
     filter_text = (
-        f"[0:a]volume=0.24[a0];"
-        f"[1:a]volume=0.10[a1];"
-        f"[2:a]lowpass=f={lowpass},volume=0.060[a2];"
-        f"[a0][a1][a2]amix=inputs=3:duration=longest,"
-        f"highpass=f=35,lowpass=f={lowpass + 500},"
-        f"aecho=0.55:0.45:80:0.20{pulse_filter},"
-        f"afade=t=in:st=0:d=1.20,"
-        f"afade=t=out:st={fade_out_start:.2f}:d=2.20,"
-        f"volume=0.95[out]"
+        f"[0:a]volume=1.00[a0];"
+        f"[1:a]volume=0.35[a1];"
+        f"[2:a]highpass=f=160,lowpass=f={noise_lowpass},volume=0.14[a2];"
+        f"[a0][a1][a2]amix=inputs=3:duration=longest:normalize=0,"
+        f"afade=t=in:st=0:d=0.60,"
+        f"afade=t=out:st={fade_out_start:.2f}:d=1.80,"
+        f"alimiter=limit=0.92,"
+        f"volume=1.40[out]"
     )
     return TinyAmbientPlan(
         duration=duration,
@@ -126,15 +124,16 @@ def _write_python_fallback_wav(path: Path, plan: TinyAmbientPlan) -> None:
         audio_file.setframerate(sample_rate)
         for index in range(frames):
             t = index / sample_rate
-            fade_in = min(t / 1.2, 1.0)
-            fade_out = min((plan.duration - t) / 2.2, 1.0)
+            fade_in = min(t / 0.6, 1.0)
+            fade_out = min((plan.duration - t) / 1.8, 1.0)
             envelope = max(0.0, min(fade_in, fade_out))
             pulse = 0.72 + 0.28 * math.sin(2.0 * math.pi * 1.15 * t) if plan.pulse else 1.0
             value = (
-                math.sin(2.0 * math.pi * frequency * t) * 0.16
-                + math.sin(2.0 * math.pi * frequency * 1.5 * t) * 0.06
+                math.sin(2.0 * math.pi * frequency * t) * 0.34
+                + math.sin(2.0 * math.pi * frequency * 1.5 * t) * 0.12
             )
             sample = int(32767 * value * envelope * pulse)
+            sample = max(-30000, min(30000, sample))
             packed = struct.pack("<hh", sample, sample)
             audio_file.writeframes(packed)
 
@@ -155,7 +154,7 @@ def generate_tiny_ambient(
     resolved_ffmpeg = resolve_tool_command(ffmpeg_command)
     if resolved_ffmpeg:
         primary = plan.base_frequency
-        overtone = plan.base_frequency * 1.5
+        overtone = min(plan.base_frequency * 1.5, 880.0)
         wav_command = [
             resolved_ffmpeg,
             "-y",
@@ -170,7 +169,7 @@ def generate_tiny_ambient(
             "-f",
             "lavfi",
             "-i",
-            f"anoisesrc=color={plan.color}:amplitude=0.04:duration={plan.duration:.2f}:sample_rate=44100",
+            f"anoisesrc=color={plan.color}:amplitude=0.05:duration={plan.duration:.2f}:sample_rate=44100",
             "-filter_complex",
             plan.filter_text,
             "-map",
