@@ -44,7 +44,7 @@ from core.project_writer import (
     write_project_files,
     write_setup_needed,
 )
-from core.tiny_ambient import generate_tiny_ambient
+from core.tiny_ambient import generate_tiny_ambient, plan_tiny_ambient
 from core.prompt_builder import MusicDirection, fallback_direction
 from core.video_bgm_pack import export_video_bgm_pack
 from ui.components import make_button, make_panel
@@ -180,6 +180,8 @@ UI_TEXT = {
     "log_musicgen_failed": "MUSICGEN：生成できなかったためsetup_needed.txtを保存しました。",
     "log_tiny_start": "FFMPEG：小さなambient previewを生成しています。",
     "log_tiny_file": "FFMPEG：{name} を作成しました。",
+    "log_tiny_motion": "補助脳：音に少し動きを入れました。",
+    "log_tiny_moving_done": "FFMPEG：moving ambient preview を作成しました。",
     "log_tiny_filter": "FFMPEG filter：{filter}",
     "log_tiny_fallback": "SYSTEM：FFmpeg生成に失敗したため簡易wavを作成しました。",
     "log_tiny_failed": "SYSTEM：preview音源を作成できませんでした。",
@@ -1348,9 +1350,11 @@ class MusicOtookuApp:
             project_paths = create_project(project_name)
             log(UI_TEXT["log_project"])
 
+            log(UI_TEXT["log_tiny_motion"])
             log(UI_TEXT["log_tiny_start"])
             tiny_result = generate_tiny_ambient(prompt, direction, project_paths.audio, selected_preset)
             if tiny_result.success and tiny_result.wav_path:
+                log(UI_TEXT["log_tiny_moving_done"])
                 log(UI_TEXT["log_tiny_file"].format(name=tiny_result.wav_path.name))
                 if tiny_result.mp3_path:
                     log(UI_TEXT["log_tiny_file"].format(name=tiny_result.mp3_path.name))
@@ -1849,6 +1853,19 @@ def run_smoke_test() -> int:
         write_project_files(yukiz_paths, prompt, yukiz_direction, log_lines, yukiz)
         if "Preset:\nYUKIZ稼働中" not in (yukiz_paths.notes / "usage_note.txt").read_text(encoding="utf-8"):
             raise AssertionError("YUKIZ稼働中 preset was not written to usage_note.txt")
+        jinja = find_preset("holiday-jinja")
+        if not jinja:
+            raise AssertionError("holiday-jinja preset missing")
+        borinef_plan = plan_tiny_ambient(prompt, borinef_direction, borinef)
+        yukiz_plan = plan_tiny_ambient(prompt, yukiz_direction, yukiz)
+        jinja_plan = plan_tiny_ambient(prompt, fallback_direction_with_preset(prompt, jinja), jinja)
+        if len({borinef_plan.frequencies, yukiz_plan.frequencies, jinja_plan.frequencies}) != 3:
+            raise AssertionError("moving ambient presets did not produce distinct notes")
+        for checked_plan in (borinef_plan, yukiz_plan, jinja_plan):
+            if not 12.0 <= checked_plan.duration <= 20.0:
+                raise AssertionError("moving ambient duration was outside the expected range")
+            if "adelay" not in checked_plan.filter_text or "atrim" not in checked_plan.filter_text:
+                raise AssertionError("moving ambient filter did not include delayed note movement")
         preview_wav = paths.audio / "preview_check.wav"
         write_generate_check_wav(preview_wav, duration_seconds=0.2)
         preview_items = find_audio_preview_items(paths.root)

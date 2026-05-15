@@ -161,6 +161,11 @@ MusicGen未導入でも、FFmpegだけでPreview音を生成します。生成�
 Phase 15では、「ちゃんと聞こえるambient preview」を優先しています。
 高級な音作りより、まず音が生まれたと感じられることを重視します。
 
+## Moving Ambient Preview
+
+Phase 16では、FFmpegだけで生成する preview 音に、ゆっくりした音程変化と空気感を加えています。
+これは完成曲ではなく、「空気が少し動く」ための簡易ambientです。
+
 ## Favorite
 
 Previewで確認した音源を、あとで使うための Favorite 棚へ保存できます。
