@@ -1,0 +1,9 @@
+{
+  "id": "sample-001",
+  "target": "Codex",
+  "project": "DAKE_series",
+  "summary": "README更新 / Git push確認",
+  "risk": "中",
+  "detail": "これはDAKE_Approve_Brainzの初期動作確認用サンプルです。",
+  "created_at": ""
+}
