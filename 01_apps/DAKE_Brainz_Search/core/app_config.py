@@ -26,6 +26,7 @@ class AppConfig:
     remote_queue_folder: str = ""
     enable_remote_queue: bool = False
     auto_run_remote_search: bool = False
+    codex_reports_folder: str = ""
     enable_notifications: bool = True
     last_query: str = ""
     last_indexed_at: str = ""
@@ -120,6 +121,7 @@ class ConfigStore:
             remote_queue_folder=str(data.get("remote_queue_folder", "") or ""),
             enable_remote_queue=bool(data.get("enable_remote_queue", False)),
             auto_run_remote_search=bool(data.get("auto_run_remote_search", False)),
+            codex_reports_folder=str(data.get("codex_reports_folder", "") or ""),
             enable_notifications=bool(data.get("enable_notifications", True)),
             last_query=str(data.get("last_query", "") or ""),
             last_indexed_at=str(data.get("last_indexed_at", "") or ""),

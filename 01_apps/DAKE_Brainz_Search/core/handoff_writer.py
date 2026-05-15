@@ -10,6 +10,7 @@ from core.db import SearchResult
 
 CHATGPT_SOURCE_TYPE = "chatgpt_export"
 CODEX_SOURCE_TYPE = "codex_result"
+CODEX_SOURCE_TYPES = {CODEX_SOURCE_TYPE, "codex_report_auto"}
 
 
 def timestamp_for_file() -> str:
@@ -125,8 +126,8 @@ def build_codex_handoff(query: str, results: Sequence[SearchResult]) -> str:
 
 def split_results(results: Sequence[SearchResult]) -> tuple[list[SearchResult], list[SearchResult], list[SearchResult]]:
     chatgpt_results = [result for result in results if result.source_type == CHATGPT_SOURCE_TYPE]
-    codex_results = [result for result in results if result.source_type == CODEX_SOURCE_TYPE]
-    file_results = [result for result in results if result.source_type not in {CHATGPT_SOURCE_TYPE, CODEX_SOURCE_TYPE}]
+    codex_results = [result for result in results if result.source_type in CODEX_SOURCE_TYPES]
+    file_results = [result for result in results if result.source_type not in {CHATGPT_SOURCE_TYPE, *CODEX_SOURCE_TYPES}]
     return chatgpt_results, codex_results, file_results
 
 
@@ -143,7 +144,7 @@ def result_line(result: SearchResult) -> str:
             f"  - conversation_id: {result.conversation_id}\n"
             f"  - message_index: {result.message_index}"
         )
-    if result.source_type == CODEX_SOURCE_TYPE:
+    if result.source_type in CODEX_SOURCE_TYPES:
         return (
             f"- {result.title} ({result.source_type})\n"
             f"  - commit_hash: {result.commit_hash}\n"
@@ -221,7 +222,7 @@ def summarize_results(results: Sequence[SearchResult]) -> str:
         if result.source_type == CHATGPT_SOURCE_TYPE:
             label = result.conversation_title or result.title
             suffix = f" / {result.role}" if result.role else ""
-        elif result.source_type == CODEX_SOURCE_TYPE:
+        elif result.source_type in CODEX_SOURCE_TYPES:
             label = result.title
             suffix = f" / {result.commit_hash[:7]}" if result.commit_hash else ""
         else:
@@ -268,7 +269,7 @@ def related_targets(results: Sequence[SearchResult]) -> str:
     for result in results[:8]:
         if result.source_type in {"md", "txt", "json"}:
             candidates.append(f"- {result.path}")
-        elif result.source_type == CODEX_SOURCE_TYPE:
+        elif result.source_type in CODEX_SOURCE_TYPES:
             candidates.extend(json_list(result.changed_files_json)[:8])
     unique = []
     for candidate in candidates:

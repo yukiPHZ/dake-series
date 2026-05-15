@@ -258,6 +258,30 @@ BRAINZは単語を探すだけの検索ツールではなく、過去の記録�
 - スマホ連携は同期フォルダ経由を想定
 - ChatGPT / Codexへ自動送信しない
 
+## Phase 15: Codex Report Auto Import
+
+補助脳BRAINZは、`codex_reports/` に置かれた `.md` / `.txt` のCodex報告を自動検出し、`source_type=codex_report_auto` として記憶できます。
+
+- Codex Report Auto Import
+- `codex_reports/` に置くだけで自動記憶
+- Markdown正本をそのまま保持
+- 要約しない
+- 自動圧縮しない
+- commit hash / changed files / build結果 / push結果を可能な範囲で抽出
+- 処理済みは `processed/`、失敗は `failed/` へ移動
+- Semantic Search / Related Memory / Memory Flow と連携
+- 通知ON時はCodex報告取り込みを通知
+- OpenAI API未使用
+
+記憶フォルダ例：
+
+```text
+brainz_memory/
+├ codex_reports/
+│  ├ processed/
+│  └ failed/
+```
+
 ## DAKE_META
 
 ```json
@@ -268,7 +292,7 @@ BRAINZは単語を探すだけの検索ツールではなく、過去の記録�
   "launcher_description": "ローカルの会話・仕様・メモを忘れず探すための記憶検索アプリです。",
   "site_title": "補助脳BRAINZ",
   "site_description": "ChatGPT、Codex、Claude、Geminiのやり取りをローカル記憶として再接続する検索補助脳です。",
-  "update_summary": "Remote Queue に対応しました。",
+  "update_summary": "Codex Report Auto Import に対応しました。",
   "folder_name": "DAKE_Brainz_Search",
   "exe_name": "DakeBrainz_Search.exe",
   "release_url": "",
@@ -282,23 +306,22 @@ BRAINZは単語を探すだけの検索ツールではなく、過去の記録�
 ## RELEASE_BODY
 
 ```markdown
-# 補助脳BRAINZ v0.8.0
+# 補助脳BRAINZ v0.9.0
 
 ローカルの会話・仕様・Codex実装結果を忘れず探すための記憶検索アプリです。
 
 ## 追加
 
-- Remote Queue
-- md / txt / json task検出
-- search / import / handoff / note task対応
-- processed / failed 振り分け
-- Remote Queue通知
-- Queue履歴保存
+- Codex Report Auto Import
+- codex_reports/ watch
+- codex_report_auto source_type
+- 正本Markdown保持
+- 自動Semantic連携
+- processed / failed 分離
 
 ## 継続
 
-- Watch Folder
-- Auto Index
+- Remote Queue
 - Notification system
 - Semantic Search
 - Related Memory

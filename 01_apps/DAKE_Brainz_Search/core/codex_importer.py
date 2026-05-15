@@ -13,6 +13,7 @@ from core.text_splitter import split_text
 
 
 SOURCE_TYPE_CODEX = "codex_result"
+SOURCE_TYPE_CODEX_REPORT_AUTO = "codex_report_auto"
 
 
 @dataclass(frozen=True)
@@ -43,12 +44,42 @@ class CodexImportResult:
     log_path: str
 
 
-def import_codex_text(raw_text: str, database: BrainzDatabase, source_label: str = "") -> CodexImportResult:
+def import_codex_text(
+    raw_text: str,
+    database: BrainzDatabase,
+    source_label: str = "",
+    source_type: str = SOURCE_TYPE_CODEX,
+    document_path: str = "",
+    preserve_raw_document: bool = False,
+) -> CodexImportResult:
+    original_text = raw_text or ""
     parsed = parse_codex_result(raw_text)
-    if not parsed.raw_text.strip():
+    if not original_text.strip():
         raise ValueError("empty codex result")
+    if preserve_raw_document:
+        parsed = CodexParsedResult(
+            title=parsed.title,
+            summary="",
+            changed_files=parsed.changed_files,
+            created_files=parsed.created_files,
+            test_results=parsed.test_results,
+            build_results=parsed.build_results,
+            commit_hash=parsed.commit_hash,
+            push_result=parsed.push_result,
+            git_status=parsed.git_status,
+            phase_notes=parsed.phase_notes,
+            raw_text=original_text,
+            content_hash=hashlib.sha256(original_text.encode("utf-8", errors="replace")).hexdigest(),
+            imported_at=parsed.imported_at,
+        )
 
-    document = build_document_record(parsed, source_label=source_label)
+    document = build_document_record(
+        parsed,
+        source_label=source_label,
+        source_type=source_type,
+        document_path=document_path,
+        preserve_raw_document=preserve_raw_document,
+    )
     chunks = split_text(document.content)
     document_id, changed = database.upsert_document(document, chunks)
     if changed:
@@ -239,30 +270,39 @@ def extract_summary(lines: list[str]) -> str:
     return "\n".join(meaningful)
 
 
-def build_document_record(parsed: CodexParsedResult, source_label: str = "") -> DocumentRecord:
+def build_document_record(
+    parsed: CodexParsedResult,
+    source_label: str = "",
+    source_type: str = SOURCE_TYPE_CODEX,
+    document_path: str = "",
+    preserve_raw_document: bool = False,
+) -> DocumentRecord:
     key = parsed.commit_hash or parsed.content_hash
-    content = "\n".join(
-        [
-            f"Title: {parsed.title}",
-            f"Summary: {parsed.summary}",
-            f"Source Type: {SOURCE_TYPE_CODEX}",
-            f"Commit Hash: {parsed.commit_hash}",
-            f"Changed Files: {json.dumps(parsed.changed_files, ensure_ascii=False)}",
-            f"Created Files: {json.dumps(parsed.created_files, ensure_ascii=False)}",
-            f"Test Results: {parsed.test_results}",
-            f"Build Results: {parsed.build_results}",
-            f"Push Result: {parsed.push_result}",
-            f"Git Status: {parsed.git_status}",
-            f"Phase Notes: {parsed.phase_notes}",
-            "",
-            parsed.raw_text,
-        ]
-    )
+    if preserve_raw_document:
+        content = parsed.raw_text
+    else:
+        content = "\n".join(
+            [
+                f"Title: {parsed.title}",
+                f"Summary: {parsed.summary}",
+                f"Source Type: {source_type}",
+                f"Commit Hash: {parsed.commit_hash}",
+                f"Changed Files: {json.dumps(parsed.changed_files, ensure_ascii=False)}",
+                f"Created Files: {json.dumps(parsed.created_files, ensure_ascii=False)}",
+                f"Test Results: {parsed.test_results}",
+                f"Build Results: {parsed.build_results}",
+                f"Push Result: {parsed.push_result}",
+                f"Git Status: {parsed.git_status}",
+                f"Phase Notes: {parsed.phase_notes}",
+                "",
+                parsed.raw_text,
+            ]
+        )
     label = source_label or "Codex result paste"
     return DocumentRecord(
-        path=f"codex_result://{key}",
+        path=document_path or f"{source_type}://{key}",
         title=parsed.title,
-        source_type=SOURCE_TYPE_CODEX,
+        source_type=source_type,
         source_label=label,
         conversation_id=parsed.commit_hash,
         conversation_title=parsed.title,

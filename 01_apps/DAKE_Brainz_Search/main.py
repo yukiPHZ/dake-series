@@ -41,6 +41,7 @@ UI_TEXT = {
     "section_remote_queue": "Remote Queue",
     "checkbox_enable_remote_queue": "Enable Remote Queue",
     "button_choose_remote_queue": "Choose Queue",
+    "section_codex_reports": "Codex Reports",
     "results_title": "Search Results",
     "preview_title": "Preview",
     "tags_title": "Related Tags",
@@ -94,6 +95,16 @@ UI_TEXT = {
     "log_codex_import_complete": "Changed files: {changed_files}. Skipped duplicate: {skipped}.",
     "log_codex_memory_imported": "補助脳：Codexの実装結果を記憶しました。",
     "log_codex_import_file": "IMPORT LOG: {path}",
+    "status_codex_report_watching": "CODEX REPORTS: WATCHING",
+    "status_codex_report_imported": "CODEX REPORT IMPORTED",
+    "status_codex_report_failed": "CODEX REPORT FAILED",
+    "status_codex_report_idle": "CODEX REPORTS: WAITING",
+    "log_codex_report_detected": "CODEX REPORT AUTO IMPORT: {path}",
+    "log_codex_report_imported": "Codex report imported: commit={commit_hash} changed_files={changed_files} skipped={skipped}",
+    "log_codex_report_failed": "Codex report failed: {path} :: {error}",
+    "phrase_codex_report_saved": "補助脳：Codex報告を記憶しました。",
+    "label_last_commit": "LAST COMMIT: {commit_hash}",
+    "label_last_report": "LAST REPORT: {path}",
     "log_semantic_search_initialized": "Semantic search initialized.",
     "log_embedding_generated": "Embedding generated.",
     "log_related_memory_found": "Related memory found: {count}",
@@ -153,6 +164,8 @@ UI_TEXT = {
     "notify_semantic_updated": "Semantic Searchを更新しました。",
     "notify_chatgpt_import_complete": "ChatGPTの記憶を取り込みました。",
     "notify_codex_import_complete": "Codex結果を記憶しました。",
+    "notify_codex_report_imported": "Codex報告を記憶しました。",
+    "notify_codex_report_failed": "Codex報告の取り込みに失敗しました。",
     "notify_handoff_complete": "{kind} handoffを生成しました。",
     "notify_remote_queue_detected": "Remote Queueを受け取りました。",
     "notify_remote_queue_processed": "Remote Queueを処理しました。",
@@ -210,6 +223,7 @@ def run_smoke_test() -> int:
     from core.app_config import AppConfig, ConfigStore, ensure_app_dirs
     from core.chatgpt_importer import import_chatgpt_export
     from core.codex_importer import import_codex_file, import_codex_text
+    from core.codex_report_auto import count_pending_reports, process_codex_reports_folder
     from core.db import BrainzDatabase
     from core.gpu_checker import check_gpu
     from core.handoff_writer import write_chatgpt_handoff, write_codex_handoff
@@ -239,6 +253,7 @@ def run_smoke_test() -> int:
                 remote_queue_folder=str(root / "remote_queue"),
                 enable_remote_queue=True,
                 auto_run_remote_search=False,
+                codex_reports_folder=str(root / "codex_reports"),
                 enable_notifications=False,
             )
         )
@@ -247,6 +262,8 @@ def run_smoke_test() -> int:
             raise RuntimeError("notification config did not roundtrip")
         if not config_data.enable_remote_queue or config_data.auto_run_remote_search:
             raise RuntimeError("remote queue config did not roundtrip")
+        if config_data.codex_reports_folder != str(root / "codex_reports"):
+            raise RuntimeError("codex reports config did not roundtrip")
 
         notification_queue = NotificationQueue(history_limit=3)
         for index in range(4):
@@ -402,6 +419,31 @@ def run_smoke_test() -> int:
         if not codex_file_result.changed:
             raise RuntimeError("codex file import did not index")
 
+        unique_commit_c = (f"{time.time_ns() + 2:x}" * 4)[:40]
+        unique_commit_d = (f"{time.time_ns() + 3:x}" * 4)[:40]
+        codex_reports = root / "codex_reports"
+        codex_reports.mkdir()
+        auto_report_md = codex_text.replace(unique_commit_a, unique_commit_c).replace(
+            "Add Codex result import to Brainz",
+            "Add codex report auto import to Brainz",
+        )
+        auto_report_txt = codex_file_text.replace(unique_commit_b, unique_commit_d)
+        (codex_reports / "auto_report.md").write_text(auto_report_md, encoding="utf-8")
+        (codex_reports / "auto_report.txt").write_text(auto_report_txt, encoding="utf-8")
+        (codex_reports / "empty.md").write_text("", encoding="utf-8")
+        if count_pending_reports(codex_reports) != 3:
+            raise RuntimeError("codex report pending count failed")
+        codex_report_result = process_codex_reports_folder(database, codex_reports)
+        if codex_report_result.imported < 2 or codex_report_result.failed < 1:
+            raise RuntimeError("codex report auto import failed")
+        if not (codex_reports / "processed").exists() or not (codex_reports / "failed").exists():
+            raise RuntimeError("codex report processed/failed folders missing")
+        (codex_reports / "auto_report.md").write_text(auto_report_md, encoding="utf-8")
+        codex_report_duplicate = process_codex_reports_folder(database, codex_reports)
+        duplicate_item = next((item for item in codex_report_duplicate.items if item.status == "processed"), None)
+        if duplicate_item is None or not duplicate_item.skipped_duplicate:
+            raise RuntimeError("codex report duplicate was not skipped")
+
     engine = SearchEngine(database)
     remote_note_results = engine.search("Remote Queue note memory", limit=10)
     if not any(result.source_type == "remote_queue_note" for result in remote_note_results):
@@ -413,10 +455,10 @@ def run_smoke_test() -> int:
     file_results = engine.search(UI_TEXT["smoke_query_memory"], limit=10)
     if not file_results:
         raise RuntimeError("file search returned no results")
-    file_match = next((result for result in file_results if result.source_type not in {"chatgpt_export", "codex_result"}), None)
+    file_match = next((result for result in file_results if result.source_type not in {"chatgpt_export", "codex_result", "codex_report_auto"}), None)
     if file_match is None:
         file_match_results = engine.search(UI_TEXT["smoke_query_git"], limit=10)
-        file_match = next((result for result in file_match_results if result.source_type not in {"chatgpt_export", "codex_result"}), None)
+        file_match = next((result for result in file_match_results if result.source_type not in {"chatgpt_export", "codex_result", "codex_report_auto"}), None)
     if file_match is None:
         raise RuntimeError("file search returned no file source result")
 
@@ -449,6 +491,19 @@ def run_smoke_test() -> int:
     if UI_TEXT["smoke_codex_codex_heading"] not in codex_codex_path.read_text(encoding="utf-8"):
         raise RuntimeError("codex handoff did not include implementation history")
 
+    codex_report_query = f"codex report auto import {unique_commit_c[:7]}"
+    codex_report_results = engine.search(codex_report_query, limit=10)
+    codex_report_match = next((result for result in codex_report_results if result.source_type == "codex_report_auto"), None)
+    if codex_report_match is None:
+        raise RuntimeError("codex_report_auto search returned no result")
+    if not codex_report_match.commit_hash or not codex_report_match.changed_files_json:
+        raise RuntimeError("codex_report_auto metadata was not stored")
+    if "Source Type:" in codex_report_match.content or "Summary:" in codex_report_match.content:
+        raise RuntimeError("codex_report_auto raw markdown was altered")
+    codex_report_handoff = write_codex_handoff(codex_report_query, codex_report_results)
+    if UI_TEXT["smoke_codex_codex_heading"] not in codex_report_handoff.read_text(encoding="utf-8"):
+        raise RuntimeError("codex_report_auto handoff was not treated as codex history")
+
     semantic_off = engine.search_with_related(UI_TEXT["smoke_query_memory"], limit=10, semantic_enabled=False)
     if not semantic_off.results or semantic_off.semantic_available:
         raise RuntimeError("semantic off fallback failed")
@@ -472,9 +527,12 @@ def run_smoke_test() -> int:
     flow_codex = engine.memory_flow(codex_match, semantic_enabled=False, ascending=True)
     if not any(item.result.source_type == "codex_result" for item in flow_codex.items):
         raise RuntimeError("codex memory flow did not include codex_result")
+    flow_codex_report = engine.memory_flow(codex_report_match, semantic_enabled=False, ascending=True)
+    if not any(item.result.source_type == "codex_report_auto" for item in flow_codex_report.items):
+        raise RuntimeError("codex report memory flow did not include codex_report_auto")
 
     flow_file = engine.memory_flow(file_match, semantic_enabled=False, ascending=True)
-    if not any(item.result.source_type not in {"chatgpt_export", "codex_result"} for item in flow_file.items):
+    if not any(item.result.source_type not in {"chatgpt_export", "codex_result", "codex_report_auto"} for item in flow_file.items):
         raise RuntimeError("file memory flow did not include file result")
 
     flow_semantic = engine.memory_flow(chatgpt_match, semantic_enabled=True, ascending=True)
@@ -492,10 +550,12 @@ def run_smoke_test() -> int:
     print(f"file_results={len(file_results)}")
     print(f"chatgpt_results={len(chatgpt_results)}")
     print(f"codex_results={len(codex_results)}")
+    print(f"codex_report_results={len(codex_report_results)}")
     print(f"chatgpt_handoff={chatgpt_path}")
     print(f"codex_handoff={codex_path}")
     print(f"codex_chatgpt_handoff={codex_chatgpt_path}")
     print(f"codex_codex_handoff={codex_codex_path}")
+    print(f"codex_report_handoff={codex_report_handoff}")
     print(f"ollama_available={ollama_status.available}")
     print(f"embedding_available={embedding_status.available}")
     print(f"embeddings_ready={embedding_stats['ready']}")
@@ -503,6 +563,7 @@ def run_smoke_test() -> int:
     print(f"related_memory={len(semantic_response.related)}")
     print(f"memory_flow_chatgpt={len(flow_chatgpt.items)}")
     print(f"memory_flow_codex={len(flow_codex.items)}")
+    print(f"memory_flow_codex_report={len(flow_codex_report.items)}")
     print(f"memory_flow_file={len(flow_file.items)}")
     print(f"memory_flow_semantic={flow_semantic.semantic_available}")
     print(f"watch_new_detected={len(watch_detection.changed_files)}")
@@ -512,6 +573,8 @@ def run_smoke_test() -> int:
     print(f"remote_queue_processed={remote_result.processed}")
     print(f"remote_queue_failed={remote_result.failed}")
     print(f"remote_queue_note_results={len(remote_note_results)}")
+    print(f"codex_report_imported={codex_report_result.imported}")
+    print(f"codex_report_failed={codex_report_result.failed}")
     print(f"gpu_detected={gpu_status.gpu_detected}")
     return 0
 
@@ -566,6 +629,7 @@ def run_gui(launch_check: bool = False) -> int:
     )
     from core.chatgpt_importer import ConversationsJsonNotFound, ChatGPTImportResult, import_chatgpt_export
     from core.codex_importer import CodexImportResult, import_codex_file, import_codex_text
+    from core.codex_report_auto import CodexReportAutoResult, count_pending_reports, process_codex_reports_folder
     from core.db import BrainzDatabase, SearchResult
     from core.gpu_checker import check_gpu
     from core.handoff_writer import write_chatgpt_handoff, write_codex_handoff
@@ -606,6 +670,8 @@ def run_gui(launch_check: bool = False) -> int:
             self.config_data = self.config_store.load()
             if not self.config_data.watch_folder and self.config_data.memory_folder:
                 self.config_data.watch_folder = self.config_data.memory_folder
+            if not self.config_data.codex_reports_folder and self.config_data.memory_folder:
+                self.config_data.codex_reports_folder = str(Path(self.config_data.memory_folder) / "codex_reports")
             self.database = BrainzDatabase()
             self.database.ensure_schema()
             self.search_engine = SearchEngine(self.database)
@@ -618,6 +684,7 @@ def run_gui(launch_check: bool = False) -> int:
             self.flow_thread: threading.Thread | None = None
             self.watch_scan_thread: threading.Thread | None = None
             self.remote_queue_thread: threading.Thread | None = None
+            self.codex_report_thread: threading.Thread | None = None
             self.current_results: list[SearchResult] = []
             self.current_related_results: list[SearchResult] = []
             self.current_flow_items: list[MemoryFlowItem] = []
@@ -636,6 +703,7 @@ def run_gui(launch_check: bool = False) -> int:
             self.pending_auto_index_folder: Path | None = None
             self.watch_poll_interval_ms = 8000
             self.remote_queue_poll_interval_ms = 8000
+            self.codex_report_poll_interval_ms = 8000
             self.notification_queue = NotificationQueue(history_limit=3)
             self.notification_visible = False
 
@@ -650,10 +718,12 @@ def run_gui(launch_check: bool = False) -> int:
             self._refresh_stats()
             self._refresh_system_status()
             self._update_remote_queue_status()
+            self._update_codex_report_status()
             self.after(100, self._poll_events)
             if not launch_check:
                 self.after(1500, self._poll_watch_folder)
                 self.after(2200, self._poll_remote_queue)
+                self.after(2800, self._poll_codex_reports)
             if launch_check:
                 self.after(1200, self._launch_check_finish)
 
@@ -875,20 +945,36 @@ def run_gui(launch_check: bool = False) -> int:
                     anchor="w",
                 ).grid(row=remote_index, column=0, sticky="ew", padx=16, pady=2)
 
-            self._section_title(left, UI_TEXT["index_title"], 17)
+            self._section_title(left, UI_TEXT["section_codex_reports"], 17)
+            self.codex_report_status_var = ctk.StringVar(value=UI_TEXT["status_codex_report_idle"])
+            self.last_report_var = ctk.StringVar(value=UI_TEXT["label_last_report"].format(path="-"))
+            self.last_commit_var = ctk.StringVar(value=UI_TEXT["label_last_commit"].format(commit_hash="-"))
+            for report_index, variable in enumerate(
+                (self.codex_report_status_var, self.last_report_var, self.last_commit_var),
+                start=18,
+            ):
+                ctk.CTkLabel(
+                    left,
+                    textvariable=variable,
+                    text_color=COLORS["muted"],
+                    font=(self.status_font_family, FONT_SIZES["micro"]),
+                    anchor="w",
+                ).grid(row=report_index, column=0, sticky="ew", padx=16, pady=2)
+
+            self._section_title(left, UI_TEXT["index_title"], 21)
             self.index_status_var = ctk.StringVar(value=UI_TEXT["index_idle"])
             ctk.CTkLabel(
                 left,
                 textvariable=self.index_status_var,
                 text_color=COLORS["section"],
                 font=(self.status_font_family, FONT_SIZES["body"]),
-            ).grid(row=18, column=0, sticky="w", padx=16, pady=(0, 8))
+            ).grid(row=22, column=0, sticky="w", padx=16, pady=(0, 8))
             self.progress = ctk.CTkProgressBar(left, height=10, progress_color=COLORS["accent"])
             self.progress.set(0)
-            self.progress.grid(row=19, column=0, sticky="ew", padx=16, pady=(0, 12))
+            self.progress.grid(row=23, column=0, sticky="ew", padx=16, pady=(0, 12))
 
             button_row = ctk.CTkFrame(left, fg_color="transparent")
-            button_row.grid(row=20, column=0, sticky="ew", padx=16, pady=(0, 18))
+            button_row.grid(row=24, column=0, sticky="ew", padx=16, pady=(0, 18))
             button_row.grid_columnconfigure((0, 1), weight=1)
             self.index_button = ctk.CTkButton(
                 button_row,
@@ -912,7 +998,7 @@ def run_gui(launch_check: bool = False) -> int:
             )
             self.cancel_button.grid(row=0, column=1, sticky="ew", padx=(6, 0))
 
-            self._section_title(left, UI_TEXT["system_title"], 21)
+            self._section_title(left, UI_TEXT["system_title"], 25)
             self.sqlite_var = ctk.StringVar(value=UI_TEXT["status_sqlite_ready"])
             self.cuda_var = ctk.StringVar(value=UI_TEXT["status_cuda_unavailable"])
             self.gpu_var = ctk.StringVar(value=UI_TEXT["status_gpu_missing"])
@@ -930,7 +1016,7 @@ def run_gui(launch_check: bool = False) -> int:
                     self.semantic_status_var,
                     self.docs_var,
                 ),
-                start=22,
+                start=26,
             ):
                 ctk.CTkLabel(
                     left,
@@ -940,7 +1026,7 @@ def run_gui(launch_check: bool = False) -> int:
                     anchor="w",
                 ).grid(row=index, column=0, sticky="ew", padx=16, pady=2)
 
-            self._section_title(left, UI_TEXT["section_notifications"], 29)
+            self._section_title(left, UI_TEXT["section_notifications"], 33)
             self.notifications_checkbox = ctk.CTkCheckBox(
                 left,
                 text=UI_TEXT["checkbox_enable_notifications"],
@@ -952,7 +1038,7 @@ def run_gui(launch_check: bool = False) -> int:
                 font=(self.status_font_family, FONT_SIZES["small"]),
                 command=self._toggle_notifications,
             )
-            self.notifications_checkbox.grid(row=30, column=0, sticky="w", padx=16, pady=(0, 10))
+            self.notifications_checkbox.grid(row=34, column=0, sticky="w", padx=16, pady=(0, 10))
 
             center = self._panel(self, 0)
             center.grid(row=1, column=1, sticky="nsew", padx=8, pady=(0, 12))
@@ -1191,6 +1277,9 @@ def run_gui(launch_check: bool = False) -> int:
             self.memory_var.set(clean if clean else UI_TEXT["empty_memory"])
             if clean and not self.config_data.watch_folder:
                 self._set_watch_folder(clean, persist=False)
+            if clean and not self.config_data.codex_reports_folder:
+                self.config_data.codex_reports_folder = str(Path(clean) / "codex_reports")
+                self._update_codex_report_status()
             if persist:
                 self.config_store.save(self.config_data)
                 if clean:
@@ -1317,6 +1406,25 @@ def run_gui(launch_check: bool = False) -> int:
                     failed=stats["failed"],
                 )
             )
+
+        def _codex_reports_folder(self) -> Path | None:
+            folder = self.config_data.codex_reports_folder
+            if not folder and self.config_data.memory_folder:
+                folder = str(Path(self.config_data.memory_folder) / "codex_reports")
+                self.config_data.codex_reports_folder = folder
+            return Path(folder) if folder else None
+
+        def _update_codex_report_status(self) -> None:
+            if not hasattr(self, "codex_report_status_var"):
+                return
+            folder = self._codex_reports_folder()
+            if folder:
+                self.codex_report_status_var.set(UI_TEXT["status_codex_report_watching"])
+                pending = count_pending_reports(folder) if folder.exists() else 0
+                if pending:
+                    self.codex_report_status_var.set(f"{UI_TEXT['status_codex_report_watching']} / {pending}")
+            else:
+                self.codex_report_status_var.set(UI_TEXT["status_codex_report_idle"])
 
         def _choose_chatgpt_export(self) -> None:
             file_path = filedialog.askopenfilename(
@@ -1543,6 +1651,27 @@ def run_gui(launch_check: bool = False) -> int:
             except Exception as exc:
                 self.events.put(("remote_queue_error", str(exc)))
 
+        def _poll_codex_reports(self) -> None:
+            try:
+                report_folder = self._codex_reports_folder()
+                if report_folder:
+                    if not self.codex_report_thread or not self.codex_report_thread.is_alive():
+                        self.codex_report_thread = threading.Thread(
+                            target=self._codex_report_worker,
+                            args=(report_folder,),
+                            daemon=True,
+                        )
+                        self.codex_report_thread.start()
+            finally:
+                self.after(self.codex_report_poll_interval_ms, self._poll_codex_reports)
+
+        def _codex_report_worker(self, report_folder: Path) -> None:
+            try:
+                result = process_codex_reports_folder(self.database, report_folder)
+                self.events.put(("codex_report_done", result))
+            except Exception as exc:
+                self.events.put(("codex_report_error", str(exc)))
+
         def _start_auto_index(self, memory_folder: Path) -> None:
             if self.index_thread and self.index_thread.is_alive():
                 self.pending_auto_index_folder = memory_folder
@@ -1647,9 +1776,9 @@ def run_gui(launch_check: bool = False) -> int:
         def _result_title(self, result: SearchResult) -> str:
             if result.source_type == "chatgpt_export":
                 return f"[chatgpt_export] {result.conversation_title or result.title}"
-            if result.source_type == "codex_result":
+            if result.source_type in {"codex_result", "codex_report_auto"}:
                 suffix = f" / {result.commit_hash[:7]}" if result.commit_hash else ""
-                return f"[codex_result] {result.title}{suffix}"
+                return f"[{result.source_type}] {result.title}{suffix}"
             return f"[file] {result.title}"
 
         def _result_meta(self, result: SearchResult) -> str:
@@ -1657,7 +1786,7 @@ def run_gui(launch_check: bool = False) -> int:
                 label = result.source_label or f"ChatGPT / {result.conversation_title or result.title} / {result.role}"
                 base = UI_TEXT["result_meta_chatgpt"].format(source_label=label, score=result.score)
                 return self._append_semantic_meta(base, result)
-            if result.source_type == "codex_result":
+            if result.source_type in {"codex_result", "codex_report_auto"}:
                 commit_hash = result.commit_hash[:12] if result.commit_hash else "-"
                 base = UI_TEXT["result_meta_codex"].format(commit_hash=commit_hash, score=result.score)
                 return self._append_semantic_meta(base, result)
@@ -1895,6 +2024,10 @@ def run_gui(launch_check: bool = False) -> int:
                     self._handle_remote_queue_done(payload)
                 elif event == "remote_queue_error":
                     self._handle_remote_queue_error(str(payload))
+                elif event == "codex_report_done":
+                    self._handle_codex_report_done(payload)
+                elif event == "codex_report_error":
+                    self._handle_codex_report_error(str(payload))
 
             self.after(100, self._poll_events)
 
@@ -1940,6 +2073,52 @@ def run_gui(launch_check: bool = False) -> int:
             self._append_log(UI_TEXT["log_remote_queue_failed"].format(path="-", error=error_text))
             self._notify(UI_TEXT["notify_remote_queue_failed"])
             self._update_remote_queue_status()
+
+        def _handle_codex_report_done(self, result: CodexReportAutoResult) -> None:
+            if result.detected <= 0:
+                self._update_codex_report_status()
+                return
+            if result.failed:
+                self.codex_report_status_var.set(UI_TEXT["status_codex_report_failed"])
+            else:
+                self.codex_report_status_var.set(UI_TEXT["status_codex_report_imported"])
+            for item in result.items:
+                self._append_log(UI_TEXT["log_codex_report_detected"].format(path=item.source_file))
+                if item.status == "failed":
+                    self._append_log(UI_TEXT["log_codex_report_failed"].format(path=item.source_file, error=item.error))
+                else:
+                    commit_hash = item.commit_hash[:12] if item.commit_hash else "-"
+                    self.last_report_var.set(UI_TEXT["label_last_report"].format(path=Path(item.destination_file).name))
+                    self.last_commit_var.set(UI_TEXT["label_last_commit"].format(commit_hash=commit_hash))
+                    self._append_log(
+                        UI_TEXT["log_codex_report_imported"].format(
+                            commit_hash=item.commit_hash,
+                            changed_files=item.changed_files_count,
+                            skipped=item.skipped_duplicate,
+                        )
+                    )
+            self._append_log(UI_TEXT["phrase_codex_report_saved"])
+            if result.log_path:
+                self._append_log(UI_TEXT["log_codex_import_file"].format(path=result.log_path))
+            self._refresh_stats()
+            self._update_codex_report_status()
+            if result.failed:
+                self.codex_report_status_var.set(UI_TEXT["status_codex_report_failed"])
+            else:
+                self.codex_report_status_var.set(UI_TEXT["status_codex_report_imported"])
+            if result.imported:
+                self._notify(UI_TEXT["notify_codex_report_imported"])
+                if self.semantic_available:
+                    self._notify(UI_TEXT["notify_semantic_updated"])
+            if result.failed:
+                self._notify(UI_TEXT["notify_codex_report_failed"])
+
+        def _handle_codex_report_error(self, error_text: str) -> None:
+            self.codex_report_status_var.set(UI_TEXT["status_codex_report_failed"])
+            self._append_log(UI_TEXT["log_codex_report_failed"].format(path="-", error=error_text))
+            self._notify(UI_TEXT["notify_codex_report_failed"])
+            self._update_codex_report_status()
+            self.codex_report_status_var.set(UI_TEXT["status_codex_report_failed"])
 
         def _handle_watch_scan_done(self, result: WatchScanResult) -> None:
             self._update_watch_status()
