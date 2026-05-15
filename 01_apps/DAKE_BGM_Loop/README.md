@@ -20,7 +20,7 @@ DAKE思想：のんきなループを、静かに作る。
 
 ## Phase 1
 
-Phase 1は、mock生成 + ACE-Step連携準備です。
+Phase 1はMock生成です。ACE-Step実生成は未接続で、adapterだけを準備しています。
 
 今回は自前の本格的な音楽生成ロジックを作りません。外部AI音楽生成モデルを呼び出す前提の薄いDAKE UIとして作っています。
 
@@ -32,7 +32,7 @@ Phase 1は、mock生成 + ACE-Step連携準備です。
 
 `MockGeneratorAdapter` はACE-Step未導入でもアプリの起動・操作確認ができるように、簡単なpad風 / クリック風 / 低音風のWAVを生成します。無音ではありませんが、完成音楽として作り込むものではありません。
 
-`AceStepGeneratorAdapter` はACE-Stepが利用可能な環境だけで呼び出します。未設定の場合、UIには `ACE-Step is not configured. Mock mode only.` と表示され、mock生成で確認できます。
+`AceStepGeneratorAdapter` はACE-Stepが利用可能な環境だけで呼び出す想定の薄い接続口です。未設定の場合、UIには `ACE-Step is not configured. Mock mode only.` と表示され、mock生成で確認できます。
 
 ## 空気
 
@@ -76,7 +76,7 @@ metadata JSONには以下を保存します。
 
 ## 設定
 
-`settings.json` に以下を保存します。
+`settings.json` に以下を保存します。このファイルはユーザー環境依存のためGit管理対象外です。初期値の参照用として `settings.example.json` を置いています。
 
 - `generator_mode`: `mock` or `ace_step`
 - `output_dir`
@@ -99,7 +99,7 @@ python main.py
 - Apple Loops等の第三者素材は同梱しません。
 - 生成物の商用利用可否は使用モデルのライセンスに依存します。
 - YouTube等で公開する前に、使用モデルのライセンス確認が必要です。
-- 商用利用可、または権利上の安全性をこのアプリ単体では断定しません。
+- 商用利用できるかどうか、または権利上の安全性をこのアプリ単体では断定しません。
 
 ## DAKE_META
 
@@ -125,7 +125,6 @@ python main.py
 ## RELEASE_BODY
 
 - 短いBGMループ生成補助ツール
-- Phase 1はmock生成 + ACE-Step連携準備
+- Phase 1はMock生成。ACE-Step実生成は未接続
 - seed、metadata、お気に入りコピーに対応
 - 生成音声の商用利用可否は使用モデル・素材・公開先の規約に依存
-
