@@ -139,3 +139,11 @@
 - Next Action ボタンから既存処理を直接実行
 - STATUS STRIP と詳細機能は残しつつ、通常導線では次の一手を優先
 - 完了状態では `整っています。` を表示
+
+## Phase 3.5
+
+- LIVE STATUS ENGINE を追加
+- RUNNING / COMPLETED / FAILED などの状態を主画面に表示
+- 主要処理のフェーズ、進捗バー、ETA / Expected Finish を表示
+- 完了時に `Completed` / `整っています。` と出力ファイル名を表示
+- 処理中は対象ボタンとNext Actionをdisabledにして二重実行を避ける

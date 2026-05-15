@@ -126,6 +126,53 @@ UI_TEXT = {
     "focus_progress_next": "next",
     "focus_progress_wait": "wait",
     "focus_action_select_video": "Select Video",
+    "live_status": "LIVE STATUS",
+    "live_state_idle": "IDLE",
+    "live_state_running": "RUNNING",
+    "live_state_completed": "COMPLETED",
+    "live_state_failed": "FAILED",
+    "live_state_waiting": "WAITING",
+    "live_state_skipped": "SKIPPED",
+    "live_ready_next": "Ready for next action.",
+    "live_completed_message": "整っています。",
+    "live_failed_default": "See log.",
+    "live_output": "Output",
+    "live_detail_nvenc": "NVENC active.",
+    "live_detail_cpu": "CPU fallback ready.",
+    "live_phase_package_source": "Reading source video...",
+    "live_phase_package_folder": "Creating package folder...",
+    "live_phase_package_probe": "Probing media info...",
+    "live_phase_package_transcribe": "Transcribing audio...",
+    "live_phase_package_shorts": "Creating Shorts candidates...",
+    "live_phase_package_metadata": "Generating metadata...",
+    "live_phase_package_final": "Finalizing package...",
+    "live_phase_review_read": "Reading package...",
+    "live_phase_review_transcript": "Loading transcript...",
+    "live_phase_review_assistant": "Asking local assistant...",
+    "live_phase_review_write": "Writing assistant_review.md...",
+    "live_phase_selected_read": "Reading candidates...",
+    "live_phase_selected_write": "Writing selected draft...",
+    "live_phase_preview_read": "Reading selected_short.json...",
+    "live_phase_preview_render": "Rendering selected preview...",
+    "live_phase_vertical_source": "Preparing source video...",
+    "live_phase_vertical_read": "Reading selected_short.json...",
+    "live_phase_vertical_nvenc": "Checking NVENC...",
+    "live_phase_vertical_render": "Rendering 1080x1920...",
+    "live_phase_vertical_audio": "Writing AAC audio...",
+    "live_phase_vertical_final": "Finalizing export...",
+    "live_phase_horizontal_sequence": "Reading sequence.json...",
+    "live_phase_horizontal_render": "Rendering horizontal edit...",
+    "live_phase_memory_read": "Reading package memory inputs...",
+    "live_phase_memory_write": "Writing memory index...",
+    "live_phase_recommend_memory": "Reading memory...",
+    "live_phase_recommend_write": "Writing recommendation...",
+    "live_phase_bridge_metadata": "Generating upload metadata...",
+    "live_phase_completed": "Completed.",
+    "button_generating": "Generating...",
+    "button_rendering": "Rendering...",
+    "button_reviewing": "Reviewing...",
+    "button_exporting": "Exporting...",
+    "button_saving": "Saving...",
     "dashboard_waiting": "WAITING",
     "dashboard_connected": "CONNECTED",
     "dashboard_package_ready": "READY",
@@ -426,6 +473,11 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.focus_action_var = ctk.StringVar(value=UI_TEXT["select_video"])
         self.focus_progress_var = ctk.StringVar(value="")
         self.focus_action_key = "select_video"
+        self.live_status_state_var = ctk.StringVar(value=UI_TEXT["live_state_idle"])
+        self.live_status_message_var = ctk.StringVar(value=UI_TEXT["live_ready_next"])
+        self.live_status_detail_var = ctk.StringVar(value="")
+        self.live_status_state = UI_TEXT["live_state_idle"]
+        self.live_operation = ""
         self.progress_var = ctk.DoubleVar(value=0.0)
 
         self.step_vars: dict[str, ctk.StringVar] = {}
@@ -584,6 +636,51 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             text_color=COLORS["text"],
             justify="left",
         ).grid(row=2, column=2, rowspan=2, sticky="w", padx=(14, 16), pady=(0, 12))
+
+        self.live_status_card = ctk.CTkFrame(
+            focus,
+            fg_color=COLORS["field"],
+            border_width=1,
+            border_color=COLORS["line"],
+            corner_radius=6,
+        )
+        self.live_status_card.grid(row=4, column=0, columnspan=3, sticky="ew", padx=16, pady=(0, 14))
+        self.live_status_card.grid_columnconfigure(1, weight=1)
+        ctk.CTkLabel(
+            self.live_status_card,
+            text=UI_TEXT["live_status"],
+            font=ctk.CTkFont(family=FONT_FAMILY, size=10, weight="bold"),
+            text_color=COLORS["accent_soft"],
+        ).grid(row=0, column=0, sticky="w", padx=12, pady=(9, 0))
+        self.live_status_state_label = ctk.CTkLabel(
+            self.live_status_card,
+            textvariable=self.live_status_state_var,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=18, weight="bold"),
+            text_color=COLORS["accent_soft"],
+        )
+        self.live_status_state_label.grid(row=1, column=0, sticky="w", padx=12, pady=(0, 8))
+        ctk.CTkLabel(
+            self.live_status_card,
+            textvariable=self.live_status_message_var,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"),
+            text_color=COLORS["text"],
+            justify="left",
+        ).grid(row=0, column=1, sticky="w", padx=12, pady=(9, 0))
+        ctk.CTkLabel(
+            self.live_status_card,
+            textvariable=self.live_status_detail_var,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            text_color=COLORS["muted"],
+            justify="left",
+            wraplength=680,
+        ).grid(row=1, column=1, sticky="ew", padx=12, pady=(0, 8))
+        self.live_status_progress = ctk.CTkProgressBar(
+            self.live_status_card,
+            variable=self.progress_var,
+            progress_color=COLORS["accent"],
+            height=6,
+        )
+        self.live_status_progress.grid(row=2, column=0, columnspan=2, sticky="ew", padx=12, pady=(0, 10))
         return focus
 
     def _build_dashboard(self) -> ctk.CTkFrame:
@@ -1528,6 +1625,191 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 return True
         return False
 
+    def _major_work_running(self) -> bool:
+        return any(
+            [
+                self.first_test_running,
+                self.package_running,
+                self.review_running,
+                self.selected_export_running,
+                self.short_preview_running,
+                self.vertical_short_running,
+                self.sequence_running,
+                self.project_bridge_running,
+                self.memory_running,
+                self.recommendation_running,
+                self.worker_running,
+            ]
+        )
+
+    def _live_color(self, state: str) -> str:
+        colors = {
+            UI_TEXT["live_state_idle"]: COLORS["accent_soft"],
+            UI_TEXT["live_state_waiting"]: COLORS["warning"],
+            UI_TEXT["live_state_running"]: COLORS["accent"],
+            UI_TEXT["live_state_completed"]: COLORS["success"],
+            UI_TEXT["live_state_failed"]: COLORS["danger"],
+            UI_TEXT["live_state_skipped"]: COLORS["warning"],
+        }
+        return colors.get(state, COLORS["accent_soft"])
+
+    def _display_output_path(self, output: object) -> str:
+        text = str(output or "").strip()
+        if not text:
+            return ""
+        path = Path(text)
+        package_dir = self._dashboard_package_dir()
+        if package_dir is not None:
+            try:
+                return str(path.resolve(strict=False).relative_to(package_dir.resolve(strict=False)))
+            except Exception:
+                pass
+        return path.name or text
+
+    def _set_live_status(
+        self,
+        state: str,
+        message: str | None = None,
+        detail: str = "",
+        progress: float | None = None,
+        eta_seconds: float | None = None,
+        output: object = None,
+        operation: str | None = None,
+    ) -> None:
+        state = state.upper()
+        valid_states = {
+            UI_TEXT["live_state_idle"],
+            UI_TEXT["live_state_running"],
+            UI_TEXT["live_state_completed"],
+            UI_TEXT["live_state_failed"],
+            UI_TEXT["live_state_waiting"],
+            UI_TEXT["live_state_skipped"],
+        }
+        if state not in valid_states:
+            state = UI_TEXT["live_state_idle"]
+        if operation is not None:
+            self.live_operation = operation
+        if eta_seconds is not None:
+            self._set_eta(eta_seconds)
+        if progress is not None:
+            self.progress_var.set(max(0.0, min(1.0, float(progress))))
+
+        if message is None:
+            if state == UI_TEXT["live_state_completed"]:
+                message = UI_TEXT["live_completed_message"]
+            elif state == UI_TEXT["live_state_failed"]:
+                message = UI_TEXT["live_failed_default"]
+            else:
+                message = UI_TEXT["live_ready_next"]
+
+        detail_lines = [line for line in str(detail or "").splitlines() if line.strip()]
+        if state == UI_TEXT["live_state_running"]:
+            if self.eta_var.get():
+                detail_lines.append(self.eta_var.get())
+            if self.finish_var.get():
+                detail_lines.append(self.finish_var.get())
+        output_text = self._display_output_path(output)
+        if output_text:
+            detail_lines.extend([f"{UI_TEXT['live_output']}:", output_text])
+
+        self.live_status_state = state
+        self.live_status_state_var.set(state)
+        self.live_status_message_var.set(message)
+        self.live_status_detail_var.set("\n".join(detail_lines))
+        self.status_var.set(
+            UI_TEXT["running"]
+            if state == UI_TEXT["live_state_running"]
+            else UI_TEXT["error"]
+            if state == UI_TEXT["live_state_failed"]
+            else UI_TEXT["complete"]
+            if state == UI_TEXT["live_state_completed"]
+            else UI_TEXT["waiting"]
+            if state == UI_TEXT["live_state_waiting"]
+            else UI_TEXT["ready"]
+        )
+
+        color = self._live_color(state)
+        if hasattr(self, "live_status_state_label"):
+            self.live_status_state_label.configure(text_color=color)
+        if hasattr(self, "live_status_card"):
+            self.live_status_card.configure(border_color=color if state != UI_TEXT["live_state_idle"] else COLORS["line"])
+        if hasattr(self, "focus_action_button"):
+            self.focus_action_button.configure(state="disabled" if self._major_work_running() else "normal")
+
+    def _set_live_completed(self, output: object = None, detail: str | None = None) -> None:
+        detail_text = "\n".join(
+            part
+            for part in [
+                UI_TEXT["live_phase_completed"],
+                UI_TEXT["live_completed_message"] if detail is None else detail,
+            ]
+            if part
+        )
+        self._set_live_status(
+            UI_TEXT["live_state_completed"],
+            UI_TEXT["live_completed_message"],
+            detail_text,
+            progress=1.0,
+            output=output,
+        )
+
+    def _set_live_failed(self, message: object) -> None:
+        self._set_live_status(
+            UI_TEXT["live_state_failed"],
+            UI_TEXT["live_failed_default"],
+            str(message or UI_TEXT["live_failed_default"]),
+            progress=1.0,
+        )
+
+    def _post_live_status(
+        self,
+        state: str,
+        message_key: str,
+        detail: str = "",
+        progress: float | None = None,
+        output: object = None,
+        log_key: str | None = None,
+    ) -> None:
+        self.events.put(
+            {
+                "type": "live_status",
+                "state": state,
+                "message": UI_TEXT[message_key],
+                "detail": detail,
+                "progress": progress,
+                "output": str(output or ""),
+            }
+        )
+        if log_key:
+            self.events.put({"type": "log", "message": LOG_TEXT[log_key]})
+
+    def _button_config(self, attr: str, state: str, text_key: str | None = None) -> None:
+        if not hasattr(self, attr):
+            return
+        options = {"state": state}
+        if text_key:
+            options["text"] = UI_TEXT[text_key]
+        getattr(self, attr).configure(**options)
+
+    def _sync_live_progress_phase(self, value: float) -> None:
+        if self.live_status_state != UI_TEXT["live_state_running"]:
+            return
+        if self.live_operation != "posting_package":
+            return
+        if value < 0.12:
+            message = UI_TEXT["live_phase_package_folder"]
+        elif value < 0.25:
+            message = UI_TEXT["live_phase_package_probe"]
+        elif value < 0.52:
+            message = UI_TEXT["live_phase_package_transcribe"]
+        elif value < 0.70:
+            message = UI_TEXT["live_phase_package_shorts"]
+        elif value < 0.90:
+            message = UI_TEXT["live_phase_package_metadata"]
+        else:
+            message = UI_TEXT["live_phase_package_final"]
+        self._set_live_status(UI_TEXT["live_state_running"], message, progress=value)
+
     def _focus_sequence_ready(self, package_dir: Path | None) -> bool:
         if self.sequence_items:
             return True
@@ -1682,7 +1964,10 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.focus_action_key = str(state.get("action_key") or "")
         self.next_action_var.set(action_label)
         if hasattr(self, "focus_action_button"):
-            self.focus_action_button.configure(text=action_label)
+            self.focus_action_button.configure(
+                text=action_label,
+                state="disabled" if self._major_work_running() else "normal",
+            )
 
     def _run_focus_action(self) -> None:
         actions = {
@@ -1877,6 +2162,8 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
 
         self.package_running = True
         self._set_package_buttons("disabled")
+        self._button_config("generate_package_button", "disabled", "button_generating")
+        self._button_config("generate_package_video_button", "disabled", "button_generating")
         self.open_package_button.configure(state="disabled")
         self.status_var.set(UI_TEXT["running"])
         self.package_summary_var.set(
@@ -1890,15 +2177,26 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.progress_var.set(0.03)
         self.step_vars[UI_TEXT["export_package"]].set(UI_TEXT["working"])
         if self.current_media_info and self.current_media_info.duration > 0:
-            self._set_eta(estimate_processing_seconds(self.current_media_info.duration, is_faster_whisper_available()))
+            eta_seconds = estimate_processing_seconds(self.current_media_info.duration, is_faster_whisper_available())
+            self._set_eta(eta_seconds)
         else:
+            eta_seconds = None
             self.eta_var.set(UI_TEXT["eta_calculating"])
             self.finish_var.set(UI_TEXT["finish_empty"])
+        self._set_live_status(
+            UI_TEXT["live_state_running"],
+            UI_TEXT["live_phase_package_source"],
+            progress=0.10,
+            eta_seconds=eta_seconds,
+            operation="posting_package",
+        )
+        self._log(LOG_TEXT["posting_package_start"])
 
         video_path = self.selected_file
 
         def worker() -> None:
             try:
+                self._post_live_status(UI_TEXT["live_state_running"], "live_phase_package_folder", progress=0.18)
                 system = run_system_check()
                 self.events.put(
                     {
@@ -1911,6 +2209,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                     }
                 )
                 statuses = system["cli"]
+                self._post_live_status(UI_TEXT["live_state_running"], "live_phase_package_probe", progress=0.28)
                 result = generate_posting_package(
                     video_path=video_path,
                     ffprobe_path=statuses.get("ffprobe", {}).get("path"),
@@ -2162,11 +2461,20 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             return
 
         self.sequence_running = True
-        self.generate_horizontal_edit_button.configure(state="disabled")
+        self._button_config("generate_horizontal_edit_button", "disabled", "button_rendering")
         self.open_horizontal_edit_button.configure(state="disabled")
         self.status_var.set(UI_TEXT["running"])
         self.progress_var.set(0.12)
-        self._set_eta(max(45, sequence_total_duration(self.sequence_items) * 0.35 + 45))
+        eta_seconds = max(45, sequence_total_duration(self.sequence_items) * 0.35 + 45)
+        self._set_eta(eta_seconds)
+        self._set_live_status(
+            UI_TEXT["live_state_running"],
+            UI_TEXT["live_phase_horizontal_sequence"],
+            detail=f"{UI_TEXT['sequence_videos']}: {len(self.sequence_items)}",
+            progress=0.12,
+            eta_seconds=eta_seconds,
+            operation="horizontal_edit",
+        )
         self.sequence_summary_var.set(
             "\n".join(
                 [
@@ -2181,6 +2489,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
 
         def worker() -> None:
             try:
+                self._post_live_status(UI_TEXT["live_state_running"], "live_phase_vertical_nvenc", progress=0.30)
                 system = run_system_check()
                 self.events.put(
                     {
@@ -2193,6 +2502,14 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                     }
                 )
                 statuses = system["cli"]
+                detail = UI_TEXT["live_detail_nvenc"] if system["nvenc"].get("state") == "ONLINE" else UI_TEXT["live_detail_cpu"]
+                self._post_live_status(
+                    UI_TEXT["live_state_running"],
+                    "live_phase_horizontal_render",
+                    detail=detail,
+                    progress=0.70,
+                    log_key=None,
+                )
                 result = generate_horizontal_edit(
                     package_dir=package_dir,
                     sequence=sequence,
@@ -2362,10 +2679,17 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         bgm_path = self._selected_project_bgm_path()
 
         self.project_bridge_running = True
-        self.generate_bridge_metadata_button.configure(state="disabled")
+        self._button_config("generate_bridge_metadata_button", "disabled", "button_generating")
         self.status_var.set(UI_TEXT["running"])
         self.progress_var.set(0.20)
-        self._set_eta(30)
+        self._set_live_status(
+            UI_TEXT["live_state_running"],
+            UI_TEXT["live_phase_bridge_metadata"],
+            progress=0.20,
+            eta_seconds=30,
+            operation="bridge_metadata",
+        )
+        self._log(LOG_TEXT["project_bgm_bridge"])
 
         project = dict(self.project_bridge_data)
 
@@ -2383,6 +2707,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                     }
                 )
                 statuses = system["cli"]
+                self._post_live_status(UI_TEXT["live_state_running"], "live_phase_bridge_metadata", progress=0.70)
                 result = generate_bridge_metadata_draft(
                     package_dir=package_dir,
                     project=project,
@@ -2428,9 +2753,16 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
 
         self.memory_running = True
         self._set_memory_buttons("disabled")
+        self._button_config("save_memory_button", "disabled", "button_saving")
         self.status_var.set(UI_TEXT["running"])
         self.progress_var.set(0.18)
-        self._set_eta(30)
+        self._set_live_status(
+            UI_TEXT["live_state_running"],
+            UI_TEXT["live_phase_memory_read"],
+            progress=0.18,
+            eta_seconds=30,
+            operation="memory",
+        )
         self.memory_summary_var.set(
             "\n".join(
                 [
@@ -2456,6 +2788,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                     }
                 )
                 statuses = system["cli"]
+                self._post_live_status(UI_TEXT["live_state_running"], "live_phase_memory_write", progress=0.70)
                 result = save_package_to_memory(
                     package_dir=package_dir,
                     ollama_ready=statuses.get("ollama", {}).get("state") == "READY",
@@ -2512,10 +2845,17 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
 
         self.recommendation_running = True
         self._set_recommendation_buttons("disabled")
+        self._button_config("generate_recommendation_button", "disabled", "button_generating")
         self.open_recommendation_button.configure(state="disabled")
         self.status_var.set(UI_TEXT["running"])
         self.progress_var.set(0.18)
-        self._set_eta(30)
+        self._set_live_status(
+            UI_TEXT["live_state_running"],
+            UI_TEXT["live_phase_recommend_memory"],
+            progress=0.18,
+            eta_seconds=30,
+            operation="recommendation",
+        )
         self.recommendation_summary_var.set(
             "\n".join(
                 [
@@ -2541,6 +2881,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                     }
                 )
                 statuses = system["cli"]
+                self._post_live_status(UI_TEXT["live_state_running"], "live_phase_recommend_write", progress=0.70)
                 result = generate_assistant_recommendation(
                     package_dir=package_dir,
                     ollama_ready=statuses.get("ollama", {}).get("state") == "READY",
@@ -2559,9 +2900,16 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             messagebox.showinfo(APP_NAME, UI_TEXT["selected_requires_package"])
             return
         self.selected_export_running = True
-        self.export_selected_button.configure(state="disabled")
+        self._button_config("export_selected_button", "disabled", "button_exporting")
         self.status_var.set(UI_TEXT["running"])
         self.progress_var.set(0.16)
+        self._set_live_status(
+            UI_TEXT["live_state_running"],
+            UI_TEXT["live_phase_selected_read"],
+            progress=0.16,
+            eta_seconds=20,
+            operation="selected_export",
+        )
 
         parsed_short_index = self._choice_index(self.short_choice_var.get())
         parsed_title_index = self._choice_index(self.title_choice_var.get())
@@ -2570,6 +2918,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
 
         def worker() -> None:
             try:
+                self._post_live_status(UI_TEXT["live_state_running"], "live_phase_selected_write", progress=0.70)
                 result = export_selected_draft(
                     package_dir=package_dir,
                     short_index=short_index,
@@ -2616,11 +2965,17 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         source_video = self._resolve_preview_source_video(package_dir)
 
         self.short_preview_running = True
-        self.generate_short_preview_button.configure(state="disabled")
+        self._button_config("generate_short_preview_button", "disabled", "button_rendering")
         self.open_short_preview_button.configure(state="disabled")
         self.status_var.set(UI_TEXT["running"])
         self.progress_var.set(0.12)
-        self._set_eta(45)
+        self._set_live_status(
+            UI_TEXT["live_state_running"],
+            UI_TEXT["live_phase_preview_read"],
+            progress=0.12,
+            eta_seconds=45,
+            operation="short_preview",
+        )
         self.short_preview_summary_var.set(
             "\n".join(
                 [
@@ -2645,6 +3000,14 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                     }
                 )
                 statuses = system["cli"]
+                detail = UI_TEXT["live_detail_nvenc"] if system["nvenc"].get("state") == "ONLINE" else UI_TEXT["live_detail_cpu"]
+                self._post_live_status(
+                    UI_TEXT["live_state_running"],
+                    "live_phase_preview_render",
+                    detail=detail,
+                    progress=0.70,
+                    log_key="selected_preview_start",
+                )
                 result = generate_selected_short_preview(
                     package_dir=package_dir,
                     ffmpeg_path=statuses.get("ffmpeg", {}).get("path"),
@@ -2668,11 +3031,18 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         source_video = self._resolve_preview_source_video(package_dir)
 
         self.vertical_short_running = True
-        self.generate_vertical_short_button.configure(state="disabled")
+        self._button_config("generate_vertical_short_button", "disabled", "button_rendering")
         self.open_vertical_short_button.configure(state="disabled")
         self.status_var.set(UI_TEXT["running"])
         self.progress_var.set(0.10)
-        self._set_eta(90)
+        self._set_live_status(
+            UI_TEXT["live_state_running"],
+            UI_TEXT["live_phase_vertical_source"],
+            progress=0.10,
+            eta_seconds=90,
+            operation="vertical_short",
+        )
+        self._log(LOG_TEXT["vertical_short_start"])
         self.vertical_short_summary_var.set(
             "\n".join(
                 [
@@ -2686,6 +3056,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
 
         def worker() -> None:
             try:
+                self._post_live_status(UI_TEXT["live_state_running"], "live_phase_vertical_read", progress=0.24)
                 system = run_system_check()
                 self.events.put(
                     {
@@ -2698,6 +3069,20 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                     }
                 )
                 statuses = system["cli"]
+                detail = UI_TEXT["live_detail_nvenc"] if system["nvenc"].get("state") == "ONLINE" else UI_TEXT["live_detail_cpu"]
+                self._post_live_status(
+                    UI_TEXT["live_state_running"],
+                    "live_phase_vertical_nvenc",
+                    detail=detail,
+                    progress=0.40,
+                    log_key="vertical_short_layout",
+                )
+                self._post_live_status(
+                    UI_TEXT["live_state_running"],
+                    "live_phase_vertical_render",
+                    detail="\n".join([detail, UI_TEXT["live_phase_vertical_audio"]]),
+                    progress=0.70,
+                )
                 result = generate_vertical_short(
                     package_dir=package_dir,
                     ffmpeg_path=statuses.get("ffmpeg", {}).get("path"),
@@ -2720,7 +3105,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             return
 
         self.review_running = True
-        self.assistant_review_button.configure(state="disabled")
+        self._button_config("assistant_review_button", "disabled", "button_reviewing")
         self.open_review_button.configure(state="disabled")
         self.review_summary_var.set(
             "\n".join(
@@ -2733,10 +3118,18 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         )
         self.status_var.set(UI_TEXT["running"])
         self.progress_var.set(0.08)
-        self._set_eta(45)
+        self._set_live_status(
+            UI_TEXT["live_state_running"],
+            UI_TEXT["live_phase_review_read"],
+            progress=0.08,
+            eta_seconds=45,
+            operation="assistant_review",
+        )
+        self._log(LOG_TEXT["review_package_read"])
 
         def worker() -> None:
             try:
+                self._post_live_status(UI_TEXT["live_state_running"], "live_phase_review_transcript", progress=0.28)
                 system = run_system_check()
                 self.events.put(
                     {
@@ -2749,6 +3142,12 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                     }
                 )
                 statuses = system["cli"]
+                self._post_live_status(
+                    UI_TEXT["live_state_running"],
+                    "live_phase_review_assistant",
+                    progress=0.70,
+                    log_key="review_atmosphere",
+                )
                 result = run_assistant_review(
                     package_dir=package_dir,
                     ollama_ready=statuses.get("ollama", {}).get("state") == "READY",
@@ -3363,6 +3762,14 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         event_type = event.get("type")
         if event_type == "log":
             self._log(str(event.get("message", "")))
+        elif event_type == "live_status":
+            self._set_live_status(
+                str(event.get("state") or UI_TEXT["live_state_idle"]),
+                str(event.get("message") or UI_TEXT["live_ready_next"]),
+                str(event.get("detail") or ""),
+                event.get("progress") if event.get("progress") is not None else None,  # type: ignore[arg-type]
+                output=event.get("output"),
+            )
         elif event_type == "cli":
             self._apply_cli_status(
                 event.get("statuses", {}),
@@ -3457,18 +3864,25 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                     self.step_vars[UI_TEXT["export_package"]].set(UI_TEXT["done"])
                     self.eta_var.set(UI_TEXT["package_completed"])
                     self.finish_var.set(UI_TEXT["complete"])
+                    self._set_live_completed(package_dir)
                     self._log(LOG_TEXT["complete"])
                 else:
                     self.status_var.set(UI_TEXT["error"])
                     self.step_vars[UI_TEXT["export_package"]].set(UI_TEXT["error"])
+                    self._set_live_failed(result.get("message") or UI_TEXT["package_failed"])
             self.package_running = False
             self._set_package_buttons("normal")
+            self._button_config("generate_package_button", "normal", "generate_posting_package")
+            self._button_config("generate_package_video_button", "normal", "generate_posting_package")
         elif event_type == "posting_package_error":
             self.package_running = False
             self._set_package_buttons("normal")
+            self._button_config("generate_package_button", "normal", "generate_posting_package")
+            self._button_config("generate_package_video_button", "normal", "generate_posting_package")
             self.status_var.set(UI_TEXT["error"])
             self.step_vars[UI_TEXT["export_package"]].set(UI_TEXT["error"])
             self.package_summary_var.set(str(event.get("message", "")))
+            self._set_live_failed(event.get("message", ""))
         elif event_type == "assistant_review_result":
             result = event.get("result", {})
             if isinstance(result, dict):
@@ -3486,14 +3900,16 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.status_var.set(UI_TEXT["complete"])
                 self.eta_var.set(UI_TEXT["review_completed"])
                 self.finish_var.set(UI_TEXT["complete"])
+                self._set_live_completed(self.review_file_path)
                 self._log(LOG_TEXT["complete"])
             self.review_running = False
-            self.assistant_review_button.configure(state="normal")
+            self._button_config("assistant_review_button", "normal", "run_assistant_review")
         elif event_type == "assistant_review_error":
             self.review_running = False
-            self.assistant_review_button.configure(state="normal")
+            self._button_config("assistant_review_button", "normal", "run_assistant_review")
             self.status_var.set(UI_TEXT["error"])
             self.review_summary_var.set(str(event.get("message", "")))
+            self._set_live_failed(event.get("message", ""))
         elif event_type == "selected_export_result":
             result = event.get("result", {})
             if isinstance(result, dict):
@@ -3517,13 +3933,15 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.status_var.set(UI_TEXT["complete"])
                 self.eta_var.set(UI_TEXT["selected_completed"])
                 self.finish_var.set(UI_TEXT["complete"])
+                self._set_live_completed(selected_dir / "selected_summary.md")
             self.selected_export_running = False
-            self.export_selected_button.configure(state="normal")
+            self._button_config("export_selected_button", "normal", "export_selected_draft")
         elif event_type == "selected_export_error":
             self.selected_export_running = False
-            self.export_selected_button.configure(state="normal")
+            self._button_config("export_selected_button", "normal", "export_selected_draft")
             self.status_var.set(UI_TEXT["error"])
             self.selected_summary_var.set(str(event.get("message", "")))
+            self._set_live_failed(event.get("message", ""))
         elif event_type == "short_preview_result":
             result = event.get("result", {})
             if isinstance(result, dict):
@@ -3541,15 +3959,18 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                     self.status_var.set(UI_TEXT["complete"])
                     self.eta_var.set(UI_TEXT["short_preview_completed"])
                     self.finish_var.set(UI_TEXT["complete"])
+                    self._set_live_completed(output_path)
                 else:
                     self.status_var.set(UI_TEXT["error"])
+                    self._set_live_failed(result.get("message") or UI_TEXT["short_preview_failed"])
             self.short_preview_running = False
-            self.generate_short_preview_button.configure(state="normal")
+            self._button_config("generate_short_preview_button", "normal", "generate_short_preview")
         elif event_type == "short_preview_error":
             self.short_preview_running = False
-            self.generate_short_preview_button.configure(state="normal")
+            self._button_config("generate_short_preview_button", "normal", "generate_short_preview")
             self.status_var.set(UI_TEXT["error"])
             self.short_preview_summary_var.set(str(event.get("message", "")))
+            self._set_live_failed(event.get("message", ""))
         elif event_type == "vertical_short_result":
             result = event.get("result", {})
             if isinstance(result, dict):
@@ -3567,15 +3988,18 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                     self.status_var.set(UI_TEXT["complete"])
                     self.eta_var.set(UI_TEXT["vertical_short_completed"])
                     self.finish_var.set(UI_TEXT["complete"])
+                    self._set_live_completed(output_path)
                 else:
                     self.status_var.set(UI_TEXT["error"])
+                    self._set_live_failed(result.get("message") or UI_TEXT["vertical_short_failed"])
             self.vertical_short_running = False
-            self.generate_vertical_short_button.configure(state="normal")
+            self._button_config("generate_vertical_short_button", "normal", "generate_vertical_short")
         elif event_type == "vertical_short_error":
             self.vertical_short_running = False
-            self.generate_vertical_short_button.configure(state="normal")
+            self._button_config("generate_vertical_short_button", "normal", "generate_vertical_short")
             self.status_var.set(UI_TEXT["error"])
             self.vertical_short_summary_var.set(str(event.get("message", "")))
+            self._set_live_failed(event.get("message", ""))
         elif event_type == "sequence_probe_result":
             package_dir = Path(str(event.get("package_dir") or ""))
             sequence = event.get("sequence", [])
@@ -3601,15 +4025,18 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                     self.status_var.set(UI_TEXT["complete"])
                     self.eta_var.set(UI_TEXT["horizontal_edit_completed"])
                     self.finish_var.set(UI_TEXT["complete"])
+                    self._set_live_completed(output_path)
                 else:
                     self.status_var.set(UI_TEXT["error"])
+                    self._set_live_failed(result.get("message") or UI_TEXT["horizontal_edit_failed"])
             self.sequence_running = False
-            self.generate_horizontal_edit_button.configure(state="normal")
+            self._button_config("generate_horizontal_edit_button", "normal", "generate_horizontal_edit")
         elif event_type == "horizontal_edit_error":
             self.sequence_running = False
-            self.generate_horizontal_edit_button.configure(state="normal")
+            self._button_config("generate_horizontal_edit_button", "normal", "generate_horizontal_edit")
             self.status_var.set(UI_TEXT["error"])
             self.sequence_summary_var.set(str(event.get("message", "")))
+            self._set_live_failed(event.get("message", ""))
         elif event_type == "project_bridge_copy_result":
             result = event.get("result", {})
             if isinstance(result, dict):
@@ -3650,18 +4077,20 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.status_var.set(UI_TEXT["complete"])
                 self.eta_var.set(UI_TEXT["project_bridge_metadata_completed"])
                 self.finish_var.set(UI_TEXT["complete"])
+                self._set_live_completed(metadata_path)
                 self._log(LOG_TEXT["project_metadata_ready"])
                 if not result.get("used_ollama"):
                     self._log(LOG_TEXT["project_ollama_fallback"])
                 self._log(LOG_TEXT["project_bridge_ready"])
             self.project_bridge_running = False
-            self.generate_bridge_metadata_button.configure(state="normal")
+            self._button_config("generate_bridge_metadata_button", "normal", "generate_upload_metadata")
         elif event_type == "project_bridge_error":
             self.project_bridge_running = False
             self.add_project_bgm_button.configure(state="normal")
-            self.generate_bridge_metadata_button.configure(state="normal")
+            self._button_config("generate_bridge_metadata_button", "normal", "generate_upload_metadata")
             self.status_var.set(UI_TEXT["error"])
             self.project_bridge_summary_var.set(str(event.get("message", "")))
+            self._set_live_failed(event.get("message", ""))
         elif event_type == "memory_save_result":
             result = event.get("result", {})
             if isinstance(result, dict):
@@ -3674,12 +4103,14 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.status_var.set(UI_TEXT["complete"])
                 self.eta_var.set(UI_TEXT["memory_saved"])
                 self.finish_var.set(UI_TEXT["complete"])
+                self._set_live_completed(summary_path)
                 self._log(LOG_TEXT["memory_saved"])
                 if not result.get("used_ollama"):
                     self._log(LOG_TEXT["memory_template_fallback"])
                 self._log(LOG_TEXT["memory_ready"])
             self.memory_running = False
             self._set_memory_buttons("normal")
+            self._button_config("save_memory_button", "normal", "save_to_memory")
         elif event_type == "memory_summary_result":
             result = event.get("result", {})
             if isinstance(result, dict):
@@ -3697,11 +4128,14 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self._log(LOG_TEXT["memory_ready"])
             self.memory_running = False
             self._set_memory_buttons("normal")
+            self._button_config("save_memory_button", "normal", "save_to_memory")
         elif event_type == "memory_error":
             self.memory_running = False
             self._set_memory_buttons("normal")
+            self._button_config("save_memory_button", "normal", "save_to_memory")
             self.status_var.set(UI_TEXT["error"])
             self.memory_summary_var.set(str(event.get("message", "")))
+            self._set_live_failed(event.get("message", ""))
         elif event_type == "recommendation_result":
             result = event.get("result", {})
             if isinstance(result, dict):
@@ -3719,6 +4153,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.status_var.set(UI_TEXT["complete"])
                 self.eta_var.set(UI_TEXT["complete"])
                 self.finish_var.set(UI_TEXT["complete"])
+                self._set_live_completed(recommendation_path)
                 if "BORINEF" in json.dumps(result, ensure_ascii=False):
                     self._log(LOG_TEXT["recommend_borinef"])
                 if not result.get("used_ollama"):
@@ -3726,15 +4161,20 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self._log(LOG_TEXT["recommend_ready"])
             self.recommendation_running = False
             self._set_recommendation_buttons("normal")
+            self._button_config("generate_recommendation_button", "normal", "generate_recommendation")
         elif event_type == "recommendation_error":
             self.recommendation_running = False
             self._set_recommendation_buttons("normal")
+            self._button_config("generate_recommendation_button", "normal", "generate_recommendation")
             self.status_var.set(UI_TEXT["error"])
             self.recommendation_summary_var.set(str(event.get("message", "")))
+            self._set_live_failed(event.get("message", ""))
         elif event_type == "youtube":
             self.youtube_status_var.set(str(event.get("message", "")))
         elif event_type == "progress":
-            self.progress_var.set(float(event.get("value", 0.0)))
+            value = float(event.get("value", 0.0))
+            self.progress_var.set(value)
+            self._sync_live_progress_phase(value)
         elif event_type == "eta":
             self._set_eta(float(event.get("seconds", 0.0)))
         elif event_type == "step":

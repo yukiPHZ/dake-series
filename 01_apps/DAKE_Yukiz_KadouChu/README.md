@@ -403,6 +403,18 @@ NEXT ACTION は、System Check、動画選択、Posting Package、Assistant Revi
 
 完了状態では `整っています。` を表示し、Next Action は `Open Package Folder` になります。
 
+## Phase 3.5 LIVE STATUS ENGINE
+
+`LIVE STATUS` をFOCUS MODE内に追加し、処理中・完了・失敗が主画面で分かるようにしました。
+
+- `IDLE` / `RUNNING` / `COMPLETED` / `FAILED` / `WAITING` / `SKIPPED` を表示
+- Posting Package、Assistant Review、Selected Draft、Short Preview、9:16 Short、Horizontal Edit、Memory、Recommendation、Project Bridge metadata のフェーズを表示
+- 進捗バーをFOCUS MODE内にも表示
+- ETA / Expected Finish をLIVE STATUSに併記
+- 完了時は `Completed` と `整っています。` を表示
+- 完了後に Current Step / Next Action を即時更新
+- 処理中は対象ボタンとNext Actionボタンをdisabledにして二重実行を避ける
+
 ## Phase 2候補
 
 - YouTube LIVE URLからyt-dlpで本取得
