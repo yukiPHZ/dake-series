@@ -61,6 +61,12 @@
 
 ```text
 audio/
+  generated_preview_A.wav
+  generated_preview_A.mp3
+  generated_preview_B.wav
+  generated_preview_B.mp3
+  generated_preview_C.wav
+  generated_preview_C.mp3
   generated_preview.wav
   generated_preview.mp3
   generated.wav
@@ -92,12 +98,13 @@ prompts/
 notes/
   usage_note.txt
   loop_notes.txt
+  variation_notes.txt
 logs/
   process_log.txt
 setup_needed.txt
 ```
 
-`generated_preview.wav` は、MusicGen未導入でもFFmpegの簡易ambient生成で作成します。`generated.wav`、`generated.mp3`、`loop_preview.mp3` は、MusicGen生成・参照音源・Tiny Ambient生成をFFmpeg整形まで進めた場合に作成されます。
+`generated_preview_A/B/C.wav` は、MusicGen未導入でもFFmpegの簡易ambient生成で作成します。`generated_preview.wav` は互換用にAをコピーします。`generated.wav`、`generated.mp3`、`loop_preview.mp3` は、MusicGen生成・参照音源・Tiny Ambient生成をFFmpeg整形まで進めた場合に作成されます。
 
 プリセットを選択した場合は、`music_direction.txt`、`musicgen_prompt.txt`、`usage_note.txt`、`loop_notes.txt`、`video_bgm_pack/notes/usage_note.txt` にプリセット名とタグを追記します。
 
@@ -165,6 +172,12 @@ Phase 15では、「ちゃんと聞こえるambient preview」を優先してい
 
 Phase 16では、FFmpegだけで生成する preview 音に、ゆっくりした音程変化と空気感を加えています。
 これは完成曲ではなく、「空気が少し動く」ための簡易ambientです。
+
+## Ambient Variations
+
+音を置く は、1つのambientだけでなく、A/B/C の3種類の空気候補を生成できます。
+
+これは「正解の曲」を作るのではなく、動画や作業に置けそうな空気を並べるための機能です。
 
 ## Favorite
 

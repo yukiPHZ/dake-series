@@ -9,7 +9,13 @@ from pathlib import Path
 
 AUDIO_PREVIEW_EXTENSIONS = {".mp3", ".wav"}
 PREVIEW_PRIORITY = (
+    Path("audio") / "generated_preview_A.wav",
+    Path("audio") / "generated_preview_B.wav",
+    Path("audio") / "generated_preview_C.wav",
     Path("audio") / "generated_preview.wav",
+    Path("audio") / "generated_preview_A.mp3",
+    Path("audio") / "generated_preview_B.mp3",
+    Path("audio") / "generated_preview_C.mp3",
     Path("audio") / "generated.wav",
     Path("audio") / "loop_preview.wav",
     Path("audio") / "generated_preview.mp3",

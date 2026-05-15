@@ -136,7 +136,7 @@ UI_TEXT = {
     "preview_playing_start": "Playing preview...",
     "preview_stopped": "Preview stopped.",
     "preview_external": "Opened in default player. Stop in player.",
-    "preview_failed": "Preview could not play. Try generated_preview.wav.",
+    "preview_failed": "Preview could not play. Try generated_preview_A.wav.",
     "favorite_saved": "Favorite saved.",
     "favorite_no_audio": "Favorite target is not selected.",
     "favorite_failed": "Favorite save failed.",
@@ -182,6 +182,9 @@ UI_TEXT = {
     "log_tiny_file": "FFMPEG：{name} を作成しました。",
     "log_tiny_motion": "補助脳：音に少し動きを入れました。",
     "log_tiny_moving_done": "FFMPEG：moving ambient preview を作成しました。",
+    "log_variations_start": "補助脳：3つの空気を生成しています。",
+    "log_variation_file": "FFMPEG：Variation {key} を作成しました。",
+    "log_variation_notes": "SYSTEM：variation_notes.txt を作成しました。",
     "log_tiny_filter": "FFMPEG filter：{filter}",
     "log_tiny_fallback": "SYSTEM：FFmpeg生成に失敗したため簡易wavを作成しました。",
     "log_tiny_failed": "SYSTEM：preview音源を作成できませんでした。",
@@ -315,15 +318,17 @@ def short_display_path(path: Path) -> str:
 def generated_file_summary(output_folder: Path) -> str:
     names = []
     for relative_path in (
+        Path("audio") / "generated_preview_A.wav",
+        Path("audio") / "generated_preview_B.wav",
+        Path("audio") / "generated_preview_C.wav",
         Path("audio") / "generated_preview.wav",
-        Path("audio") / "generated_preview.mp3",
         Path("audio") / "generated.wav",
         Path("audio") / "generated.mp3",
         Path("audio") / "loop_preview.mp3",
     ):
         if (output_folder / relative_path).exists():
             names.append(relative_path.name)
-    return "\n".join(names[:5]) if names else "--"
+    return "\n".join(names[:6]) if names else "--"
 
 
 def preview_size_text(path: Path) -> str:
@@ -1350,16 +1355,24 @@ class MusicOtookuApp:
             project_paths = create_project(project_name)
             log(UI_TEXT["log_project"])
 
+            log(UI_TEXT["log_variations_start"])
             log(UI_TEXT["log_tiny_motion"])
             log(UI_TEXT["log_tiny_start"])
             tiny_result = generate_tiny_ambient(prompt, direction, project_paths.audio, selected_preset)
             if tiny_result.success and tiny_result.wav_path:
                 log(UI_TEXT["log_tiny_moving_done"])
-                log(UI_TEXT["log_tiny_file"].format(name=tiny_result.wav_path.name))
-                if tiny_result.mp3_path:
-                    log(UI_TEXT["log_tiny_file"].format(name=tiny_result.mp3_path.name))
-                if tiny_result.plan:
-                    process_log.append(UI_TEXT["log_tiny_filter"].format(filter=tiny_result.plan.filter_text))
+                for variation in tiny_result.variations:
+                    log(UI_TEXT["log_variation_file"].format(key=variation.key))
+                    process_log.append(UI_TEXT["log_tiny_file"].format(name=variation.wav_path.name))
+                    if variation.mp3_path:
+                        process_log.append(UI_TEXT["log_tiny_file"].format(name=variation.mp3_path.name))
+                    process_log.append(
+                        UI_TEXT["log_tiny_filter"].format(
+                            filter=f"Variation {variation.key}: {variation.plan.filter_text}"
+                        )
+                    )
+                if (project_paths.notes / "variation_notes.txt").exists():
+                    log(UI_TEXT["log_variation_notes"])
                 if tiny_result.errors:
                     log(UI_TEXT["log_tiny_fallback"])
                 final_status = UI_TEXT["status_preview_complete"]
@@ -1827,10 +1840,15 @@ def run_smoke_test() -> int:
             raise AssertionError("custom output unexpectedly contains preset metadata")
         tiny_result = generate_tiny_ambient(prompt, direction, paths.audio)
         if not tiny_result.success or not tiny_result.wav_path or not tiny_result.wav_path.exists():
-            raise AssertionError("generated_preview.wav was not created")
-        tiny_duration = probe_duration(tiny_result.wav_path)
-        if tiny_duration is None or tiny_duration <= 0:
-            raise AssertionError("generated_preview.wav duration was not positive")
+            raise AssertionError("generated_preview_A.wav was not created")
+        if len(tiny_result.variations) != 3:
+            raise AssertionError("ambient variations were not all created")
+        for variation in tiny_result.variations:
+            tiny_duration = probe_duration(variation.wav_path)
+            if tiny_duration is None or not 12.0 <= tiny_duration <= 20.0:
+                raise AssertionError(f"variation {variation.key} duration was outside the expected range")
+        if not (paths.notes / "variation_notes.txt").exists():
+            raise AssertionError("variation_notes.txt was not created")
         if tiny_result.plan is None or "amix" not in tiny_result.plan.filter_text:
             raise AssertionError("tiny ambient filter was not recorded")
 
@@ -1857,10 +1875,13 @@ def run_smoke_test() -> int:
         if not jinja:
             raise AssertionError("holiday-jinja preset missing")
         borinef_plan = plan_tiny_ambient(prompt, borinef_direction, borinef)
+        borinef_plan_b = plan_tiny_ambient(prompt, borinef_direction, borinef, "B")
         yukiz_plan = plan_tiny_ambient(prompt, yukiz_direction, yukiz)
         jinja_plan = plan_tiny_ambient(prompt, fallback_direction_with_preset(prompt, jinja), jinja)
         if len({borinef_plan.frequencies, yukiz_plan.frequencies, jinja_plan.frequencies}) != 3:
             raise AssertionError("moving ambient presets did not produce distinct notes")
+        if borinef_plan.frequencies == borinef_plan_b.frequencies or borinef_plan.variation_summary == borinef_plan_b.variation_summary:
+            raise AssertionError("ambient variations did not produce distinct directions")
         for checked_plan in (borinef_plan, yukiz_plan, jinja_plan):
             if not 12.0 <= checked_plan.duration <= 20.0:
                 raise AssertionError("moving ambient duration was outside the expected range")
@@ -1871,8 +1892,8 @@ def run_smoke_test() -> int:
         preview_items = find_audio_preview_items(paths.root)
         if not preview_items:
             raise AssertionError("preview audio list was not populated")
-        if preview_items[0].label != "audio/generated_preview.wav":
-            raise AssertionError("generated_preview.wav was not prioritized in preview list")
+        if preview_items[0].label != "audio/generated_preview_A.wav":
+            raise AssertionError("generated_preview_A.wav was not prioritized in preview list")
         preview_player = AudioPreviewPlayer()
         play_result = preview_player.play(preview_wav)
         if not play_result.success:
@@ -1996,12 +2017,17 @@ def run_generate_check() -> int:
         raise AssertionError("BORINEF preset tags were not written to usage_note.txt")
     tiny_result = generate_tiny_ambient(prompt, direction, paths.audio, preset)
     if not tiny_result.success or not tiny_result.wav_path or not tiny_result.wav_path.exists():
-        raise AssertionError("generated_preview.wav was not created")
-    tiny_duration = probe_duration(tiny_result.wav_path)
-    if tiny_duration is None or tiny_duration <= 0:
-        raise AssertionError("generated_preview.wav duration was not positive")
-    if not tiny_result.mp3_path or not tiny_result.mp3_path.exists():
-        raise AssertionError("generated_preview.mp3 was not created")
+        raise AssertionError("generated_preview_A.wav was not created")
+    if len(tiny_result.variations) != 3:
+        raise AssertionError("ambient variations were not all created")
+    for variation in tiny_result.variations:
+        tiny_duration = probe_duration(variation.wav_path)
+        if tiny_duration is None or not 12.0 <= tiny_duration <= 20.0:
+            raise AssertionError(f"variation {variation.key} duration was outside the expected range")
+        if not variation.mp3_path or not variation.mp3_path.exists():
+            raise AssertionError(f"generated_preview_{variation.key}.mp3 was not created")
+    if not (paths.notes / "variation_notes.txt").exists():
+        raise AssertionError("variation_notes.txt was not created")
     if not tiny_result.plan or "amix" not in tiny_result.plan.filter_text:
         raise AssertionError("tiny ambient ffmpeg filter was not recorded")
     ffmpeg_status = report.status_for("ffmpeg")
@@ -2045,8 +2071,8 @@ def run_generate_check() -> int:
         preview_items = find_audio_preview_items(paths.root)
         if not preview_items:
             raise AssertionError("preview audio list was not populated")
-        if preview_items[0].label != "audio/generated_preview.wav":
-            raise AssertionError("generated_preview.wav was not prioritized in preview list")
+        if preview_items[0].label != "audio/generated_preview_A.wav":
+            raise AssertionError("generated_preview_A.wav was not prioritized in preview list")
     print(paths.root)
     print(f"preset: {preset.name}")
     if response_time is None:
@@ -2063,7 +2089,11 @@ def run_generate_check() -> int:
         print("video bgm pack: skipped")
     preview_items = find_audio_preview_items(paths.root)
     print(f"preview files: {len(preview_items)}")
-    print(f"generated_preview duration: {preview_duration_text(probe_duration(paths.audio / 'generated_preview.wav'))}")
+    for variation_key in ("A", "B", "C"):
+        print(
+            f"generated_preview_{variation_key} duration: "
+            f"{preview_duration_text(probe_duration(paths.audio / f'generated_preview_{variation_key}.wav'))}"
+        )
     if preview_items:
         favorite_source = next((item for item in preview_items if "loop_pack" in item.label), preview_items[0])
         favorite_result = save_favorite_audio(favorite_source.path, paths.root, preset)
