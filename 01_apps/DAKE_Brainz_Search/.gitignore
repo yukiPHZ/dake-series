@@ -5,6 +5,7 @@ dist/
 __pycache__/
 *.pyc
 data/brainz.db
+data/brainz.db-*
 data/config/
 data/logs/
 data/exports/

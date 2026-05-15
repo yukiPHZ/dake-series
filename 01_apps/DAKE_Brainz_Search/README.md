@@ -316,6 +316,39 @@ brainz_memory/
 └ remote_queue/
 ```
 
+## Phase 17: Slack Task Parser
+
+補助脳BRAINZ v1.1.0 では、Slack投稿の先頭prefixをtaskとして検出し、Remote Queueへ変換できます。
+
+- Slack Task Parser
+- `search:` / `note:` / `handoff_chatgpt:` / `handoff_codex:` / `import:` に対応
+- `type:` 形式の簡易taskにも対応
+- Slack投稿のraw Markdownは `slack_inbox` として保持
+- 検出したtaskは `slack_task` としても検索可能
+- Slack taskは `remote_queue/processed/` または `remote_queue/failed/` へ振り分け
+- note taskは既存Remote Queueと同じく `remote_queue_note` として記憶化
+- search / handoff taskは検索欄へqueryを反映し、候補として扱う
+- handoff taskでもChatGPT / Codexへ自動送信しない
+- Slack ts + task hashで重複処理を避ける
+
+Slack投稿例:
+
+```text
+search: quiet workflow
+```
+
+```text
+note:
+補助脳は判断しない。
+選択を支える。
+```
+
+```text
+handoff_chatgpt:
+補助脳BRAINZ
+Codex Report Auto Import
+```
+
 ## DAKE_META
 
 ```json
@@ -326,7 +359,7 @@ brainz_memory/
   "launcher_description": "ローカルの会話・仕様・メモを忘れず探すための記憶検索アプリです。",
   "site_title": "補助脳BRAINZ",
   "site_description": "ChatGPT、Codex、Claude、Geminiのやり取りをローカル記憶として再接続する検索補助脳です。",
-  "update_summary": "Slack Inbox Import に対応しました。",
+  "update_summary": "Slack Task Parser に対応しました。",
   "folder_name": "DAKE_Brainz_Search",
   "exe_name": "DakeBrainz_Search.exe",
   "release_url": "",
@@ -340,24 +373,22 @@ brainz_memory/
 ## RELEASE_BODY
 
 ```markdown
-# 補助脳BRAINZ v1.0.0
+# 補助脳BRAINZ v1.1.0
 
 ローカルの会話・仕様・Codex実装結果を忘れず探すための記憶検索アプリです。
 
 ## 追加
 
-- Slack Inbox Import
-- iPhone / Android 共通投入口
-- Slack polling
-- slack_inbox source_type
-- Markdown正本保存
-- Auto Semantic連携
-- Slack通知状態表示
+- Slack Task Parser
+- Slack → Remote Queue変換
+- search:/note:/handoff: task対応
+- slack_task source_type
+- raw Slack markdown保持
 
 ## 継続
 
+- Slack Inbox Import
 - Codex Report Auto Import
-- Remote Queue
 - Notification system
 - Semantic Search
 - Related Memory

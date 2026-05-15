@@ -12,13 +12,22 @@ import requests
 from core.app_config import logs_dir, now_iso
 from core.db import BrainzDatabase, DocumentRecord
 from core.ollama_embeddings import EmbeddingSession, generate_embeddings_for_document
+from core.remote_queue import (
+    RemoteQueueTask,
+    destination_for,
+    execute_task,
+    move_task_file,
+    parse_remote_queue_file,
+)
 from core.text_splitter import split_text
 
 
 SOURCE_TYPE_SLACK_INBOX = "slack_inbox"
+SOURCE_TYPE_SLACK_TASK = "slack_task"
 SLACK_HISTORY_URL = "https://slack.com/api/conversations.history"
 SLACK_PERMALINK_URL = "https://slack.com/api/chat.getPermalink"
 DEFAULT_HISTORY_LIMIT = 30
+SLACK_TASK_TYPES = {"search", "note", "handoff_chatgpt", "handoff_codex", "import"}
 
 
 class SlackSession(Protocol):
@@ -49,6 +58,7 @@ class SlackInboxImportItem:
     changed: bool
     permalink: str = ""
     title: str = ""
+    task_result: SlackTaskResult | None = None
 
 
 @dataclass(frozen=True)
@@ -64,6 +74,36 @@ class SlackInboxResult:
     message: str = ""
     log_path: str = ""
     items: list[SlackInboxImportItem] = field(default_factory=list)
+    task_results: list[SlackTaskResult] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class SlackTask:
+    task_type: str
+    query: str
+    note: str
+    import_path: str
+    raw_text: str
+    title: str
+    task_hash: str
+
+
+@dataclass(frozen=True)
+class SlackTaskResult:
+    task_type: str
+    query: str
+    note: str
+    import_path: str
+    status: str
+    source_file: str
+    destination_file: str
+    task_hash: str
+    skipped_duplicate: bool = False
+    document_id: int = 0
+    changed: bool = False
+    slack_task_document_id: int = 0
+    slack_task_changed: bool = False
+    error: str = ""
 
 
 def poll_slack_inbox(
@@ -116,6 +156,7 @@ def poll_slack_inbox(
     latest_ts = last_ts
     saved_files: list[str] = []
     items: list[SlackInboxImportItem] = []
+    task_results: list[SlackTaskResult] = []
     embedding_session = EmbeddingSession()
 
     for message_item in sorted(messages, key=lambda item: slack_ts_float(item.ts)):
@@ -151,6 +192,15 @@ def poll_slack_inbox(
                 imported += 1
             else:
                 skipped += 1
+            task_result = process_slack_task(
+                database=database,
+                memory_folder=memory_folder,
+                channel_id=channel_id,
+                message=message_with_permalink,
+                embedding_session=embedding_session,
+            )
+            if task_result is not None:
+                task_results.append(task_result)
             saved_files.append(str(saved_path))
             items.append(
                 SlackInboxImportItem(
@@ -160,6 +210,7 @@ def poll_slack_inbox(
                     changed=changed,
                     permalink=permalink,
                     title=title,
+                    task_result=task_result,
                 )
             )
             if slack_ts_float(message_item.ts) > slack_ts_float(latest_ts):
@@ -175,10 +226,11 @@ def poll_slack_inbox(
             status=status,
             imported=imported,
             skipped=skipped,
-            failed=failed,
-            latest_ts=latest_ts,
-            items=items,
-        )
+        failed=failed,
+        latest_ts=latest_ts,
+        items=items,
+        task_results=task_results,
+    )
     return SlackInboxResult(
         status=status,
         imported=imported,
@@ -191,6 +243,7 @@ def poll_slack_inbox(
         message="slack inbox imported" if imported else "slack connected",
         log_path=log_path,
         items=items,
+        task_results=task_results,
     )
 
 
@@ -365,6 +418,301 @@ def index_slack_markdown(
     return database.upsert_document(record, split_text(markdown))
 
 
+def process_slack_task(
+    database: BrainzDatabase,
+    memory_folder: Path,
+    channel_id: str,
+    message: SlackInboxMessage,
+    embedding_session: EmbeddingSession,
+) -> SlackTaskResult | None:
+    task = parse_slack_task_text(message.text, message.ts)
+    if task is None:
+        return None
+
+    queue_folder = memory_folder / "remote_queue"
+    queue_source = queue_folder / "slack_tasks" / f"slack_{safe_ts(message.ts)}_{task.task_hash[:12]}.md"
+    processed_destination = destination_for(queue_folder, queue_source, "processed")
+    failed_destination = destination_for(queue_folder, queue_source, "failed")
+    duplicate_destination = existing_task_destination(queue_folder, queue_source.name)
+
+    slack_task_document_id = 0
+    slack_task_changed = False
+    try:
+        slack_task_path, slack_task_markdown = save_slack_task_markdown(
+            memory_folder=memory_folder,
+            channel_id=channel_id,
+            message=message,
+            task=task,
+        )
+        slack_task_document_id, slack_task_changed = index_slack_task_markdown(
+            database=database,
+            saved_path=slack_task_path,
+            markdown=slack_task_markdown,
+            channel_id=channel_id,
+            message=message,
+            task=task,
+            embedding_session=embedding_session,
+        )
+    except Exception:
+        slack_task_document_id = 0
+        slack_task_changed = False
+
+    if duplicate_destination is not None:
+        return SlackTaskResult(
+            task_type=task.task_type,
+            query=task.query,
+            note=task.note,
+            import_path=task.import_path,
+            status="duplicate",
+            source_file=str(queue_source),
+            destination_file=str(duplicate_destination),
+            task_hash=task.task_hash,
+            skipped_duplicate=True,
+            slack_task_document_id=slack_task_document_id,
+            slack_task_changed=slack_task_changed,
+        )
+
+    try:
+        queue_source.parent.mkdir(parents=True, exist_ok=True)
+        queue_source.write_text(build_remote_queue_task_text(task, channel_id, message), encoding="utf-8")
+        parsed_task = parse_remote_queue_file(queue_source)
+        document_id, changed = execute_task(database, parsed_task, processed_destination, embedding_session)
+        destination = move_task_file(queue_folder, queue_source, "processed", processed_destination)
+        result = SlackTaskResult(
+            task_type=task.task_type,
+            query=task.query,
+            note=task.note,
+            import_path=task.import_path,
+            status="processed",
+            source_file=str(queue_source),
+            destination_file=str(destination),
+            task_hash=task.task_hash,
+            document_id=document_id,
+            changed=changed,
+            slack_task_document_id=slack_task_document_id,
+            slack_task_changed=slack_task_changed,
+        )
+    except Exception as exc:
+        destination = queue_source
+        if queue_source.exists():
+            destination = move_task_file(queue_folder, queue_source, "failed", failed_destination)
+        result = SlackTaskResult(
+            task_type=task.task_type,
+            query=task.query,
+            note=task.note,
+            import_path=task.import_path,
+            status="failed",
+            source_file=str(queue_source),
+            destination_file=str(destination),
+            task_hash=task.task_hash,
+            slack_task_document_id=slack_task_document_id,
+            slack_task_changed=slack_task_changed,
+            error=str(exc),
+        )
+
+    database.log_remote_queue_task(
+        task_type=result.task_type,
+        query=result.query,
+        note=result.note,
+        source_file=result.source_file,
+        status=result.status,
+        raw_text=task.raw_text,
+    )
+    return result
+
+
+def parse_slack_task_text(text: str, slack_ts: str = "") -> SlackTask | None:
+    raw_text = (text or "").strip()
+    if not raw_text:
+        return None
+    lines = raw_text.splitlines()
+    first_index = next((index for index, line in enumerate(lines) if line.strip()), -1)
+    if first_index < 0:
+        return None
+
+    first_line = lines[first_index].strip()
+    first_match = re.match(r"^(type|search|note|handoff_chatgpt|handoff_codex|import)\s*:\s*(.*)$", first_line, re.IGNORECASE)
+    if not first_match:
+        return None
+
+    key = first_match.group(1).strip().lower()
+    value = first_match.group(2).strip()
+    remainder = "\n".join(lines[first_index + 1 :]).strip()
+    values = key_value_lines(raw_text)
+
+    if key == "type":
+        task_type = normalize_slack_task_type(value)
+        if task_type not in SLACK_TASK_TYPES:
+            return None
+        query = values.get("query", "")
+        note = values.get("note", "")
+        import_path = values.get("path") or values.get("file_path") or values.get("import_path") or values.get("file") or ""
+        if task_type in {"search", "handoff_chatgpt", "handoff_codex"} and not query:
+            query = values.get(task_type, "") or remainder
+        if task_type == "note" and not note:
+            note = remainder
+        if task_type == "import" and not import_path:
+            import_path = remainder
+    else:
+        task_type = normalize_slack_task_type(key)
+        payload = value or remainder
+        query = payload if task_type in {"search", "handoff_chatgpt", "handoff_codex"} else ""
+        note = payload if task_type == "note" else values.get("note", "")
+        import_path = payload if task_type == "import" else ""
+
+    if task_type in {"search", "handoff_chatgpt", "handoff_codex"} and not query.strip():
+        return None
+    if task_type == "note" and not note.strip():
+        return None
+    if task_type == "import" and not import_path.strip():
+        return None
+
+    title = f"Slack Task {task_type}"
+    task_hash = hashlib.sha256(
+        "\n".join([slack_ts, task_type, query, note, import_path, raw_text]).encode("utf-8", errors="replace")
+    ).hexdigest()
+    return SlackTask(
+        task_type=task_type,
+        query=query.strip(),
+        note=note.strip(),
+        import_path=import_path.strip(),
+        raw_text=raw_text,
+        title=title,
+        task_hash=task_hash,
+    )
+
+
+def key_value_lines(text: str) -> dict[str, str]:
+    values: dict[str, str] = {}
+    for line in (text or "").splitlines():
+        match = re.match(r"^\s*([A-Za-z_][A-Za-z0-9_\- ]{0,48})\s*:\s*(.*)$", line.strip())
+        if not match:
+            continue
+        key = match.group(1).strip().lower().replace("-", "_").replace(" ", "_")
+        value = match.group(2).strip()
+        if value:
+            values[key] = value
+    return values
+
+
+def normalize_slack_task_type(value: str) -> str:
+    clean = value.strip().lower().replace("-", "_").replace(" ", "_")
+    aliases = {
+        "chatgpt_handoff": "handoff_chatgpt",
+        "handoff_gpt": "handoff_chatgpt",
+        "codex_handoff": "handoff_codex",
+    }
+    return aliases.get(clean, clean)
+
+
+def build_remote_queue_task_text(task: SlackTask, channel_id: str, message: SlackInboxMessage) -> str:
+    lines = [
+        "# Slack Task",
+        "",
+        f"type: {task.task_type}",
+    ]
+    if task.query:
+        lines.append(f"query: {' '.join(task.query.split())}")
+    if task.note:
+        lines.extend(["note:", task.note])
+    if task.import_path:
+        lines.append(f"path: {task.import_path}")
+    lines.extend(
+        [
+            f"source: slack",
+            f"channel: {channel_id}",
+            f"slack_ts: {message.ts}",
+            "",
+            "---",
+            "",
+            task.raw_text,
+            "",
+        ]
+    )
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def save_slack_task_markdown(
+    memory_folder: Path,
+    channel_id: str,
+    message: SlackInboxMessage,
+    task: SlackTask,
+) -> tuple[Path, str]:
+    task_folder = memory_folder / "slack_tasks"
+    task_folder.mkdir(parents=True, exist_ok=True)
+    timestamp = slack_timestamp(message.ts)
+    path = task_folder / f"{timestamp.strftime('%Y-%m-%d_%H%M%S')}_{safe_ts(message.ts)}_{task.task_hash[:12]}_task.md"
+    markdown = build_slack_task_markdown(channel_id=channel_id, message=message, task=task, timestamp=timestamp)
+    path.write_text(markdown, encoding="utf-8")
+    return path.resolve(), markdown
+
+
+def build_slack_task_markdown(
+    channel_id: str,
+    message: SlackInboxMessage,
+    task: SlackTask,
+    timestamp: datetime,
+) -> str:
+    lines = [
+        "# Slack Task",
+        "",
+        "source: slack_task",
+        f"channel: {channel_id}",
+        f"user: {message.user}",
+        f"timestamp: {timestamp.strftime('%Y-%m-%d %H:%M:%S')}",
+        f"slack_ts: {message.ts}",
+        f"task_type: {task.task_type}",
+        f"task_hash: {task.task_hash}",
+        "",
+        "---",
+        "",
+        task.raw_text,
+        "",
+    ]
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def index_slack_task_markdown(
+    database: BrainzDatabase,
+    saved_path: Path,
+    markdown: str,
+    channel_id: str,
+    message: SlackInboxMessage,
+    task: SlackTask,
+    embedding_session: EmbeddingSession,
+) -> tuple[int, bool]:
+    timestamp = slack_timestamp(message.ts).isoformat(timespec="seconds")
+    digest = hashlib.sha256(markdown.encode("utf-8", errors="replace")).hexdigest()
+    record = DocumentRecord(
+        path=str(saved_path.resolve()),
+        title=task.title,
+        source_type=SOURCE_TYPE_SLACK_TASK,
+        created_at=timestamp,
+        modified_at=timestamp,
+        indexed_at=now_iso(),
+        hash=digest,
+        content=markdown,
+        source_label=f"Slack Task / {task.task_type}",
+        conversation_id=channel_id,
+        conversation_title=channel_id,
+        role=message.user,
+        source_created_at=timestamp,
+        source_updated_at=timestamp,
+    )
+    document_id, changed = database.upsert_document(record, split_text(markdown))
+    if changed:
+        generate_embeddings_for_document(database, document_id, session=embedding_session)
+    return document_id, changed
+
+
+def existing_task_destination(queue_folder: Path, file_name: str) -> Path | None:
+    for status in ("processed", "failed"):
+        path = queue_folder / status / file_name
+        if path.exists():
+            return path.resolve()
+    return None
+
+
 def normalize_files(raw_files: Any) -> list[dict[str, str]]:
     if not isinstance(raw_files, list):
         return []
@@ -438,6 +786,7 @@ def write_slack_inbox_log(
     failed: int,
     latest_ts: str,
     items: list[SlackInboxImportItem],
+    task_results: list[SlackTaskResult],
 ) -> str:
     logs_dir().mkdir(parents=True, exist_ok=True)
     path = logs_dir() / f"slack_inbox_{now_iso().replace(':', '').replace('-', '').replace('T', '_')}.log"
@@ -459,6 +808,31 @@ def write_slack_inbox_log(
                 f"  changed: {item.changed}",
                 f"  path: {item.saved_path}",
                 f"  permalink: {item.permalink}",
+            ]
+        )
+        if item.task_result is not None:
+            lines.extend(
+                [
+                    f"  task_type: {item.task_result.task_type}",
+                    f"  task_status: {item.task_result.status}",
+                    f"  task_query: {item.task_result.query}",
+                    f"  task_hash: {item.task_result.task_hash}",
+                ]
+            )
+    if task_results:
+        lines.append("SLACK TASKS:")
+    for task_result in task_results:
+        lines.extend(
+            [
+                f"- task_type: {task_result.task_type}",
+                f"  status: {task_result.status}",
+                f"  query: {task_result.query}",
+                f"  note: {task_result.note[:160]}",
+                f"  import_path: {task_result.import_path}",
+                f"  skipped_duplicate: {task_result.skipped_duplicate}",
+                f"  source: {task_result.source_file}",
+                f"  destination: {task_result.destination_file}",
+                f"  error: {task_result.error}",
             ]
         )
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
