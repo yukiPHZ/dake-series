@@ -77,7 +77,12 @@ from core.project_writer import (
     write_source_manifest,
 )
 from core.selected_outputs import export_selected_draft, read_selected_candidates
-from core.selected_preview import find_source_video_path, generate_selected_short_preview, generate_vertical_short
+from core.selected_preview import (
+    find_source_video_path,
+    generate_horizontal_video,
+    generate_selected_short_preview,
+    generate_vertical_short,
+)
 from core.sequence_builder import (
     generate_horizontal_edit,
     read_sequence,
@@ -119,7 +124,7 @@ UI_TEXT = {
     "focus_desc_package": "Create the posting package for the selected video.",
     "focus_desc_review": "Read the package and create assistant_review.md.",
     "focus_desc_draft": "Choose the candidate short and title, then export selected draft files.",
-    "focus_desc_export": "Export either a 9:16 Short or a quiet horizontal edit.",
+    "focus_desc_export": "Export a horizontal video first, then Shorts if needed.",
     "focus_desc_memory": "Save this production flow into assistant memory.",
     "focus_desc_completed": "整っています。",
     "focus_progress_done": "done",
@@ -160,6 +165,13 @@ UI_TEXT = {
     "live_phase_vertical_render": "Rendering 1080x1920...",
     "live_phase_vertical_audio": "Writing AAC audio...",
     "live_phase_vertical_final": "Finalizing export...",
+    "live_phase_horizontal_video_source": "Preparing source video...",
+    "live_phase_horizontal_video_nvenc": "Checking NVENC...",
+    "live_phase_horizontal_video_render": "Rendering horizontal video...",
+    "live_phase_horizontal_video_scale": "Scaling to 1920x1080...",
+    "live_phase_horizontal_video_audio": "Writing AAC audio...",
+    "live_phase_horizontal_video_final": "Finalizing export...",
+    "live_horizontal_video_failed": "Horizontal video export failed. See log.",
     "live_phase_horizontal_sequence": "Reading sequence.json...",
     "live_phase_horizontal_render": "Rendering horizontal edit...",
     "live_phase_memory_read": "Reading package memory inputs...",
@@ -264,6 +276,15 @@ UI_TEXT = {
     "vertical_short_unavailable": "9:16 short is not ready yet.",
     "open_vertical_short_failed": "Could not open 9:16 short.",
     "output_size": "Size",
+    "horizontal_video": "HORIZONTAL VIDEO",
+    "generate_horizontal_video": "Generate Horizontal Video",
+    "open_horizontal_video": "Open Horizontal Video",
+    "horizontal_video_ready_hint": "Generate a 1920x1080 horizontal video from the source file.",
+    "horizontal_video_running": "Status: RUNNING",
+    "horizontal_video_completed": "Completed",
+    "horizontal_video_failed": "FAILED",
+    "horizontal_video_unavailable": "Horizontal video is not ready yet.",
+    "open_horizontal_video_failed": "Could not open horizontal video.",
     "sequence_builder": "SEQUENCE BUILDER",
     "sequence": "SEQUENCE",
     "add_sequence_video": "Add Sequence Video",
@@ -415,6 +436,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.selected_output_dir: Path | None = None
         self.short_preview_path: Path | None = None
         self.vertical_short_path: Path | None = None
+        self.horizontal_video_path: Path | None = None
         self.horizontal_edit_path: Path | None = None
         self.preview_source_video_path: Path | None = None
         self.sequence_items: list[dict[str, object]] = []
@@ -434,6 +456,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.selected_export_running = False
         self.short_preview_running = False
         self.vertical_short_running = False
+        self.horizontal_video_running = False
         self.sequence_running = False
         self.project_bridge_running = False
         self.memory_running = False
@@ -450,6 +473,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.selected_summary_var = ctk.StringVar(value=UI_TEXT["selected_ready_hint"])
         self.short_preview_summary_var = ctk.StringVar(value=UI_TEXT["short_preview_ready_hint"])
         self.vertical_short_summary_var = ctk.StringVar(value=UI_TEXT["vertical_short_ready_hint"])
+        self.horizontal_video_summary_var = ctk.StringVar(value=UI_TEXT["horizontal_video_ready_hint"])
         self.sequence_summary_var = ctk.StringVar(value=UI_TEXT["horizontal_edit_ready_hint"])
         self.project_bridge_summary_var = ctk.StringVar(value=UI_TEXT["project_bridge_ready_hint"])
         self.memory_summary_var = ctk.StringVar(value=UI_TEXT["memory_ready_hint"])
@@ -1140,12 +1164,41 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.open_selected_button.grid(row=4, column=0, columnspan=2, sticky="ew", padx=12, pady=(4, 10))
         ctk.CTkLabel(
             selected_box,
-            textvariable=self.short_preview_summary_var,
+            textvariable=self.horizontal_video_summary_var,
             font=ctk.CTkFont(family=FONT_FAMILY, size=11),
             text_color=COLORS["muted"],
             wraplength=330,
             justify="left",
         ).grid(row=5, column=0, columnspan=2, sticky="ew", padx=12, pady=(0, 8))
+        self.generate_horizontal_video_button = ctk.CTkButton(
+            selected_box,
+            text=UI_TEXT["generate_horizontal_video"],
+            command=self._start_generate_horizontal_video,
+            height=30,
+            fg_color=COLORS["button"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+        )
+        self.generate_horizontal_video_button.grid(row=6, column=0, sticky="ew", padx=(12, 4), pady=(0, 10))
+        self.open_horizontal_video_button = ctk.CTkButton(
+            selected_box,
+            text=UI_TEXT["open_horizontal_video"],
+            command=self._open_horizontal_video,
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+            state="disabled",
+        )
+        self.open_horizontal_video_button.grid(row=6, column=1, sticky="ew", padx=(4, 12), pady=(0, 10))
+        ctk.CTkLabel(
+            selected_box,
+            textvariable=self.short_preview_summary_var,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            text_color=COLORS["muted"],
+            wraplength=330,
+            justify="left",
+        ).grid(row=7, column=0, columnspan=2, sticky="ew", padx=12, pady=(0, 8))
         self.generate_short_preview_button = ctk.CTkButton(
             selected_box,
             text=UI_TEXT["generate_short_preview"],
@@ -1155,7 +1208,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             hover_color=COLORS["button_hover"],
             text_color=COLORS["text"],
         )
-        self.generate_short_preview_button.grid(row=6, column=0, sticky="ew", padx=(12, 4), pady=(0, 10))
+        self.generate_short_preview_button.grid(row=8, column=0, sticky="ew", padx=(12, 4), pady=(0, 10))
         self.open_short_preview_button = ctk.CTkButton(
             selected_box,
             text=UI_TEXT["open_short_preview"],
@@ -1166,7 +1219,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             text_color=COLORS["text"],
             state="disabled",
         )
-        self.open_short_preview_button.grid(row=6, column=1, sticky="ew", padx=(4, 12), pady=(0, 10))
+        self.open_short_preview_button.grid(row=8, column=1, sticky="ew", padx=(4, 12), pady=(0, 10))
         ctk.CTkLabel(
             selected_box,
             textvariable=self.vertical_short_summary_var,
@@ -1174,7 +1227,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             text_color=COLORS["muted"],
             wraplength=330,
             justify="left",
-        ).grid(row=7, column=0, columnspan=2, sticky="ew", padx=12, pady=(0, 8))
+        ).grid(row=9, column=0, columnspan=2, sticky="ew", padx=12, pady=(0, 8))
         self.generate_vertical_short_button = ctk.CTkButton(
             selected_box,
             text=UI_TEXT["generate_vertical_short"],
@@ -1184,7 +1237,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             hover_color=COLORS["button_hover"],
             text_color=COLORS["text"],
         )
-        self.generate_vertical_short_button.grid(row=8, column=0, sticky="ew", padx=(12, 4), pady=(0, 10))
+        self.generate_vertical_short_button.grid(row=10, column=0, sticky="ew", padx=(12, 4), pady=(0, 10))
         self.open_vertical_short_button = ctk.CTkButton(
             selected_box,
             text=UI_TEXT["open_vertical_short"],
@@ -1195,7 +1248,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             text_color=COLORS["text"],
             state="disabled",
         )
-        self.open_vertical_short_button.grid(row=8, column=1, sticky="ew", padx=(4, 12), pady=(0, 10))
+        self.open_vertical_short_button.grid(row=10, column=1, sticky="ew", padx=(4, 12), pady=(0, 10))
 
         sequence_box = ctk.CTkFrame(body, fg_color=COLORS["panel_alt"], border_width=1, border_color=COLORS["line"], corner_radius=8)
         sequence_box.grid(row=5, column=0, sticky="ew", pady=(12, 0))
@@ -1634,6 +1687,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.selected_export_running,
                 self.short_preview_running,
                 self.vertical_short_running,
+                self.horizontal_video_running,
                 self.sequence_running,
                 self.project_bridge_running,
                 self.memory_running,
@@ -1753,10 +1807,10 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             output=output,
         )
 
-    def _set_live_failed(self, message: object) -> None:
+    def _set_live_failed(self, message: object, title: str | None = None) -> None:
         self._set_live_status(
             UI_TEXT["live_state_failed"],
-            UI_TEXT["live_failed_default"],
+            title or UI_TEXT["live_failed_default"],
             str(message or UI_TEXT["live_failed_default"]),
             progress=1.0,
         )
@@ -1888,21 +1942,41 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             "selected/short_vertical_1080x1920.mp4",
             self.vertical_short_path,
         )
-        horizontal_ready = self._dashboard_file_ready(
+        horizontal_video_ready = self._dashboard_file_ready(
+            package_dir,
+            "selected/horizontal_video.mp4",
+            self.horizontal_video_path,
+        )
+        horizontal_edit_ready = self._dashboard_file_ready(
             package_dir,
             "selected/horizontal_edit.mp4",
             self.horizontal_edit_path,
         )
-        export_ready = horizontal_ready if sequence_ready else vertical_ready
-        if not export_ready:
-            action_key = "generate_horizontal_edit" if sequence_ready else "generate_vertical_short"
-            action_label_key = "generate_horizontal_edit" if sequence_ready else "generate_vertical_short"
+        if sequence_ready and not horizontal_edit_ready:
             return self._focus_step_state(
                 5,
                 "focus_step_export",
                 "focus_desc_export",
-                action_key,
-                action_label_key,
+                "generate_horizontal_edit",
+                "generate_horizontal_edit",
+                sequence_ready,
+            )
+        if not sequence_ready and not horizontal_video_ready:
+            return self._focus_step_state(
+                5,
+                "focus_step_export",
+                "focus_desc_export",
+                "generate_horizontal_video",
+                "generate_horizontal_video",
+                sequence_ready,
+            )
+        if not sequence_ready and not vertical_ready:
+            return self._focus_step_state(
+                5,
+                "focus_step_export",
+                "focus_desc_export",
+                "generate_vertical_short",
+                "generate_vertical_short",
                 sequence_ready,
             )
 
@@ -1975,6 +2049,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             "generate_posting_package": self._start_posting_package,
             "run_assistant_review": self._start_assistant_review,
             "export_selected_draft": self._start_export_selected_draft,
+            "generate_horizontal_video": self._start_generate_horizontal_video,
             "generate_vertical_short": self._start_generate_vertical_short,
             "generate_horizontal_edit": self._start_generate_horizontal_edit,
             "save_to_memory": self._start_save_memory,
@@ -2027,12 +2102,14 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.open_package_button.configure(state="disabled")
         self.open_review_button.configure(state="disabled")
         self.open_selected_button.configure(state="disabled")
+        self.open_horizontal_video_button.configure(state="disabled")
         self.open_short_preview_button.configure(state="disabled")
         self.open_vertical_short_button.configure(state="disabled")
         self.open_recommendation_button.configure(state="disabled")
         self.selected_output_dir = None
         self.short_preview_path = None
         self.vertical_short_path = None
+        self.horizontal_video_path = None
         self.horizontal_edit_path = None
         self.recommendation_path = None
         self.preview_source_video_path = None
@@ -2045,6 +2122,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.package_summary_var.set(UI_TEXT["package_ready_hint"])
         self.review_summary_var.set(UI_TEXT["review_ready_hint"])
         self.selected_summary_var.set(UI_TEXT["selected_ready_hint"])
+        self.horizontal_video_summary_var.set(UI_TEXT["horizontal_video_ready_hint"])
         self.short_preview_summary_var.set(UI_TEXT["short_preview_ready_hint"])
         self.vertical_short_summary_var.set(UI_TEXT["vertical_short_ready_hint"])
         self.sequence_summary_var.set(UI_TEXT["horizontal_edit_ready_hint"])
@@ -2099,6 +2177,21 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         recommendation_path = package_dir / "assistant_recommendation.md"
         self.recommendation_path = recommendation_path if recommendation_path.exists() else None
         self.open_recommendation_button.configure(state="normal" if self.recommendation_path else "disabled")
+        horizontal_video_path = package_dir / "selected" / "horizontal_video.mp4"
+        self.horizontal_video_path = horizontal_video_path if horizontal_video_path.exists() else None
+        self.horizontal_video_summary_var.set(
+            self._format_horizontal_video_summary(
+                {
+                    "status": "COMPLETED" if self.horizontal_video_path else UI_TEXT["ready"],
+                    "output_path": str(horizontal_video_path) if self.horizontal_video_path else "",
+                    "size": "1920x1080",
+                    "encoder": "--",
+                }
+            )
+            if self.horizontal_video_path
+            else UI_TEXT["horizontal_video_ready_hint"]
+        )
+        self.open_horizontal_video_button.configure(state="normal" if self.horizontal_video_path else "disabled")
         self.review_summary_var.set(
             "\n".join(
                 [
@@ -2282,6 +2375,20 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         selected_dir = package_dir / "selected"
         self.selected_output_dir = selected_dir if selected_dir.exists() else None
         self.open_selected_button.configure(state="normal" if self.selected_output_dir else "disabled")
+        horizontal_video_path = selected_dir / "horizontal_video.mp4"
+        self.horizontal_video_path = horizontal_video_path if horizontal_video_path.exists() else None
+        self.open_horizontal_video_button.configure(state="normal" if self.horizontal_video_path else "disabled")
+        if self.horizontal_video_path:
+            self.horizontal_video_summary_var.set(
+                self._format_horizontal_video_summary(
+                    {
+                        "status": "COMPLETED",
+                        "output_path": str(horizontal_video_path),
+                        "size": "1920x1080",
+                        "encoder": "--",
+                    }
+                )
+            )
         self.selected_summary_var.set(self._format_selected_candidates_summary(data))
         self._log(LOG_TEXT["selected_candidates_refreshed"])
         self._update_dashboard()
@@ -3096,6 +3203,81 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
 
         threading.Thread(target=worker, daemon=True).start()
 
+    def _start_generate_horizontal_video(self) -> None:
+        if self.horizontal_video_running:
+            return
+        package_dir = self._resolve_package_for_review()
+        if package_dir is None:
+            messagebox.showinfo(APP_NAME, UI_TEXT["selected_requires_package"])
+            return
+        source_video = self._resolve_preview_source_video(package_dir)
+
+        self.horizontal_video_running = True
+        self._button_config("generate_horizontal_video_button", "disabled", "button_rendering")
+        self.open_horizontal_video_button.configure(state="disabled")
+        self.status_var.set(UI_TEXT["running"])
+        self.progress_var.set(0.10)
+        self._set_live_status(
+            UI_TEXT["live_state_running"],
+            UI_TEXT["live_phase_horizontal_video_source"],
+            progress=0.10,
+            eta_seconds=120,
+            operation="horizontal_video",
+        )
+        self._log(LOG_TEXT["horizontal_video_start"])
+        self.horizontal_video_summary_var.set(
+            "\n".join(
+                [
+                    UI_TEXT["horizontal_video"],
+                    UI_TEXT["horizontal_video_running"],
+                    f"{UI_TEXT['output_size']}: 1920x1080",
+                    f"{UI_TEXT['package']}: {package_dir}",
+                ]
+            )
+        )
+
+        def worker() -> None:
+            try:
+                self._post_live_status(UI_TEXT["live_state_running"], "live_phase_horizontal_video_nvenc", progress=0.26)
+                system = run_system_check()
+                self.events.put(
+                    {
+                        "type": "cli",
+                        "statuses": system["cli"],
+                        "nvenc": system["nvenc"],
+                        "gpu": system["gpu"],
+                        "install_guide": system["install_guide"],
+                        "install_commands": system["install_commands"],
+                    }
+                )
+                statuses = system["cli"]
+                detail = UI_TEXT["live_detail_nvenc"] if system["nvenc"].get("state") == "ONLINE" else UI_TEXT["live_detail_cpu"]
+                self._post_live_status(
+                    UI_TEXT["live_state_running"],
+                    "live_phase_horizontal_video_render",
+                    detail="\n".join(
+                        [
+                            detail,
+                            UI_TEXT["live_phase_horizontal_video_scale"],
+                            UI_TEXT["live_phase_horizontal_video_audio"],
+                        ]
+                    ),
+                    progress=0.70,
+                    log_key="horizontal_video_layout",
+                )
+                result = generate_horizontal_video(
+                    package_dir=package_dir,
+                    ffmpeg_path=statuses.get("ffmpeg", {}).get("path"),
+                    nvenc_online=system["nvenc"].get("state") == "ONLINE",
+                    source_video_path=source_video,
+                    log=lambda message: self.events.put({"type": "log", "message": message}),
+                )
+                self.events.put({"type": "horizontal_video_result", "result": result})
+            except Exception as exc:
+                self.events.put({"type": "horizontal_video_error", "message": str(exc)})
+
+        threading.Thread(target=worker, daemon=True).start()
+
     def _start_assistant_review(self) -> None:
         if self.review_running:
             return
@@ -3429,6 +3611,21 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         except Exception as exc:
             messagebox.showerror(APP_NAME, f"{UI_TEXT['open_short_preview_failed']}\n{exc}")
 
+    def _open_horizontal_video(self) -> None:
+        horizontal_path = self.horizontal_video_path
+        if horizontal_path is None:
+            package_dir = self._resolve_package_for_review()
+            if package_dir is not None:
+                candidate = package_dir / "selected" / "horizontal_video.mp4"
+                horizontal_path = candidate if candidate.exists() else None
+        if horizontal_path is None or not horizontal_path.exists():
+            messagebox.showinfo(APP_NAME, UI_TEXT["horizontal_video_unavailable"])
+            return
+        try:
+            os.startfile(str(horizontal_path))  # type: ignore[attr-defined]
+        except Exception as exc:
+            messagebox.showerror(APP_NAME, f"{UI_TEXT['open_horizontal_video_failed']}\n{exc}")
+
     def _open_vertical_short(self) -> None:
         vertical_path = self.vertical_short_path
         if vertical_path is None:
@@ -3657,6 +3854,18 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             ]
         )
 
+    def _format_horizontal_video_summary(self, result: dict[str, object]) -> str:
+        output_path = str(result.get("output_path") or "")
+        return "\n".join(
+            [
+                UI_TEXT["horizontal_video"],
+                f"{UI_TEXT['package_status']}: {result.get('status', UI_TEXT['horizontal_video_failed'])}",
+                f"{UI_TEXT['output_size']}: {result.get('size', '1920x1080')}",
+                f"{UI_TEXT['encoder']}: {result.get('encoder', 'unavailable')}",
+                f"{UI_TEXT['preview_output']}: {output_path or '--'}",
+            ]
+        )
+
     def _format_project_bridge_summary(self, data: dict[str, object], extra: str = "") -> str:
         suggested_use = [str(item) for item in data.get("suggested_use", []) if str(item)]
         bgm_files = [item for item in data.get("bgm_files", []) if isinstance(item, dict)]
@@ -3835,6 +4044,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.selected_output_dir = None
                 self.short_preview_path = None
                 self.vertical_short_path = None
+                self.horizontal_video_path = None
                 self.recommendation_path = None
                 self.candidate_data = {}
                 self.short_choice_touched = False
@@ -3844,6 +4054,8 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.short_choice_menu.configure(values=[UI_TEXT["selected_none"]])
                 self.title_choice_menu.configure(values=[UI_TEXT["selected_none"]])
                 self.selected_summary_var.set(UI_TEXT["selected_ready_hint"])
+                self.horizontal_video_summary_var.set(UI_TEXT["horizontal_video_ready_hint"])
+                self.open_horizontal_video_button.configure(state="disabled")
                 self.short_preview_summary_var.set(UI_TEXT["short_preview_ready_hint"])
                 self.open_short_preview_button.configure(state="disabled")
                 self.vertical_short_summary_var.set(UI_TEXT["vertical_short_ready_hint"])
@@ -3922,6 +4134,9 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.short_preview_path = None
                 self.open_short_preview_button.configure(state="disabled")
                 self.short_preview_summary_var.set(UI_TEXT["short_preview_ready_hint"])
+                self.horizontal_video_path = None
+                self.open_horizontal_video_button.configure(state="disabled")
+                self.horizontal_video_summary_var.set(UI_TEXT["horizontal_video_ready_hint"])
                 self.vertical_short_path = None
                 self.open_vertical_short_button.configure(state="disabled")
                 self.vertical_short_summary_var.set(UI_TEXT["vertical_short_ready_hint"])
@@ -3971,6 +4186,38 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             self.status_var.set(UI_TEXT["error"])
             self.short_preview_summary_var.set(str(event.get("message", "")))
             self._set_live_failed(event.get("message", ""))
+        elif event_type == "horizontal_video_result":
+            result = event.get("result", {})
+            if isinstance(result, dict):
+                output_path = Path(str(result.get("output_path") or ""))
+                selected_dir = Path(str(result.get("selected_dir") or ""))
+                package_dir = Path(str(result.get("package_dir") or packages_dir()))
+                self.package_output_dir = package_dir
+                self.selected_output_dir = selected_dir if selected_dir.exists() else None
+                self.horizontal_video_path = output_path if output_path.exists() else None
+                self.horizontal_video_summary_var.set(self._format_horizontal_video_summary(result))
+                self.open_selected_button.configure(state="normal" if self.selected_output_dir else "disabled")
+                self.open_horizontal_video_button.configure(state="normal" if self.horizontal_video_path else "disabled")
+                self.progress_var.set(1.0)
+                if result.get("status") == "COMPLETED":
+                    self.status_var.set(UI_TEXT["complete"])
+                    self.eta_var.set(UI_TEXT["horizontal_video_completed"])
+                    self.finish_var.set(UI_TEXT["complete"])
+                    self._set_live_completed(output_path)
+                else:
+                    self.status_var.set(UI_TEXT["error"])
+                    self._set_live_failed(
+                        result.get("message") or UI_TEXT["horizontal_video_failed"],
+                        UI_TEXT["live_horizontal_video_failed"],
+                    )
+            self.horizontal_video_running = False
+            self._button_config("generate_horizontal_video_button", "normal", "generate_horizontal_video")
+        elif event_type == "horizontal_video_error":
+            self.horizontal_video_running = False
+            self._button_config("generate_horizontal_video_button", "normal", "generate_horizontal_video")
+            self.status_var.set(UI_TEXT["error"])
+            self.horizontal_video_summary_var.set(str(event.get("message", "")))
+            self._set_live_failed(event.get("message", ""), UI_TEXT["live_horizontal_video_failed"])
         elif event_type == "vertical_short_result":
             result = event.get("result", {})
             if isinstance(result, dict):

@@ -13,6 +13,8 @@ LogCallback = Callable[[str], None]
 
 VERTICAL_SIZE = "1080x1920"
 VERTICAL_POLICY = "background blur + foreground centered"
+HORIZONTAL_SIZE = "1920x1080"
+HORIZONTAL_POLICY = "background blur + foreground centered"
 
 
 def _read_json(path: Path) -> Any:
@@ -62,6 +64,26 @@ def _range_seconds(short: dict[str, Any]) -> tuple[float, float, float]:
     if end <= start and duration > 0:
         end = start + duration
     return start, end, duration
+
+
+def _source_resolution(package_dir: Path) -> str:
+    media = _read_json(package_dir / "media_info.json")
+    if isinstance(media, dict):
+        width = media.get("width") or media.get("video_width")
+        height = media.get("height") or media.get("video_height")
+        if width and height:
+            return f"{width}x{height}"
+    return "unknown"
+
+
+def _source_duration(package_dir: Path) -> float:
+    media = _read_json(package_dir / "media_info.json")
+    if isinstance(media, dict):
+        try:
+            return max(0.0, float(media.get("duration") or 0))
+        except Exception:
+            return 0.0
+    return 0.0
 
 
 def _fallback_short() -> dict[str, Any]:
@@ -215,6 +237,33 @@ def _write_vertical_log(
     return path
 
 
+def _write_horizontal_video_log(
+    selected_dir: Path,
+    source_video: Path | None,
+    source_resolution: str,
+    encoder: str,
+    nvenc_used: bool,
+    fallback: bool,
+    output_path: Path,
+    error: str,
+) -> Path:
+    lines = [
+        f"executed_at: {datetime.now().isoformat(timespec='seconds')}",
+        f"source_video: {source_video or ''}",
+        f"source_resolution: {source_resolution}",
+        f"output_resolution: {HORIZONTAL_SIZE}",
+        f"crop_pad_policy: {HORIZONTAL_POLICY}",
+        f"encoder: {encoder}",
+        f"nvenc_used: {str(nvenc_used).lower()}",
+        f"fallback: {str(fallback).lower()}",
+        f"output_path: {output_path}",
+        f"error: {error}",
+    ]
+    path = selected_dir / "horizontal_video_log.txt"
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return path
+
+
 def _vertical_args(
     ffmpeg_path: str,
     source_video: Path,
@@ -244,6 +293,46 @@ def _vertical_args(
         str(source_video),
         "-t",
         f"{max(1.0, duration):.3f}",
+        "-filter_complex",
+        filter_complex,
+        "-map",
+        "[v]",
+        "-map",
+        "0:a?",
+        *video_codec_args,
+        "-c:a",
+        "aac",
+        "-b:a",
+        "192k",
+        "-movflags",
+        "+faststart",
+        str(output_path),
+    ]
+
+
+def _horizontal_video_args(
+    ffmpeg_path: str,
+    source_video: Path,
+    output_path: Path,
+    encoder: str,
+) -> list[str]:
+    video_codec_args = (
+        ["-c:v", "h264_nvenc", "-preset", "p4", "-cq", "23"]
+        if encoder == "h264_nvenc"
+        else ["-c:v", "libx264", "-preset", "veryfast", "-crf", "23"]
+    )
+    filter_complex = (
+        "[0:v]split=2[bg][fg];"
+        "[bg]scale=1920:1080:force_original_aspect_ratio=increase,"
+        "crop=1920:1080,boxblur=24:1[bgout];"
+        "[fg]scale=1920:1080:force_original_aspect_ratio=decrease[fgout];"
+        "[bgout][fgout]overlay=(W-w)/2:(H-h)/2,format=yuv420p[v]"
+    )
+    return [
+        ffmpeg_path,
+        "-y",
+        "-i",
+        str(source_video),
         "-filter_complex",
         filter_complex,
         "-map",
@@ -509,4 +598,146 @@ def generate_vertical_short(
         "fallback": fallback,
         "used_default": used_default,
         "message": error_text or "Vertical short export failed.",
+    }
+
+
+def generate_horizontal_video(
+    package_dir: Path,
+    ffmpeg_path: str | None,
+    nvenc_online: bool,
+    source_video_path: Path | None = None,
+    log: LogCallback | None = None,
+) -> dict[str, Any]:
+    selected_dir = package_dir / "selected"
+    selected_dir.mkdir(parents=True, exist_ok=True)
+    output_path = selected_dir / "horizontal_video.mp4"
+    source_resolution = _source_resolution(package_dir)
+
+    def emit(message: str) -> None:
+        if log:
+            log(message)
+
+    emit(LOG_TEXT["horizontal_video_start"])
+    source_video = source_video_path or find_source_video_path(package_dir)
+
+    if source_video is None or not source_video.exists():
+        emit(LOG_TEXT["selected_preview_source_missing"])
+        _write_horizontal_video_log(
+            selected_dir,
+            source_video,
+            source_resolution,
+            "unavailable",
+            False,
+            False,
+            output_path,
+            "source video missing",
+        )
+        return {
+            "status": "FAILED",
+            "package_dir": str(package_dir),
+            "selected_dir": str(selected_dir),
+            "output_path": str(output_path),
+            "size": HORIZONTAL_SIZE,
+            "encoder": "unavailable",
+            "nvenc_used": False,
+            "fallback": False,
+            "source_resolution": source_resolution,
+            "message": "Source video is required.",
+        }
+    if not ffmpeg_path:
+        emit(LOG_TEXT["selected_preview_ffmpeg_missing"])
+        _write_horizontal_video_log(
+            selected_dir,
+            source_video,
+            source_resolution,
+            "unavailable",
+            False,
+            False,
+            output_path,
+            "ffmpeg missing",
+        )
+        return {
+            "status": "FAILED",
+            "package_dir": str(package_dir),
+            "selected_dir": str(selected_dir),
+            "output_path": str(output_path),
+            "size": HORIZONTAL_SIZE,
+            "encoder": "unavailable",
+            "nvenc_used": False,
+            "fallback": False,
+            "source_resolution": source_resolution,
+            "message": "FFmpeg is required for horizontal video export.",
+        }
+
+    emit(LOG_TEXT["horizontal_video_layout"])
+    if output_path.exists():
+        output_path.unlink()
+
+    duration = _source_duration(package_dir)
+    timeout = max(600, int(duration * 3 + 180)) if duration > 0 else 900
+    errors: list[str] = []
+    fallback = False
+    if nvenc_online:
+        completed = run_command(_horizontal_video_args(ffmpeg_path, source_video, output_path, "h264_nvenc"), timeout=timeout)
+        if completed.returncode == 0 and output_path.exists():
+            emit(LOG_TEXT["horizontal_video_nvenc"])
+            emit(LOG_TEXT["horizontal_video_created"])
+            _write_horizontal_video_log(selected_dir, source_video, source_resolution, "h264_nvenc", True, False, output_path, "")
+            return {
+                "status": "COMPLETED",
+                "package_dir": str(package_dir),
+                "selected_dir": str(selected_dir),
+                "output_path": str(output_path),
+                "size": HORIZONTAL_SIZE,
+                "encoder": "h264_nvenc",
+                "nvenc_used": True,
+                "fallback": False,
+                "source_resolution": source_resolution,
+                "message": LOG_TEXT["horizontal_video_created"],
+            }
+        errors.append((completed.stderr or completed.stdout or "h264_nvenc failed").strip()[-1000:])
+        fallback = True
+        emit(LOG_TEXT["horizontal_video_fallback"])
+
+    completed = run_command(_horizontal_video_args(ffmpeg_path, source_video, output_path, "libx264"), timeout=timeout)
+    if completed.returncode == 0 and output_path.exists():
+        emit(LOG_TEXT["horizontal_video_created"])
+        _write_horizontal_video_log(selected_dir, source_video, source_resolution, "libx264", False, fallback, output_path, "")
+        return {
+            "status": "COMPLETED",
+            "package_dir": str(package_dir),
+            "selected_dir": str(selected_dir),
+            "output_path": str(output_path),
+            "size": HORIZONTAL_SIZE,
+            "encoder": "libx264",
+            "nvenc_used": False,
+            "fallback": fallback,
+            "source_resolution": source_resolution,
+            "message": LOG_TEXT["horizontal_video_created"],
+        }
+
+    errors.append((completed.stderr or completed.stdout or "libx264 failed").strip()[-1000:])
+    emit(LOG_TEXT["horizontal_video_failed"])
+    error_text = "\n".join(error for error in errors if error)
+    _write_horizontal_video_log(
+        selected_dir,
+        source_video,
+        source_resolution,
+        "unavailable",
+        False,
+        fallback,
+        output_path,
+        error_text,
+    )
+    return {
+        "status": "FAILED",
+        "package_dir": str(package_dir),
+        "selected_dir": str(selected_dir),
+        "output_path": str(output_path),
+        "size": HORIZONTAL_SIZE,
+        "encoder": "unavailable",
+        "nvenc_used": False,
+        "fallback": fallback,
+        "source_resolution": source_resolution,
+        "message": error_text or "Horizontal video export failed.",
     }

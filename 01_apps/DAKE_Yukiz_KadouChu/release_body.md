@@ -147,3 +147,12 @@
 - 主要処理のフェーズ、進捗バー、ETA / Expected Finish を表示
 - 完了時に `Completed` / `整っています。` と出力ファイル名を表示
 - 処理中は対象ボタンとNext Actionをdisabledにして二重実行を避ける
+
+## Phase 3.6
+
+- 単体動画向けの `Generate Horizontal Video` を追加
+- `selected/horizontal_video.mp4` と `horizontal_video_log.txt` を生成
+- 1920x1080 / H.264 / AAC の通常横動画に整形
+- NVENC優先、失敗時は `libx264` へフォールバック
+- 縦素材や正方形素材は背景ぼかし + 前景中央配置で横動画化
+- FOCUS MODE の Export step を Horizontal Video 優先へ更新

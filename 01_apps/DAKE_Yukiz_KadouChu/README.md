@@ -415,6 +415,19 @@ NEXT ACTION は、System Check、動画選択、Posting Package、Assistant Revi
 - 完了後に Current Step / Next Action を即時更新
 - 処理中は対象ボタンとNext Actionボタンをdisabledにして二重実行を避ける
 
+## Phase 3.6 Single Horizontal Video Export
+
+単体動画から YouTube 通常投稿向けの横動画を書き出す `Generate Horizontal Video` を追加しました。
+
+- 出力は `selected/horizontal_video.mp4`
+- 推奨サイズは 1920x1080
+- NVENC が使える場合は `h264_nvenc` を優先し、失敗時は `libx264` へフォールバック
+- 音声は AAC へ変換
+- 横素材は 1920x1080 に scale/pad、縦素材・正方形素材・その他比率は背景ぼかし + 前景中央配置で整形
+- Shorts 用の `selected/short_vertical_1080x1920.mp4`、複数動画構成用の `selected/horizontal_edit.mp4` と役割を分離
+- FOCUS MODE の Export step は、単体動画では Horizontal Video を先に案内し、その後 9:16 Short または Memory へ進みます
+- YouTube 自動投稿、自動公開、元動画変更は行いません
+
 ## Phase 2候補
 
 - YouTube LIVE URLからyt-dlpで本取得
