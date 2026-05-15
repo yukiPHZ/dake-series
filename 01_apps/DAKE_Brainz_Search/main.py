@@ -120,11 +120,16 @@ UI_TEXT = {
     "status_slack_disabled": "SLACK: OFF",
     "status_slack_ready": "SLACK: READY",
     "status_slack_error": "SLACK ERROR",
+    "status_slack_config_saved": "SLACK CONFIG SAVED",
+    "status_slack_config_save_failed": "SLACK CONFIG SAVE FAILED",
     "label_slack_last_import": "LAST IMPORT: {time}",
     "label_slack_channel_status": "CHANNEL: {channel}",
     "log_slack_import": "SLACK INBOX: New message imported. imported={imported} skipped={skipped} failed={failed}",
     "log_slack_status": "SLACK INBOX: {status} {message}",
     "log_slack_file": "SLACK LOG: {path}",
+    "log_slack_config_saved": "SLACK CONFIG SAVED: enabled={enabled} channel={channel} interval={interval}s",
+    "log_slack_config_save_failed": "SLACK CONFIG SAVE FAILED: missing={missing}",
+    "log_slack_config_reloaded": "SLACK CONFIG RELOADED: enabled={enabled} channel={channel} interval={interval}s",
     "phrase_slack_memory_saved": "\u88dc\u52a9\u8133\uff1aSlack Inbox\u3092\u53d6\u308a\u8fbc\u307f\u307e\u3057\u305f\u3002",
     "log_semantic_search_initialized": "Semantic search initialized.",
     "log_embedding_generated": "Embedding generated.",
@@ -302,6 +307,15 @@ def run_smoke_test() -> int:
             or config_data.slack_poll_interval_seconds != 5
         ):
             raise RuntimeError("slack inbox config did not roundtrip")
+        parsed_interval, interval_valid = parse_slack_poll_interval("9")
+        if parsed_interval != 9 or not interval_valid:
+            raise RuntimeError("slack interval parser rejected a valid value")
+        parsed_interval, interval_valid = parse_slack_poll_interval("bad")
+        if parsed_interval != 10 or interval_valid:
+            raise RuntimeError("slack interval parser did not flag invalid input")
+        missing_fields = slack_config_missing_fields("", "", "", False)
+        if set(missing_fields) != {"memory_folder", "bot_token", "channel_id", "poll_interval"}:
+            raise RuntimeError("slack missing field detection failed")
 
         notification_queue = NotificationQueue(history_limit=3)
         for index in range(4):
@@ -741,6 +755,34 @@ def fit_logo_size(image_size: tuple[int, int], max_width: int = 118, max_height:
         return max_height, max_height
     scale = min(max_width / width, max_height / height)
     return max(1, round(width * scale)), max(1, round(height * scale))
+
+
+def parse_slack_poll_interval(value: str) -> tuple[int, bool]:
+    try:
+        interval = int(str(value).strip())
+    except ValueError:
+        return 10, False
+    if interval < 5 or interval > 15:
+        return max(5, min(15, interval)), False
+    return interval, True
+
+
+def slack_config_missing_fields(
+    memory_folder: str,
+    token: str,
+    channel_id: str,
+    interval_valid: bool,
+) -> list[str]:
+    missing: list[str] = []
+    if not memory_folder:
+        missing.append("memory_folder")
+    if not token:
+        missing.append("bot_token")
+    if not channel_id:
+        missing.append("channel_id")
+    if not interval_valid:
+        missing.append("poll_interval")
+    return missing
 
 
 def run_gui(launch_check: bool = False) -> int:
@@ -1551,26 +1593,58 @@ def run_gui(launch_check: bool = False) -> int:
             token = self.slack_token_entry.get().strip() if hasattr(self, "slack_token_entry") else ""
             channel_id = self.slack_channel_entry.get().strip() if hasattr(self, "slack_channel_entry") else ""
             interval_text = self.slack_interval_entry.get().strip() if hasattr(self, "slack_interval_entry") else "10"
+            interval, interval_valid = parse_slack_poll_interval(interval_text)
+            enabled = bool(self.slack_inbox_var.get())
+            if enabled:
+                missing = slack_config_missing_fields(
+                    memory_folder=self.config_data.memory_folder,
+                    token=token,
+                    channel_id=channel_id,
+                    interval_valid=interval_valid,
+                )
+            else:
+                missing = [] if interval_valid else ["poll_interval"]
             try:
-                interval = int(interval_text)
-            except ValueError:
-                interval = 10
-            interval = max(5, min(15, interval))
-            self.config_data.slack_bot_token = token
-            self.config_data.slack_channel_id = channel_id
-            self.config_data.slack_poll_interval_seconds = interval
-            self.slack_poll_interval_ms = interval * 1000
-            if hasattr(self, "slack_interval_entry"):
-                self.slack_interval_entry.delete(0, "end")
-                self.slack_interval_entry.insert(0, str(interval))
-            self.config_store.save(self.config_data)
-            self._update_slack_status()
+                self.config_data.enable_slack_inbox = enabled
+                self.config_data.slack_bot_token = token
+                self.config_data.slack_channel_id = channel_id
+                self.config_data.slack_poll_interval_seconds = interval
+                self.slack_poll_interval_ms = interval * 1000
+                if hasattr(self, "slack_interval_entry"):
+                    self.slack_interval_entry.delete(0, "end")
+                    self.slack_interval_entry.insert(0, str(interval))
+                self.config_store.save(self.config_data)
+                self.config_data = self.config_store.load()
+                self.slack_inbox_var.set(self.config_data.enable_slack_inbox)
+                self.slack_poll_interval_ms = max(5000, int(self.config_data.slack_poll_interval_seconds) * 1000)
+                self._append_log(
+                    UI_TEXT["log_slack_config_reloaded"].format(
+                        enabled=self.config_data.enable_slack_inbox,
+                        channel=self.config_data.slack_channel_id or "-",
+                        interval=self.config_data.slack_poll_interval_seconds,
+                    )
+                )
+                self._update_slack_status()
+                if missing:
+                    self.slack_status_var.set(UI_TEXT["status_slack_config_save_failed"])
+                    self._append_log(UI_TEXT["log_slack_config_save_failed"].format(missing=", ".join(missing)))
+                else:
+                    self.slack_status_var.set(UI_TEXT["status_slack_config_saved"])
+                    self._append_log(
+                        UI_TEXT["log_slack_config_saved"].format(
+                            enabled=self.config_data.enable_slack_inbox,
+                            channel=self.config_data.slack_channel_id,
+                            interval=self.config_data.slack_poll_interval_seconds,
+                        )
+                    )
+                if self.config_data.enable_slack_inbox and not missing:
+                    self._start_slack_poll_worker_if_ready()
+            except Exception as exc:
+                self.slack_status_var.set(UI_TEXT["status_slack_config_save_failed"])
+                self._append_log(UI_TEXT["log_slack_config_save_failed"].format(missing=str(exc)))
 
         def _toggle_slack_inbox(self) -> None:
             self._save_slack_settings()
-            self.config_data.enable_slack_inbox = bool(self.slack_inbox_var.get())
-            self.config_store.save(self.config_data)
-            self._update_slack_status()
 
         def _toggle_auto_index(self) -> None:
             self.config_data.auto_index_enabled = bool(self.auto_index_var.get())
@@ -1934,22 +2008,30 @@ def run_gui(launch_check: bool = False) -> int:
 
         def _poll_slack_inbox(self) -> None:
             try:
-                if self.slack_inbox_var.get() and self.config_data.memory_folder:
-                    if self.config_data.slack_bot_token and self.config_data.slack_channel_id:
-                        if not self.slack_thread or not self.slack_thread.is_alive():
-                            self.slack_thread = threading.Thread(
-                                target=self._slack_inbox_worker,
-                                args=(
-                                    Path(self.config_data.memory_folder),
-                                    self.config_data.slack_bot_token,
-                                    self.config_data.slack_channel_id,
-                                    self.config_data.slack_last_ts,
-                                ),
-                                daemon=True,
-                            )
-                            self.slack_thread.start()
+                self._start_slack_poll_worker_if_ready()
             finally:
                 self.after(self.slack_poll_interval_ms, self._poll_slack_inbox)
+
+        def _start_slack_poll_worker_if_ready(self) -> None:
+            if not self.config_data.enable_slack_inbox:
+                return
+            if not self.config_data.memory_folder:
+                return
+            if not self.config_data.slack_bot_token or not self.config_data.slack_channel_id:
+                return
+            if self.slack_thread and self.slack_thread.is_alive():
+                return
+            self.slack_thread = threading.Thread(
+                target=self._slack_inbox_worker,
+                args=(
+                    Path(self.config_data.memory_folder),
+                    self.config_data.slack_bot_token,
+                    self.config_data.slack_channel_id,
+                    self.config_data.slack_last_ts,
+                ),
+                daemon=True,
+            )
+            self.slack_thread.start()
 
         def _slack_inbox_worker(self, memory_folder: Path, token: str, channel_id: str, last_ts: str) -> None:
             try:
