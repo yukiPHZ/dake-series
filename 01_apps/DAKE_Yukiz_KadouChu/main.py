@@ -105,6 +105,27 @@ UI_TEXT = {
     "fetch_metadata": "Fetch Metadata",
     "status_strip": "STATUS",
     "next_action": "NEXT ACTION",
+    "focus_mode": "FOCUS MODE",
+    "current_step": "Current Step",
+    "step_progress": "Step Progress",
+    "focus_step_select": "Select",
+    "focus_step_package": "Package",
+    "focus_step_review": "Review",
+    "focus_step_draft": "Select Draft",
+    "focus_step_export": "Export",
+    "focus_step_memory": "Memory",
+    "focus_step_completed": "Completed",
+    "focus_desc_select": "Choose one video, or build a simple sequence.",
+    "focus_desc_package": "Create the posting package for the selected video.",
+    "focus_desc_review": "Read the package and create assistant_review.md.",
+    "focus_desc_draft": "Choose the candidate short and title, then export selected draft files.",
+    "focus_desc_export": "Export either a 9:16 Short or a quiet horizontal edit.",
+    "focus_desc_memory": "Save this production flow into assistant memory.",
+    "focus_desc_completed": "整っています。",
+    "focus_progress_done": "done",
+    "focus_progress_next": "next",
+    "focus_progress_wait": "wait",
+    "focus_action_select_video": "Select Video",
     "dashboard_waiting": "WAITING",
     "dashboard_connected": "CONNECTED",
     "dashboard_package_ready": "READY",
@@ -400,6 +421,11 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.status_var = ctk.StringVar(value=UI_TEXT["ready"])
         self.status_strip_var = ctk.StringVar(value="")
         self.next_action_var = ctk.StringVar(value=UI_TEXT["run_system_check"])
+        self.focus_step_var = ctk.StringVar(value="")
+        self.focus_description_var = ctk.StringVar(value="")
+        self.focus_action_var = ctk.StringVar(value=UI_TEXT["select_video"])
+        self.focus_progress_var = ctk.StringVar(value="")
+        self.focus_action_key = "select_video"
         self.progress_var = ctk.DoubleVar(value=0.0)
 
         self.step_vars: dict[str, ctk.StringVar] = {}
@@ -429,8 +455,8 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
 
     def _build_ui(self) -> None:
         self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(2, weight=1)
-        self.grid_rowconfigure(3, weight=0)
+        self.grid_rowconfigure(3, weight=1)
+        self.grid_rowconfigure(4, weight=0)
 
         header = ctk.CTkFrame(self, fg_color="transparent", height=86)
         header.grid(row=0, column=0, sticky="ew", padx=20, pady=(16, 8))
@@ -464,10 +490,11 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         )
         phrase.grid(row=0, column=2, rowspan=2, sticky="e")
 
-        self._build_dashboard().grid(row=1, column=0, sticky="ew", padx=20, pady=(0, 10))
+        self._build_focus_mode().grid(row=1, column=0, sticky="ew", padx=20, pady=(0, 10))
+        self._build_dashboard().grid(row=2, column=0, sticky="ew", padx=20, pady=(0, 10))
 
         main = ctk.CTkFrame(self, fg_color="transparent")
-        main.grid(row=2, column=0, sticky="nsew", padx=20, pady=(0, 10))
+        main.grid(row=3, column=0, sticky="nsew", padx=20, pady=(0, 10))
         main.grid_columnconfigure(0, weight=1, uniform="main")
         main.grid_columnconfigure(1, weight=1, uniform="main")
         main.grid_columnconfigure(2, weight=1, uniform="main")
@@ -478,17 +505,90 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self._build_output_panel(main).grid(row=0, column=2, sticky="nsew", padx=(8, 0))
 
         bottom = ctk.CTkFrame(self, fg_color="transparent")
-        bottom.grid(row=3, column=0, sticky="ew", padx=20, pady=(0, 16))
+        bottom.grid(row=4, column=0, sticky="ew", padx=20, pady=(0, 16))
         bottom.grid_columnconfigure(0, weight=2)
         bottom.grid_columnconfigure(1, weight=3)
 
         self._build_system_panel(bottom).grid(row=0, column=0, sticky="nsew", padx=(0, 8))
         self._build_log_panel(bottom).grid(row=0, column=1, sticky="nsew", padx=(8, 0))
 
+    def _build_focus_mode(self) -> ctk.CTkFrame:
+        focus = ctk.CTkFrame(
+            self,
+            fg_color=COLORS["panel"],
+            border_width=1,
+            border_color=COLORS["accent_soft"],
+            corner_radius=8,
+        )
+        focus.grid_columnconfigure(0, weight=3)
+        focus.grid_columnconfigure(1, weight=2)
+        focus.grid_columnconfigure(2, weight=1)
+
+        ctk.CTkLabel(
+            focus,
+            text=UI_TEXT["focus_mode"],
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            text_color=COLORS["accent"],
+        ).grid(row=0, column=0, columnspan=3, sticky="w", padx=16, pady=(12, 2))
+
+        ctk.CTkLabel(
+            focus,
+            text=UI_TEXT["current_step"],
+            font=ctk.CTkFont(family=FONT_FAMILY, size=10, weight="bold"),
+            text_color=COLORS["accent_soft"],
+        ).grid(row=1, column=0, sticky="w", padx=16, pady=(4, 0))
+        ctk.CTkLabel(
+            focus,
+            textvariable=self.focus_step_var,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=22, weight="bold"),
+            text_color=COLORS["text"],
+            justify="left",
+        ).grid(row=2, column=0, sticky="w", padx=16, pady=(0, 4))
+        ctk.CTkLabel(
+            focus,
+            textvariable=self.focus_description_var,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=13),
+            text_color=COLORS["muted"],
+            wraplength=520,
+            justify="left",
+        ).grid(row=3, column=0, sticky="w", padx=16, pady=(0, 14))
+
+        ctk.CTkLabel(
+            focus,
+            text=UI_TEXT["next_action"],
+            font=ctk.CTkFont(family=FONT_FAMILY, size=10, weight="bold"),
+            text_color=COLORS["accent_soft"],
+        ).grid(row=1, column=1, sticky="w", padx=14, pady=(4, 0))
+        self.focus_action_button = ctk.CTkButton(
+            focus,
+            text=self.focus_action_var.get(),
+            command=self._run_focus_action,
+            height=42,
+            fg_color=COLORS["button"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+            font=ctk.CTkFont(family=FONT_FAMILY, size=14, weight="bold"),
+        )
+        self.focus_action_button.grid(row=2, column=1, sticky="ew", padx=14, pady=(0, 4))
+
+        ctk.CTkLabel(
+            focus,
+            text=UI_TEXT["step_progress"],
+            font=ctk.CTkFont(family=FONT_FAMILY, size=10, weight="bold"),
+            text_color=COLORS["accent_soft"],
+        ).grid(row=1, column=2, sticky="w", padx=14, pady=(4, 0))
+        ctk.CTkLabel(
+            focus,
+            textvariable=self.focus_progress_var,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
+            text_color=COLORS["text"],
+            justify="left",
+        ).grid(row=2, column=2, rowspan=2, sticky="w", padx=(14, 16), pady=(0, 12))
+        return focus
+
     def _build_dashboard(self) -> ctk.CTkFrame:
         dashboard = ctk.CTkFrame(self, fg_color="transparent")
-        dashboard.grid_columnconfigure(0, weight=3)
-        dashboard.grid_columnconfigure(1, weight=1)
+        dashboard.grid_columnconfigure(0, weight=1)
 
         status_card = ctk.CTkFrame(
             dashboard,
@@ -497,7 +597,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             border_color=COLORS["line"],
             corner_radius=8,
         )
-        status_card.grid(row=0, column=0, sticky="ew", padx=(0, 8))
+        status_card.grid(row=0, column=0, sticky="ew")
         status_card.grid_columnconfigure(0, weight=1)
         ctk.CTkLabel(
             status_card,
@@ -514,29 +614,6 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             justify="left",
         ).grid(row=1, column=0, sticky="ew", padx=12, pady=(0, 8))
 
-        next_card = ctk.CTkFrame(
-            dashboard,
-            fg_color=COLORS["panel"],
-            border_width=1,
-            border_color=COLORS["line"],
-            corner_radius=8,
-        )
-        next_card.grid(row=0, column=1, sticky="ew", padx=(8, 0))
-        next_card.grid_columnconfigure(0, weight=1)
-        ctk.CTkLabel(
-            next_card,
-            text=UI_TEXT["next_action"],
-            font=ctk.CTkFont(family=FONT_FAMILY, size=10, weight="bold"),
-            text_color=COLORS["accent_soft"],
-        ).grid(row=0, column=0, sticky="w", padx=12, pady=(8, 0))
-        ctk.CTkLabel(
-            next_card,
-            textvariable=self.next_action_var,
-            font=ctk.CTkFont(family=FONT_FAMILY, size=14, weight="bold"),
-            text_color=COLORS["accent"],
-            wraplength=300,
-            justify="left",
-        ).grid(row=1, column=0, sticky="ew", padx=12, pady=(0, 8))
         return dashboard
 
     def _make_logo_label(self, parent: ctk.CTkFrame) -> ctk.CTkLabel:
@@ -1451,25 +1528,179 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 return True
         return False
 
-    def _dashboard_next_action(self) -> str:
-        package_dir = self._dashboard_package_dir()
-        if not self.system_check_completed:
-            return UI_TEXT["run_system_check"]
-        if self.selected_file is None and self.test_video_path is None:
-            return UI_TEXT["select_test_video"]
+    def _focus_sequence_ready(self, package_dir: Path | None) -> bool:
+        if self.sequence_items:
+            return True
         if package_dir is None:
-            return UI_TEXT["generate_posting_package"]
+            return False
+        try:
+            return bool(read_sequence(package_dir))
+        except Exception:
+            return False
+
+    def _focus_step_state(
+        self,
+        index: int,
+        step_key: str,
+        desc_key: str,
+        action_key: str,
+        action_label_key: str,
+        sequence_ready: bool = False,
+    ) -> dict[str, object]:
+        return {
+            "index": index,
+            "completed": False,
+            "step_label": UI_TEXT[step_key],
+            "description": UI_TEXT[desc_key],
+            "action_key": action_key,
+            "action_label": UI_TEXT[action_label_key],
+            "sequence_ready": sequence_ready,
+        }
+
+    def _focus_state(self) -> dict[str, object]:
+        package_dir = self._dashboard_package_dir()
+        sequence_ready = self._focus_sequence_ready(package_dir)
+        video_ready = self.selected_file is not None
+
+        if package_dir is None:
+            if not video_ready and not sequence_ready:
+                return self._focus_step_state(
+                    1,
+                    "focus_step_select",
+                    "focus_desc_select",
+                    "select_video",
+                    "focus_action_select_video",
+                    sequence_ready,
+                )
+            return self._focus_step_state(
+                2,
+                "focus_step_package",
+                "focus_desc_package",
+                "generate_posting_package",
+                "generate_posting_package",
+                sequence_ready,
+            )
+
         if not self._dashboard_file_ready(package_dir, "assistant_review.md", self.review_file_path):
-            return UI_TEXT["run_assistant_review"]
+            return self._focus_step_state(
+                3,
+                "focus_step_review",
+                "focus_desc_review",
+                "run_assistant_review",
+                "run_assistant_review",
+                sequence_ready,
+            )
+
         if not self._dashboard_file_ready(package_dir, "selected/selected_summary.md", None):
-            return UI_TEXT["export_selected_draft"]
-        if not self._dashboard_file_ready(package_dir, "selected/short_vertical_1080x1920.mp4", self.vertical_short_path):
-            return UI_TEXT["generate_vertical_short"]
+            return self._focus_step_state(
+                4,
+                "focus_step_draft",
+                "focus_desc_draft",
+                "export_selected_draft",
+                "export_selected_draft",
+                sequence_ready,
+            )
+
+        vertical_ready = self._dashboard_file_ready(
+            package_dir,
+            "selected/short_vertical_1080x1920.mp4",
+            self.vertical_short_path,
+        )
+        horizontal_ready = self._dashboard_file_ready(
+            package_dir,
+            "selected/horizontal_edit.mp4",
+            self.horizontal_edit_path,
+        )
+        export_ready = horizontal_ready if sequence_ready else vertical_ready
+        if not export_ready:
+            action_key = "generate_horizontal_edit" if sequence_ready else "generate_vertical_short"
+            action_label_key = "generate_horizontal_edit" if sequence_ready else "generate_vertical_short"
+            return self._focus_step_state(
+                5,
+                "focus_step_export",
+                "focus_desc_export",
+                action_key,
+                action_label_key,
+                sequence_ready,
+            )
+
         if not self._dashboard_memory_saved(package_dir):
-            return UI_TEXT["save_to_memory"]
-        if not self._dashboard_file_ready(package_dir, "assistant_recommendation.md", self.recommendation_path):
-            return UI_TEXT["generate_recommendation"]
-        return UI_TEXT["all_set"]
+            return self._focus_step_state(
+                6,
+                "focus_step_memory",
+                "focus_desc_memory",
+                "save_to_memory",
+                "save_to_memory",
+                sequence_ready,
+            )
+
+        return {
+            "index": 6,
+            "completed": True,
+            "step_label": UI_TEXT["focus_step_completed"],
+            "description": UI_TEXT["focus_desc_completed"],
+            "action_key": "open_package_folder",
+            "action_label": UI_TEXT["open_package_folder"],
+            "sequence_ready": sequence_ready,
+        }
+
+    def _focus_progress_text(self, active_index: int, completed: bool) -> str:
+        steps = [
+            UI_TEXT["focus_step_select"],
+            UI_TEXT["focus_step_package"],
+            UI_TEXT["focus_step_review"],
+            UI_TEXT["focus_step_draft"],
+            UI_TEXT["focus_step_export"],
+            UI_TEXT["focus_step_memory"],
+        ]
+        lines = []
+        for index, label in enumerate(steps, start=1):
+            if completed or index < active_index:
+                state = UI_TEXT["focus_progress_done"]
+            elif index == active_index:
+                state = UI_TEXT["focus_progress_next"]
+            else:
+                state = UI_TEXT["focus_progress_wait"]
+            lines.append(f"[{state}] {label}")
+        return "\n".join(lines)
+
+    def _apply_focus_state(self, state: dict[str, object]) -> None:
+        if not hasattr(self, "focus_step_var"):
+            return
+        active_index = int(state.get("index") or 1)
+        completed = bool(state.get("completed"))
+        step_label = str(state.get("step_label") or "")
+        action_label = str(state.get("action_label") or "")
+        if completed:
+            current_step = f"{UI_TEXT['focus_step_completed']}\n{UI_TEXT['all_set']}"
+        else:
+            current_step = f"STEP {active_index} / 6\n{step_label}"
+        self.focus_step_var.set(current_step)
+        self.focus_description_var.set(str(state.get("description") or ""))
+        self.focus_action_var.set(action_label)
+        self.focus_progress_var.set(self._focus_progress_text(active_index, completed))
+        self.focus_action_key = str(state.get("action_key") or "")
+        self.next_action_var.set(action_label)
+        if hasattr(self, "focus_action_button"):
+            self.focus_action_button.configure(text=action_label)
+
+    def _run_focus_action(self) -> None:
+        actions = {
+            "select_video": self._select_video,
+            "generate_posting_package": self._start_posting_package,
+            "run_assistant_review": self._start_assistant_review,
+            "export_selected_draft": self._start_export_selected_draft,
+            "generate_vertical_short": self._start_generate_vertical_short,
+            "generate_horizontal_edit": self._start_generate_horizontal_edit,
+            "save_to_memory": self._start_save_memory,
+            "open_package_folder": self._open_package_folder,
+        }
+        handler = actions.get(self.focus_action_key)
+        if handler is not None:
+            handler()
+
+    def _dashboard_next_action(self) -> str:
+        return str(self._focus_state().get("action_label") or UI_TEXT["all_set"])
 
     def _update_dashboard(self) -> None:
         if not hasattr(self, "status_strip_var"):
@@ -1487,7 +1718,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             f"{UI_TEXT['dashboard_bridge']}: {bridge_state}",
         ]
         self.status_strip_var.set("  |  ".join(status_parts))
-        self.next_action_var.set(self._dashboard_next_action())
+        self._apply_focus_state(self._focus_state())
 
     def _select_video(self) -> None:
         file_path = filedialog.askopenfilename(

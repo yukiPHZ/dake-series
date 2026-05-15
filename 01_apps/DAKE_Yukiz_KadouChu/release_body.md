@@ -131,3 +131,11 @@
 - NVENC優先、失敗時は `libx264` へフォールバック
 - Ollama READY時は横編集前に短い構成提案を試行
 - タイムライン編集ソフト化はせず、静かな構成に限定
+
+## Phase 3.4
+
+- FOCUS MODE を追加
+- Current Step / Next Action / Step Progress で制作導線を整理
+- Next Action ボタンから既存処理を直接実行
+- STATUS STRIP と詳細機能は残しつつ、通常導線では次の一手を優先
+- 完了状態では `整っています。` を表示

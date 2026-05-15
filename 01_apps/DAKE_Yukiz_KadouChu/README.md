@@ -391,6 +391,18 @@ NEXT ACTION は、System Check、動画選択、Posting Package、Assistant Revi
 
 これはPremiereやDaVinciのようなタイムライン編集ではありません。多トラック、波形編集、キーフレーム、秒単位GUI編集は行わず、素材を置き、流れを整え、止まらず外へ出すための静かな構成機能です。元動画は変更せず、出力はpackage内の `selected/` に限定します。
 
+## Phase 3.4 FOCUS MODE
+
+`FOCUS MODE` を画面上部に追加し、通常の制作導線では「今やること」を1つだけ強く表示するように整理しました。
+
+- Current Step で Select / Package / Review / Select Draft / Export / Memory の現在位置を表示
+- Next Action ボタンで既存の処理を直接呼び出し
+- Step Progress で `[done]`, `[next]`, `[wait]` を表示
+- STATUS STRIP は残しつつ、FOCUS MODEより控えめに表示
+- 詳細機能は残したまま、通常導線では「わかる、押せる、進む」を優先
+
+完了状態では `整っています。` を表示し、Next Action は `Open Package Folder` になります。
+
 ## Phase 2候補
 
 - YouTube LIVE URLからyt-dlpで本取得
