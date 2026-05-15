@@ -1,3 +1,3 @@
-# Phase 1 mock mode uses only the Python standard library.
-# ACE-Step integration is optional and configured outside this app.
-
+# Runtime mock mode uses only the Python standard library.
+# PyInstaller is used by build.bat to create DakeBGM_Loop.exe.
+pyinstaller>=6.0
