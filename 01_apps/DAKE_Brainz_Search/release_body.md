@@ -1,18 +1,20 @@
-# 補助脳BRAINZ v0.9.0
+# 補助脳BRAINZ v1.0.0
 
 ローカルの会話・仕様・Codex実装結果を忘れず探すための記憶検索アプリです。
 
 ## 追加
 
-- Codex Report Auto Import
-- codex_reports/ watch
-- codex_report_auto source_type
-- 正本Markdown保持
-- 自動Semantic連携
-- processed / failed 分離
+- Slack Inbox Import
+- iPhone / Android 共通投入口
+- Slack polling
+- slack_inbox source_type
+- Markdown正本保存
+- Auto Semantic連携
+- Slack通知状態表示
 
 ## 継続
 
+- Codex Report Auto Import
 - Remote Queue
 - Notification system
 - Semantic Search

@@ -42,6 +42,12 @@ UI_TEXT = {
     "checkbox_enable_remote_queue": "Enable Remote Queue",
     "button_choose_remote_queue": "Choose Queue",
     "section_codex_reports": "Codex Reports",
+    "section_slack_inbox": "Slack Inbox",
+    "checkbox_enable_slack_inbox": "Enable Slack Inbox",
+    "label_slack_token": "Bot Token",
+    "label_slack_channel": "Channel ID",
+    "label_slack_interval": "Poll sec 5-15",
+    "button_save_slack": "Save Slack",
     "results_title": "Search Results",
     "preview_title": "Preview",
     "tags_title": "Related Tags",
@@ -105,6 +111,21 @@ UI_TEXT = {
     "phrase_codex_report_saved": "補助脳：Codex報告を記憶しました。",
     "label_last_commit": "LAST COMMIT: {commit_hash}",
     "label_last_report": "LAST REPORT: {path}",
+    "status_slack_connected": "SLACK: CONNECTED",
+    "status_slack_auth_failed": "SLACK AUTH FAILED",
+    "status_slack_timeout": "SLACK TIMEOUT",
+    "status_slack_import_complete": "SLACK IMPORT COMPLETE",
+    "status_slack_channel_not_found": "CHANNEL NOT FOUND",
+    "status_slack_config_missing": "SLACK CONFIG MISSING",
+    "status_slack_disabled": "SLACK: OFF",
+    "status_slack_ready": "SLACK: READY",
+    "status_slack_error": "SLACK ERROR",
+    "label_slack_last_import": "LAST IMPORT: {time}",
+    "label_slack_channel_status": "CHANNEL: {channel}",
+    "log_slack_import": "SLACK INBOX: New message imported. imported={imported} skipped={skipped} failed={failed}",
+    "log_slack_status": "SLACK INBOX: {status} {message}",
+    "log_slack_file": "SLACK LOG: {path}",
+    "phrase_slack_memory_saved": "\u88dc\u52a9\u8133\uff1aSlack Inbox\u3092\u53d6\u308a\u8fbc\u307f\u307e\u3057\u305f\u3002",
     "log_semantic_search_initialized": "Semantic search initialized.",
     "log_embedding_generated": "Embedding generated.",
     "log_related_memory_found": "Related memory found: {count}",
@@ -166,6 +187,8 @@ UI_TEXT = {
     "notify_codex_import_complete": "Codex結果を記憶しました。",
     "notify_codex_report_imported": "Codex報告を記憶しました。",
     "notify_codex_report_failed": "Codex報告の取り込みに失敗しました。",
+    "notify_slack_import_complete": "Slack Inboxを取り込みました。",
+    "notify_slack_import_failed": "Slack Inboxの取得に失敗しました。",
     "notify_handoff_complete": "{kind} handoffを生成しました。",
     "notify_remote_queue_detected": "Remote Queueを受け取りました。",
     "notify_remote_queue_processed": "Remote Queueを処理しました。",
@@ -220,6 +243,8 @@ UI_TEXT = {
 
 
 def run_smoke_test() -> int:
+    import requests
+
     from core.app_config import AppConfig, ConfigStore, ensure_app_dirs
     from core.chatgpt_importer import import_chatgpt_export
     from core.codex_importer import import_codex_file, import_codex_text
@@ -233,6 +258,7 @@ def run_smoke_test() -> int:
     from core.ollama_embeddings import DEFAULT_EMBED_MODEL, check_embedding_status
     from core.remote_queue import count_pending_queue_files, process_remote_queue_folder
     from core.search_engine import SearchEngine
+    from core.slack_inbox import poll_slack_inbox
     from core.watch_folder import detect_changed_files
 
     ensure_app_dirs()
@@ -254,6 +280,11 @@ def run_smoke_test() -> int:
                 enable_remote_queue=True,
                 auto_run_remote_search=False,
                 codex_reports_folder=str(root / "codex_reports"),
+                enable_slack_inbox=True,
+                slack_bot_token="xoxb-smoke-token",
+                slack_channel_id="C123SMOKE",
+                slack_poll_interval_seconds=5,
+                slack_last_ts="0",
                 enable_notifications=False,
             )
         )
@@ -264,6 +295,13 @@ def run_smoke_test() -> int:
             raise RuntimeError("remote queue config did not roundtrip")
         if config_data.codex_reports_folder != str(root / "codex_reports"):
             raise RuntimeError("codex reports config did not roundtrip")
+        if (
+            not config_data.enable_slack_inbox
+            or config_data.slack_bot_token != "xoxb-smoke-token"
+            or config_data.slack_channel_id != "C123SMOKE"
+            or config_data.slack_poll_interval_seconds != 5
+        ):
+            raise RuntimeError("slack inbox config did not roundtrip")
 
         notification_queue = NotificationQueue(history_limit=3)
         for index in range(4):
@@ -444,6 +482,85 @@ def run_smoke_test() -> int:
         if duplicate_item is None or not duplicate_item.skipped_duplicate:
             raise RuntimeError("codex report duplicate was not skipped")
 
+        class FakeSlackResponse:
+            def __init__(self, payload: dict[str, object], status_code: int = 200) -> None:
+                self.payload = payload
+                self.status_code = status_code
+
+            def json(self) -> dict[str, object]:
+                return self.payload
+
+        class FakeSlackSession:
+            def __init__(self, mode: str = "ok") -> None:
+                self.mode = mode
+
+            def get(self, url: str, headers=None, params=None, timeout=None):  # noqa: ANN001
+                if self.mode == "timeout":
+                    raise requests.Timeout("slack timeout")
+                if self.mode == "auth_failed":
+                    return FakeSlackResponse({"ok": False, "error": "invalid_auth"})
+                if "chat.getPermalink" in url:
+                    return FakeSlackResponse({"ok": True, "permalink": "https://example.slack.com/archives/C123SMOKE/p123"})
+                return FakeSlackResponse(
+                    {
+                        "ok": True,
+                        "messages": [
+                            {
+                                "ts": slack_ts,
+                                "user": "U123",
+                                "text": slack_message_text,
+                                "files": [{"name": "brainz-note.md", "mimetype": "text/markdown"}],
+                            }
+                        ],
+                    }
+                )
+
+        slack_ts = f"{int(time.time())}.{str(time.time_ns())[-6:]}"
+        slack_query = f"Slack Inbox quiet workflow {unique_suffix}"
+        slack_message_text = f"{slack_query}\n<https://example.com/brainz|reference>"
+        slack_result = poll_slack_inbox(
+            database=database,
+            memory_folder=root,
+            token="xoxb-smoke-token",
+            channel_id="C123SMOKE",
+            last_ts="",
+            session=FakeSlackSession(),
+        )
+        if slack_result.imported < 1 or slack_result.status != "imported":
+            raise RuntimeError("slack inbox import failed")
+        if not slack_result.saved_files or not Path(slack_result.saved_files[0]).exists():
+            raise RuntimeError("slack markdown was not saved")
+        if "source: slack_inbox" not in Path(slack_result.saved_files[0]).read_text(encoding="utf-8"):
+            raise RuntimeError("slack markdown source marker missing")
+        slack_duplicate = poll_slack_inbox(
+            database=database,
+            memory_folder=root,
+            token="xoxb-smoke-token",
+            channel_id="C123SMOKE",
+            last_ts="",
+            session=FakeSlackSession(),
+        )
+        if slack_duplicate.skipped < 1:
+            raise RuntimeError("slack duplicate was not skipped")
+        slack_auth = poll_slack_inbox(
+            database=database,
+            memory_folder=root,
+            token="xoxb-bad-token",
+            channel_id="C123SMOKE",
+            session=FakeSlackSession("auth_failed"),
+        )
+        if slack_auth.status != "auth_failed":
+            raise RuntimeError("slack auth failure branch failed")
+        slack_timeout = poll_slack_inbox(
+            database=database,
+            memory_folder=root,
+            token="xoxb-smoke-token",
+            channel_id="C123SMOKE",
+            session=FakeSlackSession("timeout"),
+        )
+        if slack_timeout.status != "timeout":
+            raise RuntimeError("slack timeout branch failed")
+
     engine = SearchEngine(database)
     remote_note_results = engine.search("Remote Queue note memory", limit=10)
     if not any(result.source_type == "remote_queue_note" for result in remote_note_results):
@@ -451,14 +568,20 @@ def run_smoke_test() -> int:
     remote_import_results = engine.search("Remote Queue import target", limit=10)
     if not remote_import_results:
         raise RuntimeError("remote queue import was not indexed")
+    slack_results = engine.search(slack_query, limit=10)
+    slack_match = next((result for result in slack_results if result.source_type == "slack_inbox"), None)
+    if slack_match is None:
+        raise RuntimeError("slack_inbox search returned no result")
+    if "Slack permalink:" not in slack_match.content or slack_match.conversation_id != "C123SMOKE":
+        raise RuntimeError("slack inbox metadata was not stored")
 
     file_results = engine.search(UI_TEXT["smoke_query_memory"], limit=10)
     if not file_results:
         raise RuntimeError("file search returned no results")
-    file_match = next((result for result in file_results if result.source_type not in {"chatgpt_export", "codex_result", "codex_report_auto"}), None)
+    file_match = next((result for result in file_results if result.source_type not in {"chatgpt_export", "codex_result", "codex_report_auto", "slack_inbox"}), None)
     if file_match is None:
         file_match_results = engine.search(UI_TEXT["smoke_query_git"], limit=10)
-        file_match = next((result for result in file_match_results if result.source_type not in {"chatgpt_export", "codex_result", "codex_report_auto"}), None)
+        file_match = next((result for result in file_match_results if result.source_type not in {"chatgpt_export", "codex_result", "codex_report_auto", "slack_inbox"}), None)
     if file_match is None:
         raise RuntimeError("file search returned no file source result")
 
@@ -530,9 +653,12 @@ def run_smoke_test() -> int:
     flow_codex_report = engine.memory_flow(codex_report_match, semantic_enabled=False, ascending=True)
     if not any(item.result.source_type == "codex_report_auto" for item in flow_codex_report.items):
         raise RuntimeError("codex report memory flow did not include codex_report_auto")
+    flow_slack = engine.memory_flow(slack_match, semantic_enabled=False, ascending=True)
+    if not any(item.result.source_type == "slack_inbox" for item in flow_slack.items):
+        raise RuntimeError("slack inbox memory flow did not include slack_inbox")
 
     flow_file = engine.memory_flow(file_match, semantic_enabled=False, ascending=True)
-    if not any(item.result.source_type not in {"chatgpt_export", "codex_result", "codex_report_auto"} for item in flow_file.items):
+    if not any(item.result.source_type not in {"chatgpt_export", "codex_result", "codex_report_auto", "slack_inbox"} for item in flow_file.items):
         raise RuntimeError("file memory flow did not include file result")
 
     flow_semantic = engine.memory_flow(chatgpt_match, semantic_enabled=True, ascending=True)
@@ -564,6 +690,7 @@ def run_smoke_test() -> int:
     print(f"memory_flow_chatgpt={len(flow_chatgpt.items)}")
     print(f"memory_flow_codex={len(flow_codex.items)}")
     print(f"memory_flow_codex_report={len(flow_codex_report.items)}")
+    print(f"memory_flow_slack={len(flow_slack.items)}")
     print(f"memory_flow_file={len(flow_file.items)}")
     print(f"memory_flow_semantic={flow_semantic.semantic_available}")
     print(f"watch_new_detected={len(watch_detection.changed_files)}")
@@ -575,6 +702,8 @@ def run_smoke_test() -> int:
     print(f"remote_queue_note_results={len(remote_note_results)}")
     print(f"codex_report_imported={codex_report_result.imported}")
     print(f"codex_report_failed={codex_report_result.failed}")
+    print(f"slack_imported={slack_result.imported}")
+    print(f"slack_duplicate_skipped={slack_duplicate.skipped}")
     print(f"gpu_detected={gpu_status.gpu_detected}")
     return 0
 
@@ -640,6 +769,7 @@ def run_gui(launch_check: bool = False) -> int:
     from core.ollama_embeddings import check_embedding_status
     from core.remote_queue import RemoteQueueBatchResult, count_pending_queue_files, process_remote_queue_folder
     from core.search_engine import SearchEngine, SearchResponse
+    from core.slack_inbox import SlackInboxResult, poll_slack_inbox
     from core.watch_folder import WatchScanResult, detect_changed_files, write_watch_log
     from ui.components import choose_font_family, set_textbox_text
     from ui.theme import (
@@ -685,6 +815,7 @@ def run_gui(launch_check: bool = False) -> int:
             self.watch_scan_thread: threading.Thread | None = None
             self.remote_queue_thread: threading.Thread | None = None
             self.codex_report_thread: threading.Thread | None = None
+            self.slack_thread: threading.Thread | None = None
             self.current_results: list[SearchResult] = []
             self.current_related_results: list[SearchResult] = []
             self.current_flow_items: list[MemoryFlowItem] = []
@@ -695,6 +826,7 @@ def run_gui(launch_check: bool = False) -> int:
             self.auto_index_var = ctk.BooleanVar(value=self.config_data.auto_index_enabled)
             self.notifications_var = ctk.BooleanVar(value=self.config_data.enable_notifications)
             self.remote_queue_var = ctk.BooleanVar(value=self.config_data.enable_remote_queue)
+            self.slack_inbox_var = ctk.BooleanVar(value=self.config_data.enable_slack_inbox)
             self.flow_sort_ascending = True
             self.flow_request_id = 0
             self.flow_cache: dict[tuple[int, bool, bool], MemoryFlowResponse] = {}
@@ -704,8 +836,10 @@ def run_gui(launch_check: bool = False) -> int:
             self.watch_poll_interval_ms = 8000
             self.remote_queue_poll_interval_ms = 8000
             self.codex_report_poll_interval_ms = 8000
+            self.slack_poll_interval_ms = max(5000, int(self.config_data.slack_poll_interval_seconds) * 1000)
             self.notification_queue = NotificationQueue(history_limit=3)
             self.notification_visible = False
+            self.last_slack_status = ""
 
             self._apply_icon()
             self._build_ui()
@@ -719,11 +853,13 @@ def run_gui(launch_check: bool = False) -> int:
             self._refresh_system_status()
             self._update_remote_queue_status()
             self._update_codex_report_status()
+            self._update_slack_status()
             self.after(100, self._poll_events)
             if not launch_check:
                 self.after(1500, self._poll_watch_folder)
                 self.after(2200, self._poll_remote_queue)
                 self.after(2800, self._poll_codex_reports)
+                self.after(3400, self._poll_slack_inbox)
             if launch_check:
                 self.after(1200, self._launch_check_finish)
 
@@ -808,7 +944,15 @@ def run_gui(launch_check: bool = False) -> int:
             )
             self.semantic_checkbox.grid(row=1, column=0, columnspan=2, sticky="w", pady=(6, 0))
 
-            left = self._panel(self, 0)
+            left = ctk.CTkScrollableFrame(
+                self,
+                fg_color=COLORS["panel"],
+                border_color=COLORS["border"],
+                border_width=1,
+                corner_radius=0,
+                scrollbar_button_color=COLORS["panel_soft"],
+                scrollbar_button_hover_color=COLORS["accent_soft"],
+            )
             left.grid(row=1, column=0, sticky="nsew", padx=(18, 8), pady=(0, 10))
             left.grid_columnconfigure(0, weight=1)
             self._section_title(left, UI_TEXT["memory_title"], 0)
@@ -961,20 +1105,98 @@ def run_gui(launch_check: bool = False) -> int:
                     anchor="w",
                 ).grid(row=report_index, column=0, sticky="ew", padx=16, pady=2)
 
-            self._section_title(left, UI_TEXT["index_title"], 21)
+            self._section_title(left, UI_TEXT["section_slack_inbox"], 21)
+            self.slack_token_entry = ctk.CTkEntry(
+                left,
+                height=28,
+                placeholder_text=UI_TEXT["label_slack_token"],
+                show="*",
+                fg_color=COLORS["input"],
+                border_color=COLORS["border"],
+                text_color=COLORS["text"],
+                font=(self.status_font_family, FONT_SIZES["micro"]),
+            )
+            self.slack_token_entry.grid(row=22, column=0, sticky="ew", padx=16, pady=(0, 5))
+            self.slack_token_entry.insert(0, self.config_data.slack_bot_token)
+            slack_row = ctk.CTkFrame(left, fg_color="transparent")
+            slack_row.grid(row=23, column=0, sticky="ew", padx=16, pady=(0, 5))
+            slack_row.grid_columnconfigure(0, weight=2)
+            slack_row.grid_columnconfigure(1, weight=1)
+            self.slack_channel_entry = ctk.CTkEntry(
+                slack_row,
+                height=28,
+                placeholder_text=UI_TEXT["label_slack_channel"],
+                fg_color=COLORS["input"],
+                border_color=COLORS["border"],
+                text_color=COLORS["text"],
+                font=(self.status_font_family, FONT_SIZES["micro"]),
+            )
+            self.slack_channel_entry.grid(row=0, column=0, sticky="ew", padx=(0, 5))
+            self.slack_channel_entry.insert(0, self.config_data.slack_channel_id)
+            self.slack_interval_entry = ctk.CTkEntry(
+                slack_row,
+                height=28,
+                placeholder_text=UI_TEXT["label_slack_interval"],
+                fg_color=COLORS["input"],
+                border_color=COLORS["border"],
+                text_color=COLORS["text"],
+                font=(self.status_font_family, FONT_SIZES["micro"]),
+            )
+            self.slack_interval_entry.grid(row=0, column=1, sticky="ew", padx=(5, 0))
+            self.slack_interval_entry.insert(0, str(self.config_data.slack_poll_interval_seconds))
+            slack_control_row = ctk.CTkFrame(left, fg_color="transparent")
+            slack_control_row.grid(row=24, column=0, sticky="ew", padx=16, pady=(0, 5))
+            slack_control_row.grid_columnconfigure((0, 1), weight=1)
+            self.slack_inbox_checkbox = ctk.CTkCheckBox(
+                slack_control_row,
+                text=UI_TEXT["checkbox_enable_slack_inbox"],
+                variable=self.slack_inbox_var,
+                text_color=COLORS["muted"],
+                fg_color=COLORS["accent"],
+                hover_color=COLORS["accent_hover"],
+                border_color=COLORS["border"],
+                font=(self.status_font_family, FONT_SIZES["micro"]),
+                command=self._toggle_slack_inbox,
+            )
+            self.slack_inbox_checkbox.grid(row=0, column=0, sticky="w", padx=(0, 6))
+            ctk.CTkButton(
+                slack_control_row,
+                text=UI_TEXT["button_save_slack"],
+                height=28,
+                fg_color=COLORS["panel_soft"],
+                hover_color=COLORS["accent_soft"],
+                font=(self.status_font_family, FONT_SIZES["micro"]),
+                command=self._save_slack_settings,
+            ).grid(row=0, column=1, sticky="ew", padx=(6, 0))
+            self.slack_status_var = ctk.StringVar(value=UI_TEXT["status_slack_disabled"])
+            self.slack_last_import_var = ctk.StringVar(value=UI_TEXT["label_slack_last_import"].format(time="-"))
+            self.slack_channel_var = ctk.StringVar(value=UI_TEXT["label_slack_channel_status"].format(channel="-"))
+            for slack_index, variable in enumerate(
+                (self.slack_status_var, self.slack_last_import_var, self.slack_channel_var),
+                start=25,
+            ):
+                ctk.CTkLabel(
+                    left,
+                    textvariable=variable,
+                    text_color=COLORS["muted"],
+                    font=(self.status_font_family, FONT_SIZES["micro"]),
+                    anchor="w",
+                ).grid(row=slack_index, column=0, sticky="ew", padx=16, pady=1)
+
+            self._section_title(left, UI_TEXT["index_title"], 28)
             self.index_status_var = ctk.StringVar(value=UI_TEXT["index_idle"])
             ctk.CTkLabel(
                 left,
                 textvariable=self.index_status_var,
                 text_color=COLORS["section"],
                 font=(self.status_font_family, FONT_SIZES["body"]),
-            ).grid(row=22, column=0, sticky="w", padx=16, pady=(0, 8))
+            ).grid(row=29, column=0, sticky="w", padx=16, pady=(0, 8))
             self.progress = ctk.CTkProgressBar(left, height=10, progress_color=COLORS["accent"])
             self.progress.set(0)
-            self.progress.grid(row=23, column=0, sticky="ew", padx=16, pady=(0, 12))
+            self.progress.grid(row=30, column=0, sticky="ew", padx=16, pady=(0, 12))
 
             button_row = ctk.CTkFrame(left, fg_color="transparent")
-            button_row.grid(row=24, column=0, sticky="ew", padx=16, pady=(0, 18))
+            button_row.grid(row=31, column=0, sticky="ew", padx=16, pady=(0, 18))
             button_row.grid_columnconfigure((0, 1), weight=1)
             self.index_button = ctk.CTkButton(
                 button_row,
@@ -998,7 +1220,7 @@ def run_gui(launch_check: bool = False) -> int:
             )
             self.cancel_button.grid(row=0, column=1, sticky="ew", padx=(6, 0))
 
-            self._section_title(left, UI_TEXT["system_title"], 25)
+            self._section_title(left, UI_TEXT["system_title"], 32)
             self.sqlite_var = ctk.StringVar(value=UI_TEXT["status_sqlite_ready"])
             self.cuda_var = ctk.StringVar(value=UI_TEXT["status_cuda_unavailable"])
             self.gpu_var = ctk.StringVar(value=UI_TEXT["status_gpu_missing"])
@@ -1016,7 +1238,7 @@ def run_gui(launch_check: bool = False) -> int:
                     self.semantic_status_var,
                     self.docs_var,
                 ),
-                start=26,
+                start=33,
             ):
                 ctk.CTkLabel(
                     left,
@@ -1026,7 +1248,7 @@ def run_gui(launch_check: bool = False) -> int:
                     anchor="w",
                 ).grid(row=index, column=0, sticky="ew", padx=16, pady=2)
 
-            self._section_title(left, UI_TEXT["section_notifications"], 33)
+            self._section_title(left, UI_TEXT["section_notifications"], 40)
             self.notifications_checkbox = ctk.CTkCheckBox(
                 left,
                 text=UI_TEXT["checkbox_enable_notifications"],
@@ -1038,7 +1260,7 @@ def run_gui(launch_check: bool = False) -> int:
                 font=(self.status_font_family, FONT_SIZES["small"]),
                 command=self._toggle_notifications,
             )
-            self.notifications_checkbox.grid(row=34, column=0, sticky="w", padx=16, pady=(0, 10))
+            self.notifications_checkbox.grid(row=41, column=0, sticky="w", padx=16, pady=(0, 10))
 
             center = self._panel(self, 0)
             center.grid(row=1, column=1, sticky="nsew", padx=8, pady=(0, 12))
@@ -1280,6 +1502,7 @@ def run_gui(launch_check: bool = False) -> int:
             if clean and not self.config_data.codex_reports_folder:
                 self.config_data.codex_reports_folder = str(Path(clean) / "codex_reports")
                 self._update_codex_report_status()
+            self._update_slack_status()
             if persist:
                 self.config_store.save(self.config_data)
                 if clean:
@@ -1323,6 +1546,31 @@ def run_gui(launch_check: bool = False) -> int:
             self.config_data.enable_remote_queue = bool(self.remote_queue_var.get())
             self.config_store.save(self.config_data)
             self._update_remote_queue_status()
+
+        def _save_slack_settings(self) -> None:
+            token = self.slack_token_entry.get().strip() if hasattr(self, "slack_token_entry") else ""
+            channel_id = self.slack_channel_entry.get().strip() if hasattr(self, "slack_channel_entry") else ""
+            interval_text = self.slack_interval_entry.get().strip() if hasattr(self, "slack_interval_entry") else "10"
+            try:
+                interval = int(interval_text)
+            except ValueError:
+                interval = 10
+            interval = max(5, min(15, interval))
+            self.config_data.slack_bot_token = token
+            self.config_data.slack_channel_id = channel_id
+            self.config_data.slack_poll_interval_seconds = interval
+            self.slack_poll_interval_ms = interval * 1000
+            if hasattr(self, "slack_interval_entry"):
+                self.slack_interval_entry.delete(0, "end")
+                self.slack_interval_entry.insert(0, str(interval))
+            self.config_store.save(self.config_data)
+            self._update_slack_status()
+
+        def _toggle_slack_inbox(self) -> None:
+            self._save_slack_settings()
+            self.config_data.enable_slack_inbox = bool(self.slack_inbox_var.get())
+            self.config_store.save(self.config_data)
+            self._update_slack_status()
 
         def _toggle_auto_index(self) -> None:
             self.config_data.auto_index_enabled = bool(self.auto_index_var.get())
@@ -1425,6 +1673,18 @@ def run_gui(launch_check: bool = False) -> int:
                     self.codex_report_status_var.set(f"{UI_TEXT['status_codex_report_watching']} / {pending}")
             else:
                 self.codex_report_status_var.set(UI_TEXT["status_codex_report_idle"])
+
+        def _update_slack_status(self) -> None:
+            if not hasattr(self, "slack_status_var"):
+                return
+            channel_id = self.config_data.slack_channel_id or "-"
+            self.slack_channel_var.set(UI_TEXT["label_slack_channel_status"].format(channel=channel_id))
+            if not self.slack_inbox_var.get():
+                self.slack_status_var.set(UI_TEXT["status_slack_disabled"])
+            elif not self.config_data.memory_folder or not self.config_data.slack_bot_token or not self.config_data.slack_channel_id:
+                self.slack_status_var.set(UI_TEXT["status_slack_config_missing"])
+            elif self.slack_status_var.get() in {UI_TEXT["status_slack_disabled"], UI_TEXT["status_slack_config_missing"]}:
+                self.slack_status_var.set(UI_TEXT["status_slack_ready"])
 
         def _choose_chatgpt_export(self) -> None:
             file_path = filedialog.askopenfilename(
@@ -1672,6 +1932,39 @@ def run_gui(launch_check: bool = False) -> int:
             except Exception as exc:
                 self.events.put(("codex_report_error", str(exc)))
 
+        def _poll_slack_inbox(self) -> None:
+            try:
+                if self.slack_inbox_var.get() and self.config_data.memory_folder:
+                    if self.config_data.slack_bot_token and self.config_data.slack_channel_id:
+                        if not self.slack_thread or not self.slack_thread.is_alive():
+                            self.slack_thread = threading.Thread(
+                                target=self._slack_inbox_worker,
+                                args=(
+                                    Path(self.config_data.memory_folder),
+                                    self.config_data.slack_bot_token,
+                                    self.config_data.slack_channel_id,
+                                    self.config_data.slack_last_ts,
+                                ),
+                                daemon=True,
+                            )
+                            self.slack_thread.start()
+            finally:
+                self.after(self.slack_poll_interval_ms, self._poll_slack_inbox)
+
+        def _slack_inbox_worker(self, memory_folder: Path, token: str, channel_id: str, last_ts: str) -> None:
+            try:
+                result = poll_slack_inbox(
+                    database=self.database,
+                    memory_folder=memory_folder,
+                    token=token,
+                    channel_id=channel_id,
+                    last_ts=last_ts,
+                    poll_timeout_seconds=8.0,
+                )
+                self.events.put(("slack_inbox_done", result))
+            except Exception as exc:
+                self.events.put(("slack_inbox_error", str(exc)))
+
         def _start_auto_index(self, memory_folder: Path) -> None:
             if self.index_thread and self.index_thread.is_alive():
                 self.pending_auto_index_folder = memory_folder
@@ -1776,6 +2069,8 @@ def run_gui(launch_check: bool = False) -> int:
         def _result_title(self, result: SearchResult) -> str:
             if result.source_type == "chatgpt_export":
                 return f"[chatgpt_export] {result.conversation_title or result.title}"
+            if result.source_type == "slack_inbox":
+                return f"[slack_inbox] {result.title}"
             if result.source_type in {"codex_result", "codex_report_auto"}:
                 suffix = f" / {result.commit_hash[:7]}" if result.commit_hash else ""
                 return f"[{result.source_type}] {result.title}{suffix}"
@@ -2028,6 +2323,10 @@ def run_gui(launch_check: bool = False) -> int:
                     self._handle_codex_report_done(payload)
                 elif event == "codex_report_error":
                     self._handle_codex_report_error(str(payload))
+                elif event == "slack_inbox_done":
+                    self._handle_slack_inbox_done(payload)
+                elif event == "slack_inbox_error":
+                    self._handle_slack_inbox_error(str(payload))
 
             self.after(100, self._poll_events)
 
@@ -2119,6 +2418,52 @@ def run_gui(launch_check: bool = False) -> int:
             self._notify(UI_TEXT["notify_codex_report_failed"])
             self._update_codex_report_status()
             self.codex_report_status_var.set(UI_TEXT["status_codex_report_failed"])
+
+        def _handle_slack_inbox_done(self, result: SlackInboxResult) -> None:
+            status_text = self._slack_status_text(result.status)
+            self.slack_status_var.set(status_text)
+            self.slack_channel_var.set(UI_TEXT["label_slack_channel_status"].format(channel=result.channel_label or result.channel_id or "-"))
+            if result.latest_ts and result.latest_ts != self.config_data.slack_last_ts:
+                self.config_data.slack_last_ts = result.latest_ts
+                self.config_store.save(self.config_data)
+            if result.imported:
+                self.slack_last_import_var.set(UI_TEXT["label_slack_last_import"].format(time=now_iso()))
+                self._append_log(
+                    UI_TEXT["log_slack_import"].format(
+                        imported=result.imported,
+                        skipped=result.skipped,
+                        failed=result.failed,
+                    )
+                )
+                self._append_log(UI_TEXT["phrase_slack_memory_saved"])
+                if result.log_path:
+                    self._append_log(UI_TEXT["log_slack_file"].format(path=result.log_path))
+                self._refresh_stats()
+                self._notify(UI_TEXT["notify_slack_import_complete"])
+                if self.semantic_available:
+                    self._notify(UI_TEXT["notify_semantic_updated"])
+            elif result.status not in {"connected"} and result.status != self.last_slack_status:
+                self._append_log(UI_TEXT["log_slack_status"].format(status=result.status, message=result.message))
+                if result.status in {"auth_failed", "channel_not_found", "timeout", "error"}:
+                    self._notify(UI_TEXT["notify_slack_import_failed"])
+            self.last_slack_status = result.status
+
+        def _handle_slack_inbox_error(self, error_text: str) -> None:
+            self.slack_status_var.set(UI_TEXT["status_slack_error"])
+            self._append_log(UI_TEXT["log_slack_status"].format(status="error", message=error_text))
+            self._notify(UI_TEXT["notify_slack_import_failed"])
+            self.last_slack_status = "error"
+
+        def _slack_status_text(self, status: str) -> str:
+            return {
+                "imported": UI_TEXT["status_slack_import_complete"],
+                "connected": UI_TEXT["status_slack_connected"],
+                "auth_failed": UI_TEXT["status_slack_auth_failed"],
+                "channel_not_found": UI_TEXT["status_slack_channel_not_found"],
+                "timeout": UI_TEXT["status_slack_timeout"],
+                "config_missing": UI_TEXT["status_slack_config_missing"],
+                "error": UI_TEXT["status_slack_error"],
+            }.get(status, UI_TEXT["status_slack_error"])
 
         def _handle_watch_scan_done(self, result: WatchScanResult) -> None:
             self._update_watch_status()

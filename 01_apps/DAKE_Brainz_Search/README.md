@@ -282,6 +282,40 @@ brainz_memory/
 │  └ failed/
 ```
 
+## Phase 16: Slack Inbox Import
+
+補助脳BRAINZ v1.0.0 では、Slackの専用チャンネルをスマホ共通の投入口として使い、投稿されたメモをローカルMarkdown正本として保存・indexできます。
+
+- Slack Inbox Import
+- iPhone / Android からSlackチャンネルへ投稿した内容を取り込み
+- Slack API `conversations.history` をpolling
+- Poll Interval は5〜15秒の範囲で設定
+- `last_ts` を保存し、新規メッセージだけ取得
+- 取得した本文は `brainz_memory/slack/` にMarkdown正本として保存
+- Slack履歴自体を正本にせず、BRAINZ側のMarkdownを正本として扱う
+- `source_type=slack_inbox` として検索可能
+- 保存後にAuto Index / Semantic Search / Related Memory / Memory Flowへ連携
+- Slack tokenは `data/config/brainz_config.json` に保存し、Git commitしない
+- private channel推奨。Botを対象チャンネルへ招待してください
+- 外部送信、OpenAI API、自動ChatGPT/Codex送信は行いません
+
+必要なSlack scope例:
+
+- `channels:history`
+- `groups:history`
+- `channels:read`
+- `groups:read`
+
+記憶フォルダ例:
+
+```text
+brainz_memory/
+├ slack/
+├ codex_reports/
+├ chatgpt/
+└ remote_queue/
+```
+
 ## DAKE_META
 
 ```json
@@ -292,7 +326,7 @@ brainz_memory/
   "launcher_description": "ローカルの会話・仕様・メモを忘れず探すための記憶検索アプリです。",
   "site_title": "補助脳BRAINZ",
   "site_description": "ChatGPT、Codex、Claude、Geminiのやり取りをローカル記憶として再接続する検索補助脳です。",
-  "update_summary": "Codex Report Auto Import に対応しました。",
+  "update_summary": "Slack Inbox Import に対応しました。",
   "folder_name": "DAKE_Brainz_Search",
   "exe_name": "DakeBrainz_Search.exe",
   "release_url": "",
@@ -306,21 +340,23 @@ brainz_memory/
 ## RELEASE_BODY
 
 ```markdown
-# 補助脳BRAINZ v0.9.0
+# 補助脳BRAINZ v1.0.0
 
 ローカルの会話・仕様・Codex実装結果を忘れず探すための記憶検索アプリです。
 
 ## 追加
 
-- Codex Report Auto Import
-- codex_reports/ watch
-- codex_report_auto source_type
-- 正本Markdown保持
-- 自動Semantic連携
-- processed / failed 分離
+- Slack Inbox Import
+- iPhone / Android 共通投入口
+- Slack polling
+- slack_inbox source_type
+- Markdown正本保存
+- Auto Semantic連携
+- Slack通知状態表示
 
 ## 継続
 
+- Codex Report Auto Import
 - Remote Queue
 - Notification system
 - Semantic Search

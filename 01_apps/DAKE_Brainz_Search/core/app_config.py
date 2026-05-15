@@ -27,6 +27,11 @@ class AppConfig:
     enable_remote_queue: bool = False
     auto_run_remote_search: bool = False
     codex_reports_folder: str = ""
+    enable_slack_inbox: bool = False
+    slack_bot_token: str = ""
+    slack_channel_id: str = ""
+    slack_poll_interval_seconds: int = 10
+    slack_last_ts: str = ""
     enable_notifications: bool = True
     last_query: str = ""
     last_indexed_at: str = ""
@@ -122,6 +127,11 @@ class ConfigStore:
             enable_remote_queue=bool(data.get("enable_remote_queue", False)),
             auto_run_remote_search=bool(data.get("auto_run_remote_search", False)),
             codex_reports_folder=str(data.get("codex_reports_folder", "") or ""),
+            enable_slack_inbox=bool(data.get("enable_slack_inbox", False)),
+            slack_bot_token=str(data.get("slack_bot_token", "") or ""),
+            slack_channel_id=str(data.get("slack_channel_id", "") or ""),
+            slack_poll_interval_seconds=parse_int(data.get("slack_poll_interval_seconds", 10), default=10, minimum=5, maximum=15),
+            slack_last_ts=str(data.get("slack_last_ts", "") or ""),
             enable_notifications=bool(data.get("enable_notifications", True)),
             last_query=str(data.get("last_query", "") or ""),
             last_indexed_at=str(data.get("last_indexed_at", "") or ""),
@@ -131,6 +141,14 @@ class ConfigStore:
         payload = asdict(config)
         payload["updated_at"] = now_iso()
         write_json_file(self.path, payload)
+
+
+def parse_int(value: Any, default: int, minimum: int, maximum: int) -> int:
+    try:
+        parsed = int(str(value).strip())
+    except (TypeError, ValueError):
+        return default
+    return max(minimum, min(maximum, parsed))
 
 
 def read_text_safe(path: Path) -> str:
