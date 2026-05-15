@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import queue
@@ -110,6 +111,7 @@ UI_TEXT = {
     "cli_description": "Dake BGM Loop",
     "cli_generate_help": "Generate 15/30/60 sec mock WAVs and metadata.",
     "cli_preview_help": "Exercise the preview/stop code path.",
+    "cli_deterministic_help": "Verify that the same mood, duration, and seed produce the same WAV hash.",
     "cli_smoke_help": "Launch the GUI and close after N seconds.",
 }
 
@@ -311,7 +313,7 @@ def build_output_path(output_dir: Path, created_at: datetime, mood: str, duratio
     timestamp = created_at.strftime("%Y%m%d_%H%M%S")
     slug = MOOD_SLUGS.get(mood, "mood")
     filename = f"{APP_KEY}_{timestamp}_{slug}_{duration_sec}s_seed{seed}.wav"
-    return unique_path(output_dir / filename)
+    return unique_path(output_dir / created_at.strftime("%Y%m%d") / filename)
 
 
 def build_request(mood: str, duration_sec: int, seed: int, output_dir: Path, created_at: datetime) -> GenerateRequest:
@@ -351,6 +353,8 @@ def write_metadata_file(
         "duration_sec": request.duration_sec,
         "seed": request.seed,
         "prompt": request.prompt,
+        "mood_prompt": request.prompt,
+        "mock_profile": result.mock_profile or {},
         "model_adapter": result.adapter_name,
         "output_path": str(result.output_path.resolve()),
         "favorite": favorite,
@@ -364,6 +368,21 @@ def mark_metadata_favorite(metadata_path: Path) -> None:
     payload = json.loads(metadata_path.read_text(encoding="utf-8"))
     payload["favorite"] = True
     metadata_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def favorite_subdir_for_output(favorite_dir: Path, output_path: Path) -> Path:
+    output_date_dir = output_path.parent.name
+    if len(output_date_dir) == 8 and output_date_dir.isdigit():
+        return favorite_dir / output_date_dir
+    return favorite_dir / datetime.now().strftime("%Y%m%d")
+
+
+def file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as file:
+        for chunk in iter(lambda: file.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def open_path(path: Path) -> None:
@@ -834,8 +853,9 @@ class DakeBgmLoopApp(tk.Tk):
         if not self.current:
             return
         try:
-            self.paths.favorite_dir.mkdir(parents=True, exist_ok=True)
-            favorite_path = unique_path(self.paths.favorite_dir / self.current.output_path.name)
+            favorite_dir = favorite_subdir_for_output(self.paths.favorite_dir, self.current.output_path)
+            favorite_dir.mkdir(parents=True, exist_ok=True)
+            favorite_path = unique_path(favorite_dir / self.current.output_path.name)
             shutil.copy2(self.current.output_path, favorite_path)
             mark_metadata_favorite(self.current.metadata_path)
             self.current.favorite = True
@@ -884,7 +904,10 @@ def run_generate_check() -> int:
         print(f"generated {duration_sec}s: {result.output_path.name} ({actual_duration:.2f}s)")
 
     first_request, first_result, first_metadata = generated[0]
-    favorite_path = unique_path(paths.favorite_dir / first_result.output_path.name)
+    favorite_path = unique_path(
+        favorite_subdir_for_output(paths.favorite_dir, first_result.output_path) / first_result.output_path.name
+    )
+    favorite_path.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(first_result.output_path, favorite_path)
     mark_metadata_favorite(first_metadata)
     print(f"favorite copied: {favorite_path.name}")
@@ -896,7 +919,7 @@ def run_preview_check() -> int:
     settings = load_settings()
     paths = resolve_runtime_paths(settings)
     ensure_runtime_dirs(paths)
-    wav_files = sorted(paths.output_dir.glob("*.wav"), key=lambda path: path.stat().st_mtime, reverse=True)
+    wav_files = sorted(paths.output_dir.rglob("*.wav"), key=lambda path: path.stat().st_mtime, reverse=True)
     if not wav_files:
         created_at = datetime.now()
         request = build_request(UI_TEXT["mood_nonkina"], 15, 418220, paths.output_dir, created_at)
@@ -912,17 +935,64 @@ def run_preview_check() -> int:
     return 0
 
 
+def run_deterministic_check() -> int:
+    settings = load_settings()
+    paths = resolve_runtime_paths(settings)
+    ensure_runtime_dirs(paths)
+    adapter = MockGeneratorAdapter()
+    deterministic_dir = paths.output_dir / datetime.now().strftime("%Y%m%d") / "deterministic_check"
+    deterministic_dir.mkdir(parents=True, exist_ok=True)
+    checks = (
+        (UI_TEXT["mood_nonkina"], 15, 418220),
+        (UI_TEXT["mood_rain"], 15, 418220),
+        (UI_TEXT["mood_space"], 15, 418220),
+        (UI_TEXT["mood_code"], 30, 123456),
+    )
+    for mood, duration_sec, seed in checks:
+        slug = MOOD_SLUGS.get(mood, "mood")
+        request_a = GenerateRequest(
+            prompt=build_prompt(mood),
+            mood=mood,
+            mood_slug=slug,
+            duration_sec=duration_sec,
+            seed=seed,
+            output_path=deterministic_dir / f"{slug}_{duration_sec}s_seed{seed}_a.wav",
+        )
+        request_b = GenerateRequest(
+            prompt=build_prompt(mood),
+            mood=mood,
+            mood_slug=slug,
+            duration_sec=duration_sec,
+            seed=seed,
+            output_path=deterministic_dir / f"{slug}_{duration_sec}s_seed{seed}_b.wav",
+        )
+        adapter.generate(request_a)
+        adapter.generate(request_b)
+        hash_a = file_sha256(request_a.output_path)
+        hash_b = file_sha256(request_b.output_path)
+        if hash_a != hash_b:
+            print(f"deterministic mismatch: {mood} {duration_sec}s seed{seed}")
+            print(hash_a)
+            print(hash_b)
+            return 1
+        print(f"deterministic ok: {mood} {duration_sec}s seed{seed} {hash_a[:16]}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=APP_NAME)
-    parser.add_argument("--generate-check", action="store_true", help="Generate 15/30/60 sec mock WAVs and metadata.")
-    parser.add_argument("--preview-check", action="store_true", help="Exercise the preview/stop code path.")
-    parser.add_argument("--gui-smoke-seconds", type=float, default=None, help="Launch the GUI and close after N seconds.")
+    parser.add_argument("--generate-check", action="store_true", help=UI_TEXT["cli_generate_help"])
+    parser.add_argument("--preview-check", action="store_true", help=UI_TEXT["cli_preview_help"])
+    parser.add_argument("--deterministic-check", action="store_true", help=UI_TEXT["cli_deterministic_help"])
+    parser.add_argument("--gui-smoke-seconds", type=float, default=None, help=UI_TEXT["cli_smoke_help"])
     args = parser.parse_args(argv)
 
     if args.generate_check:
         return run_generate_check()
     if args.preview_check:
         return run_preview_check()
+    if args.deterministic_check:
+        return run_deterministic_check()
 
     app = DakeBgmLoopApp(smoke_seconds=args.gui_smoke_seconds)
     app.mainloop()

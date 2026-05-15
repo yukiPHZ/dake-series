@@ -32,7 +32,26 @@ Phase 1はMock生成です。ACE-Step実生成は未接続で、adapterだけを
 
 `MockGeneratorAdapter` はACE-Step未導入でもアプリの起動・操作確認ができるように、簡単なpad風 / クリック風 / 低音風のWAVを生成します。無音ではありませんが、完成音楽として作り込むものではありません。
 
-`AceStepGeneratorAdapter` はACE-Stepが利用可能な環境だけで呼び出す想定の薄い接続口です。未設定の場合、UIには `ACE-Step is not configured. Mock mode only.` と表示され、mock生成で確認できます。
+`AceStepGeneratorAdapter` は将来呼び出す想定の薄い接続口です。Phase 3では実接続せず、UIには `ACE-Step real generation is not connected yet. Mock mode only.` と表示され、mock生成で確認できます。
+
+## Phase 3
+
+Phase 3では、Mock生成でも「のんきなループ音をいっぱい作って楽しい」状態へ近づけました。ACE-Step実生成はまだ接続していません。
+
+- moodごとにMock音の傾向を分離
+  - のんき: 柔らかい木琴 / ベル風
+  - 静か: 低いpad風
+  - 雨: 小さい粒ノイズ + pad
+  - 夜: 低音少なめの暗いpad
+  - ミシン: 小さいclick rhythm
+  - コード: keyboard click風 + soft pad
+  - 神社: 遠いbell風 + reverb風
+  - 余白: 音数少なめ、無音多め
+- 同じ mood / duration / seed なら同じWAVになるseed再現性を追加
+- 先頭と末尾の短いfade、簡易crossfade、循環echoでループ時のブツつきを軽減
+- `outputs/YYYYMMDD/` と `favorites/YYYYMMDD/` に保存
+- metadataに `mood_prompt` と `mock_profile` を保存
+- `python main.py --deterministic-check` でWAVハッシュ一致を確認可能
 
 ## 空気
 
@@ -52,7 +71,9 @@ Phase 1はMock生成です。ACE-Step実生成は未接続で、adapterだけを
 
 ```text
 outputs/
+  YYYYMMDD/
 favorites/
+  YYYYMMDD/
 metadata/
 ```
 
@@ -69,6 +90,8 @@ metadata JSONには以下を保存します。
 - `duration_sec`
 - `seed`
 - `prompt`
+- `mood_prompt`
+- `mock_profile`
 - `model_adapter`
 - `output_path`
 - `favorite`
@@ -125,6 +148,6 @@ python main.py
 ## RELEASE_BODY
 
 - 短いBGMループ生成補助ツール
-- Phase 1はMock生成。ACE-Step実生成は未接続
+- Phase 3でMock音の傾向分け、seed再現性、ループ改善を追加
 - seed、metadata、お気に入りコピーに対応
 - 生成音声の商用利用可否は使用モデル・素材・公開先の規約に依存
