@@ -13,8 +13,8 @@ MAX_EVENTS = 100
 
 UI_TEXT = {
     "title_chatgpt_export": "ChatGPT exportを取り込みました",
-    "title_codex_report": "Codex報告を保存しました",
-    "title_codex_result": "Codex結果を保存しました",
+    "title_codex_report": "Codex報告を正本として保存しました",
+    "title_codex_result": "Codex報告を正本として保存しました",
     "title_paste_import": "ペースト投稿を取り込みました",
     "title_slack_import": "Slackから記憶が入りました",
     "title_slack_memory": "Slackから記憶が入りました",
@@ -25,6 +25,11 @@ UI_TEXT = {
     "title_slack_import_task": "取り込み指示を記憶しました",
     "message_saved_count": "{count}件の記憶を保存しました。",
     "message_slack_saved": "記憶庫に保存しました。OIKAWAから戻れます。",
+    "message_codex_source_saved": "原本をそのまま保存しました。OIKAWAから戻れます。",
+    "message_codex_commit": "commit記録を含むCodex報告です。",
+    "message_codex_push": "push済みのCodex報告です。",
+    "message_codex_changed_files": "修正ファイルの記録を含みます。",
+    "message_codex_attention": "確認が必要なCodex報告です。",
 }
 
 

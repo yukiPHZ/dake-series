@@ -156,6 +156,15 @@ Phase 12では、Slack由来の通知をログではなく、記憶へ戻るた�
 - Slack通知は熾火とORBITにも流れ、今日の流れでは自然な言葉で扱います
 - `related_path` がある通知は、保存済みMarkdownへ戻れます
 
+## QPSC Phase 13: Codex報告の正本入口化
+
+Phase 13では、Codex由来の通知を正本へ戻る入口として表示します。
+
+- 古いCodex通知も、OIKAWA側では静かな正本入口の文言へ寄せます
+- Codex報告は通知、熾火、ORBITの候補から原本プレビューへ戻れます
+- `related_path` があるCodex報告は、熾火候補として少し浮上しやすくします
+- OIKAWAはCodex報告を編集せず、読む場所として扱います
+
 ## 使い方
 
 1. `python main.py` で起動します。

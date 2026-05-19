@@ -108,6 +108,7 @@ UI_TEXT = {
     "orbit_metric_quiet": "記憶庫は静かです",
     "orbit_flow_import_source": "{source}から記憶が入りました",
     "orbit_flow_slack": "Slackから記憶が入りました",
+    "orbit_flow_codex": "Codex報告がBRAINZに入りました",
     "orbit_flow_unread": "未読通知が{count}件あります",
     "orbit_flow_quieted": "静かになった通知が{count}件あります",
     "orbit_flow_ember": "熾火候補が{count}件あります",
@@ -141,6 +142,11 @@ UI_TEXT = {
     "qpsc_slack_message": "記憶庫に保存しました。OIKAWAから戻れます。",
     "qpsc_slack_legacy_title": "Slackから取り込みました",
     "qpsc_saved_count_marker": "件の記憶を保存しました",
+    "qpsc_codex_title": "Codex報告を正本として保存しました",
+    "qpsc_codex_message": "原本をそのまま保存しました。OIKAWAから戻れます。",
+    "qpsc_codex_legacy_report_title": "Codex報告を保存しました",
+    "qpsc_codex_legacy_result_title": "Codex結果を保存しました",
+    "qpsc_codex_legacy_notify_title": "Codex報告を記憶しました",
     "qpsc_related_missing": "原本が見つかりません。",
     "qpsc_check_brainz_ok": "BRAINZ awake: OK",
     "qpsc_check_brainz_unconfirmed": "BRAINZ awake: 未確認",
@@ -242,27 +248,49 @@ def _is_slack_notification(notification: QpscNotification) -> bool:
     return notification.source.strip().lower() == "slack"
 
 
+def _is_codex_notification(notification: QpscNotification) -> bool:
+    source = notification.source.strip().lower()
+    title = notification.title.strip().lower()
+    return source in {"codex_result", "codex_report_auto", "handoff_codex"} or "codex" in title
+
+
 def _notification_display_title(notification: QpscNotification) -> str:
     title = notification.title.strip()
-    if not _is_slack_notification(notification):
+    if _is_slack_notification(notification):
+        if not title or title == UI_TEXT["qpsc_slack_legacy_title"]:
+            return UI_TEXT["qpsc_slack_title"]
         return title
-    if not title or title == UI_TEXT["qpsc_slack_legacy_title"]:
-        return UI_TEXT["qpsc_slack_title"]
+    if _is_codex_notification(notification):
+        legacy_titles = {
+            UI_TEXT["qpsc_codex_legacy_report_title"],
+            UI_TEXT["qpsc_codex_legacy_result_title"],
+            UI_TEXT["qpsc_codex_legacy_notify_title"],
+        }
+        if not title or title in legacy_titles:
+            return UI_TEXT["qpsc_codex_title"]
+        return title
     return title
 
 
 def _notification_display_message(notification: QpscNotification) -> str:
     message = notification.message.strip()
-    if not _is_slack_notification(notification):
+    if _is_slack_notification(notification):
+        if not message or UI_TEXT["qpsc_saved_count_marker"] in message:
+            return UI_TEXT["qpsc_slack_message"]
         return message
-    if not message or UI_TEXT["qpsc_saved_count_marker"] in message:
-        return UI_TEXT["qpsc_slack_message"]
+    if _is_codex_notification(notification):
+        if not message or UI_TEXT["qpsc_saved_count_marker"] in message:
+            return UI_TEXT["qpsc_codex_message"]
+        return message
     return message
 
 
 def _orbit_flow_line_for_source(source: str) -> str:
-    if source.strip().lower() == "slack":
+    source_key = source.strip().lower()
+    if source_key == "slack":
         return UI_TEXT["orbit_flow_slack"]
+    if source_key in {"codex_result", "codex_report_auto", "handoff_codex"}:
+        return UI_TEXT["orbit_flow_codex"]
     return UI_TEXT["orbit_flow_import_source"].format(source=source)
 
 
@@ -854,6 +882,8 @@ def _notification_heat_score(notification: QpscNotification, index: int, terms: 
         score += 600
     if notification.related_path.strip():
         score += 80
+    if _is_codex_notification(notification) and notification.related_path.strip():
+        score += 160
     text = _notification_search_text(notification)
     for term in terms:
         if term in text:
@@ -901,8 +931,8 @@ def _notification_boosts(
 def _notification_search_text(notification: QpscNotification) -> str:
     return " ".join(
         [
-            notification.title,
-            notification.message,
+            _notification_display_title(notification),
+            _notification_display_message(notification),
             notification.source,
             notification.kind,
         ]

@@ -4,10 +4,15 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from core.app_config import logs_dir, now_iso, read_text_safe
-from core.codex_importer import CodexImportResult, SOURCE_TYPE_CODEX_REPORT_AUTO, import_codex_text
+from core.codex_importer import (
+    CodexImportResult,
+    SOURCE_TYPE_CODEX_REPORT_AUTO,
+    codex_notification_message,
+    import_codex_text,
+)
 from core.db import BrainzDatabase
 from core.qpsc_notifications import UI_TEXT as QPSC_NOTIFICATION_TEXT
-from core.qpsc_notifications import append_saved_count_notification
+from core.qpsc_notifications import append_import_notification
 from core.remote_queue import destination_for, move_task_file
 
 
@@ -108,12 +113,22 @@ def process_codex_reports_folder(
     log_path = write_codex_report_log(items) if items else ""
     changed_items = [item for item in items if item.status == "processed" and not item.skipped_duplicate]
     related_path = changed_items[0].destination_file if changed_items else ""
-    append_saved_count_notification(
-        source=SOURCE_TYPE_CODEX_REPORT_AUTO,
-        title=QPSC_NOTIFICATION_TEXT["title_codex_report"],
-        count=len(changed_items),
-        related_path=related_path,
-    )
+    if changed_items:
+        raw_text = read_text_safe(Path(related_path)) if related_path else ""
+        try:
+            append_import_notification(
+                source=SOURCE_TYPE_CODEX_REPORT_AUTO,
+                title=QPSC_NOTIFICATION_TEXT["title_codex_report"],
+                message=codex_notification_message(
+                    commit_hash=changed_items[0].commit_hash,
+                    changed_files_count=changed_items[0].changed_files_count,
+                    raw_text=raw_text,
+                    failed=failed > 0,
+                ),
+                related_path=related_path,
+            )
+        except OSError:
+            pass
     return CodexReportAutoResult(
         detected=len(files),
         imported=imported,

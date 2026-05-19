@@ -10,12 +10,13 @@ from core.app_config import logs_dir, now_iso, read_text_safe
 from core.db import BrainzDatabase, DocumentRecord
 from core.ollama_embeddings import generate_embeddings_for_document
 from core.qpsc_notifications import UI_TEXT as QPSC_NOTIFICATION_TEXT
-from core.qpsc_notifications import append_saved_count_notification
+from core.qpsc_notifications import append_import_notification
 from core.text_splitter import split_text
 
 
 SOURCE_TYPE_CODEX = "codex_result"
 SOURCE_TYPE_CODEX_REPORT_AUTO = "codex_report_auto"
+CODEX_PASTE_LABEL = "codex result paste"
 
 
 @dataclass(frozen=True)
@@ -44,6 +45,39 @@ class CodexImportResult:
     commit_hash: str
     content_hash: str
     log_path: str
+
+
+CODEX_ATTENTION_PATTERN = re.compile(r"error|failed|failure|exception|失敗|エラー|確認が必要", re.IGNORECASE)
+CODEX_PUSH_DONE_PATTERN = re.compile(r"push|origin/main|origin main|pushed|成功", re.IGNORECASE)
+
+
+def codex_notification_message(
+    commit_hash: str = "",
+    changed_files_count: int = 0,
+    push_result: str = "",
+    raw_text: str = "",
+    failed: bool = False,
+) -> str:
+    if failed or CODEX_ATTENTION_PATTERN.search(raw_text):
+        return QPSC_NOTIFICATION_TEXT["message_codex_attention"]
+    if CODEX_PUSH_DONE_PATTERN.search(push_result or raw_text):
+        return QPSC_NOTIFICATION_TEXT["message_codex_push"]
+    if commit_hash:
+        return QPSC_NOTIFICATION_TEXT["message_codex_commit"]
+    if changed_files_count:
+        return QPSC_NOTIFICATION_TEXT["message_codex_changed_files"]
+    return QPSC_NOTIFICATION_TEXT["message_codex_source_saved"]
+
+
+def codex_related_path(source_label: str, raw_text: str) -> str:
+    label = source_label.strip()
+    if label and label.lower() != CODEX_PASTE_LABEL:
+        path = Path(label).expanduser()
+        if path.exists() and path.is_file():
+            return str(path.resolve())
+    if raw_text.strip():
+        return str(write_codex_source_copy(raw_text))
+    return ""
 
 
 def import_codex_text(
@@ -101,17 +135,18 @@ def import_codex_text(
     )
     log_path = write_import_log(result_without_log)
     if source_type != SOURCE_TYPE_CODEX_REPORT_AUTO:
-        is_paste_source = source_label.strip().lower() == "codex result paste"
-        append_saved_count_notification(
-            source="paste" if is_paste_source else source_type,
-            title=(
-                QPSC_NOTIFICATION_TEXT["title_paste_import"]
-                if is_paste_source
-                else QPSC_NOTIFICATION_TEXT["title_codex_result"]
-            ),
-            count=1 if changed else 0,
-            related_path="" if is_paste_source else source_label,
-        )
+        if changed:
+            append_import_notification(
+                source=source_type,
+                title=QPSC_NOTIFICATION_TEXT["title_codex_result"],
+                message=codex_notification_message(
+                    commit_hash=parsed.commit_hash,
+                    changed_files_count=len(parsed.changed_files),
+                    push_result=parsed.push_result,
+                    raw_text=parsed.raw_text,
+                ),
+                related_path=codex_related_path(source_label, original_text),
+            )
     return CodexImportResult(
         title=result_without_log.title,
         changed=result_without_log.changed,
@@ -352,4 +387,11 @@ def write_import_log(result: CodexImportResult) -> Path:
         f"Content hash: {result.content_hash}",
     ]
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return path
+
+
+def write_codex_source_copy(raw_text: str) -> Path:
+    logs_dir().mkdir(parents=True, exist_ok=True)
+    path = logs_dir() / f"codex_result_source_{now_iso().replace(':', '').replace('-', '').replace('T', '_')}.md"
+    path.write_text(raw_text.rstrip() + "\n", encoding="utf-8")
     return path

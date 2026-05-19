@@ -112,6 +112,15 @@ Phase 12では、Slack取り込み通知をログではなく、記憶へ戻る�
 - `handoff_codex`、`note:`、`search:`、`import:` は軽く分類して通知タイトルへ反映します
 - 原本主義を維持し、通知の `related_path` から保存済みMarkdownへ戻れます
 
+## QPSC Phase 13: Codex報告の正本入口化
+
+Phase 13では、Codex結果・Codex報告の通知を、正本へ戻る入口として整流しました。
+
+- Codex報告は要約せず、原本Markdown / TXTを正本として保存します
+- 通知文は短く、命令せず、OIKAWAから戻れる入口として扱います
+- commit、push、修正ファイル、確認が必要な報告は軽く分類してmessageへ反映します
+- OIKAWAではCodex報告通知、熾火、ORBITから原本へ戻れます
+
 ## Phase 1でできること
 
 - ローカル記憶フォルダの指定
