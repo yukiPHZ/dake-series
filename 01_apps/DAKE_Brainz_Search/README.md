@@ -38,6 +38,8 @@ Phase 2では、BRAINZで発生した取り込みをOIKAWA側の通知・提案�
 - 通知イベントには `source`、`title`、`message`、`status`、`kind`、`related_path` を保持します
 - 原本主義を維持し、`related_path` がある通知はOIKAWAから元のMarkdownや取り込み元へ戻れる設計です
 
+Phase 3以降、原本表示と読む導線はOIKAWA側へ寄せます。BRAINZは保存・取り込み・indexを優先し、前面の閲覧体験を増やしすぎない方針です。
+
 ## Phase 1でできること
 
 - ローカル記憶フォルダの指定

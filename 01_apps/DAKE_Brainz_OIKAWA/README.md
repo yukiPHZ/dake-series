@@ -52,6 +52,15 @@ Phase 2では、BRAINZが保存する `data/config/qpsc_notifications.json` を�
 - `related_path` がある通知は原本へ戻れます
 - 原本主義を維持し、全文プレビューではなく導線だけを置きます
 
+## QPSC Phase 3: 原本プレビュー
+
+Phase 3では、OIKAWAに原本プレビューを追加しました。通知の `related_path` や記憶検索の結果から、BRAINZに保存されたMarkdown / TXT原本へ戻れます。
+
+- OIKAWAはBRAINZの記憶を直接編集しません
+- 原本主義を維持し、Markdownはテキストとして表示します
+- BRAINZは保存とindexを担い、OIKAWAは読む / 戻る前面UIを担います
+- OIKAWA上では、記憶を検索する、原本へ戻る、熾火を見る、BRAINZからの通知を受ける役割を短く表示します
+
 ## 使い方
 
 1. `python main.py` で起動します。

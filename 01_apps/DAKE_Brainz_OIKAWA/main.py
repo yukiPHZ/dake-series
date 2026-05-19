@@ -17,7 +17,7 @@ from core.heat_engine import AnalysisResult, analyze_documents
 from core.markdown_writer import write_suggestion
 from core.qpsc_notifications import QpscNotification, mark_qpsc_notification_read, read_qpsc_notifications
 from core.qpsc_status import is_brainz_awake, read_brainz_status
-from core.scanner import scan_memory
+from core.scanner import MemoryDocument, scan_memory
 
 
 APP_NAME = "DakeBrainzOIKAWA"
@@ -27,12 +27,18 @@ COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
 UI_TEXT = {
     "app_title": "OIKAWA",
     "copyright": COPYRIGHT,
-    "app_subtitle": "記憶層を巡回する観測装置",
+    "app_subtitle": "検索 / 原本 / 熾火 / 通知",
+    "button_search": "記憶検索",
+    "button_searching": "検索中",
     "button_scan": "巡回する",
     "button_scanning": "巡回中",
     "button_open_output": "保存先を開く",
     "button_choose_folder": "記憶フォルダを選ぶ",
+    "button_preview_source": "原本を読む",
     "status_idle": "眠っています",
+    "status_searching": "記憶を検索中",
+    "status_search_complete": "検索完了",
+    "status_no_search_results": "検索結果はありません",
     "status_scanning": "記憶層を巡回中",
     "status_complete": "観測完了",
     "status_no_trace": "強い熱の痕跡は見つかりませんでした",
@@ -40,17 +46,28 @@ UI_TEXT = {
     "section_traces": "浮上した痕跡",
     "section_related": "関連断片",
     "section_suggestion": "OIKAWA提案",
+    "section_source_preview": "原本プレビュー",
     "label_memory_folder": "記憶フォルダ",
     "memory_folder_missing": "記憶フォルダ未検出",
     "dialog_choose_memory": "記憶フォルダを選択",
     "dialog_title": "OIKAWA",
     "summary_idle": "呼ばれるまで、記憶層の外側で待機します",
     "summary_scan": "files {files} / skipped {skipped} / traces {traces}",
+    "summary_search": "results {results} / skipped {skipped}",
     "summary_saved": "提案Markdownを保存しました",
     "card_file": "該当ファイル",
     "card_excerpt": "抜粋",
     "card_score": "score {score}",
     "card_empty": "まだ浮上したカードはありません",
+    "source_preview_empty": "通知または検索結果から原本を選んでください。",
+    "source_preview_loading": "原本を読み込んでいます。",
+    "source_preview_loaded": "原本を表示しました。",
+    "source_preview_missing": "ファイルが見つかりません。",
+    "source_preview_failed": "原本を表示できませんでした。",
+    "source_preview_not_file": "原本を表示できませんでした。",
+    "source_preview_path": "PATH: {path}",
+    "source_preview_truncated": "\n\n---\n先頭のみ表示しています。",
+    "search_result_meta": "{path} / score {score}",
     "section_qpsc_notifications": "QPSC通知",
     "qpsc_brainz_awake": "BRAINZ is awake.",
     "qpsc_memory_awake": "記憶庫は起きています。",
@@ -70,6 +87,102 @@ UI_TEXT = {
     "scan_check_ok": "SCAN CHECK OK",
     "ghost_words": ["熾火", "巡り", "側に", "在る", "余白", "記憶", "痕跡"],
 }
+
+MAX_PREVIEW_CHARS = 240_000
+
+
+@dataclass(frozen=True)
+class SourcePreviewResult:
+    request_id: int
+    path: Path
+    title: str
+    text: str
+    truncated: bool
+
+
+@dataclass(frozen=True)
+class SearchHit:
+    title: str
+    path: Path
+    relative_path: str
+    excerpt: str
+    score: int
+
+
+def build_search_hits(documents: list[MemoryDocument], query: str, memory_root: Path, limit: int = 20) -> list[SearchHit]:
+    terms = [term for term in query.lower().split() if term]
+    if not terms:
+        return []
+    hits: list[SearchHit] = []
+    for document in documents:
+        title_text = document.title.lower()
+        path_text = document.relative_path.lower()
+        body_text = document.text.lower()
+        score = 0
+        for term in terms:
+            score += body_text.count(term)
+            if term in title_text:
+                score += 6
+            if term in path_text:
+                score += 3
+        if score <= 0:
+            continue
+        hits.append(
+            SearchHit(
+                title=document.title,
+                path=document.path,
+                relative_path=_relative_path(document.path, memory_root),
+                excerpt=_search_excerpt(document.text, terms),
+                score=score,
+            )
+        )
+    hits.sort(key=lambda item: (item.score, item.path.stat().st_mtime if item.path.exists() else 0), reverse=True)
+    return hits[:limit]
+
+
+def _relative_path(path: Path, memory_root: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(memory_root.resolve()))
+    except ValueError:
+        return str(path)
+
+
+def _search_excerpt(text: str, terms: list[str], width: int = 160) -> str:
+    compact = " ".join(text.split())
+    lowered = compact.lower()
+    index = -1
+    for term in terms:
+        index = lowered.find(term)
+        if index >= 0:
+            break
+    if index < 0:
+        return compact[:width]
+    left = max(0, index - width // 2)
+    right = min(len(compact), index + width // 2)
+    excerpt = compact[left:right].strip()
+    if left > 0:
+        excerpt = f"...{excerpt}"
+    if right < len(compact):
+        excerpt = f"{excerpt}..."
+    return excerpt
+
+
+def read_source_preview_text(path: Path, limit: int = MAX_PREVIEW_CHARS) -> tuple[str, bool]:
+    for encoding in ("utf-8-sig", "utf-8", "cp932", "utf-16"):
+        try:
+            with path.open("r", encoding=encoding) as handle:
+                text = handle.read(limit + 1)
+            return text[:limit], len(text) > limit
+        except UnicodeDecodeError:
+            continue
+        except OSError:
+            return "", False
+    try:
+        with path.open("r", encoding="utf-8", errors="replace") as handle:
+            text = handle.read(limit + 1)
+        return text[:limit], len(text) > limit
+    except OSError:
+        return "", False
 
 COLORS = {
     "background": "#06070A",
@@ -119,6 +232,9 @@ class OikawaApp(tk.Tk):
         self.output_path: Path | None = None
         self.events: queue.Queue[tuple[str, object]] = queue.Queue()
         self.scan_thread: threading.Thread | None = None
+        self.search_thread: threading.Thread | None = None
+        self.source_preview_thread: threading.Thread | None = None
+        self.source_preview_request_id = 0
         self.scanning = False
         self.particles: list[Particle] = []
         self.last_animation = time.monotonic()
@@ -200,6 +316,27 @@ class OikawaApp(tk.Tk):
             wraplength=520,
             justify="left",
         ).pack(anchor="w", pady=(8, 0))
+        search_row = tk.Frame(header, bg=COLORS["background"])
+        search_row.pack(anchor="w", pady=(10, 0))
+        self.search_entry = tk.Entry(
+            search_row,
+            width=34,
+            bg=COLORS["panel"],
+            fg=COLORS["text"],
+            insertbackground=COLORS["text"],
+            relief="flat",
+            bd=0,
+            font=FONT_JP_SMALL,
+        )
+        self.search_entry.pack(side="left", ipady=7)
+        self.search_entry.bind("<Return>", lambda _event: self._start_memory_search())
+        self.search_button = tk.Button(
+            search_row,
+            text=UI_TEXT["button_search"],
+            command=self._start_memory_search,
+            **self._button_style(COLORS["panel_light"]),
+        )
+        self.search_button.pack(side="left", padx=(8, 0))
 
         self.missing_frame = tk.Frame(
             self,
@@ -288,6 +425,51 @@ class OikawaApp(tk.Tk):
         self.qpsc_status_label.pack(anchor="w", pady=(6, 0))
         self.qpsc_import_frame = tk.Frame(notice, bg=COLORS["background"])
         self.qpsc_import_frame.pack(fill="x", pady=(8, 0))
+
+        self.source_preview_status_var = tk.StringVar(value=UI_TEXT["source_preview_empty"])
+        source_preview = tk.Frame(
+            self,
+            bg=COLORS["panel"],
+            highlightbackground=COLORS["line"],
+            highlightthickness=1,
+            padx=12,
+            pady=10,
+        )
+        source_preview.place(relx=0.66, rely=0.50, relwidth=0.31, relheight=0.35)
+        tk.Label(
+            source_preview,
+            text=UI_TEXT["section_source_preview"],
+            fg=COLORS["muted"],
+            bg=COLORS["panel"],
+            font=FONT_LABEL,
+        ).pack(anchor="w")
+        tk.Label(
+            source_preview,
+            textvariable=self.source_preview_status_var,
+            fg=COLORS["text"],
+            bg=COLORS["panel"],
+            font=FONT_JP_SMALL,
+            wraplength=300,
+            justify="left",
+        ).pack(anchor="w", pady=(5, 8))
+        preview_body = tk.Frame(source_preview, bg=COLORS["panel"])
+        preview_body.pack(fill="both", expand=True)
+        preview_scrollbar = tk.Scrollbar(preview_body)
+        preview_scrollbar.pack(side="right", fill="y")
+        self.source_preview_box = tk.Text(
+            preview_body,
+            bg=COLORS["background"],
+            fg=COLORS["text"],
+            insertbackground=COLORS["text"],
+            relief="flat",
+            bd=0,
+            wrap="word",
+            font=FONT_JP_SMALL,
+            yscrollcommand=preview_scrollbar.set,
+        )
+        self.source_preview_box.pack(side="left", fill="both", expand=True)
+        preview_scrollbar.configure(command=self.source_preview_box.yview)
+        self._set_source_preview_text(UI_TEXT["source_preview_empty"])
 
         footer = tk.Frame(self, bg=COLORS["background"])
         footer.place(relx=0.04, rely=0.96, anchor="sw")
@@ -397,13 +579,7 @@ class OikawaApp(tk.Tk):
         path_text = notification.related_path.strip()
         if not path_text:
             return
-        path = Path(path_text)
-        if not path.is_absolute() and self.memory_folder:
-            path = self.memory_folder / path
-        if not path.exists():
-            messagebox.showwarning(UI_TEXT["dialog_title"], UI_TEXT["qpsc_related_missing"])
-            return
-        open_path(path)
+        self._show_source_path(path_text, notification.title)
 
     def _button_style(self, background: str) -> dict[str, object]:
         return {
@@ -506,6 +682,52 @@ class OikawaApp(tk.Tk):
                 tags="field",
             )
 
+    def _start_memory_search(self) -> None:
+        if self.search_thread and self.search_thread.is_alive():
+            return
+        if not self.memory_folder:
+            self.status_var.set(UI_TEXT["memory_folder_missing"])
+            self._render_memory_state()
+            return
+        query = self.search_entry.get().strip()
+        if not query:
+            return
+
+        self.status_var.set(UI_TEXT["status_searching"])
+        self.summary_var.set(UI_TEXT["status_searching"])
+        self.search_button.configure(text=UI_TEXT["button_searching"], state="disabled")
+        self._render_loading_card(UI_TEXT["status_searching"])
+        self.search_thread = threading.Thread(target=self._memory_search_worker, args=(self.memory_folder, query), daemon=True)
+        self.search_thread.start()
+
+    def _memory_search_worker(self, memory_folder: Path, query: str) -> None:
+        try:
+            documents, skipped = scan_memory(memory_folder)
+            hits = build_search_hits(documents, query, memory_folder)
+            self.events.put(("search_done", (query, hits, skipped)))
+        except Exception as exc:  # noqa: BLE001
+            self.events.put(("search_error", exc))
+
+    def _handle_search_done(self, payload: object) -> None:
+        query, hits, skipped = payload
+        assert isinstance(query, str)
+        assert isinstance(hits, list)
+        self.search_button.configure(text=UI_TEXT["button_search"], state="normal")
+        self.status_var.set(UI_TEXT["status_search_complete"] if hits else UI_TEXT["status_no_search_results"])
+        self.summary_var.set(
+            UI_TEXT["summary_search"].format(
+                results=len(hits),
+                skipped=skipped,
+            )
+        )
+        self._render_search_hits(hits)
+
+    def _handle_search_error(self, payload: object) -> None:
+        self.search_button.configure(text=UI_TEXT["button_search"], state="normal")
+        self.status_var.set(UI_TEXT["status_error"])
+        self.summary_var.set(str(payload))
+        self._render_loading_card(UI_TEXT["status_error"])
+
     def _start_scan(self) -> None:
         if self.scanning:
             return
@@ -544,6 +766,14 @@ class OikawaApp(tk.Tk):
                     self._handle_scan_done(result, output_path)
                 elif event_name == "scan_error":
                     self._handle_scan_error(payload)
+                elif event_name == "search_done":
+                    self._handle_search_done(payload)
+                elif event_name == "search_error":
+                    self._handle_search_error(payload)
+                elif event_name == "source_preview_done":
+                    self._handle_source_preview_done(payload)
+                elif event_name == "source_preview_error":
+                    self._handle_source_preview_error(payload)
         except queue.Empty:
             pass
         self.after(100, self._poll_events)
@@ -582,6 +812,61 @@ class OikawaApp(tk.Tk):
             font=FONT_JP_SMALL,
         ).pack(anchor="w")
 
+    def _render_loading_card(self, message: str) -> None:
+        self._clear_cards()
+        card = self._card_frame()
+        card.pack(fill="x", pady=(0, 10))
+        tk.Label(
+            card,
+            text=message,
+            fg=COLORS["muted"],
+            bg=COLORS["panel"],
+            font=FONT_JP_SMALL,
+        ).pack(anchor="w")
+
+    def _render_search_hits(self, hits: list[SearchHit]) -> None:
+        self._clear_cards()
+        if not hits:
+            self._render_loading_card(UI_TEXT["status_no_search_results"])
+            return
+        for hit in hits[:8]:
+            card = self._card_frame()
+            card.pack(fill="x", pady=(0, 10))
+            card.bind("<Button-1>", lambda _event, selected=hit: self._show_source_path(selected.path, selected.title))
+            tk.Label(
+                card,
+                text=hit.title,
+                fg=COLORS["heat"],
+                bg=COLORS["panel"],
+                font=FONT_JP,
+                wraplength=560,
+                justify="left",
+            ).pack(anchor="w")
+            tk.Label(
+                card,
+                text=UI_TEXT["search_result_meta"].format(path=hit.relative_path, score=hit.score),
+                fg=COLORS["muted"],
+                bg=COLORS["panel"],
+                font=FONT_MONO,
+                wraplength=560,
+                justify="left",
+            ).pack(anchor="w", pady=(5, 0))
+            tk.Label(
+                card,
+                text=hit.excerpt,
+                fg=COLORS["muted"],
+                bg=COLORS["panel"],
+                font=FONT_JP_SMALL,
+                wraplength=560,
+                justify="left",
+            ).pack(anchor="w", pady=(5, 0))
+            tk.Button(
+                card,
+                text=UI_TEXT["button_preview_source"],
+                command=lambda selected=hit: self._show_source_path(selected.path, selected.title),
+                **self._small_button_style(COLORS["panel_light"]),
+            ).pack(anchor="w", pady=(8, 0))
+
     def _render_cards(self, result: AnalysisResult) -> None:
         self._clear_cards()
         if not result.fragments:
@@ -608,6 +893,7 @@ class OikawaApp(tk.Tk):
         for fragment in result.fragments[:5]:
             card = self._card_frame()
             card.pack(fill="x", pady=(0, 10))
+            card.bind("<Button-1>", lambda _event, selected=fragment: self._show_source_path(selected.path, selected.title))
             top = tk.Frame(card, bg=COLORS["panel"])
             top.pack(fill="x")
             tk.Label(
@@ -651,6 +937,12 @@ class OikawaApp(tk.Tk):
                 wraplength=560,
                 justify="left",
             ).pack(anchor="w", pady=(6, 0))
+            tk.Button(
+                card,
+                text=UI_TEXT["button_preview_source"],
+                command=lambda selected=fragment: self._show_source_path(selected.path, selected.title),
+                **self._small_button_style(COLORS["panel_light"]),
+            ).pack(anchor="w", pady=(8, 0))
 
     def _card_frame(self) -> tk.Frame:
         return tk.Frame(
@@ -665,6 +957,72 @@ class OikawaApp(tk.Tk):
     def _clear_cards(self) -> None:
         for child in self.cards_frame.winfo_children():
             child.destroy()
+
+    def _show_source_path(self, source_path: str | Path, title: str = "") -> None:
+        path = self._resolve_source_path(source_path)
+        self.source_preview_request_id += 1
+        request_id = self.source_preview_request_id
+        self.source_preview_status_var.set(UI_TEXT["source_preview_loading"])
+        self._set_source_preview_text(UI_TEXT["source_preview_loading"])
+        self.source_preview_thread = threading.Thread(
+            target=self._source_preview_worker,
+            args=(request_id, path, title),
+            daemon=True,
+        )
+        self.source_preview_thread.start()
+
+    def _resolve_source_path(self, source_path: str | Path) -> Path:
+        path = Path(str(source_path).strip())
+        if path.is_absolute() or not self.memory_folder:
+            return path
+        return self.memory_folder / path
+
+    def _source_preview_worker(self, request_id: int, path: Path, title: str) -> None:
+        try:
+            if not path.exists():
+                self.events.put(("source_preview_error", (request_id, path, UI_TEXT["source_preview_missing"])))
+                return
+            if not path.is_file() or path.suffix.lower() not in {".md", ".txt"}:
+                self.events.put(("source_preview_error", (request_id, path, UI_TEXT["source_preview_not_file"])))
+                return
+            text, truncated = read_source_preview_text(path)
+            self.events.put(("source_preview_done", SourcePreviewResult(request_id, path, title, text, truncated)))
+        except Exception:  # noqa: BLE001
+            self.events.put(("source_preview_error", (request_id, path, UI_TEXT["source_preview_failed"])))
+
+    def _handle_source_preview_done(self, payload: object) -> None:
+        assert isinstance(payload, SourcePreviewResult)
+        if payload.request_id != self.source_preview_request_id:
+            return
+        header = UI_TEXT["source_preview_path"].format(path=payload.path)
+        title = payload.title.strip()
+        content = payload.text
+        if payload.truncated:
+            content = f"{content}{UI_TEXT['source_preview_truncated']}"
+        if title:
+            content = f"{title}\n{header}\n\n{content}"
+        else:
+            content = f"{header}\n\n{content}"
+        self.source_preview_status_var.set(UI_TEXT["source_preview_loaded"])
+        self._set_source_preview_text(content)
+
+    def _handle_source_preview_error(self, payload: object) -> None:
+        request_id, path, message = payload
+        assert isinstance(request_id, int)
+        assert isinstance(path, Path)
+        assert isinstance(message, str)
+        if request_id != self.source_preview_request_id:
+            return
+        self.source_preview_status_var.set(message)
+        self._set_source_preview_text(f"{message}\n{UI_TEXT['source_preview_path'].format(path=path)}")
+
+    def _set_source_preview_text(self, text: str) -> None:
+        if not hasattr(self, "source_preview_box"):
+            return
+        self.source_preview_box.configure(state="normal")
+        self.source_preview_box.delete("1.0", "end")
+        self.source_preview_box.insert("1.0", text)
+        self.source_preview_box.configure(state="disabled")
 
     def _choose_memory_folder(self) -> None:
         selected = filedialog.askdirectory(title=UI_TEXT["dialog_choose_memory"])
