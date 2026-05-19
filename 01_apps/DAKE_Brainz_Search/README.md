@@ -1,4 +1,6 @@
-# 補助脳BRAINZ
+# BRAINZ
+
+記憶庫 / 取り込み母艦。
 
 補助脳BRAINZ は、ローカルの会話・仕様・メモ・README・Codex結果を忘れず探すための記憶検索アプリです。
 
@@ -43,6 +45,16 @@ Phase 3以降、原本表示と読む導線はOIKAWA側へ寄せます。BRAINZ�
 Phase 4以降、熾火表示と熱検索入口もOIKAWA側で扱います。BRAINZは通知イベントと原本への `related_path` を残し、候補表示や読み戻しはOIKAWAに寄せます。
 
 Phase 5以降、今日の整理表示もOIKAWA側で扱います。BRAINZは取り込み通知と原本パスを残し、ORBITの集計・表示・読み戻しはOIKAWAに寄せます。
+
+## QPSC Phase 8: 静かな母艦UI
+
+Phase 8では、BRAINZを「見るアプリ」ではなく、記憶庫・取り込み母艦として静かに扱うトップ画面へ整理しました。
+
+- BRAINZは記憶の保存、取り込み、index、設定、状態確認を担います
+- OIKAWAが検索、原本表示、熾火、ORBITを担います
+- BRAINZはOIKAWAを開く導線を持ち、読む場所へ静かに移れます
+- 検索や原本確認はBRAINZ内では補助表示とし、主役化しません
+- 取り込み、接続/設定、最終取り込み状態、awake/heartbeatをBRAINZ側の主情報として扱います
 
 ## Phase 1でできること
 
@@ -423,7 +435,7 @@ Aru Inbox は、既存の Slack Inbox とは別の「在る」専用取り込み
   "launcher_description": "ローカルの会話・仕様・メモを忘れず探すための記憶検索アプリです。",
   "site_title": "補助脳BRAINZ",
   "site_description": "ChatGPT、Codex、Claude、Geminiのやり取りをローカル記憶として再接続する検索補助脳です。",
-  "update_summary": "Aru Inbox に対応しました。",
+  "update_summary": "QPSC Phase 8で静かな記憶庫・取り込み母艦UIへ整理しました。",
   "folder_name": "DAKE_Brainz_Search",
   "exe_name": "DakeBrainz_Search.exe",
   "release_url": "",

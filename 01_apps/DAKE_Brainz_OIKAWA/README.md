@@ -103,6 +103,10 @@ Phase 7では、通知をログではなく循環として扱うため、OIKAWA�
 - ORBITには今日静かになった通知数、熾火候補数、最近戻った原本数を反映します
 - 原本へ戻った履歴は `data/config/qpsc_recent_returns.json` に保存しますが、Git管理しません
 
+## QPSC Phase 8: BRAINZからOIKAWAへ
+
+Phase 8では、BRAINZ側にOIKAWAを開く導線を追加しました。BRAINZは取り込み母艦として状態と設定に集中し、検索・原本表示・熾火・ORBITはOIKAWA側で受け持ちます。
+
 ## 使い方
 
 1. `python main.py` で起動します。

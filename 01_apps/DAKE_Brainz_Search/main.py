@@ -4,6 +4,8 @@ from __future__ import annotations
 import argparse
 import json
 import queue
+import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -11,15 +13,37 @@ import zipfile
 from pathlib import Path
 
 
-APP_NAME = "補助脳BRAINZ"
-WINDOW_TITLE = "補助脳BRAINZ - Local Memory Search"
-COPYRIGHT = "© 2026 PEAKHEADZ / DAKE series"
+APP_NAME = "BRAINZ"
+WINDOW_TITLE = "BRAINZ - 記憶庫 / 取り込み母艦"
+COPYRIGHT = "QPSC — Quiet Personal Cognitive System by Yukihiko Kikuta"
 
 UI_TEXT = {
     "app_title": APP_NAME,
     "window_title": WINDOW_TITLE,
     "copyright": COPYRIGHT,
-    "subtitle": "Local Memory Search",
+    "subtitle": "記憶庫 / 取り込み母艦",
+    "role_summary": "保存 / 取り込み / 設定 / 状態",
+    "brainz_status_title": "BRAINZ状態",
+    "status_brainz_standby": "待機しています",
+    "status_brainz_awake": "起きています",
+    "status_brainz_awake_detail": "記憶庫は起きています",
+    "status_memory_path": "記憶フォルダ: {path}",
+    "status_last_import_none": "最終取り込み: まだありません",
+    "status_last_import": "最終取り込み: {source}",
+    "last_import_chatgpt_export": "ChatGPT export",
+    "last_import_codex_result": "Codex結果",
+    "last_import_codex_report": "Codex報告",
+    "last_import_slack": "Slack Inbox",
+    "last_import_aru": "Aru Inbox",
+    "button_open_oikawa": "OIKAWAを開く",
+    "button_settings_entry": "接続 / 設定",
+    "section_import_entry": "取り込み入口",
+    "section_settings_entry": "接続 / 設定",
+    "settings_entry_hint": "Slack / Queue / Codex報告の入口を下にまとめています。",
+    "section_oikawa_bridge": "OIKAWAへ",
+    "oikawa_bridge_message": "検索・原本表示・熾火・ORBITはOIKAWAで扱います。",
+    "search_bridge_title": "検索入口（補助）",
+    "search_bridge_helper": "読む場所はOIKAWAへ移しています。",
     "search_placeholder": "うろ覚えで検索",
     "embers_search_placeholder": "何を探したいかわからなくても大丈夫です。",
     "embers_search_helper": "忘れていた熱を探します。",
@@ -36,7 +60,7 @@ UI_TEXT = {
     "button_import_codex_result": "Codex結果取込",
     "button_chatgpt": "ChatGPTまとめ",
     "button_codex": "Codex素材",
-    "memory_title": "Memory Folder",
+    "memory_title": "記憶庫 / 取り込み入口",
     "label_watch_folder": "Watch Folder",
     "checkbox_auto_index": "Auto Index",
     "index_title": "Index Status",
@@ -58,13 +82,13 @@ UI_TEXT = {
     "label_aru_token": "Aru Slack Token",
     "label_aru_channel": "Aru Channel ID",
     "button_save_aru": "Save Aru",
-    "results_title": "Search Results",
+    "results_title": "検索結果（補助）",
     "embers_results_title": "熾火",
-    "source_view_title": "Markdown正本",
-    "preview_title": "Preview",
+    "source_view_title": "原本確認（補助）",
+    "preview_title": "詳細（補助）",
     "tags_title": "Related Tags",
     "section_related_memory": "Related Memory",
-    "section_memory_flow": "Memory Flow",
+    "section_memory_flow": "Memory Flow（OIKAWAへ）",
     "label_memory_flow": "関連する記憶を辿っています。",
     "handoff_title": "Handoff Summary",
     "log_title": "BRAINZ Log",
@@ -229,7 +253,12 @@ UI_TEXT = {
     "log_remote_queue_failed": "Remote queue failed: {path} :: {error}",
     "phrase_remote_queue_received": "補助脳：遠隔キューを受け取りました。",
     "log_export": "EXPORT: {path}",
-    "notify_title": "補助脳",
+    "log_oikawa_open": "OIKAWA OPEN: {path}",
+    "log_oikawa_missing": "OIKAWA NOT FOUND",
+    "log_settings_entry": "SETTINGS ENTRY: Slack / Queue / Codex reports",
+    "notify_title": "BRAINZ",
+    "notify_oikawa_opened": "OIKAWAを開きます。",
+    "notify_oikawa_missing": "OIKAWAの起動先が見つかりませんでした。",
     "notify_memory_detected": "新しい記憶を検出しました。",
     "notify_auto_index_complete": "記憶を更新しました。",
     "notify_semantic_updated": "Semantic Searchを更新しました。",
@@ -294,6 +323,27 @@ UI_TEXT = {
     "handoff_preview": "query: {query}\nresults: {count}\n\n{items}",
     "launch_check_ok": "LAUNCH CHECK OK",
 }
+
+
+def resolve_oikawa_launch_target() -> Path | None:
+    app_dir = Path(__file__).resolve().parent
+    oikawa_dir = app_dir.parent / "DAKE_Brainz_OIKAWA"
+    exe_path = oikawa_dir / "dist" / "DakeBrainz_OIKAWA.exe"
+    if exe_path.exists():
+        return exe_path
+    main_path = oikawa_dir / "main.py"
+    if main_path.exists():
+        return main_path
+    return None
+
+
+def resolve_oikawa_launch_command() -> tuple[list[str], Path | None]:
+    target = resolve_oikawa_launch_target()
+    if target is None:
+        return [], None
+    if target.suffix.lower() == ".py":
+        return [sys.executable, str(target)], target
+    return [str(target)], target
 
 
 def run_smoke_test() -> int:
@@ -379,6 +429,9 @@ def run_smoke_test() -> int:
             or not qpsc_status.get("last_heartbeat_at")
         ):
             raise RuntimeError("qpsc awake status did not roundtrip")
+        oikawa_command, oikawa_target = resolve_oikawa_launch_command()
+        if not oikawa_command or oikawa_target is None or not oikawa_target.exists():
+            raise RuntimeError("oikawa launch target was not resolved")
         parsed_interval, interval_valid = parse_slack_poll_interval("9")
         if parsed_interval != 9 or not interval_valid:
             raise RuntimeError("slack interval parser rejected a valid value")
@@ -897,6 +950,7 @@ def run_smoke_test() -> int:
     print(f"watch_update_detected={len(watch_update.changed_files)}")
     print(f"notification_queue_history={len(notification_queue.history)}")
     print(f"notifications_default={default_config.enable_notifications}")
+    print(f"oikawa_launch_target={oikawa_target}")
     print(f"remote_queue_processed={remote_result.processed}")
     print(f"remote_queue_failed={remote_result.failed}")
     print(f"remote_queue_note_results={len(remote_note_results)}")
@@ -1132,7 +1186,7 @@ def run_gui(launch_check: bool = False) -> int:
                 try:
                     image = Image.open(logo_path)
                     self.logo_image = ctk.CTkImage(light_image=image, dark_image=image, size=fit_logo_size(image.size))
-                    ctk.CTkLabel(header, image=self.logo_image, text="").grid(row=0, column=0, rowspan=2, padx=(0, 10))
+                    ctk.CTkLabel(header, image=self.logo_image, text="").grid(row=0, column=0, rowspan=3, padx=(0, 10))
                 except Exception:
                     pass
 
@@ -1148,68 +1202,34 @@ def run_gui(launch_check: bool = False) -> int:
                 text_color=COLORS["muted"],
                 font=(self.status_font_family, FONT_SIZES["subtitle"]),
             ).grid(row=1, column=1, sticky="w")
+            ctk.CTkLabel(
+                header,
+                text=UI_TEXT["role_summary"],
+                text_color=COLORS["quiet"],
+                font=(self.status_font_family, FONT_SIZES["micro"]),
+            ).grid(row=2, column=1, sticky="w", pady=(2, 0))
 
-            search_box = ctk.CTkFrame(header, fg_color=COLORS["bg"], corner_radius=0)
-            search_box.grid(row=0, column=2, rowspan=2, sticky="e")
-            search_box.grid_columnconfigure(0, weight=1)
-
-            self.search_entry = ctk.CTkEntry(
-                search_box,
-                width=430,
-                height=42,
-                placeholder_text=UI_TEXT["search_placeholder"],
-                fg_color=COLORS["input"],
-                border_color=COLORS["border"],
-                text_color=COLORS["text"],
-                font=(self.reading_font_family, FONT_SIZES["search"]),
-            )
-            self.search_entry.grid(row=0, column=0, padx=(0, 10))
-            self.search_entry.insert(0, self.current_query)
-            self.search_entry.bind("<Return>", lambda _event: self._start_search())
-            self.search_button = ctk.CTkButton(
-                search_box,
-                text=UI_TEXT["button_search"],
-                width=112,
-                height=42,
+            header_action = ctk.CTkFrame(header, fg_color=COLORS["bg"], corner_radius=0)
+            header_action.grid(row=0, column=2, rowspan=3, sticky="e")
+            header_action.grid_columnconfigure(0, weight=1)
+            self.awake_status_var = ctk.StringVar(value=UI_TEXT["status_brainz_standby"])
+            ctk.CTkLabel(
+                header_action,
+                textvariable=self.awake_status_var,
+                text_color=COLORS["section"],
+                font=(self.status_font_family, FONT_SIZES["small"]),
+                anchor="e",
+            ).grid(row=0, column=0, sticky="e", pady=(0, 7))
+            ctk.CTkButton(
+                header_action,
+                text=UI_TEXT["button_open_oikawa"],
+                width=168,
+                height=38,
                 fg_color=COLORS["accent"],
                 hover_color=COLORS["accent_hover"],
                 font=(self.status_font_family, FONT_SIZES["button"]),
-                command=self._start_search,
-            )
-            self.search_button.grid(row=0, column=1)
-            self.semantic_checkbox = ctk.CTkCheckBox(
-                search_box,
-                text=UI_TEXT["checkbox_semantic_search"],
-                variable=self.semantic_search_var,
-                text_color=COLORS["muted"],
-                fg_color=COLORS["accent"],
-                hover_color=COLORS["accent_hover"],
-                border_color=COLORS["border"],
-                font=(self.status_font_family, FONT_SIZES["small"]),
-            )
-            self.semantic_checkbox.grid(row=1, column=0, sticky="w", pady=(6, 0))
-            self.view_switch = ctk.CTkSegmentedButton(
-                search_box,
-                values=[UI_TEXT["tab_search"], UI_TEXT["tab_embers"]],
-                variable=self.view_mode_var,
-                fg_color=COLORS["panel_soft"],
-                selected_color=COLORS["accent"],
-                selected_hover_color=COLORS["accent_hover"],
-                unselected_color=COLORS["panel_soft"],
-                unselected_hover_color=COLORS["accent_soft"],
-                text_color=COLORS["text"],
-                font=(self.status_font_family, FONT_SIZES["small"]),
-                command=self._change_view_mode,
-            )
-            self.view_switch.grid(row=1, column=1, sticky="e", pady=(6, 0))
-            self.search_helper_var = ctk.StringVar(value="")
-            ctk.CTkLabel(
-                search_box,
-                textvariable=self.search_helper_var,
-                text_color=COLORS["quiet"],
-                font=(self.reading_font_family, FONT_SIZES["small"]),
-                anchor="w",
-            ).grid(row=2, column=0, columnspan=2, sticky="ew", pady=(4, 0))
+                command=self._open_oikawa,
+            ).grid(row=1, column=0, sticky="e")
 
             left = ctk.CTkScrollableFrame(
                 self,
@@ -1596,12 +1616,143 @@ def run_gui(launch_check: bool = False) -> int:
             center = self._panel(self, 0)
             center.grid(row=1, column=1, sticky="nsew", padx=8, pady=(0, 12))
             center.grid_columnconfigure(0, weight=1)
-            center.grid_rowconfigure(1, weight=2)
-            center.grid_rowconfigure(3, weight=1)
-            self._section_title(center, UI_TEXT["source_view_title"], 0)
+            center.grid_rowconfigure(1, weight=0)
+            center.grid_rowconfigure(5, weight=1)
+            center.grid_rowconfigure(7, weight=1)
+            self._section_title(center, UI_TEXT["brainz_status_title"], 0)
+            mothership = ctk.CTkFrame(
+                center,
+                fg_color=COLORS["panel_alt"],
+                border_color=COLORS["border"],
+                border_width=1,
+                corner_radius=6,
+            )
+            mothership.grid(row=1, column=0, sticky="ew", padx=12, pady=(0, 12))
+            mothership.grid_columnconfigure(0, weight=1)
+            mothership.grid_columnconfigure(1, weight=1)
+            ctk.CTkLabel(
+                mothership,
+                textvariable=self.awake_status_var,
+                text_color=COLORS["section"],
+                font=(self.status_font_family, FONT_SIZES["body"]),
+                anchor="w",
+            ).grid(row=0, column=0, sticky="ew", padx=14, pady=(12, 2))
+            self.memory_path_summary_var = ctk.StringVar(
+                value=UI_TEXT["status_memory_path"].format(path=self.memory_var.get())
+            )
+            ctk.CTkLabel(
+                mothership,
+                textvariable=self.memory_path_summary_var,
+                text_color=COLORS["muted"],
+                font=(self.reading_font_family, FONT_SIZES["small"]),
+                wraplength=330,
+                justify="left",
+                anchor="w",
+            ).grid(row=1, column=0, sticky="ew", padx=14, pady=2)
+            self.last_import_summary_var = ctk.StringVar(value=UI_TEXT["status_last_import_none"])
+            ctk.CTkLabel(
+                mothership,
+                textvariable=self.last_import_summary_var,
+                text_color=COLORS["muted"],
+                font=(self.status_font_family, FONT_SIZES["small"]),
+                anchor="w",
+            ).grid(row=2, column=0, sticky="ew", padx=14, pady=(2, 12))
+            ctk.CTkLabel(
+                mothership,
+                text=UI_TEXT["oikawa_bridge_message"],
+                text_color=COLORS["quiet"],
+                font=(self.reading_font_family, FONT_SIZES["small"]),
+                wraplength=290,
+                justify="left",
+                anchor="w",
+            ).grid(row=0, column=1, sticky="ew", padx=14, pady=(12, 4))
+            mission_buttons = ctk.CTkFrame(mothership, fg_color="transparent")
+            mission_buttons.grid(row=1, column=1, rowspan=2, sticky="ew", padx=14, pady=(0, 12))
+            mission_buttons.grid_columnconfigure((0, 1), weight=1)
+            ctk.CTkButton(
+                mission_buttons,
+                text=UI_TEXT["button_open_oikawa"],
+                height=34,
+                fg_color=COLORS["accent"],
+                hover_color=COLORS["accent_hover"],
+                font=(self.status_font_family, FONT_SIZES["button"]),
+                command=self._open_oikawa,
+            ).grid(row=0, column=0, sticky="ew", padx=(0, 6))
+            ctk.CTkButton(
+                mission_buttons,
+                text=UI_TEXT["button_settings_entry"],
+                height=34,
+                fg_color=COLORS["panel_soft"],
+                hover_color=COLORS["accent_soft"],
+                font=(self.status_font_family, FONT_SIZES["button"]),
+                command=self._mark_settings_entry,
+            ).grid(row=0, column=1, sticky="ew", padx=(6, 0))
+
+            self._section_title(center, UI_TEXT["search_bridge_title"], 2)
+            search_box = ctk.CTkFrame(center, fg_color="transparent")
+            search_box.grid(row=3, column=0, sticky="ew", padx=12, pady=(0, 10))
+            search_box.grid_columnconfigure(0, weight=1)
+            self.search_entry = ctk.CTkEntry(
+                search_box,
+                height=34,
+                placeholder_text=UI_TEXT["search_placeholder"],
+                fg_color=COLORS["input"],
+                border_color=COLORS["border"],
+                text_color=COLORS["text"],
+                font=(self.reading_font_family, FONT_SIZES["body"]),
+            )
+            self.search_entry.grid(row=0, column=0, sticky="ew", padx=(0, 8))
+            self.search_entry.insert(0, self.current_query)
+            self.search_entry.bind("<Return>", lambda _event: self._start_search())
+            self.search_button = ctk.CTkButton(
+                search_box,
+                text=UI_TEXT["button_search"],
+                width=96,
+                height=34,
+                fg_color=COLORS["panel_soft"],
+                hover_color=COLORS["accent_soft"],
+                font=(self.status_font_family, FONT_SIZES["button"]),
+                command=self._start_search,
+            )
+            self.search_button.grid(row=0, column=1, padx=(0, 8))
+            self.view_switch = ctk.CTkSegmentedButton(
+                search_box,
+                values=[UI_TEXT["tab_search"], UI_TEXT["tab_embers"]],
+                variable=self.view_mode_var,
+                fg_color=COLORS["panel_soft"],
+                selected_color=COLORS["accent"],
+                selected_hover_color=COLORS["accent_hover"],
+                unselected_color=COLORS["panel_soft"],
+                unselected_hover_color=COLORS["accent_soft"],
+                text_color=COLORS["text"],
+                font=(self.status_font_family, FONT_SIZES["micro"]),
+                command=self._change_view_mode,
+            )
+            self.view_switch.grid(row=0, column=2)
+            self.semantic_checkbox = ctk.CTkCheckBox(
+                search_box,
+                text=UI_TEXT["checkbox_semantic_search"],
+                variable=self.semantic_search_var,
+                text_color=COLORS["quiet"],
+                fg_color=COLORS["accent"],
+                hover_color=COLORS["accent_hover"],
+                border_color=COLORS["border"],
+                font=(self.status_font_family, FONT_SIZES["micro"]),
+            )
+            self.semantic_checkbox.grid(row=1, column=0, sticky="w", pady=(5, 0))
+            self.search_helper_var = ctk.StringVar(value=UI_TEXT["search_bridge_helper"])
+            ctk.CTkLabel(
+                search_box,
+                textvariable=self.search_helper_var,
+                text_color=COLORS["quiet"],
+                font=(self.reading_font_family, FONT_SIZES["micro"]),
+                anchor="w",
+            ).grid(row=1, column=1, columnspan=2, sticky="ew", pady=(5, 0))
+
+            self._section_title(center, UI_TEXT["source_view_title"], 4)
             self.source_view_box = ctk.CTkTextbox(
                 center,
-                height=260,
+                height=120,
                 fg_color=COLORS["input"],
                 border_color=COLORS["border"],
                 border_width=1,
@@ -1609,7 +1760,7 @@ def run_gui(launch_check: bool = False) -> int:
                 font=(self.reading_font_family, FONT_SIZES["preview"]),
                 wrap="word",
             )
-            self.source_view_box.grid(row=1, column=0, sticky="nsew", padx=12, pady=(0, 10))
+            self.source_view_box.grid(row=5, column=0, sticky="nsew", padx=12, pady=(0, 10))
             self._relax_textbox_spacing(self.source_view_box, spacing1=3, spacing3=6)
             set_textbox_text(self.source_view_box, UI_TEXT["empty_source_view"])
             self.results_title_var = ctk.StringVar(value=UI_TEXT["results_title"])
@@ -1618,7 +1769,7 @@ def run_gui(launch_check: bool = False) -> int:
                 textvariable=self.results_title_var,
                 text_color=COLORS["section"],
                 font=(self.font_family, FONT_SIZES["section"]),
-            ).grid(row=2, column=0, sticky="w", padx=14, pady=(8, 7))
+            ).grid(row=6, column=0, sticky="w", padx=14, pady=(8, 7))
             self.results_frame = ctk.CTkScrollableFrame(
                 center,
                 fg_color=COLORS["panel"],
@@ -1626,7 +1777,7 @@ def run_gui(launch_check: bool = False) -> int:
                 scrollbar_button_color=COLORS["panel_soft"],
                 scrollbar_button_hover_color=COLORS["accent_soft"],
             )
-            self.results_frame.grid(row=3, column=0, sticky="nsew", padx=12, pady=(0, 12))
+            self.results_frame.grid(row=7, column=0, sticky="nsew", padx=12, pady=(0, 12))
             self._render_empty_results()
 
             right = self._panel(self, 0)
@@ -1849,6 +2000,9 @@ def run_gui(launch_check: bool = False) -> int:
             clean = str(folder or "")
             self.config_data.memory_folder = clean
             self.memory_var.set(clean if clean else UI_TEXT["empty_memory"])
+            if hasattr(self, "memory_path_summary_var"):
+                path_text = clean if clean else UI_TEXT["empty_memory"]
+                self.memory_path_summary_var.set(UI_TEXT["status_memory_path"].format(path=path_text))
             if clean and not self.config_data.watch_folder:
                 self._set_watch_folder(clean, persist=False)
             if clean and not self.config_data.codex_reports_folder:
@@ -2019,6 +2173,38 @@ def run_gui(launch_check: bool = False) -> int:
             if not self.config_data.enable_notifications:
                 self.notification_frame.grid_remove()
                 self.notification_visible = False
+
+        def _mark_settings_entry(self) -> None:
+            self._append_log(UI_TEXT["log_settings_entry"])
+            self._notify(UI_TEXT["settings_entry_hint"])
+
+        def _open_oikawa(self) -> None:
+            command, target = resolve_oikawa_launch_command()
+            if not command or target is None:
+                self._append_log(UI_TEXT["log_oikawa_missing"])
+                self._notify(UI_TEXT["notify_oikawa_missing"])
+                return
+            try:
+                cwd = target.parent.parent if target.parent.name.lower() == "dist" else target.parent
+                subprocess.Popen(
+                    command,
+                    cwd=str(cwd),
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    stdin=subprocess.DEVNULL,
+                    close_fds=True,
+                )
+            except Exception:
+                self._append_log(UI_TEXT["log_oikawa_missing"])
+                self._notify(UI_TEXT["notify_oikawa_missing"])
+                return
+            self._append_log(UI_TEXT["log_oikawa_open"].format(path=target))
+            self._notify(UI_TEXT["notify_oikawa_opened"])
+
+        def _set_last_import_summary(self, source_key: str) -> None:
+            if hasattr(self, "last_import_summary_var"):
+                source = UI_TEXT[source_key]
+                self.last_import_summary_var.set(UI_TEXT["status_last_import"].format(source=source))
 
         def _notify(self, message: str) -> None:
             if not self.notifications_var.get():
@@ -2535,7 +2721,8 @@ def run_gui(launch_check: bool = False) -> int:
                 title = UI_TEXT["embers_results_title"] if self.embers_mode else UI_TEXT["results_title"]
                 self.results_title_var.set(title)
             if hasattr(self, "search_helper_var"):
-                self.search_helper_var.set(UI_TEXT["embers_search_helper"] if self.embers_mode else "")
+                helper = UI_TEXT["embers_search_helper"] if self.embers_mode else UI_TEXT["search_bridge_helper"]
+                self.search_helper_var.set(helper)
             if hasattr(self, "search_entry"):
                 placeholder = UI_TEXT["embers_search_placeholder"] if self.embers_mode else UI_TEXT["search_placeholder"]
                 self.search_entry.configure(placeholder_text=placeholder)
@@ -2961,6 +3148,7 @@ def run_gui(launch_check: bool = False) -> int:
             else:
                 self.codex_report_status_var.set(UI_TEXT["status_codex_report_imported"])
             if result.imported:
+                self._set_last_import_summary("last_import_codex_report")
                 self._notify(UI_TEXT["notify_codex_report_imported"])
                 if self.semantic_available:
                     self._notify(UI_TEXT["notify_semantic_updated"])
@@ -2994,6 +3182,7 @@ def run_gui(launch_check: bool = False) -> int:
                 if result.log_path:
                     self._append_log(UI_TEXT["log_slack_file"].format(path=result.log_path))
                 self._refresh_stats()
+                self._set_last_import_summary("last_import_slack")
                 self._notify(UI_TEXT["notify_slack_import_complete"])
                 if self.semantic_available:
                     self._notify(UI_TEXT["notify_semantic_updated"])
@@ -3085,6 +3274,7 @@ def run_gui(launch_check: bool = False) -> int:
                 if result.log_path:
                     self._append_log(UI_TEXT["log_aru_file"].format(path=result.log_path))
                 self._refresh_stats()
+                self._set_last_import_summary("last_import_aru")
                 self._notify(UI_TEXT["notify_aru_import_complete"])
                 if self.semantic_available:
                     self._notify(UI_TEXT["notify_semantic_updated"])
@@ -3228,6 +3418,7 @@ def run_gui(launch_check: bool = False) -> int:
             )
             self._append_log(UI_TEXT["log_chatgpt_memory_imported"])
             self._append_log(UI_TEXT["log_chatgpt_import_file"].format(path=result.log_path))
+            self._set_last_import_summary("last_import_chatgpt_export")
             self._notify(UI_TEXT["notify_chatgpt_import_complete"])
             messagebox.showinfo(UI_TEXT["dialog_title"], UI_TEXT["status_chatgpt_import_complete"])
 
@@ -3259,6 +3450,7 @@ def run_gui(launch_check: bool = False) -> int:
             )
             self._append_log(UI_TEXT["log_codex_memory_imported"])
             self._append_log(UI_TEXT["log_codex_import_file"].format(path=result.log_path))
+            self._set_last_import_summary("last_import_codex_result")
             self._notify(UI_TEXT["notify_codex_import_complete"])
             messagebox.showinfo(UI_TEXT["dialog_title"], UI_TEXT["status_codex_import_complete"])
 
@@ -3372,7 +3564,11 @@ def run_gui(launch_check: bool = False) -> int:
         def _write_qpsc_awake_status(self) -> None:
             try:
                 write_brainz_awake_status(started_at=self.qpsc_started_at)
+                if hasattr(self, "awake_status_var"):
+                    self.awake_status_var.set(UI_TEXT["status_brainz_awake_detail"])
             except Exception:
+                if hasattr(self, "awake_status_var"):
+                    self.awake_status_var.set(UI_TEXT["status_brainz_standby"])
                 pass
 
         def _heartbeat_qpsc_status(self) -> None:
