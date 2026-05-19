@@ -8,11 +8,12 @@ import random
 import threading
 import time
 from dataclasses import dataclass
+from datetime import date, datetime
 from pathlib import Path
 from tkinter import filedialog, messagebox
 import tkinter as tk
 
-from core.config import AppConfig, ConfigStore, existing_folder, open_path, resolve_memory_folder
+from core.config import ConfigStore, app_dir, existing_folder, open_path, resolve_memory_folder, write_json_file
 from core.heat_engine import AnalysisResult, analyze_documents
 from core.markdown_writer import write_suggestion
 from core.qpsc_notifications import (
@@ -58,6 +59,9 @@ UI_TEXT = {
     "section_suggestion": "OIKAWA提案",
     "section_source_preview": "原本プレビュー",
     "section_heat_candidates": "熾火",
+    "section_orbit_today": "今日の整理",
+    "section_orbit_flow": "今日の流れ",
+    "section_orbit_next": "次の候補",
     "label_memory_folder": "記憶フォルダ",
     "memory_folder_missing": "記憶フォルダ未検出",
     "dialog_choose_memory": "記憶フォルダを選択",
@@ -88,6 +92,28 @@ UI_TEXT = {
     "heat_reason_recent_import": "最近の取り込み",
     "heat_reason_related_path": "原本あり",
     "heat_reason_query_match": "検索語に近い",
+    "orbit_status_loading": "今日の流れを整理しています。",
+    "orbit_status_unavailable": "今日の整理を表示できませんでした。",
+    "orbit_metric_today": "今日取り込まれた記憶: {count}件",
+    "orbit_metric_unread": "未読通知: {count}件",
+    "orbit_metric_ember": "熾火候補: {count}件",
+    "orbit_metric_awake": "記憶庫は起きています",
+    "orbit_metric_quiet": "記憶庫は静かです",
+    "orbit_flow_import_source": "{source}から記憶が入りました",
+    "orbit_flow_unread": "未読通知が{count}件あります",
+    "orbit_flow_ember": "熾火候補が{count}件あります",
+    "orbit_flow_query": "検索語: {query}",
+    "orbit_flow_awake": "記憶庫は起きています",
+    "orbit_flow_quiet": "今日は静かです",
+    "orbit_bullet": "- {text}",
+    "orbit_next_empty": "次の候補はまだありません。",
+    "orbit_next_unread": "この記憶に戻れます",
+    "orbit_next_heat": "まだ熱が残っていそうです",
+    "orbit_next_today": "今日取り込まれた記憶です",
+    "orbit_next_related": "原本へ戻れます",
+    "orbit_next_query": "検索語に近い記憶です",
+    "orbit_next_no_related": "原本への道筋はまだありません。",
+    "orbit_next_template": "{message}: {title}",
     "section_qpsc_notifications": "QPSC通知",
     "qpsc_brainz_awake": "BRAINZ is awake.",
     "qpsc_memory_awake": "記憶庫は起きています。",
@@ -109,6 +135,7 @@ UI_TEXT = {
 }
 
 MAX_PREVIEW_CHARS = 240_000
+ORBIT_FILE_NAME = "qpsc_orbit_today.json"
 
 
 @dataclass(frozen=True)
@@ -137,6 +164,28 @@ class HeatCandidate:
     reason: str
     related_path: str
     score: int
+
+
+@dataclass(frozen=True)
+class OrbitCandidate:
+    id: str
+    title: str
+    message: str
+    reason: str
+    related_path: str
+    score: int
+
+
+@dataclass(frozen=True)
+class OrbitToday:
+    generated_at: str
+    date: str
+    brainz_awake: bool
+    notification_count_today: int
+    unread_count: int
+    ember_count: int
+    summary_lines: list[str]
+    next_candidates: list[OrbitCandidate]
 
 
 def build_search_hits(documents: list[MemoryDocument], query: str, memory_root: Path, limit: int = 20) -> list[SearchHit]:
@@ -253,6 +302,197 @@ def build_heat_search_hits(
         seen_paths.add(resolved_path)
     hits.sort(key=lambda item: (item.score, item.path.stat().st_mtime if item.path.exists() else 0), reverse=True)
     return hits[:limit]
+
+
+def build_orbit_today(
+    notifications: list[QpscNotification],
+    heat_candidates: list[HeatCandidate],
+    brainz_awake: bool,
+    query: str = "",
+    today: date | None = None,
+) -> OrbitToday:
+    generated = datetime.now().astimezone()
+    orbit_date = today or generated.date()
+    today_notifications = [item for item in notifications if _notification_is_today(item, orbit_date)]
+    unread_count = sum(1 for item in notifications if item.status == "unread")
+    summary_lines = _build_orbit_summary_lines(today_notifications, unread_count, len(heat_candidates), brainz_awake, query)
+    next_candidates = build_orbit_next_candidates(notifications, heat_candidates, query, orbit_date, limit=3)
+    return OrbitToday(
+        generated_at=generated.isoformat(timespec="seconds"),
+        date=orbit_date.isoformat(),
+        brainz_awake=brainz_awake,
+        notification_count_today=len(today_notifications),
+        unread_count=unread_count,
+        ember_count=len(heat_candidates),
+        summary_lines=summary_lines,
+        next_candidates=next_candidates,
+    )
+
+
+def build_orbit_next_candidates(
+    notifications: list[QpscNotification],
+    heat_candidates: list[HeatCandidate],
+    query: str = "",
+    today: date | None = None,
+    limit: int = 3,
+) -> list[OrbitCandidate]:
+    orbit_date = today or datetime.now().astimezone().date()
+    terms = [term for term in query.lower().split() if term]
+    candidates: list[OrbitCandidate] = []
+    seen: set[str] = set()
+
+    for notification in notifications:
+        if notification.status == "unread":
+            _append_orbit_candidate(
+                candidates,
+                seen,
+                _orbit_candidate_from_notification(notification, "unread_notification", UI_TEXT["orbit_next_unread"], 5000),
+            )
+
+    for heat_candidate in heat_candidates:
+        _append_orbit_candidate(
+            candidates,
+            seen,
+            OrbitCandidate(
+                id=heat_candidate.id,
+                title=heat_candidate.title,
+                message=UI_TEXT["orbit_next_heat"],
+                reason="heat_candidate",
+                related_path=heat_candidate.related_path,
+                score=4000 + heat_candidate.score,
+            ),
+        )
+
+    for notification in notifications:
+        if _notification_is_today(notification, orbit_date):
+            _append_orbit_candidate(
+                candidates,
+                seen,
+                _orbit_candidate_from_notification(notification, "today_import", UI_TEXT["orbit_next_today"], 3000),
+            )
+
+    for notification in notifications:
+        if notification.related_path.strip():
+            _append_orbit_candidate(
+                candidates,
+                seen,
+                _orbit_candidate_from_notification(notification, "related_path", UI_TEXT["orbit_next_related"], 2000),
+            )
+
+    if terms:
+        for notification in notifications:
+            if any(term in _notification_search_text(notification) for term in terms):
+                _append_orbit_candidate(
+                    candidates,
+                    seen,
+                    _orbit_candidate_from_notification(notification, "query_match", UI_TEXT["orbit_next_query"], 1000),
+                )
+
+    candidates.sort(key=lambda item: item.score, reverse=True)
+    return candidates[:limit]
+
+
+def save_orbit_today(orbit: OrbitToday) -> Path:
+    path = _orbit_today_path()
+    write_json_file(
+        path,
+        {
+            "generated_at": orbit.generated_at,
+            "date": orbit.date,
+            "brainz_awake": orbit.brainz_awake,
+            "notification_count_today": orbit.notification_count_today,
+            "unread_count": orbit.unread_count,
+            "ember_count": orbit.ember_count,
+            "summary_lines": orbit.summary_lines,
+            "next_candidates": [
+                {
+                    "id": candidate.id,
+                    "title": candidate.title,
+                    "message": candidate.message,
+                    "reason": candidate.reason,
+                    "related_path": candidate.related_path,
+                }
+                for candidate in orbit.next_candidates
+            ],
+        },
+    )
+    return path
+
+
+def _build_orbit_summary_lines(
+    today_notifications: list[QpscNotification],
+    unread_count: int,
+    ember_count: int,
+    brainz_awake: bool,
+    query: str,
+) -> list[str]:
+    lines: list[str] = []
+    source_counts: dict[str, int] = {}
+    for notification in today_notifications:
+        source = notification.source.strip() or UI_TEXT["section_qpsc_notifications"]
+        source_counts[source] = source_counts.get(source, 0) + 1
+    for source, _count in sorted(source_counts.items(), key=lambda item: (-item[1], item[0]))[:2]:
+        lines.append(UI_TEXT["orbit_flow_import_source"].format(source=source))
+    if unread_count:
+        lines.append(UI_TEXT["orbit_flow_unread"].format(count=unread_count))
+    if ember_count:
+        lines.append(UI_TEXT["orbit_flow_ember"].format(count=ember_count))
+    if query.strip():
+        lines.append(UI_TEXT["orbit_flow_query"].format(query=query.strip()))
+    if brainz_awake:
+        lines.append(UI_TEXT["orbit_flow_awake"])
+    if not lines:
+        lines.append(UI_TEXT["orbit_flow_quiet"])
+    return lines[:5]
+
+
+def _orbit_candidate_from_notification(
+    notification: QpscNotification,
+    reason: str,
+    message: str,
+    score: int,
+) -> OrbitCandidate:
+    return OrbitCandidate(
+        id=notification.id,
+        title=notification.title.strip() or UI_TEXT["heat_candidate_title"],
+        message=message,
+        reason=reason,
+        related_path=notification.related_path.strip(),
+        score=score + (80 if notification.related_path.strip() else 0),
+    )
+
+
+def _append_orbit_candidate(candidates: list[OrbitCandidate], seen: set[str], candidate: OrbitCandidate) -> None:
+    key = candidate.related_path.strip() or candidate.id or candidate.title
+    if key in seen:
+        return
+    seen.add(key)
+    candidates.append(candidate)
+
+
+def _notification_is_today(notification: QpscNotification, target_date: date) -> bool:
+    parsed = _parse_notification_date(notification.created_at)
+    return parsed == target_date
+
+
+def _parse_notification_date(value: str) -> date | None:
+    text = value.strip()
+    if not text:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        try:
+            return date.fromisoformat(text[:10])
+        except ValueError:
+            return None
+    if parsed.tzinfo:
+        parsed = parsed.astimezone()
+    return parsed.date()
+
+
+def _orbit_today_path() -> Path:
+    return app_dir() / "data" / "config" / ORBIT_FILE_NAME
 
 
 def _document_search_score(document: MemoryDocument, terms: list[str]) -> int:
@@ -434,10 +674,13 @@ class OikawaApp(tk.Tk):
         self.events: queue.Queue[tuple[str, object]] = queue.Queue()
         self.scan_thread: threading.Thread | None = None
         self.search_thread: threading.Thread | None = None
+        self.orbit_thread: threading.Thread | None = None
         self.source_preview_thread: threading.Thread | None = None
         self.source_preview_request_id = 0
+        self.orbit_request_id = 0
         self.qpsc_notifications_all: list[QpscNotification] = []
         self.heat_candidates: list[HeatCandidate] = []
+        self.last_search_query = ""
         self.scanning = False
         self.particles: list[Particle] = []
         self.last_animation = time.monotonic()
@@ -486,6 +729,8 @@ class OikawaApp(tk.Tk):
         self.memory_var = tk.StringVar(value="")
         self.summary_var = tk.StringVar(value=UI_TEXT["summary_idle"])
         self.qpsc_notification_var = tk.StringVar(value=UI_TEXT["qpsc_waiting"])
+        self.orbit_metrics_var = tk.StringVar(value=UI_TEXT["orbit_status_loading"])
+        self.orbit_flow_var = tk.StringVar(value=UI_TEXT["orbit_status_loading"])
 
         header = tk.Frame(self, bg=COLORS["background"])
         header.place(x=30, y=24)
@@ -569,6 +814,65 @@ class OikawaApp(tk.Tk):
             command=self._choose_memory_folder,
             **self._button_style(COLORS["panel_light"]),
         ).pack(anchor="w", pady=(12, 0))
+
+        orbit = tk.Frame(
+            self,
+            bg=COLORS["background"],
+            highlightbackground=COLORS["line_soft"],
+            highlightthickness=1,
+            padx=14,
+            pady=10,
+        )
+        orbit.place(relx=0.04, rely=0.29, relwidth=0.58, relheight=0.18)
+        orbit_top = tk.Frame(orbit, bg=COLORS["background"])
+        orbit_top.pack(fill="x")
+        tk.Label(
+            orbit_top,
+            text=UI_TEXT["section_orbit_today"],
+            fg=COLORS["muted"],
+            bg=COLORS["background"],
+            font=FONT_LABEL,
+        ).pack(side="left")
+        tk.Label(
+            orbit_top,
+            textvariable=self.orbit_metrics_var,
+            fg=COLORS["text"],
+            bg=COLORS["background"],
+            font=FONT_JP_SMALL,
+            justify="right",
+            wraplength=440,
+        ).pack(side="right")
+        orbit_body = tk.Frame(orbit, bg=COLORS["background"])
+        orbit_body.pack(fill="both", expand=True, pady=(6, 0))
+        orbit_flow = tk.Frame(orbit_body, bg=COLORS["background"])
+        orbit_flow.pack(side="left", fill="both", expand=True)
+        tk.Label(
+            orbit_flow,
+            text=UI_TEXT["section_orbit_flow"],
+            fg=COLORS["muted"],
+            bg=COLORS["background"],
+            font=FONT_LABEL,
+        ).pack(anchor="w")
+        tk.Label(
+            orbit_flow,
+            textvariable=self.orbit_flow_var,
+            fg=COLORS["text"],
+            bg=COLORS["background"],
+            font=FONT_JP_SMALL,
+            justify="left",
+            wraplength=350,
+        ).pack(anchor="w", pady=(3, 0))
+        orbit_next = tk.Frame(orbit_body, bg=COLORS["background"])
+        orbit_next.pack(side="right", fill="both", padx=(18, 0))
+        tk.Label(
+            orbit_next,
+            text=UI_TEXT["section_orbit_next"],
+            fg=COLORS["muted"],
+            bg=COLORS["background"],
+            font=FONT_LABEL,
+        ).pack(anchor="w")
+        self.orbit_next_frame = tk.Frame(orbit_next, bg=COLORS["background"])
+        self.orbit_next_frame.pack(fill="both", expand=True, pady=(3, 0))
 
         self.results_frame = tk.Frame(self, bg=COLORS["background"])
         self.results_frame.place(relx=0.04, rely=0.50, relwidth=0.58, relheight=0.44)
@@ -719,7 +1023,8 @@ class OikawaApp(tk.Tk):
 
     def _refresh_qpsc_notifications(self, schedule: bool = True) -> None:
         status = read_brainz_status()
-        if is_brainz_awake(status):
+        brainz_awake = is_brainz_awake(status)
+        if brainz_awake:
             line1 = UI_TEXT["qpsc_brainz_awake"]
             line2 = UI_TEXT["qpsc_memory_awake"]
         elif status:
@@ -738,12 +1043,44 @@ class OikawaApp(tk.Tk):
         self.qpsc_notifications_all = read_qpsc_notification_events(limit=30)
         self._render_qpsc_import_notifications(read_qpsc_notifications(limit=3))
         self._refresh_heat_candidates()
+        self._start_orbit_refresh(brainz_awake=brainz_awake)
         if schedule:
             self.after(10000, self._refresh_qpsc_notifications)
 
     def _refresh_heat_candidates(self, query: str = "") -> None:
         self.heat_candidates = build_heat_candidates(self.qpsc_notifications_all, query=query, limit=3)
         self._render_heat_candidates(self.heat_candidates)
+
+    def _start_orbit_refresh(self, query: str = "", brainz_awake: bool | None = None) -> None:
+        self.orbit_request_id += 1
+        request_id = self.orbit_request_id
+        if brainz_awake is None:
+            brainz_awake = is_brainz_awake(read_brainz_status())
+        notifications = list(self.qpsc_notifications_all)
+        heat_candidates = list(self.heat_candidates)
+        if not query and hasattr(self, "search_entry"):
+            query = self.search_entry.get().strip() or self.last_search_query
+        self.orbit_thread = threading.Thread(
+            target=self._orbit_worker,
+            args=(request_id, notifications, heat_candidates, brainz_awake, query),
+            daemon=True,
+        )
+        self.orbit_thread.start()
+
+    def _orbit_worker(
+        self,
+        request_id: int,
+        notifications: list[QpscNotification],
+        heat_candidates: list[HeatCandidate],
+        brainz_awake: bool,
+        query: str,
+    ) -> None:
+        try:
+            orbit = build_orbit_today(notifications, heat_candidates, brainz_awake, query=query)
+            save_orbit_today(orbit)
+            self.events.put(("orbit_done", (request_id, orbit)))
+        except Exception as exc:  # noqa: BLE001
+            self.events.put(("orbit_error", (request_id, exc)))
 
     def _render_qpsc_import_notifications(self, notifications: list[QpscNotification]) -> None:
         if not hasattr(self, "qpsc_import_frame"):
@@ -844,6 +1181,65 @@ class OikawaApp(tk.Tk):
             reason_label.pack(side="right", padx=(8, 0))
             reason_label.bind("<Button-1>", lambda _event, selected=candidate: self._open_heat_candidate(selected))
 
+    def _handle_orbit_done(self, payload: object) -> None:
+        request_id, orbit = payload
+        assert isinstance(request_id, int)
+        assert isinstance(orbit, OrbitToday)
+        if request_id != self.orbit_request_id:
+            return
+        metrics = [
+            UI_TEXT["orbit_metric_today"].format(count=orbit.notification_count_today),
+            UI_TEXT["orbit_metric_unread"].format(count=orbit.unread_count),
+            UI_TEXT["orbit_metric_ember"].format(count=orbit.ember_count),
+            UI_TEXT["orbit_metric_awake"] if orbit.brainz_awake else UI_TEXT["orbit_metric_quiet"],
+        ]
+        self.orbit_metrics_var.set(" / ".join(metrics))
+        flow_text = "\n".join(UI_TEXT["orbit_bullet"].format(text=line) for line in orbit.summary_lines[:5])
+        self.orbit_flow_var.set(flow_text)
+        self._render_orbit_next_candidates(orbit.next_candidates)
+
+    def _handle_orbit_error(self, payload: object) -> None:
+        request_id, _error = payload
+        assert isinstance(request_id, int)
+        if request_id != self.orbit_request_id:
+            return
+        self.orbit_metrics_var.set(UI_TEXT["orbit_status_unavailable"])
+        self.orbit_flow_var.set(UI_TEXT["orbit_status_unavailable"])
+        self._render_orbit_next_candidates([])
+
+    def _render_orbit_next_candidates(self, candidates: list[OrbitCandidate]) -> None:
+        if not hasattr(self, "orbit_next_frame"):
+            return
+        for child in self.orbit_next_frame.winfo_children():
+            child.destroy()
+        if not candidates:
+            tk.Label(
+                self.orbit_next_frame,
+                text=UI_TEXT["orbit_next_empty"],
+                fg=COLORS["muted"],
+                bg=COLORS["background"],
+                font=FONT_JP_SMALL,
+                wraplength=220,
+                justify="left",
+            ).pack(anchor="w")
+            return
+        for candidate in candidates[:3]:
+            row = tk.Frame(self.orbit_next_frame, bg=COLORS["background"], cursor="hand2")
+            row.pack(fill="x", pady=(0, 3))
+            row.bind("<Button-1>", lambda _event, selected=candidate: self._open_orbit_candidate(selected))
+            tk.Label(
+                row,
+                text=UI_TEXT["orbit_next_template"].format(message=candidate.message, title=candidate.title),
+                fg=COLORS["text"],
+                bg=COLORS["background"],
+                font=FONT_JP_SMALL,
+                wraplength=220,
+                justify="left",
+                cursor="hand2",
+            ).pack(anchor="w")
+            for child in row.winfo_children():
+                child.bind("<Button-1>", lambda _event, selected=candidate: self._open_orbit_candidate(selected))
+
     def _small_button_style(self, background: str) -> dict[str, object]:
         style = self._button_style(background)
         style.update({"padx": 8, "pady": 4})
@@ -866,6 +1262,13 @@ class OikawaApp(tk.Tk):
             return
         self.source_preview_status_var.set(UI_TEXT["heat_candidate_no_related"])
         self._set_source_preview_text(f"{candidate.title}\n{UI_TEXT['heat_candidate_no_related']}")
+
+    def _open_orbit_candidate(self, candidate: OrbitCandidate) -> None:
+        if candidate.related_path:
+            self._show_source_path(candidate.related_path, candidate.title)
+            return
+        self.source_preview_status_var.set(UI_TEXT["orbit_next_no_related"])
+        self._set_source_preview_text(f"{candidate.title}\n{UI_TEXT['orbit_next_no_related']}")
 
     def _button_style(self, background: str) -> dict[str, object]:
         return {
@@ -978,6 +1381,7 @@ class OikawaApp(tk.Tk):
         query = self.search_entry.get().strip()
         if not query:
             return
+        self.last_search_query = query
 
         self.status_var.set(UI_TEXT["status_searching"])
         self.summary_var.set(UI_TEXT["status_searching"])
@@ -1001,7 +1405,9 @@ class OikawaApp(tk.Tk):
         query = self.search_entry.get().strip()
         if not query:
             self._refresh_heat_candidates()
+            self._start_orbit_refresh()
             return
+        self.last_search_query = query
 
         notifications = read_qpsc_notification_events(limit=30)
         self.qpsc_notifications_all = notifications
@@ -1055,6 +1461,7 @@ class OikawaApp(tk.Tk):
             )
         )
         self._render_search_hits(hits)
+        self._start_orbit_refresh(query=query)
 
     def _handle_search_error(self, payload: object) -> None:
         _heat_search, error = payload
@@ -1106,6 +1513,10 @@ class OikawaApp(tk.Tk):
                     self._handle_search_done(payload)
                 elif event_name == "search_error":
                     self._handle_search_error(payload)
+                elif event_name == "orbit_done":
+                    self._handle_orbit_done(payload)
+                elif event_name == "orbit_error":
+                    self._handle_orbit_error(payload)
                 elif event_name == "source_preview_done":
                     self._handle_source_preview_done(payload)
                 elif event_name == "source_preview_error":

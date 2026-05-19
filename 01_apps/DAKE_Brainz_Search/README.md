@@ -42,6 +42,8 @@ Phase 3以降、原本表示と読む導線はOIKAWA側へ寄せます。BRAINZ�
 
 Phase 4以降、熾火表示と熱検索入口もOIKAWA側で扱います。BRAINZは通知イベントと原本への `related_path` を残し、候補表示や読み戻しはOIKAWAに寄せます。
 
+Phase 5以降、今日の整理表示もOIKAWA側で扱います。BRAINZは取り込み通知と原本パスを残し、ORBITの集計・表示・読み戻しはOIKAWAに寄せます。
+
 ## Phase 1でできること
 
 - ローカル記憶フォルダの指定
