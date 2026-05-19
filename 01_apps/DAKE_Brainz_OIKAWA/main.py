@@ -19,10 +19,11 @@ from core.heat_engine import AnalysisResult, analyze_documents
 from core.markdown_writer import write_suggestion
 from core.qpsc_notifications import (
     QpscNotification,
+    brainz_notification_candidates,
     mark_qpsc_notification_read,
     read_qpsc_notification_events,
 )
-from core.qpsc_status import is_brainz_awake, read_brainz_status
+from core.qpsc_status import brainz_status_candidates, is_brainz_awake, read_brainz_status
 from core.scanner import MemoryDocument, scan_memory
 
 
@@ -44,6 +45,8 @@ UI_TEXT = {
     "button_open_output": "保存先を開く",
     "button_choose_folder": "記憶フォルダを選ぶ",
     "button_preview_source": "原本を読む",
+    "button_qpsc_state_check": "状態確認",
+    "button_qpsc_state_checking": "確認中",
     "status_idle": "眠っています",
     "status_searching": "記憶を検索中",
     "status_search_complete": "検索完了",
@@ -63,6 +66,7 @@ UI_TEXT = {
     "section_orbit_today": "今日の整理",
     "section_orbit_flow": "今日の流れ",
     "section_orbit_next": "次の候補",
+    "section_qpsc_state": "QPSC状態",
     "label_memory_folder": "記憶フォルダ",
     "memory_folder_missing": "記憶フォルダ未検出",
     "dialog_choose_memory": "記憶フォルダを選択",
@@ -133,6 +137,18 @@ UI_TEXT = {
     "qpsc_notification_open_related": "原本",
     "qpsc_notification_read": "既読",
     "qpsc_related_missing": "原本が見つかりません。",
+    "qpsc_check_brainz_ok": "BRAINZ awake: OK",
+    "qpsc_check_brainz_unconfirmed": "BRAINZ awake: 未確認",
+    "qpsc_check_notifications_ok": "通知ファイル: OK",
+    "qpsc_check_notifications_missing": "通知ファイル: 未作成",
+    "qpsc_check_preview_ok": "原本プレビュー: OK",
+    "qpsc_check_preview_waiting": "原本プレビュー: 待機中",
+    "qpsc_check_orbit_ok": "ORBIT: OK",
+    "qpsc_check_orbit_missing": "ORBIT: 未生成",
+    "qpsc_check_recent_returns": "最近戻った原本: {count}件",
+    "qpsc_check_related_ok": "原本パス: OK",
+    "qpsc_check_related_empty": "原本パス: まだ記録がありません",
+    "qpsc_check_related_missing": "原本パス: ファイルが見つかりません",
     "footer_source": "記憶はBRAINZに在り、OIKAWAが静かに呼び戻します。",
     "launch_check_ok": "LAUNCH CHECK OK",
     "gui_smoke_ok": "GUI SMOKE OK",
@@ -210,6 +226,11 @@ class RecentReturn:
     opened_at: str
     title: str
     related_path: str
+
+
+@dataclass(frozen=True)
+class QpscSelfCheckResult:
+    lines: list[str]
 
 
 def build_search_hits(documents: list[MemoryDocument], query: str, memory_root: Path, limit: int = 20) -> list[SearchHit]:
@@ -663,6 +684,110 @@ def _write_recent_returns(items: list[RecentReturn]) -> None:
     temp_path.replace(path)
 
 
+def build_qpsc_self_check(
+    memory_root: Path | None,
+    preview_loaded: bool,
+    status_paths: list[Path] | None = None,
+    notification_paths: list[Path] | None = None,
+    orbit_path: Path | None = None,
+    recent_returns_path: Path | None = None,
+) -> QpscSelfCheckResult:
+    status_exists, status_data = _read_first_json_dict(status_paths or brainz_status_candidates())
+    brainz_line = (
+        UI_TEXT["qpsc_check_brainz_ok"]
+        if status_exists and is_brainz_awake(status_data)
+        else UI_TEXT["qpsc_check_brainz_unconfirmed"]
+    )
+
+    notifications_exists, notification_items = _read_first_json_list(notification_paths or brainz_notification_candidates())
+    notification_line = (
+        UI_TEXT["qpsc_check_notifications_ok"]
+        if notifications_exists
+        else UI_TEXT["qpsc_check_notifications_missing"]
+    )
+
+    orbit_exists, _orbit_data = _read_json_dict(orbit_path or _orbit_today_path())
+    orbit_line = UI_TEXT["qpsc_check_orbit_ok"] if orbit_exists else UI_TEXT["qpsc_check_orbit_missing"]
+
+    recent_returns = _read_recent_returns_from_path(recent_returns_path or _recent_returns_path())
+    recent_line = UI_TEXT["qpsc_check_recent_returns"].format(count=len(recent_returns))
+
+    related_line = _self_check_related_path_line(notification_items, memory_root)
+    preview_line = UI_TEXT["qpsc_check_preview_ok"] if preview_loaded else UI_TEXT["qpsc_check_preview_waiting"]
+    return QpscSelfCheckResult(
+        lines=[
+            brainz_line,
+            notification_line,
+            preview_line,
+            orbit_line,
+            recent_line,
+            related_line,
+        ]
+    )
+
+
+def _read_first_json_dict(paths: list[Path]) -> tuple[bool, dict[str, object]]:
+    for path in paths:
+        exists, data = _read_json_dict(path)
+        if exists:
+            return exists, data
+    return False, {}
+
+
+def _read_json_dict(path: Path) -> tuple[bool, dict[str, object]]:
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False, {}
+    return (True, raw) if isinstance(raw, dict) else (False, {})
+
+
+def _read_first_json_list(paths: list[Path]) -> tuple[bool, list[dict[str, object]]]:
+    for path in paths:
+        exists, data = _read_json_list(path)
+        if exists:
+            return exists, data
+    return False, []
+
+
+def _read_json_list(path: Path) -> tuple[bool, list[dict[str, object]]]:
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False, []
+    if not isinstance(raw, list):
+        return False, []
+    return True, [item for item in raw if isinstance(item, dict)]
+
+
+def _read_recent_returns_from_path(path: Path) -> list[RecentReturn]:
+    exists, data = _read_json_list(path)
+    if not exists:
+        return []
+    returns: list[RecentReturn] = []
+    for item in data:
+        returns.append(
+            RecentReturn(
+                opened_at=str(item.get("opened_at", "") or ""),
+                title=str(item.get("title", "") or ""),
+                related_path=str(item.get("related_path", "") or ""),
+            )
+        )
+    return returns
+
+
+def _self_check_related_path_line(notification_items: list[dict[str, object]], memory_root: Path | None) -> str:
+    related_paths = [str(item.get("related_path", "") or "").strip() for item in notification_items]
+    related_paths = [path for path in related_paths if path]
+    if not related_paths:
+        return UI_TEXT["qpsc_check_related_empty"]
+    for related_path in related_paths:
+        resolved = _resolve_related_source_path(related_path, memory_root)
+        if resolved.exists() and resolved.is_file():
+            return UI_TEXT["qpsc_check_related_ok"]
+    return UI_TEXT["qpsc_check_related_missing"]
+
+
 def _count_recent_returns(recent_returns: list[RecentReturn], target_date: date) -> int:
     return sum(1 for item in recent_returns if _recent_return_is_today(item, target_date))
 
@@ -853,8 +978,10 @@ class OikawaApp(tk.Tk):
         self.search_thread: threading.Thread | None = None
         self.orbit_thread: threading.Thread | None = None
         self.source_preview_thread: threading.Thread | None = None
+        self.self_check_thread: threading.Thread | None = None
         self.source_preview_request_id = 0
         self.orbit_request_id = 0
+        self.source_preview_loaded = False
         self.qpsc_notifications_all: list[QpscNotification] = []
         self.heat_candidates: list[HeatCandidate] = []
         self.last_search_query = ""
@@ -908,6 +1035,7 @@ class OikawaApp(tk.Tk):
         self.qpsc_notification_var = tk.StringVar(value=UI_TEXT["qpsc_waiting"])
         self.orbit_metrics_var = tk.StringVar(value=UI_TEXT["orbit_status_loading"])
         self.orbit_flow_var = tk.StringVar(value=UI_TEXT["orbit_status_loading"])
+        self.qpsc_self_check_var = tk.StringVar(value=self._initial_qpsc_self_check_text())
 
         left_panel = tk.Frame(self, bg=COLORS["background"])
         left_panel.place(relx=0.03, rely=0.055, relwidth=0.21, relheight=0.84)
@@ -1029,6 +1157,41 @@ class OikawaApp(tk.Tk):
             **self._small_button_style(COLORS["heat"]),
         )
         self.scan_button.pack(side="left", padx=(8, 0))
+
+        qpsc_state = tk.Frame(
+            left_panel,
+            bg=COLORS["background"],
+            highlightbackground=COLORS["line_soft"],
+            highlightthickness=1,
+            padx=10,
+            pady=8,
+        )
+        qpsc_state.pack(fill="x", pady=(10, 0))
+        qpsc_state_header = tk.Frame(qpsc_state, bg=COLORS["background"])
+        qpsc_state_header.pack(fill="x")
+        tk.Label(
+            qpsc_state_header,
+            text=UI_TEXT["section_qpsc_state"],
+            fg=COLORS["muted"],
+            bg=COLORS["background"],
+            font=FONT_LABEL,
+        ).pack(side="left", anchor="w")
+        self.qpsc_self_check_button = tk.Button(
+            qpsc_state_header,
+            text=UI_TEXT["button_qpsc_state_check"],
+            command=self._start_qpsc_self_check,
+            **self._small_button_style(COLORS["panel_light"]),
+        )
+        self.qpsc_self_check_button.pack(side="right")
+        tk.Label(
+            qpsc_state,
+            textvariable=self.qpsc_self_check_var,
+            fg=COLORS["text"],
+            bg=COLORS["background"],
+            font=FONT_JP_SMALL,
+            wraplength=240,
+            justify="left",
+        ).pack(anchor="w", pady=(6, 0))
 
         self.source_preview_status_var = tk.StringVar(value=UI_TEXT["source_preview_empty"])
         source_preview = tk.Frame(
@@ -1208,6 +1371,40 @@ class OikawaApp(tk.Tk):
             bg=COLORS["background"],
             font=FONT_MONO,
         ).pack(side="right", anchor="e")
+
+    def _initial_qpsc_self_check_text(self) -> str:
+        return "\n".join(
+            [
+                UI_TEXT["qpsc_check_brainz_unconfirmed"],
+                UI_TEXT["qpsc_check_notifications_missing"],
+                UI_TEXT["qpsc_check_preview_waiting"],
+                UI_TEXT["qpsc_check_orbit_missing"],
+                UI_TEXT["qpsc_check_recent_returns"].format(count=0),
+                UI_TEXT["qpsc_check_related_empty"],
+            ]
+        )
+
+    def _start_qpsc_self_check(self) -> None:
+        if self.self_check_thread and self.self_check_thread.is_alive():
+            return
+        self.qpsc_self_check_button.configure(text=UI_TEXT["button_qpsc_state_checking"], state="disabled")
+        memory_folder = self.memory_folder
+        preview_loaded = self.source_preview_loaded
+        self.self_check_thread = threading.Thread(
+            target=self._qpsc_self_check_worker,
+            args=(memory_folder, preview_loaded),
+            daemon=True,
+        )
+        self.self_check_thread.start()
+
+    def _qpsc_self_check_worker(self, memory_folder: Path | None, preview_loaded: bool) -> None:
+        result = build_qpsc_self_check(memory_folder, preview_loaded)
+        self.events.put(("self_check_done", result))
+
+    def _handle_self_check_done(self, payload: object) -> None:
+        assert isinstance(payload, QpscSelfCheckResult)
+        self.qpsc_self_check_var.set("\n".join(payload.lines))
+        self.qpsc_self_check_button.configure(text=UI_TEXT["button_qpsc_state_check"], state="normal")
 
     def _refresh_qpsc_notifications(self, schedule: bool = True) -> None:
         status = read_brainz_status()
@@ -1725,6 +1922,8 @@ class OikawaApp(tk.Tk):
                     self._handle_source_preview_done(payload)
                 elif event_name == "source_preview_error":
                     self._handle_source_preview_error(payload)
+                elif event_name == "self_check_done":
+                    self._handle_self_check_done(payload)
         except queue.Empty:
             pass
         self.after(100, self._poll_events)
@@ -1913,6 +2112,7 @@ class OikawaApp(tk.Tk):
         path = self._resolve_source_path(source_path)
         self.source_preview_request_id += 1
         request_id = self.source_preview_request_id
+        self.source_preview_loaded = False
         self.source_preview_status_var.set(UI_TEXT["source_preview_loading"])
         self._set_source_preview_text(UI_TEXT["source_preview_loading"])
         self.source_preview_thread = threading.Thread(
@@ -1955,6 +2155,7 @@ class OikawaApp(tk.Tk):
             content = f"{title}\n{header}\n\n{content}"
         else:
             content = f"{header}\n\n{content}"
+        self.source_preview_loaded = True
         self.source_preview_status_var.set(UI_TEXT["source_preview_loaded"])
         self._set_source_preview_text(content)
 
@@ -1965,6 +2166,7 @@ class OikawaApp(tk.Tk):
         assert isinstance(message, str)
         if request_id != self.source_preview_request_id:
             return
+        self.source_preview_loaded = False
         self.source_preview_status_var.set(message)
         self._set_source_preview_text(f"{message}\n{UI_TEXT['source_preview_path'].format(path=path)}")
 
