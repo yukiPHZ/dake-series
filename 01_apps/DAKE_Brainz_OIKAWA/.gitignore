@@ -3,5 +3,6 @@ dist/
 *.spec
 *_config.json
 data/config/qpsc_orbit_today.json
+data/config/qpsc_recent_returns.json
 __pycache__/
 *.pyc
