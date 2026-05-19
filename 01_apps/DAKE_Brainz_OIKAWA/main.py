@@ -28,11 +28,12 @@ from core.scanner import MemoryDocument, scan_memory
 
 APP_NAME = "DakeBrainzOIKAWA"
 WINDOW_TITLE = "OIKAWA"
-COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "QPSC — Quiet Personal Cognitive System by Yukihiko Kikuta"
 
 UI_TEXT = {
     "app_title": "OIKAWA",
     "copyright": COPYRIGHT,
+    "app_subcopy": "補助脳BRAINZ",
     "app_subtitle": "検索 / 原本 / 熾火 / 通知",
     "button_search": "記憶検索",
     "button_searching": "検索中",
@@ -127,7 +128,7 @@ UI_TEXT = {
     "qpsc_notification_open_related": "原本",
     "qpsc_notification_read": "既読",
     "qpsc_related_missing": "原本が見つかりません。",
-    "footer_source": "local scan / no cloud",
+    "footer_source": "記憶はBRAINZに在り、OIKAWAが静かに呼び戻します。",
     "launch_check_ok": "LAUNCH CHECK OK",
     "gui_smoke_ok": "GUI SMOKE OK",
     "scan_check_ok": "SCAN CHECK OK",
@@ -663,8 +664,8 @@ class OikawaApp(tk.Tk):
     ) -> None:
         super().__init__()
         self.title(WINDOW_TITLE)
-        self.geometry("1120x720")
-        self.minsize(980, 620)
+        self.geometry("1240x760")
+        self.minsize(1120, 680)
         self.configure(bg=COLORS["background"])
 
         self.config_store = ConfigStore()
@@ -732,43 +733,49 @@ class OikawaApp(tk.Tk):
         self.orbit_metrics_var = tk.StringVar(value=UI_TEXT["orbit_status_loading"])
         self.orbit_flow_var = tk.StringVar(value=UI_TEXT["orbit_status_loading"])
 
-        header = tk.Frame(self, bg=COLORS["background"])
-        header.place(x=30, y=24)
+        left_panel = tk.Frame(self, bg=COLORS["background"])
+        left_panel.place(relx=0.03, rely=0.055, relwidth=0.21, relheight=0.84)
         tk.Label(
-            header,
+            left_panel,
             text=UI_TEXT["app_title"],
             fg=COLORS["text"],
             bg=COLORS["background"],
             font=FONT_TITLE,
         ).pack(anchor="w")
         tk.Label(
-            header,
+            left_panel,
+            text=UI_TEXT["app_subcopy"],
+            fg=COLORS["heat"],
+            bg=COLORS["background"],
+            font=FONT_JP,
+        ).pack(anchor="w", pady=(5, 0))
+        tk.Label(
+            left_panel,
             text=UI_TEXT["app_subtitle"],
             fg=COLORS["muted"],
             bg=COLORS["background"],
             font=FONT_JP_SMALL,
-        ).pack(anchor="w", pady=(4, 12))
+        ).pack(anchor="w", pady=(4, 14))
         tk.Label(
-            header,
+            left_panel,
             textvariable=self.status_var,
             fg=COLORS["heat"],
             bg=COLORS["background"],
             font=FONT_JP_SMALL,
         ).pack(anchor="w")
         tk.Label(
-            header,
+            left_panel,
             textvariable=self.memory_var,
             fg=COLORS["muted"],
             bg=COLORS["background"],
             font=FONT_MONO,
-            wraplength=520,
+            wraplength=240,
             justify="left",
         ).pack(anchor="w", pady=(8, 0))
-        search_row = tk.Frame(header, bg=COLORS["background"])
-        search_row.pack(anchor="w", pady=(10, 0))
+        search_row = tk.Frame(left_panel, bg=COLORS["background"])
+        search_row.pack(fill="x", pady=(14, 0))
         self.search_entry = tk.Entry(
             search_row,
-            width=34,
             bg=COLORS["panel"],
             fg=COLORS["text"],
             insertbackground=COLORS["text"],
@@ -776,17 +783,19 @@ class OikawaApp(tk.Tk):
             bd=0,
             font=FONT_JP_SMALL,
         )
-        self.search_entry.pack(side="left", ipady=7)
+        self.search_entry.pack(fill="x", ipady=7)
         self.search_entry.bind("<Return>", lambda _event: self._start_memory_search())
+        search_buttons = tk.Frame(left_panel, bg=COLORS["background"])
+        search_buttons.pack(fill="x", pady=(8, 0))
         self.search_button = tk.Button(
-            search_row,
+            search_buttons,
             text=UI_TEXT["button_search"],
             command=self._start_memory_search,
             **self._button_style(COLORS["panel_light"]),
         )
-        self.search_button.pack(side="left", padx=(8, 0))
+        self.search_button.pack(side="left")
         self.heat_search_button = tk.Button(
-            search_row,
+            search_buttons,
             text=UI_TEXT["button_heat_search"],
             command=self._start_heat_search,
             **self._button_style(COLORS["heat"]),
@@ -815,67 +824,8 @@ class OikawaApp(tk.Tk):
             **self._button_style(COLORS["panel_light"]),
         ).pack(anchor="w", pady=(12, 0))
 
-        orbit = tk.Frame(
-            self,
-            bg=COLORS["background"],
-            highlightbackground=COLORS["line_soft"],
-            highlightthickness=1,
-            padx=14,
-            pady=10,
-        )
-        orbit.place(relx=0.04, rely=0.29, relwidth=0.58, relheight=0.18)
-        orbit_top = tk.Frame(orbit, bg=COLORS["background"])
-        orbit_top.pack(fill="x")
-        tk.Label(
-            orbit_top,
-            text=UI_TEXT["section_orbit_today"],
-            fg=COLORS["muted"],
-            bg=COLORS["background"],
-            font=FONT_LABEL,
-        ).pack(side="left")
-        tk.Label(
-            orbit_top,
-            textvariable=self.orbit_metrics_var,
-            fg=COLORS["text"],
-            bg=COLORS["background"],
-            font=FONT_JP_SMALL,
-            justify="right",
-            wraplength=440,
-        ).pack(side="right")
-        orbit_body = tk.Frame(orbit, bg=COLORS["background"])
-        orbit_body.pack(fill="both", expand=True, pady=(6, 0))
-        orbit_flow = tk.Frame(orbit_body, bg=COLORS["background"])
-        orbit_flow.pack(side="left", fill="both", expand=True)
-        tk.Label(
-            orbit_flow,
-            text=UI_TEXT["section_orbit_flow"],
-            fg=COLORS["muted"],
-            bg=COLORS["background"],
-            font=FONT_LABEL,
-        ).pack(anchor="w")
-        tk.Label(
-            orbit_flow,
-            textvariable=self.orbit_flow_var,
-            fg=COLORS["text"],
-            bg=COLORS["background"],
-            font=FONT_JP_SMALL,
-            justify="left",
-            wraplength=350,
-        ).pack(anchor="w", pady=(3, 0))
-        orbit_next = tk.Frame(orbit_body, bg=COLORS["background"])
-        orbit_next.pack(side="right", fill="both", padx=(18, 0))
-        tk.Label(
-            orbit_next,
-            text=UI_TEXT["section_orbit_next"],
-            fg=COLORS["muted"],
-            bg=COLORS["background"],
-            font=FONT_LABEL,
-        ).pack(anchor="w")
-        self.orbit_next_frame = tk.Frame(orbit_next, bg=COLORS["background"])
-        self.orbit_next_frame.pack(fill="both", expand=True, pady=(3, 0))
-
-        self.results_frame = tk.Frame(self, bg=COLORS["background"])
-        self.results_frame.place(relx=0.04, rely=0.50, relwidth=0.58, relheight=0.44)
+        self.results_frame = tk.Frame(left_panel, bg=COLORS["background"])
+        self.results_frame.pack(fill="both", expand=True, pady=(18, 0))
         tk.Label(
             self.results_frame,
             text=UI_TEXT["section_related"],
@@ -884,42 +834,83 @@ class OikawaApp(tk.Tk):
             font=FONT_JP_SMALL,
         ).pack(anchor="w")
         self.cards_frame = tk.Frame(self.results_frame, bg=COLORS["background"])
-        self.cards_frame.pack(fill="both", expand=True, pady=(10, 0))
+        self.cards_frame.pack(fill="both", expand=True, pady=(8, 0))
 
-        actions = tk.Frame(self, bg=COLORS["background"])
-        actions.place(relx=0.97, rely=0.94, anchor="se")
-        tk.Label(
-            actions,
-            text=UI_TEXT["footer_source"],
-            fg=COLORS["muted"],
-            bg=COLORS["background"],
-            font=FONT_LABEL,
-        ).pack(anchor="e", pady=(0, 10))
+        actions = tk.Frame(left_panel, bg=COLORS["background"])
+        actions.pack(fill="x", pady=(12, 0))
         self.open_output_button = tk.Button(
             actions,
             text=UI_TEXT["button_open_output"],
             command=self._open_output,
             state="disabled",
-            **self._button_style(COLORS["panel_light"]),
+            **self._small_button_style(COLORS["panel_light"]),
         )
-        self.open_output_button.pack(anchor="e", pady=(0, 10))
+        self.open_output_button.pack(side="left")
         self.scan_button = tk.Button(
             actions,
             text=UI_TEXT["button_scan"],
             command=self._start_scan,
-            **self._button_style(COLORS["heat"]),
+            **self._small_button_style(COLORS["heat"]),
         )
-        self.scan_button.pack(anchor="e")
+        self.scan_button.pack(side="left", padx=(8, 0))
+
+        self.source_preview_status_var = tk.StringVar(value=UI_TEXT["source_preview_empty"])
+        source_preview = tk.Frame(
+            self,
+            bg=COLORS["panel"],
+            highlightbackground=COLORS["line"],
+            highlightthickness=1,
+            padx=16,
+            pady=14,
+        )
+        source_preview.place(relx=0.27, rely=0.055, relwidth=0.44, relheight=0.84)
+        tk.Label(
+            source_preview,
+            text=UI_TEXT["section_source_preview"],
+            fg=COLORS["muted"],
+            bg=COLORS["panel"],
+            font=FONT_LABEL,
+        ).pack(anchor="w")
+        tk.Label(
+            source_preview,
+            textvariable=self.source_preview_status_var,
+            fg=COLORS["text"],
+            bg=COLORS["panel"],
+            font=FONT_JP_SMALL,
+            wraplength=500,
+            justify="left",
+        ).pack(anchor="w", pady=(6, 10))
+        preview_body = tk.Frame(source_preview, bg=COLORS["panel"])
+        preview_body.pack(fill="both", expand=True)
+        preview_scrollbar = tk.Scrollbar(preview_body)
+        preview_scrollbar.pack(side="right", fill="y")
+        self.source_preview_box = tk.Text(
+            preview_body,
+            bg=COLORS["background"],
+            fg=COLORS["text"],
+            insertbackground=COLORS["text"],
+            relief="flat",
+            bd=0,
+            wrap="word",
+            font=FONT_JP,
+            yscrollcommand=preview_scrollbar.set,
+        )
+        self.source_preview_box.pack(side="left", fill="both", expand=True)
+        preview_scrollbar.configure(command=self.source_preview_box.yview)
+        self._set_source_preview_text(UI_TEXT["source_preview_empty"])
+
+        right_panel = tk.Frame(self, bg=COLORS["background"])
+        right_panel.place(relx=0.74, rely=0.055, relwidth=0.23, relheight=0.84)
 
         notice = tk.Frame(
-            self,
+            right_panel,
             bg=COLORS["background"],
             highlightbackground=COLORS["line_soft"],
             highlightthickness=1,
-            padx=14,
-            pady=10,
+            padx=12,
+            pady=9,
         )
-        notice.place(relx=0.97, rely=0.08, anchor="ne")
+        notice.pack(fill="x")
         tk.Label(
             notice,
             text=UI_TEXT["section_qpsc_notifications"],
@@ -934,21 +925,21 @@ class OikawaApp(tk.Tk):
             bg=COLORS["background"],
             font=FONT_JP_SMALL,
             justify="left",
-            wraplength=260,
+            wraplength=250,
         )
         self.qpsc_status_label.pack(anchor="w", pady=(6, 0))
         self.qpsc_import_frame = tk.Frame(notice, bg=COLORS["background"])
         self.qpsc_import_frame.pack(fill="x", pady=(8, 0))
 
         heat = tk.Frame(
-            self,
+            right_panel,
             bg=COLORS["background"],
             highlightbackground=COLORS["line_soft"],
             highlightthickness=1,
             padx=12,
             pady=8,
         )
-        heat.place(relx=0.66, rely=0.34, relwidth=0.31, relheight=0.13)
+        heat.pack(fill="x", pady=(10, 0))
         tk.Label(
             heat,
             text=UI_TEXT["section_heat_candidates"],
@@ -959,67 +950,88 @@ class OikawaApp(tk.Tk):
         self.heat_candidates_frame = tk.Frame(heat, bg=COLORS["background"])
         self.heat_candidates_frame.pack(fill="both", expand=True, pady=(5, 0))
 
-        self.source_preview_status_var = tk.StringVar(value=UI_TEXT["source_preview_empty"])
-        source_preview = tk.Frame(
-            self,
-            bg=COLORS["panel"],
-            highlightbackground=COLORS["line"],
+        orbit = tk.Frame(
+            right_panel,
+            bg=COLORS["background"],
+            highlightbackground=COLORS["line_soft"],
             highlightthickness=1,
             padx=12,
-            pady=10,
+            pady=9,
         )
-        source_preview.place(relx=0.66, rely=0.50, relwidth=0.31, relheight=0.35)
+        orbit.pack(fill="both", expand=True, pady=(10, 0))
+        orbit_top = tk.Frame(orbit, bg=COLORS["background"])
+        orbit_top.pack(fill="x")
         tk.Label(
-            source_preview,
-            text=UI_TEXT["section_source_preview"],
+            orbit_top,
+            text=UI_TEXT["section_orbit_today"],
             fg=COLORS["muted"],
-            bg=COLORS["panel"],
+            bg=COLORS["background"],
             font=FONT_LABEL,
         ).pack(anchor="w")
         tk.Label(
-            source_preview,
-            textvariable=self.source_preview_status_var,
+            orbit,
+            textvariable=self.orbit_metrics_var,
             fg=COLORS["text"],
-            bg=COLORS["panel"],
-            font=FONT_JP_SMALL,
-            wraplength=300,
-            justify="left",
-        ).pack(anchor="w", pady=(5, 8))
-        preview_body = tk.Frame(source_preview, bg=COLORS["panel"])
-        preview_body.pack(fill="both", expand=True)
-        preview_scrollbar = tk.Scrollbar(preview_body)
-        preview_scrollbar.pack(side="right", fill="y")
-        self.source_preview_box = tk.Text(
-            preview_body,
             bg=COLORS["background"],
-            fg=COLORS["text"],
-            insertbackground=COLORS["text"],
-            relief="flat",
-            bd=0,
-            wrap="word",
             font=FONT_JP_SMALL,
-            yscrollcommand=preview_scrollbar.set,
-        )
-        self.source_preview_box.pack(side="left", fill="both", expand=True)
-        preview_scrollbar.configure(command=self.source_preview_box.yview)
-        self._set_source_preview_text(UI_TEXT["source_preview_empty"])
+            justify="left",
+            wraplength=250,
+        ).pack(anchor="w", pady=(5, 0))
+        orbit_body = tk.Frame(orbit, bg=COLORS["background"])
+        orbit_body.pack(fill="both", expand=True, pady=(6, 0))
+        orbit_flow = tk.Frame(orbit_body, bg=COLORS["background"])
+        orbit_flow.pack(fill="x")
+        tk.Label(
+            orbit_flow,
+            text=UI_TEXT["section_orbit_flow"],
+            fg=COLORS["muted"],
+            bg=COLORS["background"],
+            font=FONT_LABEL,
+        ).pack(anchor="w")
+        tk.Label(
+            orbit_flow,
+            textvariable=self.orbit_flow_var,
+            fg=COLORS["text"],
+            bg=COLORS["background"],
+            font=FONT_JP_SMALL,
+            justify="left",
+            wraplength=250,
+        ).pack(anchor="w", pady=(3, 0))
+        orbit_next = tk.Frame(orbit_body, bg=COLORS["background"])
+        orbit_next.pack(fill="both", expand=True, pady=(8, 0))
+        tk.Label(
+            orbit_next,
+            text=UI_TEXT["section_orbit_next"],
+            fg=COLORS["muted"],
+            bg=COLORS["background"],
+            font=FONT_LABEL,
+        ).pack(anchor="w")
+        self.orbit_next_frame = tk.Frame(orbit_next, bg=COLORS["background"])
+        self.orbit_next_frame.pack(fill="both", expand=True, pady=(3, 0))
 
         footer = tk.Frame(self, bg=COLORS["background"])
-        footer.place(relx=0.04, rely=0.96, anchor="sw")
+        footer.place(relx=0.03, rely=0.93, relwidth=0.94, relheight=0.055)
         tk.Label(
             footer,
             text=UI_TEXT["copyright"],
             fg=COLORS["muted"],
             bg=COLORS["background"],
             font=FONT_LABEL,
-        ).pack(anchor="w")
+        ).pack(side="left", anchor="w")
+        tk.Label(
+            footer,
+            text=UI_TEXT["footer_source"],
+            fg=COLORS["muted"],
+            bg=COLORS["background"],
+            font=FONT_JP_SMALL,
+        ).pack(side="left", padx=(18, 0))
         tk.Label(
             footer,
             textvariable=self.summary_var,
             fg=COLORS["muted"],
             bg=COLORS["background"],
             font=FONT_MONO,
-        ).pack(anchor="w", pady=(4, 0))
+        ).pack(side="right", anchor="e")
 
     def _refresh_qpsc_notifications(self, schedule: bool = True) -> None:
         status = read_brainz_status()
@@ -1294,7 +1306,7 @@ class OikawaApp(tk.Tk):
             return
 
         self.memory_var.set(UI_TEXT["memory_folder_missing"])
-        self.missing_frame.place(relx=0.04, rely=0.30, relwidth=0.28)
+        self.missing_frame.place(relx=0.03, rely=0.38, relwidth=0.21)
 
     def _init_particles(self) -> None:
         width = max(1, self.canvas.winfo_width() or 1120)
@@ -1586,7 +1598,7 @@ class OikawaApp(tk.Tk):
                 fg=COLORS["heat"],
                 bg=COLORS["panel"],
                 font=FONT_JP,
-                wraplength=560,
+                wraplength=230,
                 justify="left",
             ).pack(anchor="w")
             tk.Label(
@@ -1595,7 +1607,7 @@ class OikawaApp(tk.Tk):
                 fg=COLORS["muted"],
                 bg=COLORS["panel"],
                 font=FONT_MONO,
-                wraplength=560,
+                wraplength=230,
                 justify="left",
             ).pack(anchor="w", pady=(5, 0))
             tk.Label(
@@ -1604,7 +1616,7 @@ class OikawaApp(tk.Tk):
                 fg=COLORS["muted"],
                 bg=COLORS["panel"],
                 font=FONT_JP_SMALL,
-                wraplength=560,
+                wraplength=230,
                 justify="left",
             ).pack(anchor="w", pady=(5, 0))
             tk.Button(
@@ -1632,7 +1644,7 @@ class OikawaApp(tk.Tk):
                 fg=COLORS["muted"],
                 bg=COLORS["panel"],
                 font=FONT_JP_SMALL,
-                wraplength=560,
+                wraplength=230,
                 justify="left",
             ).pack(anchor="w", pady=(8, 0))
             return
@@ -1663,7 +1675,7 @@ class OikawaApp(tk.Tk):
                 fg=COLORS["text"],
                 bg=COLORS["panel"],
                 font=FONT_JP_SMALL,
-                wraplength=560,
+                wraplength=230,
                 justify="left",
             ).pack(anchor="w", pady=(6, 0))
             tk.Label(
@@ -1672,7 +1684,7 @@ class OikawaApp(tk.Tk):
                 fg=COLORS["muted"],
                 bg=COLORS["panel"],
                 font=FONT_JP_SMALL,
-                wraplength=560,
+                wraplength=230,
                 justify="left",
             ).pack(anchor="w", pady=(4, 0))
             tk.Label(
@@ -1681,7 +1693,7 @@ class OikawaApp(tk.Tk):
                 fg=COLORS["glow"],
                 bg=COLORS["panel"],
                 font=FONT_JP_SMALL,
-                wraplength=560,
+                wraplength=230,
                 justify="left",
             ).pack(anchor="w", pady=(6, 0))
             tk.Button(
