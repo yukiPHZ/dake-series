@@ -1107,7 +1107,7 @@ def run_gui(launch_check: bool = False) -> int:
     )
 
     ensure_app_dirs()
-    ctk.set_appearance_mode("light")
+    ctk.set_appearance_mode("dark")
     ctk.set_default_color_theme("blue")
 
     class BrainzApp(ctk.CTk):

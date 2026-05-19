@@ -94,6 +94,15 @@ ChatGPT exportの基本手順:
 2. BRAINZで `zip`、`フォルダ`、または `conversations.json` を選びます
 3. 取り込み完了後、OIKAWAの通知や検索から記憶へ戻ります
 
+## QPSC UI表示方針
+
+QPSCのBRAINZ / OIKAWAは黒基調の静かなUIを基本にします。
+
+- 背景は黒〜ダークグレーを優先します
+- 日本語本文は `Yu Gothic UI` / `Meiryo` を優先します
+- 小さすぎる日本語や太字の多用は避けます
+- 原本、通知、取り込み状態は読みやすさを優先します
+
 ## Phase 1でできること
 
 - ローカル記憶フォルダの指定

@@ -2,30 +2,30 @@ from __future__ import annotations
 
 
 COLORS = {
-    "bg": "#F6F8FA",
-    "panel": "#FFFFFF",
-    "panel_alt": "#F1F5F9",
-    "panel_soft": "#E6EDF5",
-    "notification": "#EAF2FA",
-    "notification_border": "#B9CBE0",
-    "border": "#D3DEE9",
-    "accent": "#2D6FA3",
-    "accent_hover": "#235D8A",
-    "accent_soft": "#DCEAF6",
-    "text": "#182433",
-    "section": "#244B70",
-    "muted": "#53687D",
-    "quiet": "#74879A",
-    "log_text": "#31506D",
-    "ok": "#1F8A5C",
-    "warn": "#9E741B",
-    "danger": "#B64D4D",
-    "input": "#FFFFFF",
+    "bg": "#080A0F",
+    "panel": "#11151C",
+    "panel_alt": "#151A22",
+    "panel_soft": "#151A22",
+    "notification": "#11151C",
+    "notification_border": "#252B36",
+    "border": "#252B36",
+    "accent": "#263247",
+    "accent_hover": "#33425F",
+    "accent_soft": "#202A3C",
+    "text": "#E6EAF0",
+    "section": "#7AA7FF",
+    "muted": "#9AA4B2",
+    "quiet": "#A9B3C2",
+    "log_text": "#C4CBD6",
+    "ok": "#84D2A6",
+    "warn": "#D8B26A",
+    "danger": "#D98C8C",
+    "input": "#0D1017",
 }
 
 UI_FONT_CANDIDATES = ("Yu Gothic UI", "Meiryo", "BIZ UDPGothic", "Segoe UI")
 READING_FONT_CANDIDATES = ("Yu Gothic UI", "Meiryo", "BIZ UDPGothic", "Segoe UI")
-STATUS_FONT_CANDIDATES = ("Segoe UI Variable", "Segoe UI", "Yu Gothic UI", "Meiryo")
+STATUS_FONT_CANDIDATES = ("Yu Gothic UI", "Meiryo", "Segoe UI Variable", "Segoe UI")
 MONO_FONT_CANDIDATES = ("Cascadia Mono", "Consolas", "Yu Gothic UI", "Meiryo")
 
 FONT_CANDIDATES = UI_FONT_CANDIDATES

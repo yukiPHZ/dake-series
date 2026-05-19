@@ -928,22 +928,22 @@ def read_source_preview_text(path: Path, limit: int = MAX_PREVIEW_CHARS) -> tupl
         return "", False
 
 COLORS = {
-    "background": "#06070A",
-    "panel": "#101218",
-    "panel_light": "#151821",
-    "text": "#D7DAE0",
-    "muted": "#7B8190",
-    "glow": "#6E7FA8",
-    "heat": "#C47A3A",
-    "line": "#242B3A",
-    "line_soft": "#161B26",
+    "background": "#080A0F",
+    "panel": "#11151C",
+    "panel_light": "#151A22",
+    "text": "#E6EAF0",
+    "muted": "#9AA4B2",
+    "glow": "#263247",
+    "heat": "#7AA7FF",
+    "line": "#252B36",
+    "line_soft": "#1A202B",
 }
 
-FONT_JP = ("BIZ UDPGothic", 11)
-FONT_JP_SMALL = ("BIZ UDPGothic", 9)
-FONT_TITLE = ("Segoe UI", 18, "bold")
-FONT_LABEL = ("Segoe UI", 9)
-FONT_MONO = ("JetBrains Mono", 9)
+FONT_JP = ("Yu Gothic UI", 12)
+FONT_JP_SMALL = ("Yu Gothic UI", 10)
+FONT_TITLE = ("Yu Gothic UI", 20)
+FONT_LABEL = ("Yu Gothic UI", 10)
+FONT_MONO = ("Cascadia Mono", 10)
 
 
 @dataclass
