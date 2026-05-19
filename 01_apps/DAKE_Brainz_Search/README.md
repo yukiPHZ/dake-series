@@ -77,6 +77,23 @@ exeがない開発中の状態では、`DAKE_Brainz_OIKAWA/main.py` を `python 
 
 exeと `main.py` のどちらも見つからない場合は、削除や強制終了はせず、OIKAWAのbuildまたは配置確認を促す静かな状態表示だけにします。
 
+## QPSC Phase 11: ChatGPT export取り込み導線
+
+Phase 11では、BRAINZの取り込み入口にChatGPT export専用カードを追加しました。
+
+- `zip`、展開済みフォルダ、`conversations.json` を選んで取り込めます
+- 取り込み処理は既存の `core/chatgpt_importer.py` を使い、重複した取り込みロジックは持ちません
+- 取り込み中と結果はBRAINZ画面内に短く表示します
+- 取り込み成功時は `data/config/qpsc_notifications.json` に `chatgpt_export` 通知を保存します
+- 通知の `related_path` はBRAINZ側の取り込みログを指し、OIKAWAから取り込み元と結果を確認できます
+- 取り込んだ記憶はOIKAWAで検索・通知・原本表示・熾火・ORBITの導線から戻れます
+
+ChatGPT exportの基本手順:
+
+1. ChatGPTからexportを取得します
+2. BRAINZで `zip`、`フォルダ`、または `conversations.json` を選びます
+3. 取り込み完了後、OIKAWAの通知や検索から記憶へ戻ります
+
 ## Phase 1でできること
 
 - ローカル記憶フォルダの指定

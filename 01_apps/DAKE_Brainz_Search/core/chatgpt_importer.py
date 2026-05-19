@@ -105,7 +105,7 @@ def _import_from_root(original_path: Path, root: Path, database: BrainzDatabase)
         source=SOURCE_TYPE_CHATGPT,
         title=QPSC_NOTIFICATION_TEXT["title_chatgpt_export"],
         count=result_without_log.messages_indexed,
-        related_path=str(original_path),
+        related_path=str(log_path),
     )
     return ChatGPTImportResult(
         source_path=result_without_log.source_path,
@@ -346,7 +346,7 @@ def format_export_time(value: Any) -> str:
 
 def write_import_log(result: ChatGPTImportResult) -> Path:
     logs_dir().mkdir(parents=True, exist_ok=True)
-    path = logs_dir() / f"chatgpt_import_{now_iso().replace(':', '').replace('-', '').replace('T', '_')}.log"
+    path = logs_dir() / f"chatgpt_import_{now_iso().replace(':', '').replace('-', '').replace('T', '_')}.txt"
     lines = [
         f"ChatGPT export detected: {result.source_path}",
         f"conversations.json found: {result.conversations_json_path}",

@@ -129,6 +129,15 @@ Phase 10では、OIKAWAに小さなQPSC状態確認を追加しました。実�
 - JSONが未作成でも落とさず、まだ記録がない状態として静かに表示します
 - `related_path` がある通知から、最低1件の原本へ戻れるかを確認します
 
+## QPSC Phase 11: ChatGPT export取り込み後
+
+Phase 11では、BRAINZ側でChatGPT exportの取り込み入口を簡素化しました。
+
+- OIKAWAは取り込み後の通知を `chatgpt_export` として受け取ります
+- ChatGPT exportの取り込み通知は未読通知、熾火、ORBITの候補に反映されます
+- `related_path` がある場合は、BRAINZ側の取り込みログや原本導線へ戻れます
+- 取り込まれた記憶は通常検索・熱検索から探し、原本プレビューで確認します
+
 ## 使い方
 
 1. `python main.py` で起動します。

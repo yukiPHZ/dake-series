@@ -57,6 +57,14 @@ UI_TEXT = {
     "button_cancel": "Cancel",
     "button_choose": "Choose",
     "button_import_chatgpt_export": "ChatGPT export取込",
+    "chatgpt_import_title": "ChatGPT exportを取り込む",
+    "chatgpt_import_helper": "zip / フォルダ / conversations.json に対応",
+    "chatgpt_import_note": "取り込むとBRAINZに保存され、OIKAWAで読めます。",
+    "chatgpt_import_waiting": "選んだexportを静かに取り込みます。",
+    "chatgpt_import_importing": "ChatGPT exportを取り込んでいます。",
+    "button_import_chatgpt_zip": "zip",
+    "button_import_chatgpt_folder": "フォルダ",
+    "button_import_chatgpt_json": "conversations.json",
     "button_import_codex_result": "Codex結果取込",
     "button_chatgpt": "ChatGPTまとめ",
     "button_codex": "Codex素材",
@@ -109,6 +117,7 @@ UI_TEXT = {
     "dialog_export_done": "ファイルを生成しました",
     "dialog_select_chatgpt_export": "ChatGPT export zipを選択（キャンセルでフォルダ選択）",
     "dialog_select_chatgpt_export_folder": "展開済みChatGPT exportフォルダを選択",
+    "dialog_select_chatgpt_conversations_json": "conversations.jsonを選択",
     "dialog_import_codex_result": "Codex結果を取り込む",
     "dialog_select_codex_result_file": "Codex結果ファイルを選択",
     "label_codex_result_input": "Codexの完了報告・修正結果・commit/push結果を貼り付け",
@@ -118,10 +127,14 @@ UI_TEXT = {
     "button_timeline_ascending": "Old -> New",
     "button_timeline_descending": "New -> Old",
     "filetype_zip": "zipファイル",
+    "filetype_json": "jsonファイル",
     "filetype_text_markdown": "txt / md",
     "filetype_all": "すべてのファイル",
     "status_importing_chatgpt": "CHATGPT EXPORT IMPORTING...",
     "status_chatgpt_import_complete": "CHATGPT EXPORT IMPORT COMPLETE",
+    "chatgpt_import_result": "ChatGPT exportを取り込みました。{conversations}件の会話 / {messages}件の記憶を保存しました。",
+    "chatgpt_import_result_no_new": "ChatGPT exportを確認しました。新しく保存する記憶はありませんでした。",
+    "chatgpt_import_failed_short": "取り込みできませんでした。",
     "status_importing_codex": "CODEX RESULT IMPORTING...",
     "status_codex_import_complete": "CODEX RESULT IMPORT COMPLETE",
     "error_conversations_json_not_found": "conversations.json が見つかりませんでした。zipまたは展開済みフォルダを確認してください。",
@@ -1286,16 +1299,78 @@ def run_gui(launch_check: bool = False) -> int:
                 font=(self.font_family, FONT_SIZES["button"]),
                 command=self._choose_memory_folder,
             ).grid(row=2, column=0, sticky="ew", padx=16, pady=(0, 9))
-            self.import_button = ctk.CTkButton(
+            chatgpt_card = ctk.CTkFrame(
                 left,
-                text=UI_TEXT["button_import_chatgpt_export"],
-                height=36,
+                fg_color=COLORS["panel_alt"],
+                border_color=COLORS["border"],
+                border_width=1,
+                corner_radius=6,
+            )
+            chatgpt_card.grid(row=3, column=0, sticky="ew", padx=16, pady=(0, 10))
+            chatgpt_card.grid_columnconfigure((0, 1), weight=1)
+            ctk.CTkLabel(
+                chatgpt_card,
+                text=UI_TEXT["chatgpt_import_title"],
+                text_color=COLORS["section"],
+                font=(self.font_family, FONT_SIZES["section"]),
+                anchor="w",
+            ).grid(row=0, column=0, columnspan=2, sticky="ew", padx=12, pady=(10, 2))
+            ctk.CTkLabel(
+                chatgpt_card,
+                text=UI_TEXT["chatgpt_import_helper"],
+                text_color=COLORS["muted"],
+                font=(self.reading_font_family, FONT_SIZES["small"]),
+                anchor="w",
+            ).grid(row=1, column=0, columnspan=2, sticky="ew", padx=12, pady=(0, 2))
+            ctk.CTkLabel(
+                chatgpt_card,
+                text=UI_TEXT["chatgpt_import_note"],
+                text_color=COLORS["muted"],
+                font=(self.reading_font_family, FONT_SIZES["small"]),
+                wraplength=218,
+                justify="left",
+                anchor="w",
+            ).grid(row=2, column=0, columnspan=2, sticky="ew", padx=12, pady=(0, 8))
+            self.import_button = ctk.CTkButton(
+                chatgpt_card,
+                text=UI_TEXT["button_import_chatgpt_zip"],
+                height=32,
                 fg_color=COLORS["panel_soft"],
                 hover_color=COLORS["accent_soft"],
                 font=(self.font_family, FONT_SIZES["button"]),
-                command=self._choose_chatgpt_export,
+                command=self._choose_chatgpt_export_zip,
             )
-            self.import_button.grid(row=3, column=0, sticky="ew", padx=16, pady=(0, 9))
+            self.import_button.grid(row=3, column=0, sticky="ew", padx=(12, 5), pady=(0, 6))
+            self.chatgpt_folder_button = ctk.CTkButton(
+                chatgpt_card,
+                text=UI_TEXT["button_import_chatgpt_folder"],
+                height=32,
+                fg_color=COLORS["panel_soft"],
+                hover_color=COLORS["accent_soft"],
+                font=(self.font_family, FONT_SIZES["button"]),
+                command=self._choose_chatgpt_export_folder,
+            )
+            self.chatgpt_folder_button.grid(row=3, column=1, sticky="ew", padx=(5, 12), pady=(0, 6))
+            self.chatgpt_json_button = ctk.CTkButton(
+                chatgpt_card,
+                text=UI_TEXT["button_import_chatgpt_json"],
+                height=32,
+                fg_color=COLORS["panel_soft"],
+                hover_color=COLORS["accent_soft"],
+                font=(self.font_family, FONT_SIZES["button"]),
+                command=self._choose_chatgpt_conversations_json,
+            )
+            self.chatgpt_json_button.grid(row=4, column=0, columnspan=2, sticky="ew", padx=12, pady=(0, 8))
+            self.chatgpt_import_status_var = ctk.StringVar(value=UI_TEXT["chatgpt_import_waiting"])
+            ctk.CTkLabel(
+                chatgpt_card,
+                textvariable=self.chatgpt_import_status_var,
+                text_color=COLORS["muted"],
+                font=(self.reading_font_family, FONT_SIZES["small"]),
+                wraplength=218,
+                justify="left",
+                anchor="w",
+            ).grid(row=5, column=0, columnspan=2, sticky="ew", padx=12, pady=(0, 10))
             self.codex_import_button = ctk.CTkButton(
                 left,
                 text=UI_TEXT["button_import_codex_result"],
@@ -2343,6 +2418,9 @@ def run_gui(launch_check: bool = False) -> int:
                 self.aru_status_var.set(UI_TEXT["status_aru_ready"])
 
         def _choose_chatgpt_export(self) -> None:
+            self._choose_chatgpt_export_zip(fallback_to_folder=True)
+
+        def _choose_chatgpt_export_zip(self, fallback_to_folder: bool = False) -> None:
             file_path = filedialog.askopenfilename(
                 title=UI_TEXT["dialog_select_chatgpt_export"],
                 filetypes=[
@@ -2350,17 +2428,34 @@ def run_gui(launch_check: bool = False) -> int:
                     (UI_TEXT["filetype_all"], "*.*"),
                 ],
             )
-            selected = file_path
-            if not selected:
-                selected = filedialog.askdirectory(title=UI_TEXT["dialog_select_chatgpt_export_folder"])
-            if selected:
-                self._start_chatgpt_import(Path(selected))
+            if file_path:
+                self._start_chatgpt_import(Path(file_path))
+            elif fallback_to_folder:
+                self._choose_chatgpt_export_folder()
+
+        def _choose_chatgpt_export_folder(self) -> None:
+            folder_path = filedialog.askdirectory(title=UI_TEXT["dialog_select_chatgpt_export_folder"])
+            if folder_path:
+                self._start_chatgpt_import(Path(folder_path))
+
+        def _choose_chatgpt_conversations_json(self) -> None:
+            file_path = filedialog.askopenfilename(
+                title=UI_TEXT["dialog_select_chatgpt_conversations_json"],
+                filetypes=[
+                    (UI_TEXT["filetype_json"], "*.json"),
+                    (UI_TEXT["filetype_all"], "*.*"),
+                ],
+            )
+            if file_path:
+                self._start_chatgpt_import(Path(file_path))
 
         def _start_chatgpt_import(self, source_path: Path) -> None:
             if self.import_thread and self.import_thread.is_alive():
                 return
             self._set_import_buttons_state("disabled")
             self.index_status_var.set(UI_TEXT["status_importing_chatgpt"])
+            if hasattr(self, "chatgpt_import_status_var"):
+                self.chatgpt_import_status_var.set(UI_TEXT["chatgpt_import_importing"])
             self.progress.set(0)
             self._append_log(UI_TEXT["log_chatgpt_export_detected"])
             self.import_thread = threading.Thread(target=self._chatgpt_import_worker, args=(source_path,), daemon=True)
@@ -2455,8 +2550,15 @@ def run_gui(launch_check: bool = False) -> int:
             ).grid(row=0, column=2, sticky="ew", padx=(6, 0))
 
         def _set_import_buttons_state(self, state: str) -> None:
-            self.import_button.configure(state=state)
-            self.codex_import_button.configure(state=state)
+            for button_name in (
+                "import_button",
+                "chatgpt_folder_button",
+                "chatgpt_json_button",
+                "codex_import_button",
+            ):
+                button = getattr(self, button_name, None)
+                if button is not None:
+                    button.configure(state=state)
 
         def _start_codex_import_text(self, text_value: str) -> None:
             if self.import_thread and self.import_thread.is_alive():
@@ -3431,6 +3533,16 @@ def run_gui(launch_check: bool = False) -> int:
             self._set_import_buttons_state("normal")
             self.index_status_var.set(UI_TEXT["status_chatgpt_import_complete"])
             self.progress.set(1)
+            if hasattr(self, "chatgpt_import_status_var"):
+                if result.messages_indexed:
+                    self.chatgpt_import_status_var.set(
+                        UI_TEXT["chatgpt_import_result"].format(
+                            conversations=result.conversations_imported,
+                            messages=result.messages_indexed,
+                        )
+                    )
+                else:
+                    self.chatgpt_import_status_var.set(UI_TEXT["chatgpt_import_result_no_new"])
             self._refresh_stats()
             self._append_log(UI_TEXT["log_conversations_json_found"].format(path=result.conversations_json_path))
             self._append_log(
@@ -3445,21 +3557,22 @@ def run_gui(launch_check: bool = False) -> int:
             self._append_log(UI_TEXT["log_chatgpt_import_file"].format(path=result.log_path))
             self._set_last_import_summary("last_import_chatgpt_export")
             self._notify(UI_TEXT["notify_chatgpt_import_complete"])
-            messagebox.showinfo(UI_TEXT["dialog_title"], UI_TEXT["status_chatgpt_import_complete"])
 
         def _handle_chatgpt_import_missing(self) -> None:
             self._set_import_buttons_state("normal")
             self.index_status_var.set(UI_TEXT["index_idle"])
             self.progress.set(0)
+            if hasattr(self, "chatgpt_import_status_var"):
+                self.chatgpt_import_status_var.set(UI_TEXT["error_conversations_json_not_found"])
             self._append_log(UI_TEXT["error_conversations_json_not_found"])
-            messagebox.showwarning(UI_TEXT["dialog_title"], UI_TEXT["error_conversations_json_not_found"])
 
         def _handle_chatgpt_import_error(self, error_text: str) -> None:
             self._set_import_buttons_state("normal")
             self.index_status_var.set(UI_TEXT["index_idle"])
             self.progress.set(0)
+            if hasattr(self, "chatgpt_import_status_var"):
+                self.chatgpt_import_status_var.set(UI_TEXT["chatgpt_import_failed_short"])
             self._append_log(f"{UI_TEXT['error_chatgpt_import_failed']} {error_text}")
-            messagebox.showwarning(UI_TEXT["dialog_title"], f"{UI_TEXT['error_chatgpt_import_failed']}\n{error_text}")
 
         def _handle_codex_import_done(self, result: CodexImportResult) -> None:
             self._set_import_buttons_state("normal")
