@@ -107,6 +107,7 @@ UI_TEXT = {
     "orbit_metric_awake": "記憶庫は起きています",
     "orbit_metric_quiet": "記憶庫は静かです",
     "orbit_flow_import_source": "{source}から記憶が入りました",
+    "orbit_flow_slack": "Slackから記憶が入りました",
     "orbit_flow_unread": "未読通知が{count}件あります",
     "orbit_flow_quieted": "静かになった通知が{count}件あります",
     "orbit_flow_ember": "熾火候補が{count}件あります",
@@ -136,6 +137,10 @@ UI_TEXT = {
     "qpsc_notification_sedimented": "沈んだ通知: {count}件",
     "qpsc_notification_open_related": "原本",
     "qpsc_notification_read": "既読",
+    "qpsc_slack_title": "Slackから記憶が入りました",
+    "qpsc_slack_message": "記憶庫に保存しました。OIKAWAから戻れます。",
+    "qpsc_slack_legacy_title": "Slackから取り込みました",
+    "qpsc_saved_count_marker": "件の記憶を保存しました",
     "qpsc_related_missing": "原本が見つかりません。",
     "qpsc_check_brainz_ok": "BRAINZ awake: OK",
     "qpsc_check_brainz_unconfirmed": "BRAINZ awake: 未確認",
@@ -233,6 +238,34 @@ class QpscSelfCheckResult:
     lines: list[str]
 
 
+def _is_slack_notification(notification: QpscNotification) -> bool:
+    return notification.source.strip().lower() == "slack"
+
+
+def _notification_display_title(notification: QpscNotification) -> str:
+    title = notification.title.strip()
+    if not _is_slack_notification(notification):
+        return title
+    if not title or title == UI_TEXT["qpsc_slack_legacy_title"]:
+        return UI_TEXT["qpsc_slack_title"]
+    return title
+
+
+def _notification_display_message(notification: QpscNotification) -> str:
+    message = notification.message.strip()
+    if not _is_slack_notification(notification):
+        return message
+    if not message or UI_TEXT["qpsc_saved_count_marker"] in message:
+        return UI_TEXT["qpsc_slack_message"]
+    return message
+
+
+def _orbit_flow_line_for_source(source: str) -> str:
+    if source.strip().lower() == "slack":
+        return UI_TEXT["orbit_flow_slack"]
+    return UI_TEXT["orbit_flow_import_source"].format(source=source)
+
+
 def build_search_hits(documents: list[MemoryDocument], query: str, memory_root: Path, limit: int = 20) -> list[SearchHit]:
     terms = [term for term in query.lower().split() if term]
     if not terms:
@@ -275,8 +308,8 @@ def build_heat_candidates(
         candidates.append(
             HeatCandidate(
                 id=notification.id or f"auto-{index}",
-                title=notification.title.strip() or UI_TEXT["heat_candidate_title"],
-                message=notification.message.strip() or UI_TEXT["heat_candidate_message"].format(
+                title=_notification_display_title(notification) or UI_TEXT["heat_candidate_title"],
+                message=_notification_display_message(notification) or UI_TEXT["heat_candidate_message"].format(
                     source=notification.source.strip() or UI_TEXT["section_qpsc_notifications"],
                 ),
                 reason=_notification_heat_reason(notification, terms),
@@ -334,10 +367,10 @@ def build_heat_search_hits(
         if not notification_text_match and file_score <= 0:
             continue
         score = file_score + _notification_heat_score(notification, index, terms)
-        excerpt_source = preview_text or notification.message or notification.title
+        excerpt_source = preview_text or _notification_display_message(notification) or _notification_display_title(notification)
         hits.append(
             SearchHit(
-                title=notification.title.strip() or path.stem,
+                title=_notification_display_title(notification) or path.stem,
                 path=path,
                 relative_path=_relative_path(path, memory_root),
                 excerpt=_search_excerpt(excerpt_source, terms),
@@ -522,7 +555,7 @@ def _build_orbit_summary_lines(
         source = notification.source.strip() or UI_TEXT["section_qpsc_notifications"]
         source_counts[source] = source_counts.get(source, 0) + 1
     for source, _count in sorted(source_counts.items(), key=lambda item: (-item[1], item[0]))[:2]:
-        lines.append(UI_TEXT["orbit_flow_import_source"].format(source=source))
+        lines.append(_orbit_flow_line_for_source(source))
     if unread_count:
         lines.append(UI_TEXT["orbit_flow_unread"].format(count=unread_count))
     if quieted_count:
@@ -548,7 +581,7 @@ def _orbit_candidate_from_notification(
 ) -> OrbitCandidate:
     return OrbitCandidate(
         id=notification.id,
-        title=notification.title.strip() or UI_TEXT["heat_candidate_title"],
+        title=_notification_display_title(notification) or UI_TEXT["heat_candidate_title"],
         message=message,
         reason=reason,
         related_path=notification.related_path.strip(),
@@ -1486,6 +1519,8 @@ class OikawaApp(tk.Tk):
 
         for view_item in notifications:
             notification = view_item.notification
+            display_title = _notification_display_title(notification)
+            display_message = _notification_display_message(notification)
             event_frame = tk.Frame(self.qpsc_import_frame, bg=COLORS["background"])
             event_frame.pack(fill="x", pady=(0, 8))
             title_color = COLORS["heat"] if view_item.heat_related else COLORS["text"]
@@ -1493,17 +1528,17 @@ class OikawaApp(tk.Tk):
                 title_color = COLORS["muted"]
             tk.Label(
                 event_frame,
-                text=notification.title,
+                text=display_title,
                 fg=title_color,
                 bg=COLORS["background"],
                 font=FONT_JP_SMALL,
                 wraplength=250,
                 justify="left",
             ).pack(anchor="w")
-            if notification.message:
+            if display_message:
                 tk.Label(
                     event_frame,
-                    text=notification.message,
+                    text=display_message,
                     fg=COLORS["muted"],
                     bg=COLORS["background"],
                     font=FONT_JP_SMALL,

@@ -147,6 +147,15 @@ QPSCのOIKAWA / BRAINZは黒基調の静かなUIを基本にします。
 - 小さすぎる日本語や太字の多用は避けます
 - 原本プレビュー、通知、熾火、ORBITは読みやすさを優先します
 
+## QPSC Phase 12: Slack通知の整流
+
+Phase 12では、Slack由来の通知をログではなく、記憶へ戻るための静かな入口として表示します。
+
+- Slack通知はタイトルと短いmessageを中心に表示します
+- 古いSlack通知も、OIKAWA側では静かな文言へ寄せて表示します
+- Slack通知は熾火とORBITにも流れ、今日の流れでは自然な言葉で扱います
+- `related_path` がある通知は、保存済みMarkdownへ戻れます
+
 ## 使い方
 
 1. `python main.py` で起動します。

@@ -818,6 +818,9 @@ def run_smoke_test() -> int:
         task_types = {task_result.task_type for task_result in slack_task_result.task_results}
         if task_types != {"search", "note", "handoff_chatgpt", "handoff_codex", "import"}:
             raise RuntimeError("slack task parser did not detect all task types")
+        notification_kinds = {item.notification_kind for item in slack_task_result.items}
+        if not {"search", "note", "handoff_chatgpt", "handoff_codex", "import"}.issubset(notification_kinds):
+            raise RuntimeError("slack notification classification failed")
         if any(task_result.status != "processed" for task_result in slack_task_result.task_results):
             raise RuntimeError("slack tasks were not processed")
         if not (root / "remote_queue" / "processed").exists():

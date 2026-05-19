@@ -103,6 +103,15 @@ QPSCのBRAINZ / OIKAWAは黒基調の静かなUIを基本にします。
 - 小さすぎる日本語や太字の多用は避けます
 - 原本、通知、取り込み状態は読みやすさを優先します
 
+## QPSC Phase 12: Slack通知文の整流
+
+Phase 12では、Slack取り込み通知をログではなく、記憶へ戻る入口として整流しました。
+
+- Slack投稿はBRAINZへ保存し、OIKAWAの通知・熾火・ORBITへ流れます
+- 通知文は命令せず、短く、戻れる入口として扱います
+- `handoff_codex`、`note:`、`search:`、`import:` は軽く分類して通知タイトルへ反映します
+- 原本主義を維持し、通知の `related_path` から保存済みMarkdownへ戻れます
+
 ## Phase 1でできること
 
 - ローカル記憶フォルダの指定

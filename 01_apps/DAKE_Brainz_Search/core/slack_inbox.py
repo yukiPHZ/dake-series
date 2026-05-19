@@ -14,6 +14,7 @@ from core.db import BrainzDatabase, DocumentRecord
 from core.embers import build_ember_metadata
 from core.ollama_embeddings import EmbeddingSession, generate_embeddings_for_document
 from core.qpsc_notifications import UI_TEXT as QPSC_NOTIFICATION_TEXT
+from core.qpsc_notifications import append_import_notification
 from core.qpsc_notifications import append_saved_count_notification
 from core.remote_queue import (
     RemoteQueueTask,
@@ -34,6 +35,14 @@ SLACK_PERMALINK_URL = "https://slack.com/api/chat.getPermalink"
 DEFAULT_HISTORY_LIMIT = 200
 MAX_HISTORY_PAGES = 10
 SLACK_TASK_TYPES = {"search", "note", "handoff_chatgpt", "handoff_codex", "import"}
+SLACK_NOTIFICATION_KIND_PRIORITY = {
+    "handoff_codex": 0,
+    "handoff_chatgpt": 1,
+    "note": 2,
+    "search": 3,
+    "import": 4,
+    "slack_memory": 5,
+}
 
 
 class SlackSession(Protocol):
@@ -65,6 +74,7 @@ class SlackInboxImportItem:
     changed: bool
     permalink: str = ""
     title: str = ""
+    notification_kind: str = "slack_memory"
     task_result: SlackTaskResult | None = None
 
 
@@ -111,6 +121,56 @@ class SlackTaskResult:
     slack_task_document_id: int = 0
     slack_task_changed: bool = False
     error: str = ""
+
+
+def classify_slack_notification_text(text: str, task_result: SlackTaskResult | None = None) -> str:
+    task_type = (task_result.task_type if task_result else "").strip().lower()
+    if task_type == "import":
+        return "import"
+    if task_type in SLACK_NOTIFICATION_KIND_PRIORITY:
+        return task_type
+
+    normalized = text.strip().lower()
+    if "handoff_codex" in normalized:
+        return "handoff_codex"
+    if "handoff_chatgpt" in normalized:
+        return "handoff_chatgpt"
+    if re.search(r"(?m)(^|\s)note\s*:", normalized):
+        return "note"
+    if re.search(r"(?m)(^|\s)search\s*:", normalized):
+        return "search"
+    if re.search(r"(?m)(^|\s)import\s*:", normalized):
+        return "import"
+    return "slack_memory"
+
+
+def slack_notification_title_for_kind(kind: str) -> str:
+    if kind == "import":
+        return QPSC_NOTIFICATION_TEXT["title_slack_import_task"]
+    return QPSC_NOTIFICATION_TEXT.get(f"title_slack_{kind}", QPSC_NOTIFICATION_TEXT["title_slack_memory"])
+
+
+def select_slack_notification_kind(items: list[SlackInboxImportItem]) -> str:
+    changed_kinds = [item.notification_kind for item in items if item.changed]
+    if not changed_kinds:
+        return "slack_memory"
+    return min(changed_kinds, key=lambda kind: SLACK_NOTIFICATION_KIND_PRIORITY.get(kind, 99))
+
+
+def append_slack_import_notification(items: list[SlackInboxImportItem], related_path: str, source: str) -> None:
+    changed_items = [item for item in items if item.changed]
+    if not changed_items:
+        return
+    kind = select_slack_notification_kind(changed_items)
+    try:
+        append_import_notification(
+            source=source,
+            title=slack_notification_title_for_kind(kind),
+            message=QPSC_NOTIFICATION_TEXT["message_slack_saved"],
+            related_path=related_path,
+        )
+    except OSError:
+        return
 
 
 def poll_slack_inbox(
@@ -223,6 +283,7 @@ def poll_slack_inbox(
                 )
             if task_result is not None:
                 task_results.append(task_result)
+            notification_kind = classify_slack_notification_text(message_with_permalink.text, task_result)
             saved_files.append(str(saved_path))
             items.append(
                 SlackInboxImportItem(
@@ -232,6 +293,7 @@ def poll_slack_inbox(
                     changed=changed,
                     permalink=permalink,
                     title=title,
+                    notification_kind=notification_kind,
                     task_result=task_result,
                 )
             )
@@ -257,16 +319,19 @@ def poll_slack_inbox(
         )
     changed_paths = [item.saved_path for item in items if item.changed]
     is_paste_source = source_type == SOURCE_TYPE_ARU
-    append_saved_count_notification(
-        source="paste" if is_paste_source else source_type,
-        title=(
-            QPSC_NOTIFICATION_TEXT["title_paste_import"]
-            if is_paste_source
-            else QPSC_NOTIFICATION_TEXT["title_slack_import"]
-        ),
-        count=imported,
-        related_path=changed_paths[0] if changed_paths else "",
-    )
+    if is_paste_source:
+        append_saved_count_notification(
+            source="paste",
+            title=QPSC_NOTIFICATION_TEXT["title_paste_import"],
+            count=imported,
+            related_path=changed_paths[0] if changed_paths else "",
+        )
+    else:
+        append_slack_import_notification(
+            items=items,
+            related_path=changed_paths[0] if changed_paths else "",
+            source=source_type,
+        )
     return SlackInboxResult(
         status=status,
         imported=imported,

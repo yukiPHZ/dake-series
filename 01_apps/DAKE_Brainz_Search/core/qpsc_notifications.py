@@ -16,8 +16,15 @@ UI_TEXT = {
     "title_codex_report": "Codex報告を保存しました",
     "title_codex_result": "Codex結果を保存しました",
     "title_paste_import": "ペースト投稿を取り込みました",
-    "title_slack_import": "Slackから取り込みました",
+    "title_slack_import": "Slackから記憶が入りました",
+    "title_slack_memory": "Slackから記憶が入りました",
+    "title_slack_handoff_codex": "Codexへの受け渡し候補を記憶しました",
+    "title_slack_handoff_chatgpt": "ChatGPTへの受け渡し候補を記憶しました",
+    "title_slack_note": "メモを記憶しました",
+    "title_slack_search": "検索の種を記憶しました",
+    "title_slack_import_task": "取り込み指示を記憶しました",
     "message_saved_count": "{count}件の記憶を保存しました。",
+    "message_slack_saved": "記憶庫に保存しました。OIKAWAから戻れます。",
 }
 
 
