@@ -1,5 +1,13 @@
 # 承認Brainz
 
+## Frozen
+
+このアプリは現在 frozen 扱いです。削除はしませんが、QPSC本線には含めません。
+
+理由は、Codex公式のモバイル承認 / 遠隔操作導線が進んでおり、承認専用UIとしての役割が重複する可能性が高いためです。
+
+QPSC本線では、承認はCodex公式導線を優先します。BRAINZ / OIKAWA は通知・記憶・検索・提案を担い、承認専用UIは現時点で積極開発しません。将来、公式Codexモバイル承認で代替できない用途が出た場合のみ再開します。
+
 承認Brainzは、家PC上の承認待ちをスマホブラウザから確認し、承認 / 却下の結果を保存する小さなDAKEアプリです。
 
 ## アプリ概要
@@ -49,13 +57,13 @@ http://127.0.0.1:8765
 - WebSocket
 - Slack / Discord連携
 
-## 今後の拡張予定
+## 凍結中の扱い
 
-- BRAINZ側の作業報告との橋渡し
-- Codex approvalとの安全な連携方式の検討
-- 複数承認待ちへの対応
-- 承認履歴の保存
-- LAN内運用に必要な最小設定の追加
+- 新機能追加はしません
+- UI改修はしません
+- QPSC本線の承認導線には使いません
+- 必要な場合のみ既存メモとして参照します
+- 公式Codexモバイル承認で代替できない用途が出た場合のみ再開します
 
 ## ビルド
 
@@ -79,14 +87,14 @@ dist\DakeApproveBrainz.exe
   "launcher_description": "家PC上の承認待ちをスマホブラウザから確認します。",
   "site_title": "承認Brainz",
   "site_description": "承認だけを取り出す、BRAINZ連携前提の小さな承認パネルです。",
-  "update_summary": "スマホブラウザから承認 / 却下できる最小Webパネルを追加しました。",
+  "update_summary": "Codex公式モバイル承認導線を優先するため凍結",
   "folder_name": "DAKE_Approve_Brainz",
   "exe_name": "DakeApproveBrainz.exe",
   "release_url": "",
   "screenshot_path": "assets/screenshot.webp",
-  "status": "available",
-  "show_in_launcher": true,
-  "show_on_site": true
+  "status": "frozen",
+  "show_in_launcher": false,
+  "show_on_site": false
 }
 ```
 
