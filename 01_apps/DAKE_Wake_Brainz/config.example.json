@@ -1,0 +1,8 @@
+{
+  "target_mac": "AA:BB:CC:DD:EE:FF",
+  "target_ip": "192.168.1.100",
+  "web_port": 8766,
+  "broadcast_ip": "255.255.255.255",
+  "wake_port": 9,
+  "ping_timeout_ms": 1000
+}
