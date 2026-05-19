@@ -90,6 +90,7 @@ from core.sequence_builder import (
     write_sequence,
 )
 from core.shorts_analyzer import create_shorts_candidates, write_shorts_candidates
+from core.shorts_pack import generate_shorts_pack
 from core.transcription import is_faster_whisper_available, transcribe_media
 from ui.theme import COLORS, FONT_FAMILY, setup_theme
 
@@ -172,6 +173,14 @@ UI_TEXT = {
     "live_phase_horizontal_video_audio": "Writing AAC audio...",
     "live_phase_horizontal_video_final": "Finalizing export...",
     "live_horizontal_video_failed": "Horizontal video export failed. See log.",
+    "live_phase_shorts_pack_start": "Generating Shorts Pack...",
+    "live_phase_shorts_pack_intro": "Preparing INTRO...",
+    "live_phase_shorts_pack_work": "Preparing WORK...",
+    "live_phase_shorts_pack_afterglow": "Preparing AFTERGLOW...",
+    "live_phase_shorts_pack_render": "Rendering vertical shorts...",
+    "live_phase_shorts_pack_fade": "Applying fade...",
+    "live_phase_shorts_pack_audio": "Writing AAC audio...",
+    "live_shorts_pack_failed": "Shorts Pack generation failed. See log.",
     "live_phase_horizontal_sequence": "Reading sequence.json...",
     "live_phase_horizontal_render": "Rendering horizontal edit...",
     "live_phase_memory_read": "Reading package memory inputs...",
@@ -285,6 +294,20 @@ UI_TEXT = {
     "horizontal_video_failed": "FAILED",
     "horizontal_video_unavailable": "Horizontal video is not ready yet.",
     "open_horizontal_video_failed": "Could not open horizontal video.",
+    "smart_shorts_pack": "SMART SHORTS PACK",
+    "pack_type": "Pack Type",
+    "quiet_flow": "quiet_flow",
+    "targets": "Targets",
+    "generate_shorts_pack": "Generate Shorts Pack",
+    "open_shorts_pack": "Open Shorts Pack",
+    "preview_pack": "Preview Pack",
+    "shorts_pack_ready_hint": "Generate INTRO / WORK / AFTERGLOW shorts from this package.",
+    "shorts_pack_running": "Status: RUNNING",
+    "shorts_pack_completed": "Completed",
+    "shorts_pack_failed": "FAILED",
+    "shorts_pack_unavailable": "Shorts Pack is not ready yet.",
+    "open_shorts_pack_failed": "Could not open Shorts Pack.",
+    "preview_pack_failed": "Could not preview Shorts Pack.",
     "sequence_builder": "SEQUENCE BUILDER",
     "sequence": "SEQUENCE",
     "add_sequence_video": "Add Sequence Video",
@@ -437,6 +460,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.short_preview_path: Path | None = None
         self.vertical_short_path: Path | None = None
         self.horizontal_video_path: Path | None = None
+        self.shorts_pack_dir: Path | None = None
         self.horizontal_edit_path: Path | None = None
         self.preview_source_video_path: Path | None = None
         self.sequence_items: list[dict[str, object]] = []
@@ -457,6 +481,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.short_preview_running = False
         self.vertical_short_running = False
         self.horizontal_video_running = False
+        self.shorts_pack_running = False
         self.sequence_running = False
         self.project_bridge_running = False
         self.memory_running = False
@@ -474,6 +499,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.short_preview_summary_var = ctk.StringVar(value=UI_TEXT["short_preview_ready_hint"])
         self.vertical_short_summary_var = ctk.StringVar(value=UI_TEXT["vertical_short_ready_hint"])
         self.horizontal_video_summary_var = ctk.StringVar(value=UI_TEXT["horizontal_video_ready_hint"])
+        self.shorts_pack_summary_var = ctk.StringVar(value=UI_TEXT["shorts_pack_ready_hint"])
         self.sequence_summary_var = ctk.StringVar(value=UI_TEXT["horizontal_edit_ready_hint"])
         self.project_bridge_summary_var = ctk.StringVar(value=UI_TEXT["project_bridge_ready_hint"])
         self.memory_summary_var = ctk.StringVar(value=UI_TEXT["memory_ready_hint"])
@@ -1249,6 +1275,50 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             state="disabled",
         )
         self.open_vertical_short_button.grid(row=10, column=1, sticky="ew", padx=(4, 12), pady=(0, 10))
+        ctk.CTkLabel(
+            selected_box,
+            textvariable=self.shorts_pack_summary_var,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            text_color=COLORS["muted"],
+            wraplength=330,
+            justify="left",
+        ).grid(row=11, column=0, columnspan=2, sticky="ew", padx=12, pady=(0, 8))
+        self.generate_shorts_pack_button = ctk.CTkButton(
+            selected_box,
+            text=UI_TEXT["generate_shorts_pack"],
+            command=self._start_generate_shorts_pack,
+            height=30,
+            fg_color=COLORS["button"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+        )
+        self.generate_shorts_pack_button.grid(row=12, column=0, sticky="ew", padx=(12, 4), pady=(0, 10))
+        pack_buttons = ctk.CTkFrame(selected_box, fg_color="transparent")
+        pack_buttons.grid(row=12, column=1, sticky="ew", padx=(4, 12), pady=(0, 10))
+        pack_buttons.grid_columnconfigure(0, weight=1)
+        pack_buttons.grid_columnconfigure(1, weight=1)
+        self.open_shorts_pack_button = ctk.CTkButton(
+            pack_buttons,
+            text=UI_TEXT["open_shorts_pack"],
+            command=self._open_shorts_pack,
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+            state="disabled",
+        )
+        self.open_shorts_pack_button.grid(row=0, column=0, sticky="ew", padx=(0, 3))
+        self.preview_shorts_pack_button = ctk.CTkButton(
+            pack_buttons,
+            text=UI_TEXT["preview_pack"],
+            command=self._preview_shorts_pack,
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+            state="disabled",
+        )
+        self.preview_shorts_pack_button.grid(row=0, column=1, sticky="ew", padx=(3, 0))
 
         sequence_box = ctk.CTkFrame(body, fg_color=COLORS["panel_alt"], border_width=1, border_color=COLORS["line"], corner_radius=8)
         sequence_box.grid(row=5, column=0, sticky="ew", pady=(12, 0))
@@ -1688,6 +1758,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.short_preview_running,
                 self.vertical_short_running,
                 self.horizontal_video_running,
+                self.shorts_pack_running,
                 self.sequence_running,
                 self.project_bridge_running,
                 self.memory_running,
@@ -1952,6 +2023,11 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             "selected/horizontal_edit.mp4",
             self.horizontal_edit_path,
         )
+        shorts_pack_ready = self._dashboard_file_ready(
+            package_dir,
+            "selected/shorts_pack/shorts_pack.json",
+            (self.shorts_pack_dir / "shorts_pack.json") if self.shorts_pack_dir else None,
+        )
         if sequence_ready and not horizontal_edit_ready:
             return self._focus_step_state(
                 5,
@@ -1977,6 +2053,15 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 "focus_desc_export",
                 "generate_vertical_short",
                 "generate_vertical_short",
+                sequence_ready,
+            )
+        if not sequence_ready and not shorts_pack_ready:
+            return self._focus_step_state(
+                5,
+                "focus_step_export",
+                "focus_desc_export",
+                "generate_shorts_pack",
+                "generate_shorts_pack",
                 sequence_ready,
             )
 
@@ -2051,6 +2136,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             "export_selected_draft": self._start_export_selected_draft,
             "generate_horizontal_video": self._start_generate_horizontal_video,
             "generate_vertical_short": self._start_generate_vertical_short,
+            "generate_shorts_pack": self._start_generate_shorts_pack,
             "generate_horizontal_edit": self._start_generate_horizontal_edit,
             "save_to_memory": self._start_save_memory,
             "open_package_folder": self._open_package_folder,
@@ -2105,11 +2191,14 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.open_horizontal_video_button.configure(state="disabled")
         self.open_short_preview_button.configure(state="disabled")
         self.open_vertical_short_button.configure(state="disabled")
+        self.open_shorts_pack_button.configure(state="disabled")
+        self.preview_shorts_pack_button.configure(state="disabled")
         self.open_recommendation_button.configure(state="disabled")
         self.selected_output_dir = None
         self.short_preview_path = None
         self.vertical_short_path = None
         self.horizontal_video_path = None
+        self.shorts_pack_dir = None
         self.horizontal_edit_path = None
         self.recommendation_path = None
         self.preview_source_video_path = None
@@ -2125,6 +2214,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.horizontal_video_summary_var.set(UI_TEXT["horizontal_video_ready_hint"])
         self.short_preview_summary_var.set(UI_TEXT["short_preview_ready_hint"])
         self.vertical_short_summary_var.set(UI_TEXT["vertical_short_ready_hint"])
+        self.shorts_pack_summary_var.set(UI_TEXT["shorts_pack_ready_hint"])
         self.sequence_summary_var.set(UI_TEXT["horizontal_edit_ready_hint"])
         self.sequence_choice_var.set(UI_TEXT["sequence_empty"])
         self.sequence_choice_menu.configure(values=[UI_TEXT["sequence_empty"]])
@@ -2192,6 +2282,11 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             else UI_TEXT["horizontal_video_ready_hint"]
         )
         self.open_horizontal_video_button.configure(state="normal" if self.horizontal_video_path else "disabled")
+        shorts_pack_dir = package_dir / "selected" / "shorts_pack"
+        self.shorts_pack_dir = shorts_pack_dir if (shorts_pack_dir / "shorts_pack.json").exists() else None
+        self.shorts_pack_summary_var.set(self._format_shorts_pack_existing(self.shorts_pack_dir) if self.shorts_pack_dir else UI_TEXT["shorts_pack_ready_hint"])
+        self.open_shorts_pack_button.configure(state="normal" if self.shorts_pack_dir else "disabled")
+        self.preview_shorts_pack_button.configure(state="normal" if self.shorts_pack_dir else "disabled")
         self.review_summary_var.set(
             "\n".join(
                 [
@@ -2389,6 +2484,12 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                     }
                 )
             )
+        shorts_pack_dir = selected_dir / "shorts_pack"
+        self.shorts_pack_dir = shorts_pack_dir if (shorts_pack_dir / "shorts_pack.json").exists() else None
+        self.open_shorts_pack_button.configure(state="normal" if self.shorts_pack_dir else "disabled")
+        self.preview_shorts_pack_button.configure(state="normal" if self.shorts_pack_dir else "disabled")
+        if self.shorts_pack_dir:
+            self.shorts_pack_summary_var.set(self._format_shorts_pack_existing(self.shorts_pack_dir))
         self.selected_summary_var.set(self._format_selected_candidates_summary(data))
         self._log(LOG_TEXT["selected_candidates_refreshed"])
         self._update_dashboard()
@@ -3278,6 +3379,93 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
 
         threading.Thread(target=worker, daemon=True).start()
 
+    def _start_generate_shorts_pack(self) -> None:
+        if self.shorts_pack_running:
+            return
+        package_dir = self._resolve_package_for_review()
+        if package_dir is None:
+            messagebox.showinfo(APP_NAME, UI_TEXT["selected_requires_package"])
+            return
+        source_video = self._resolve_preview_source_video(package_dir)
+
+        self.shorts_pack_running = True
+        self._button_config("generate_shorts_pack_button", "disabled", "button_rendering")
+        self.open_shorts_pack_button.configure(state="disabled")
+        self.preview_shorts_pack_button.configure(state="disabled")
+        self.status_var.set(UI_TEXT["running"])
+        self.progress_var.set(0.08)
+        self._set_live_status(
+            UI_TEXT["live_state_running"],
+            UI_TEXT["live_phase_shorts_pack_start"],
+            detail="\n".join(
+                [
+                    UI_TEXT["live_phase_shorts_pack_intro"],
+                    UI_TEXT["live_phase_shorts_pack_work"],
+                    UI_TEXT["live_phase_shorts_pack_afterglow"],
+                ]
+            ),
+            progress=0.08,
+            eta_seconds=180,
+            operation="shorts_pack",
+        )
+        self._log(LOG_TEXT["shorts_pack_start"])
+        self.shorts_pack_summary_var.set(
+            "\n".join(
+                [
+                    UI_TEXT["smart_shorts_pack"],
+                    f"{UI_TEXT['pack_type']}: {UI_TEXT['quiet_flow']}",
+                    f"{UI_TEXT['targets']}: 3 shorts",
+                    UI_TEXT["shorts_pack_running"],
+                    f"{UI_TEXT['package']}: {package_dir}",
+                ]
+            )
+        )
+
+        def worker() -> None:
+            try:
+                self._post_live_status(UI_TEXT["live_state_running"], "live_phase_shorts_pack_intro", progress=0.18, log_key="shorts_pack_roles")
+                self._post_live_status(UI_TEXT["live_state_running"], "live_phase_shorts_pack_work", progress=0.28)
+                self._post_live_status(UI_TEXT["live_state_running"], "live_phase_shorts_pack_afterglow", progress=0.38)
+                system = run_system_check()
+                self.events.put(
+                    {
+                        "type": "cli",
+                        "statuses": system["cli"],
+                        "nvenc": system["nvenc"],
+                        "gpu": system["gpu"],
+                        "install_guide": system["install_guide"],
+                        "install_commands": system["install_commands"],
+                    }
+                )
+                statuses = system["cli"]
+                detail = UI_TEXT["live_detail_nvenc"] if system["nvenc"].get("state") == "ONLINE" else UI_TEXT["live_detail_cpu"]
+                self._post_live_status(
+                    UI_TEXT["live_state_running"],
+                    "live_phase_shorts_pack_render",
+                    detail="\n".join(
+                        [
+                            detail,
+                            UI_TEXT["live_phase_shorts_pack_fade"],
+                            UI_TEXT["live_phase_shorts_pack_audio"],
+                        ]
+                    ),
+                    progress=0.70,
+                    log_key="shorts_pack_flow",
+                )
+                result = generate_shorts_pack(
+                    package_dir=package_dir,
+                    ffmpeg_path=statuses.get("ffmpeg", {}).get("path"),
+                    nvenc_online=system["nvenc"].get("state") == "ONLINE",
+                    ollama_ready=statuses.get("ollama", {}).get("state") == "READY",
+                    source_video_path=source_video,
+                    log=lambda message: self.events.put({"type": "log", "message": message}),
+                )
+                self.events.put({"type": "shorts_pack_result", "result": result})
+            except Exception as exc:
+                self.events.put({"type": "shorts_pack_error", "message": str(exc)})
+
+        threading.Thread(target=worker, daemon=True).start()
+
     def _start_assistant_review(self) -> None:
         if self.review_running:
             return
@@ -3641,6 +3829,41 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         except Exception as exc:
             messagebox.showerror(APP_NAME, f"{UI_TEXT['open_vertical_short_failed']}\n{exc}")
 
+    def _resolve_shorts_pack_dir(self) -> Path | None:
+        pack_dir = self.shorts_pack_dir
+        if pack_dir is None:
+            package_dir = self._resolve_package_for_review()
+            if package_dir is not None:
+                candidate = package_dir / "selected" / "shorts_pack"
+                pack_dir = candidate if (candidate / "shorts_pack.json").exists() else None
+        return pack_dir if pack_dir and pack_dir.exists() else None
+
+    def _open_shorts_pack(self) -> None:
+        pack_dir = self._resolve_shorts_pack_dir()
+        if pack_dir is None:
+            messagebox.showinfo(APP_NAME, UI_TEXT["shorts_pack_unavailable"])
+            return
+        try:
+            os.startfile(str(pack_dir))  # type: ignore[attr-defined]
+        except Exception as exc:
+            messagebox.showerror(APP_NAME, f"{UI_TEXT['open_shorts_pack_failed']}\n{exc}")
+
+    def _preview_shorts_pack(self) -> None:
+        pack_dir = self._resolve_shorts_pack_dir()
+        if pack_dir is None:
+            messagebox.showinfo(APP_NAME, UI_TEXT["shorts_pack_unavailable"])
+            return
+        for name in ["short_01_intro.mp4", "short_02_work.mp4", "short_03_afterglow.mp4"]:
+            path = pack_dir / name
+            if path.exists():
+                try:
+                    os.startfile(str(path))  # type: ignore[attr-defined]
+                    return
+                except Exception as exc:
+                    messagebox.showerror(APP_NAME, f"{UI_TEXT['preview_pack_failed']}\n{exc}")
+                    return
+        messagebox.showinfo(APP_NAME, UI_TEXT["shorts_pack_unavailable"])
+
     def _open_horizontal_edit(self) -> None:
         horizontal_path = self.horizontal_edit_path
         if horizontal_path is None:
@@ -3866,6 +4089,50 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             ]
         )
 
+    def _format_shorts_pack_summary(self, result: dict[str, object]) -> str:
+        pack_dir = str(result.get("pack_dir") or "")
+        clips = result.get("clips")
+        generated_count = int(result.get("generated_count") or 0)
+        lines = [
+            UI_TEXT["smart_shorts_pack"],
+            f"{UI_TEXT['pack_type']}: {UI_TEXT['quiet_flow']}",
+            f"{UI_TEXT['targets']}: {generated_count}/3 shorts",
+            f"{UI_TEXT['package_status']}: {result.get('status', UI_TEXT['shorts_pack_failed'])}",
+            f"{UI_TEXT['encoder']}: {'h264_nvenc' if result.get('nvenc_used') else 'libx264' if generated_count else 'unavailable'}",
+            f"{UI_TEXT['preview_output']}: {pack_dir or '--'}",
+        ]
+        if result.get("bgm_applied"):
+            lines.append(f"{UI_TEXT['bgm']}: {UI_TEXT['selected_available']}")
+        if result.get("used_ollama"):
+            lines.append(f"{UI_TEXT['ollama']}: {UI_TEXT['used']}")
+        if isinstance(clips, list):
+            for clip in clips[:3]:
+                if isinstance(clip, dict):
+                    lines.append(f"- {clip.get('type', '--')}: {Path(str(clip.get('output_path') or '')).name}")
+        return "\n".join(lines)
+
+    def _format_shorts_pack_existing(self, pack_dir: Path | None) -> str:
+        if pack_dir is None:
+            return UI_TEXT["shorts_pack_ready_hint"]
+        pack_json = pack_dir / "shorts_pack.json"
+        try:
+            payload = json.loads(pack_json.read_text(encoding="utf-8", errors="replace"))
+        except Exception:
+            payload = {}
+        clips = payload.get("clips") if isinstance(payload, dict) else []
+        generated_count = len([clip for clip in clips if isinstance(clip, dict) and clip.get("status") == "completed"]) if isinstance(clips, list) else 0
+        return self._format_shorts_pack_summary(
+            {
+                "status": "COMPLETED" if generated_count else UI_TEXT["ready"],
+                "pack_dir": str(pack_dir),
+                "clips": clips if isinstance(clips, list) else [],
+                "generated_count": generated_count,
+                "bgm_applied": bool(payload.get("bgm_volume")) if isinstance(payload, dict) else False,
+                "used_ollama": bool(payload.get("used_ollama")) if isinstance(payload, dict) else False,
+                "nvenc_used": any(bool(clip.get("nvenc_used")) for clip in clips if isinstance(clip, dict)) if isinstance(clips, list) else False,
+            }
+        )
+
     def _format_project_bridge_summary(self, data: dict[str, object], extra: str = "") -> str:
         suggested_use = [str(item) for item in data.get("suggested_use", []) if str(item)]
         bgm_files = [item for item in data.get("bgm_files", []) if isinstance(item, dict)]
@@ -4045,6 +4312,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.short_preview_path = None
                 self.vertical_short_path = None
                 self.horizontal_video_path = None
+                self.shorts_pack_dir = None
                 self.recommendation_path = None
                 self.candidate_data = {}
                 self.short_choice_touched = False
@@ -4060,6 +4328,9 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.open_short_preview_button.configure(state="disabled")
                 self.vertical_short_summary_var.set(UI_TEXT["vertical_short_ready_hint"])
                 self.open_vertical_short_button.configure(state="disabled")
+                self.shorts_pack_summary_var.set(UI_TEXT["shorts_pack_ready_hint"])
+                self.open_shorts_pack_button.configure(state="disabled")
+                self.preview_shorts_pack_button.configure(state="disabled")
                 self.sequence_items = []
                 self.horizontal_edit_path = None
                 self.sequence_summary_var.set(UI_TEXT["horizontal_edit_ready_hint"])
@@ -4140,6 +4411,10 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.vertical_short_path = None
                 self.open_vertical_short_button.configure(state="disabled")
                 self.vertical_short_summary_var.set(UI_TEXT["vertical_short_ready_hint"])
+                self.shorts_pack_dir = None
+                self.open_shorts_pack_button.configure(state="disabled")
+                self.preview_shorts_pack_button.configure(state="disabled")
+                self.shorts_pack_summary_var.set(UI_TEXT["shorts_pack_ready_hint"])
                 self.recommendation_path = None
                 self.open_recommendation_button.configure(state="disabled")
                 self.recommendation_summary_var.set(UI_TEXT["recommend_ready_hint"])
@@ -4198,6 +4473,10 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.horizontal_video_summary_var.set(self._format_horizontal_video_summary(result))
                 self.open_selected_button.configure(state="normal" if self.selected_output_dir else "disabled")
                 self.open_horizontal_video_button.configure(state="normal" if self.horizontal_video_path else "disabled")
+                self.shorts_pack_dir = None
+                self.open_shorts_pack_button.configure(state="disabled")
+                self.preview_shorts_pack_button.configure(state="disabled")
+                self.shorts_pack_summary_var.set(UI_TEXT["shorts_pack_ready_hint"])
                 self.progress_var.set(1.0)
                 if result.get("status") == "COMPLETED":
                     self.status_var.set(UI_TEXT["complete"])
@@ -4230,6 +4509,10 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.vertical_short_summary_var.set(self._format_vertical_short_summary(result))
                 self.open_selected_button.configure(state="normal" if self.selected_output_dir else "disabled")
                 self.open_vertical_short_button.configure(state="normal" if self.vertical_short_path else "disabled")
+                self.shorts_pack_dir = None
+                self.open_shorts_pack_button.configure(state="disabled")
+                self.preview_shorts_pack_button.configure(state="disabled")
+                self.shorts_pack_summary_var.set(UI_TEXT["shorts_pack_ready_hint"])
                 self.progress_var.set(1.0)
                 if result.get("status") == "COMPLETED":
                     self.status_var.set(UI_TEXT["complete"])
@@ -4247,6 +4530,39 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             self.status_var.set(UI_TEXT["error"])
             self.vertical_short_summary_var.set(str(event.get("message", "")))
             self._set_live_failed(event.get("message", ""))
+        elif event_type == "shorts_pack_result":
+            result = event.get("result", {})
+            if isinstance(result, dict):
+                pack_dir = Path(str(result.get("pack_dir") or ""))
+                selected_dir = Path(str(result.get("selected_dir") or ""))
+                package_dir = Path(str(result.get("package_dir") or packages_dir()))
+                self.package_output_dir = package_dir
+                self.selected_output_dir = selected_dir if selected_dir.exists() else None
+                self.shorts_pack_dir = pack_dir if (pack_dir / "shorts_pack.json").exists() else None
+                self.shorts_pack_summary_var.set(self._format_shorts_pack_summary(result))
+                self.open_selected_button.configure(state="normal" if self.selected_output_dir else "disabled")
+                self.open_shorts_pack_button.configure(state="normal" if self.shorts_pack_dir else "disabled")
+                self.preview_shorts_pack_button.configure(state="normal" if self.shorts_pack_dir else "disabled")
+                self.progress_var.set(1.0)
+                if result.get("status") == "COMPLETED":
+                    self.status_var.set(UI_TEXT["complete"])
+                    self.eta_var.set(UI_TEXT["shorts_pack_completed"])
+                    self.finish_var.set(UI_TEXT["complete"])
+                    self._set_live_completed(pack_dir, detail=f"{result.get('generated_count', 0)} Shorts generated.")
+                else:
+                    self.status_var.set(UI_TEXT["error"])
+                    self._set_live_failed(
+                        result.get("message") or UI_TEXT["shorts_pack_failed"],
+                        UI_TEXT["live_shorts_pack_failed"],
+                    )
+            self.shorts_pack_running = False
+            self._button_config("generate_shorts_pack_button", "normal", "generate_shorts_pack")
+        elif event_type == "shorts_pack_error":
+            self.shorts_pack_running = False
+            self._button_config("generate_shorts_pack_button", "normal", "generate_shorts_pack")
+            self.status_var.set(UI_TEXT["error"])
+            self.shorts_pack_summary_var.set(str(event.get("message", "")))
+            self._set_live_failed(event.get("message", ""), UI_TEXT["live_shorts_pack_failed"])
         elif event_type == "sequence_probe_result":
             package_dir = Path(str(event.get("package_dir") or ""))
             sequence = event.get("sequence", [])

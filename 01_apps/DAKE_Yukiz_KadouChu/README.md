@@ -428,6 +428,20 @@ NEXT ACTION は、System Check、動画選択、Posting Package、Assistant Revi
 - FOCUS MODE の Export step は、単体動画では Horizontal Video を先に案内し、その後 9:16 Short または Memory へ進みます
 - YouTube 自動投稿、自動公開、元動画変更は行いません
 
+## Phase 3.7 SMART SHORTS PACK
+
+`SMART SHORTS PACK` を追加しました。1つのpackageから、役割の違うShortsをまとめて3本生成します。
+
+- `INTRO` / `WORK` / `AFTERGLOW` の3方向に候補を分けます
+- 出力は `selected/shorts_pack/`
+- `short_01_intro.mp4` / `short_02_work.mp4` / `short_03_afterglow.mp4` を生成
+- `shorts_pack.json` に role、start/end、reason、text_direction、caption_idea を保存
+- 先頭と末尾に微細な黒fadeを入れ、静かな呼吸感だけを整えます
+- `selected/bgm/` にBGMがある場合は小さめの音量で添え、元音声を優先します
+- BGMが無い場合もそのまま生成します
+- FOCUS MODEは `Horizontal Video` → `9:16 Short` → `Generate Shorts Pack` → `Save to Memory` の順で案内します
+- これは編集ソフト化ではなく、素材の流れを静かに整えるための出力機能です
+
 ## Phase 2候補
 
 - YouTube LIVE URLからyt-dlpで本取得

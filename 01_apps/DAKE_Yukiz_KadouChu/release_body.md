@@ -156,3 +156,12 @@
 - NVENC優先、失敗時は `libx264` へフォールバック
 - 縦素材や正方形素材は背景ぼかし + 前景中央配置で横動画化
 - FOCUS MODE の Export step を Horizontal Video 優先へ更新
+
+## Phase 3.7
+
+- SMART SHORTS PACK を追加
+- INTRO / WORK / AFTERGLOW の3本を `selected/shorts_pack/` に生成
+- `shorts_pack.json` と `shorts_pack_log.txt` を保存
+- 微細なfade in / fade outで呼吸感を整える
+- `selected/bgm/` のBGMを小さめに添える処理に対応
+- FOCUS MODE の Export step を Shorts Pack まで案内
