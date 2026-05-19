@@ -253,12 +253,14 @@ UI_TEXT = {
     "log_remote_queue_failed": "Remote queue failed: {path} :: {error}",
     "phrase_remote_queue_received": "補助脳：遠隔キューを受け取りました。",
     "log_export": "EXPORT: {path}",
-    "log_oikawa_open": "OIKAWA OPEN: {path}",
+    "log_oikawa_open": "OIKAWA OPEN: {mode} / {path}",
     "log_oikawa_missing": "OIKAWA NOT FOUND",
+    "oikawa_mode_exe": "dist exe",
+    "oikawa_mode_python": "python main.py",
     "log_settings_entry": "SETTINGS ENTRY: Slack / Queue / Codex reports",
     "notify_title": "BRAINZ",
     "notify_oikawa_opened": "OIKAWAを開きます。",
-    "notify_oikawa_missing": "OIKAWAの起動先が見つかりませんでした。",
+    "notify_oikawa_missing": "OIKAWAが見つかりません。buildまたは配置を確認してください。",
     "notify_memory_detected": "新しい記憶を検出しました。",
     "notify_auto_index_complete": "記憶を更新しました。",
     "notify_semantic_updated": "Semantic Searchを更新しました。",
@@ -325,25 +327,25 @@ UI_TEXT = {
 }
 
 
-def resolve_oikawa_launch_target() -> Path | None:
-    app_dir = Path(__file__).resolve().parent
+def resolve_oikawa_launch_target(brainz_app_dir: Path | None = None) -> tuple[Path | None, str]:
+    app_dir = brainz_app_dir or Path(__file__).resolve().parent
     oikawa_dir = app_dir.parent / "DAKE_Brainz_OIKAWA"
     exe_path = oikawa_dir / "dist" / "DakeBrainz_OIKAWA.exe"
     if exe_path.exists():
-        return exe_path
+        return exe_path, UI_TEXT["oikawa_mode_exe"]
     main_path = oikawa_dir / "main.py"
     if main_path.exists():
-        return main_path
-    return None
+        return main_path, UI_TEXT["oikawa_mode_python"]
+    return None, ""
 
 
-def resolve_oikawa_launch_command() -> tuple[list[str], Path | None]:
-    target = resolve_oikawa_launch_target()
+def resolve_oikawa_launch_command(brainz_app_dir: Path | None = None) -> tuple[list[str], Path | None, str]:
+    target, mode = resolve_oikawa_launch_target(brainz_app_dir)
     if target is None:
-        return [], None
+        return [], None, ""
     if target.suffix.lower() == ".py":
-        return [sys.executable, str(target)], target
-    return [str(target)], target
+        return [sys.executable, str(target)], target, mode
+    return [str(target)], target, mode
 
 
 def run_smoke_test() -> int:
@@ -429,9 +431,31 @@ def run_smoke_test() -> int:
             or not qpsc_status.get("last_heartbeat_at")
         ):
             raise RuntimeError("qpsc awake status did not roundtrip")
-        oikawa_command, oikawa_target = resolve_oikawa_launch_command()
+        oikawa_command, oikawa_target, oikawa_mode = resolve_oikawa_launch_command()
         if not oikawa_command or oikawa_target is None or not oikawa_target.exists():
             raise RuntimeError("oikawa launch target was not resolved")
+        if oikawa_mode not in {UI_TEXT["oikawa_mode_exe"], UI_TEXT["oikawa_mode_python"]}:
+            raise RuntimeError("oikawa launch mode was not resolved")
+        fake_apps = root / "fake_apps"
+        fake_brainz = fake_apps / "DAKE_Brainz_Search"
+        fake_oikawa = fake_apps / "DAKE_Brainz_OIKAWA"
+        fake_dist = fake_oikawa / "dist"
+        fake_brainz.mkdir(parents=True)
+        command, target, mode = resolve_oikawa_launch_command(fake_brainz)
+        if command or target is not None or mode:
+            raise RuntimeError("missing oikawa fallback did not return quiet missing state")
+        fake_oikawa.mkdir(parents=True)
+        fake_main = fake_oikawa / "main.py"
+        fake_main.write_text("print('ok')\n", encoding="utf-8")
+        command, target, mode = resolve_oikawa_launch_command(fake_brainz)
+        if not command or target != fake_main or mode != UI_TEXT["oikawa_mode_python"]:
+            raise RuntimeError("oikawa python fallback was not selected")
+        fake_dist.mkdir(parents=True)
+        fake_exe = fake_dist / "DakeBrainz_OIKAWA.exe"
+        fake_exe.write_text("", encoding="utf-8")
+        command, target, mode = resolve_oikawa_launch_command(fake_brainz)
+        if not command or target != fake_exe or mode != UI_TEXT["oikawa_mode_exe"]:
+            raise RuntimeError("oikawa dist exe was not prioritized")
         parsed_interval, interval_valid = parse_slack_poll_interval("9")
         if parsed_interval != 9 or not interval_valid:
             raise RuntimeError("slack interval parser rejected a valid value")
@@ -951,6 +975,7 @@ def run_smoke_test() -> int:
     print(f"notification_queue_history={len(notification_queue.history)}")
     print(f"notifications_default={default_config.enable_notifications}")
     print(f"oikawa_launch_target={oikawa_target}")
+    print(f"oikawa_launch_mode={oikawa_mode}")
     print(f"remote_queue_processed={remote_result.processed}")
     print(f"remote_queue_failed={remote_result.failed}")
     print(f"remote_queue_note_results={len(remote_note_results)}")
@@ -2179,7 +2204,7 @@ def run_gui(launch_check: bool = False) -> int:
             self._notify(UI_TEXT["settings_entry_hint"])
 
         def _open_oikawa(self) -> None:
-            command, target = resolve_oikawa_launch_command()
+            command, target, mode = resolve_oikawa_launch_command()
             if not command or target is None:
                 self._append_log(UI_TEXT["log_oikawa_missing"])
                 self._notify(UI_TEXT["notify_oikawa_missing"])
@@ -2198,7 +2223,7 @@ def run_gui(launch_check: bool = False) -> int:
                 self._append_log(UI_TEXT["log_oikawa_missing"])
                 self._notify(UI_TEXT["notify_oikawa_missing"])
                 return
-            self._append_log(UI_TEXT["log_oikawa_open"].format(path=target))
+            self._append_log(UI_TEXT["log_oikawa_open"].format(mode=mode, path=target))
             self._notify(UI_TEXT["notify_oikawa_opened"])
 
         def _set_last_import_summary(self, source_key: str) -> None:
