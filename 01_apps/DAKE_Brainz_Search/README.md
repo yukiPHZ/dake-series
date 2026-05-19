@@ -293,7 +293,7 @@ brainz_memory/
 - `last_ts` を保存し、新規メッセージだけ取得
 - 取得した本文は `brainz_memory/slack/` にMarkdown正本として保存
 - Slack履歴自体を正本にせず、BRAINZ側のMarkdownを正本として扱う
-- `source_type=slack_inbox` として検索可能
+- `source_type=slack` として検索可能
 - 保存後にAuto Index / Semantic Search / Related Memory / Memory Flowへ連携
 - Slack tokenは `data/config/brainz_config.json` に保存し、Git commitしない
 - private channel推奨。Botを対象チャンネルへ招待してください
@@ -323,7 +323,7 @@ brainz_memory/
 - Slack Task Parser
 - `search:` / `note:` / `handoff_chatgpt:` / `handoff_codex:` / `import:` に対応
 - `type:` 形式の簡易taskにも対応
-- Slack投稿のraw Markdownは `slack_inbox` として保持
+- Slack投稿のraw Markdownは `slack` として保持
 - 検出したtaskは `slack_task` としても検索可能
 - Slack taskは `remote_queue/processed/` または `remote_queue/failed/` へ振り分け
 - note taskは既存Remote Queueと同じく `remote_queue_note` として記憶化
@@ -349,6 +349,22 @@ handoff_chatgpt:
 Codex Report Auto Import
 ```
 
+## 熾火 / Slack正本保存
+
+補助脳BRAINZは、検索結果を管理するためだけのUIではなく、忘れていた記憶へ戻るためのUIとして育てています。
+
+- 熾火は「何を探したいかわからない」状態から記憶へ戻る巡回モードです
+- Slackはスマホからの投入口として扱い、取得後はローカルMarkdownを正本として保存します
+- Slack本文 `message.text` / `ts` / `user` / `channel` / permalinkを正本優先で保持します
+- attachments / unfurl は補助情報として保存し、本文の代替にはしません
+- `last_ts` 以降のbacklog syncにより、PCスリープ中の投稿も起床後に差分取り込みします
+- `#aru` / `#embers` / `#thought` / `#brainz` などの断片も、整理しすぎず熱源として保持します
+- Codex完了報告やSlack投稿は要約せず、Markdown正本をBRAINZ内で読めるようにします
+- AI解析は現段階では必須ではなく、heat tags / reignition score は将来拡張用のメタデータです
+- BRAINZは「忘れを肯定する検索」として、単語一致だけでなく巡り直しを支えます
+
+常駐・タスクトレイ構成は今後の拡張候補です。現段階では既存のwatch / pollingをバックグラウンドで動かし、UIを開いて巡回・確認します。
+
 ## DAKE_META
 
 ```json
@@ -359,7 +375,7 @@ Codex Report Auto Import
   "launcher_description": "ローカルの会話・仕様・メモを忘れず探すための記憶検索アプリです。",
   "site_title": "補助脳BRAINZ",
   "site_description": "ChatGPT、Codex、Claude、Geminiのやり取りをローカル記憶として再接続する検索補助脳です。",
-  "update_summary": "Slack Task Parser に対応しました。",
+  "update_summary": "熾火UIとSlack正本保存を強化しました。",
   "folder_name": "DAKE_Brainz_Search",
   "exe_name": "DakeBrainz_Search.exe",
   "release_url": "",
@@ -373,21 +389,23 @@ Codex Report Auto Import
 ## RELEASE_BODY
 
 ```markdown
-# 補助脳BRAINZ v1.1.0
+# 補助脳BRAINZ v1.2.0
 
-ローカルの会話・仕様・Codex実装結果を忘れず探すための記憶検索アプリです。
+ローカルの会話・仕様・Codex実装結果・Slack断片を、記憶へ戻るための正本として保持する補助脳です。
 
 ## 追加
 
-- Slack Task Parser
-- Slack → Remote Queue変換
-- search:/note:/handoff: task対応
-- slack_task source_type
-- raw Slack markdown保持
+- 熾火モード
+- Slack正本保存の強化
+- Slack backlog sync
+- `source_type=slack`
+- embers_index メタデータ
+- BRAINZ内Markdown読書導線
 
 ## 継続
 
 - Slack Inbox Import
+- Slack Task Parser
 - Codex Report Auto Import
 - Notification system
 - Semantic Search

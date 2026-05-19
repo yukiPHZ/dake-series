@@ -228,6 +228,24 @@ class BrainzDatabase:
                 CREATE INDEX IF NOT EXISTS idx_remote_queue_tasks_status
                 ON remote_queue_tasks(status, processed_at);
 
+                CREATE TABLE IF NOT EXISTS embers_index (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    document_id INTEGER NOT NULL UNIQUE,
+                    heat_tags TEXT NOT NULL DEFAULT '',
+                    temperature REAL NOT NULL DEFAULT 0,
+                    unfinished_score REAL NOT NULL DEFAULT 0,
+                    reignition_score REAL NOT NULL DEFAULT 0,
+                    related_terms TEXT NOT NULL DEFAULT '',
+                    source_path TEXT NOT NULL DEFAULT '',
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    excerpt TEXT NOT NULL DEFAULT '',
+                    FOREIGN KEY(document_id) REFERENCES documents(id) ON DELETE CASCADE
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_embers_index_updated
+                ON embers_index(updated_at);
+
                 CREATE VIRTUAL TABLE IF NOT EXISTS documents_fts USING fts5(
                     title,
                     path,
@@ -365,6 +383,57 @@ class BrainzDatabase:
             )
             conn.commit()
             return document_id, True
+
+    def upsert_ember_index(
+        self,
+        document_id: int,
+        heat_tags: str,
+        temperature: float,
+        unfinished_score: float,
+        reignition_score: float,
+        related_terms: str,
+        source_path: str,
+        created_at: str,
+        updated_at: str,
+        excerpt: str,
+    ) -> None:
+        self.ensure_schema()
+        with self._lock, self.connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO embers_index
+                (
+                    document_id, heat_tags, temperature, unfinished_score,
+                    reignition_score, related_terms, source_path, created_at,
+                    updated_at, excerpt
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(document_id)
+                DO UPDATE SET
+                    heat_tags = excluded.heat_tags,
+                    temperature = excluded.temperature,
+                    unfinished_score = excluded.unfinished_score,
+                    reignition_score = excluded.reignition_score,
+                    related_terms = excluded.related_terms,
+                    source_path = excluded.source_path,
+                    created_at = excluded.created_at,
+                    updated_at = excluded.updated_at,
+                    excerpt = excluded.excerpt
+                """,
+                (
+                    int(document_id),
+                    heat_tags,
+                    float(temperature),
+                    float(unfinished_score),
+                    float(reignition_score),
+                    related_terms,
+                    source_path,
+                    created_at,
+                    updated_at,
+                    excerpt,
+                ),
+            )
+            conn.commit()
 
     def chunk_rows_for_document(self, document_id: int, missing_only: bool = False) -> list[dict[str, object]]:
         self.ensure_schema()

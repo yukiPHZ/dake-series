@@ -11,6 +11,7 @@ import requests
 
 from core.app_config import logs_dir, now_iso
 from core.db import BrainzDatabase, DocumentRecord
+from core.embers import build_ember_metadata
 from core.ollama_embeddings import EmbeddingSession, generate_embeddings_for_document
 from core.remote_queue import (
     RemoteQueueTask,
@@ -22,11 +23,13 @@ from core.remote_queue import (
 from core.text_splitter import split_text
 
 
-SOURCE_TYPE_SLACK_INBOX = "slack_inbox"
+SOURCE_TYPE_SLACK = "slack"
+SOURCE_TYPE_SLACK_INBOX = SOURCE_TYPE_SLACK
 SOURCE_TYPE_SLACK_TASK = "slack_task"
 SLACK_HISTORY_URL = "https://slack.com/api/conversations.history"
 SLACK_PERMALINK_URL = "https://slack.com/api/chat.getPermalink"
-DEFAULT_HISTORY_LIMIT = 30
+DEFAULT_HISTORY_LIMIT = 200
+MAX_HISTORY_PAGES = 10
 SLACK_TASK_TYPES = {"search", "note", "handoff_chatgpt", "handoff_codex", "import"}
 
 
@@ -48,6 +51,7 @@ class SlackInboxMessage:
     text: str
     permalink: str = ""
     files: list[dict[str, str]] = field(default_factory=list)
+    attachments: list[dict[str, str]] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -177,6 +181,7 @@ def poll_slack_inbox(
                 text=message_item.text,
                 permalink=permalink,
                 files=message_item.files,
+                attachments=message_item.attachments,
             )
             saved_path, markdown, title = save_slack_markdown(slack_folder, channel_id, message_with_permalink)
             document_id, changed = index_slack_markdown(
@@ -254,35 +259,46 @@ def fetch_slack_history(
     last_ts: str,
     timeout_seconds: float,
 ) -> tuple[list[SlackInboxMessage], str, str]:
-    params = {
+    base_params = {
         "channel": channel_id,
         "limit": str(DEFAULT_HISTORY_LIMIT),
     }
     if last_ts:
-        params["oldest"] = last_ts
-        params["inclusive"] = "false"
-
-    payload = slack_get_json(
-        session=session,
-        url=SLACK_HISTORY_URL,
-        token=token,
-        params=params,
-        timeout_seconds=timeout_seconds,
-    )
-    if not payload.get("ok"):
-        return [], map_slack_error(str(payload.get("error") or "")), str(payload.get("error") or "slack error")
+        base_params["oldest"] = last_ts
+        base_params["inclusive"] = "false"
 
     messages: list[SlackInboxMessage] = []
-    for raw_message in payload.get("messages") or []:
-        if not isinstance(raw_message, dict):
-            continue
-        ts = str(raw_message.get("ts") or "").strip()
-        text = str(raw_message.get("text") or "")
-        files = normalize_files(raw_message.get("files"))
-        if not ts or (not text.strip() and not files):
-            continue
-        user = str(raw_message.get("user") or raw_message.get("username") or raw_message.get("bot_id") or "unknown")
-        messages.append(SlackInboxMessage(ts=ts, user=user, text=text, files=files))
+    cursor = ""
+    for _page in range(MAX_HISTORY_PAGES):
+        params = dict(base_params)
+        if cursor:
+            params["cursor"] = cursor
+        payload = slack_get_json(
+            session=session,
+            url=SLACK_HISTORY_URL,
+            token=token,
+            params=params,
+            timeout_seconds=timeout_seconds,
+        )
+        if not payload.get("ok"):
+            return [], map_slack_error(str(payload.get("error") or "")), str(payload.get("error") or "slack error")
+
+        for raw_message in payload.get("messages") or []:
+            if not isinstance(raw_message, dict):
+                continue
+            ts = str(raw_message.get("ts") or "").strip()
+            text = str(raw_message.get("text") or "")
+            files = normalize_files(raw_message.get("files"))
+            attachments = normalize_attachments(raw_message.get("attachments"))
+            if not ts or (not text.strip() and not files and not attachments):
+                continue
+            user = str(raw_message.get("user") or raw_message.get("username") or raw_message.get("bot_id") or "unknown")
+            messages.append(SlackInboxMessage(ts=ts, user=user, text=text, files=files, attachments=attachments))
+
+        metadata = payload.get("response_metadata") or {}
+        cursor = str(metadata.get("next_cursor") or "").strip() if isinstance(metadata, dict) else ""
+        if not cursor:
+            break
     return messages, "ok", ""
 
 
@@ -359,7 +375,7 @@ def build_slack_markdown(
     lines = [
         "# Slack Inbox",
         "",
-        "source: slack_inbox",
+        f"source: {SOURCE_TYPE_SLACK}",
         f"channel: {channel_id}",
         f"user: {message.user}",
         f"timestamp: {timestamp.strftime('%Y-%m-%d %H:%M:%S')}",
@@ -384,6 +400,16 @@ def build_slack_markdown(
             url = file_item.get("url_private") or file_item.get("permalink") or file_item.get("mimetype") or ""
             suffix = f" {url}" if url else ""
             lines.append(f"- {name}{suffix}")
+    if message.attachments:
+        lines.extend(["", "Attachments / unfurl:"])
+        for attachment in message.attachments:
+            title_text = attachment.get("title") or attachment.get("fallback") or attachment.get("service_name") or "attachment"
+            link = attachment.get("title_link") or attachment.get("from_url") or ""
+            body = attachment.get("text") or attachment.get("pretext") or ""
+            suffix = f" {link}" if link else ""
+            lines.append(f"- {title_text}{suffix}")
+            if body:
+                lines.append(f"  {body}")
     return "\n".join(lines).rstrip() + "\n"
 
 
@@ -415,7 +441,21 @@ def index_slack_markdown(
         source_created_at=timestamp,
         source_updated_at=timestamp,
     )
-    return database.upsert_document(record, split_text(markdown))
+    document_id, changed = database.upsert_document(record, split_text(markdown))
+    metadata = build_ember_metadata(markdown)
+    database.upsert_ember_index(
+        document_id=document_id,
+        heat_tags=metadata.heat_tags,
+        temperature=metadata.temperature,
+        unfinished_score=metadata.unfinished_score,
+        reignition_score=metadata.reignition_score,
+        related_terms=metadata.related_terms,
+        source_path=str(saved_path.resolve()),
+        created_at=timestamp,
+        updated_at=timestamp,
+        excerpt=metadata.excerpt,
+    )
+    return document_id, changed
 
 
 def process_slack_task(
@@ -700,6 +740,19 @@ def index_slack_task_markdown(
         source_updated_at=timestamp,
     )
     document_id, changed = database.upsert_document(record, split_text(markdown))
+    metadata = build_ember_metadata(markdown)
+    database.upsert_ember_index(
+        document_id=document_id,
+        heat_tags=metadata.heat_tags,
+        temperature=metadata.temperature,
+        unfinished_score=metadata.unfinished_score,
+        reignition_score=metadata.reignition_score,
+        related_terms=metadata.related_terms,
+        source_path=str(saved_path.resolve()),
+        created_at=timestamp,
+        updated_at=timestamp,
+        excerpt=metadata.excerpt,
+    )
     if changed:
         generate_embeddings_for_document(database, document_id, session=embedding_session)
     return document_id, changed
@@ -730,6 +783,27 @@ def normalize_files(raw_files: Any) -> list[dict[str, str]]:
             }
         )
     return files
+
+
+def normalize_attachments(raw_attachments: Any) -> list[dict[str, str]]:
+    if not isinstance(raw_attachments, list):
+        return []
+    attachments: list[dict[str, str]] = []
+    for raw_attachment in raw_attachments:
+        if not isinstance(raw_attachment, dict):
+            continue
+        attachments.append(
+            {
+                "fallback": str(raw_attachment.get("fallback") or ""),
+                "pretext": str(raw_attachment.get("pretext") or ""),
+                "title": str(raw_attachment.get("title") or ""),
+                "title_link": str(raw_attachment.get("title_link") or ""),
+                "text": str(raw_attachment.get("text") or ""),
+                "from_url": str(raw_attachment.get("from_url") or ""),
+                "service_name": str(raw_attachment.get("service_name") or ""),
+            }
+        )
+    return attachments
 
 
 def build_title(text: str, timestamp: datetime) -> str:

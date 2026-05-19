@@ -21,8 +21,13 @@ UI_TEXT = {
     "copyright": COPYRIGHT,
     "subtitle": "Local Memory Search",
     "search_placeholder": "うろ覚えで検索",
+    "embers_search_placeholder": "何を探したいかわからなくても大丈夫です。",
+    "embers_search_helper": "忘れていた熱を探します。",
+    "tab_search": "Search",
+    "tab_embers": "熾火",
     "button_search": "Search",
     "button_searching": "Searching...",
+    "button_read": "読む",
     "checkbox_semantic_search": "Semantic Search",
     "button_index": "Index",
     "button_cancel": "Cancel",
@@ -49,6 +54,8 @@ UI_TEXT = {
     "label_slack_interval": "Poll sec 5-15",
     "button_save_slack": "Save Slack",
     "results_title": "Search Results",
+    "embers_results_title": "熾火",
+    "source_view_title": "Markdown正本",
     "preview_title": "Preview",
     "tags_title": "Related Tags",
     "section_related_memory": "Related Memory",
@@ -61,6 +68,7 @@ UI_TEXT = {
     "empty_remote_queue_folder": "未選択",
     "empty_results": "検索結果はまだありません",
     "empty_preview": "結果を選ぶと詳細が表示されます",
+    "empty_source_view": "読む記憶を選んでください",
     "empty_tags": "タグ候補なし",
     "related_memory_empty": "関連記憶なし",
     "memory_flow_empty": "記憶の流れはまだありません",
@@ -139,6 +147,10 @@ UI_TEXT = {
     "log_slack_task_failed": "Slack task failed: {task_type} / {error}",
     "phrase_slack_memory_saved": "\u88dc\u52a9\u8133\uff1aSlack Inbox\u3092\u53d6\u308a\u8fbc\u307f\u307e\u3057\u305f\u3002",
     "phrase_slack_task_received": "\u88dc\u52a9\u8133\uff1aSlack task\u3092\u53d7\u4fe1\u3057\u307e\u3057\u305f\u3002",
+    "log_embers_search": "EMBERS: {query}",
+    "status_markdown_loading": "READING SOURCE...",
+    "status_markdown_loaded": "SOURCE LOADED",
+    "embers_card_meta": "{updated_at} | {source_type} | {terms}",
     "log_semantic_search_initialized": "Semantic search initialized.",
     "log_embedding_generated": "Embedding generated.",
     "log_related_memory_found": "Related memory found: {count}",
@@ -245,6 +257,7 @@ UI_TEXT = {
     "status_memory_flow_loading": "MEMORY FLOW...",
     "status_docs": "DOCS {documents} / CHUNKS {chunks}",
     "preview_template": "PATH: {path}\nSOURCE: {source_type}\nLABEL: {source_label}\nCONVERSATION: {conversation_title}\nROLE: {role}\nMESSAGE INDEX: {message_index}\nCOMMIT: {commit_hash}\nCHANGED FILES: {changed_files}\nTEST RESULTS: {test_results}\nBUILD RESULTS: {build_results}\nPUSH: {push_result}\nGIT STATUS: {git_status}\nMODIFIED: {modified_at}\nINDEXED: {indexed_at}\nSCORE: {score:.2f}\nSEMANTIC: {semantic_score:.2f}\n\n{content}",
+    "source_view_template": "PATH: {path}\nSOURCE: {source_type}\nTS: {source_created_at}\n\n---\n\n{content}",
     "result_meta": "{source_type} | score {score:.1f}",
     "result_meta_chatgpt": "{source_label} | score {score:.1f}",
     "result_meta_codex": "commit {commit_hash} | score {score:.1f}",
@@ -272,7 +285,7 @@ def run_smoke_test() -> int:
     from core.ollama_embeddings import DEFAULT_EMBED_MODEL, check_embedding_status
     from core.remote_queue import count_pending_queue_files, process_remote_queue_folder
     from core.search_engine import SearchEngine
-    from core.slack_inbox import poll_slack_inbox
+    from core.slack_inbox import poll_slack_inbox, slack_ts_float
     from core.watch_folder import detect_changed_files
 
     ensure_app_dirs()
@@ -533,6 +546,7 @@ def run_smoke_test() -> int:
                             "user": "U123",
                             "text": slack_message_text,
                             "files": [{"name": "brainz-note.md", "mimetype": "text/markdown"}],
+                            "attachments": [{"title": "Preview title", "text": "Preview body"}],
                         }
                     ]
                 return FakeSlackResponse(
@@ -557,8 +571,11 @@ def run_smoke_test() -> int:
             raise RuntimeError("slack inbox import failed")
         if not slack_result.saved_files or not Path(slack_result.saved_files[0]).exists():
             raise RuntimeError("slack markdown was not saved")
-        if "source: slack_inbox" not in Path(slack_result.saved_files[0]).read_text(encoding="utf-8"):
+        slack_markdown_text = Path(slack_result.saved_files[0]).read_text(encoding="utf-8")
+        if "source: slack" not in slack_markdown_text:
             raise RuntimeError("slack markdown source marker missing")
+        if slack_query not in slack_markdown_text or "Preview title" not in slack_markdown_text:
+            raise RuntimeError("slack canonical text was not preserved")
         slack_duplicate = poll_slack_inbox(
             database=database,
             memory_folder=root,
@@ -569,6 +586,20 @@ def run_smoke_test() -> int:
         )
         if slack_duplicate.skipped < 1:
             raise RuntimeError("slack duplicate was not skipped")
+        backlog_messages = [
+            {"ts": f"{int(slack_ts_float(slack_ts)) - 1}.000001", "user": "U123", "text": f"older slack memory {unique_suffix}"},
+            {"ts": f"{int(slack_ts_float(slack_ts)) + 1}.000002", "user": "U123", "text": f"#embers backlog slack memory {unique_suffix}"},
+        ]
+        backlog_result = poll_slack_inbox(
+            database=database,
+            memory_folder=root,
+            token="xoxb-smoke-token",
+            channel_id="C123SMOKE",
+            last_ts=slack_ts,
+            session=FakeSlackSession(messages=backlog_messages),
+        )
+        if backlog_result.imported != 1 or slack_ts_float(backlog_result.latest_ts) <= slack_ts_float(slack_ts):
+            raise RuntimeError("slack backlog sync did not import only newer messages")
         slack_auth = poll_slack_inbox(
             database=database,
             memory_folder=root,
@@ -633,9 +664,9 @@ def run_smoke_test() -> int:
     if not remote_import_results:
         raise RuntimeError("remote queue import was not indexed")
     slack_results = engine.search(slack_query, limit=10)
-    slack_match = next((result for result in slack_results if result.source_type == "slack_inbox"), None)
+    slack_match = next((result for result in slack_results if result.source_type in {"slack", "slack_inbox"}), None)
     if slack_match is None:
-        raise RuntimeError("slack_inbox search returned no result")
+        raise RuntimeError("slack search returned no result")
     if "Slack permalink:" not in slack_match.content or slack_match.conversation_id != "C123SMOKE":
         raise RuntimeError("slack inbox metadata was not stored")
     slack_task_search_results = engine.search(slack_task_query, limit=20)
@@ -649,10 +680,11 @@ def run_smoke_test() -> int:
     file_results = engine.search(UI_TEXT["smoke_query_memory"], limit=10)
     if not file_results:
         raise RuntimeError("file search returned no results")
-    file_match = next((result for result in file_results if result.source_type not in {"chatgpt_export", "codex_result", "codex_report_auto", "slack_inbox"}), None)
+    non_file_sources = {"chatgpt_export", "codex_result", "codex_report_auto", "slack", "slack_inbox", "slack_task"}
+    file_match = next((result for result in file_results if result.source_type not in non_file_sources), None)
     if file_match is None:
         file_match_results = engine.search(UI_TEXT["smoke_query_git"], limit=10)
-        file_match = next((result for result in file_match_results if result.source_type not in {"chatgpt_export", "codex_result", "codex_report_auto", "slack_inbox"}), None)
+        file_match = next((result for result in file_match_results if result.source_type not in non_file_sources), None)
     if file_match is None:
         raise RuntimeError("file search returned no file source result")
 
@@ -725,11 +757,11 @@ def run_smoke_test() -> int:
     if not any(item.result.source_type == "codex_report_auto" for item in flow_codex_report.items):
         raise RuntimeError("codex report memory flow did not include codex_report_auto")
     flow_slack = engine.memory_flow(slack_match, semantic_enabled=False, ascending=True)
-    if not any(item.result.source_type == "slack_inbox" for item in flow_slack.items):
-        raise RuntimeError("slack inbox memory flow did not include slack_inbox")
+    if not any(item.result.source_type in {"slack", "slack_inbox"} for item in flow_slack.items):
+        raise RuntimeError("slack memory flow did not include slack")
 
     flow_file = engine.memory_flow(file_match, semantic_enabled=False, ascending=True)
-    if not any(item.result.source_type not in {"chatgpt_export", "codex_result", "codex_report_auto", "slack_inbox"} for item in flow_file.items):
+    if not any(item.result.source_type not in non_file_sources for item in flow_file.items):
         raise RuntimeError("file memory flow did not include file result")
 
     flow_semantic = engine.memory_flow(chatgpt_match, semantic_enabled=True, ascending=True)
@@ -861,6 +893,7 @@ def run_gui(launch_check: bool = False) -> int:
     from core.codex_importer import CodexImportResult, import_codex_file, import_codex_text
     from core.codex_report_auto import CodexReportAutoResult, count_pending_reports, process_codex_reports_folder
     from core.db import BrainzDatabase, SearchResult
+    from core.embers import HEAT_TERMS, default_ember_query, detect_heat_terms
     from core.gpu_checker import check_gpu
     from core.handoff_writer import write_chatgpt_handoff, write_codex_handoff
     from core.indexer import IndexProgress, Indexer
@@ -883,7 +916,7 @@ def run_gui(launch_check: bool = False) -> int:
     )
 
     ensure_app_dirs()
-    ctk.set_appearance_mode("dark")
+    ctk.set_appearance_mode("light")
     ctk.set_default_color_theme("blue")
 
     class BrainzApp(ctk.CTk):
@@ -923,6 +956,8 @@ def run_gui(launch_check: bool = False) -> int:
             self.selected_result: SearchResult | None = None
             self.current_query = self.config_data.last_query
             self.semantic_available = True
+            self.view_mode_var = ctk.StringVar(value=UI_TEXT["tab_search"])
+            self.embers_mode = False
             self.semantic_search_var = ctk.BooleanVar(value=True)
             self.auto_index_var = ctk.BooleanVar(value=self.config_data.auto_index_enabled)
             self.notifications_var = ctk.BooleanVar(value=self.config_data.enable_notifications)
@@ -1043,7 +1078,29 @@ def run_gui(launch_check: bool = False) -> int:
                 border_color=COLORS["border"],
                 font=(self.status_font_family, FONT_SIZES["small"]),
             )
-            self.semantic_checkbox.grid(row=1, column=0, columnspan=2, sticky="w", pady=(6, 0))
+            self.semantic_checkbox.grid(row=1, column=0, sticky="w", pady=(6, 0))
+            self.view_switch = ctk.CTkSegmentedButton(
+                search_box,
+                values=[UI_TEXT["tab_search"], UI_TEXT["tab_embers"]],
+                variable=self.view_mode_var,
+                fg_color=COLORS["panel_soft"],
+                selected_color=COLORS["accent"],
+                selected_hover_color=COLORS["accent_hover"],
+                unselected_color=COLORS["panel_soft"],
+                unselected_hover_color=COLORS["accent_soft"],
+                text_color=COLORS["text"],
+                font=(self.status_font_family, FONT_SIZES["small"]),
+                command=self._change_view_mode,
+            )
+            self.view_switch.grid(row=1, column=1, sticky="e", pady=(6, 0))
+            self.search_helper_var = ctk.StringVar(value="")
+            ctk.CTkLabel(
+                search_box,
+                textvariable=self.search_helper_var,
+                text_color=COLORS["quiet"],
+                font=(self.reading_font_family, FONT_SIZES["small"]),
+                anchor="w",
+            ).grid(row=2, column=0, columnspan=2, sticky="ew", pady=(4, 0))
 
             left = ctk.CTkScrollableFrame(
                 self,
@@ -1367,8 +1424,29 @@ def run_gui(launch_check: bool = False) -> int:
             center = self._panel(self, 0)
             center.grid(row=1, column=1, sticky="nsew", padx=8, pady=(0, 12))
             center.grid_columnconfigure(0, weight=1)
-            center.grid_rowconfigure(1, weight=1)
-            self._section_title(center, UI_TEXT["results_title"], 0)
+            center.grid_rowconfigure(1, weight=2)
+            center.grid_rowconfigure(3, weight=1)
+            self._section_title(center, UI_TEXT["source_view_title"], 0)
+            self.source_view_box = ctk.CTkTextbox(
+                center,
+                height=260,
+                fg_color=COLORS["input"],
+                border_color=COLORS["border"],
+                border_width=1,
+                text_color=COLORS["text"],
+                font=(self.reading_font_family, FONT_SIZES["preview"]),
+                wrap="word",
+            )
+            self.source_view_box.grid(row=1, column=0, sticky="nsew", padx=12, pady=(0, 10))
+            self._relax_textbox_spacing(self.source_view_box, spacing1=3, spacing3=6)
+            set_textbox_text(self.source_view_box, UI_TEXT["empty_source_view"])
+            self.results_title_var = ctk.StringVar(value=UI_TEXT["results_title"])
+            ctk.CTkLabel(
+                center,
+                textvariable=self.results_title_var,
+                text_color=COLORS["section"],
+                font=(self.font_family, FONT_SIZES["section"]),
+            ).grid(row=2, column=0, sticky="w", padx=14, pady=(8, 7))
             self.results_frame = ctk.CTkScrollableFrame(
                 center,
                 fg_color=COLORS["panel"],
@@ -1376,7 +1454,7 @@ def run_gui(launch_check: bool = False) -> int:
                 scrollbar_button_color=COLORS["panel_soft"],
                 scrollbar_button_hover_color=COLORS["accent_soft"],
             )
-            self.results_frame.grid(row=1, column=0, sticky="nsew", padx=12, pady=(0, 12))
+            self.results_frame.grid(row=3, column=0, sticky="nsew", padx=12, pady=(0, 12))
             self._render_empty_results()
 
             right = self._panel(self, 0)
@@ -2136,6 +2214,8 @@ def run_gui(launch_check: bool = False) -> int:
 
         def _start_search(self) -> None:
             query_text = self.search_entry.get().strip()
+            if not query_text and self.embers_mode:
+                query_text = default_ember_query()
             if not query_text:
                 return
             if self.search_thread and self.search_thread.is_alive():
@@ -2147,6 +2227,8 @@ def run_gui(launch_check: bool = False) -> int:
             self.index_status_var.set(UI_TEXT["status_searching"])
             self._append_log(UI_TEXT["log_searching"].format(query=query_text))
             self._append_log(UI_TEXT["phrase_searching_memory"])
+            if self.embers_mode:
+                self._append_log(UI_TEXT["log_embers_search"].format(query=query_text))
             self.update_idletasks()
             semantic_enabled = bool(self.semantic_search_var.get()) and self.semantic_available
             self.search_thread = threading.Thread(
@@ -2168,6 +2250,17 @@ def run_gui(launch_check: bool = False) -> int:
                 self.search_button.configure(text=UI_TEXT["button_searching"], state="disabled")
             else:
                 self.search_button.configure(text=UI_TEXT["button_search"], state="normal")
+
+        def _change_view_mode(self, value: str) -> None:
+            self.embers_mode = value == UI_TEXT["tab_embers"]
+            if hasattr(self, "results_title_var"):
+                title = UI_TEXT["embers_results_title"] if self.embers_mode else UI_TEXT["results_title"]
+                self.results_title_var.set(title)
+            if hasattr(self, "search_helper_var"):
+                self.search_helper_var.set(UI_TEXT["embers_search_helper"] if self.embers_mode else "")
+            if hasattr(self, "search_entry"):
+                placeholder = UI_TEXT["embers_search_placeholder"] if self.embers_mode else UI_TEXT["search_placeholder"]
+                self.search_entry.configure(placeholder_text=placeholder)
 
         def _render_results(self, results: list[SearchResult]) -> None:
             for child in self.results_frame.winfo_children():
@@ -2206,13 +2299,37 @@ def run_gui(launch_check: bool = False) -> int:
                     wraplength=510,
                     justify="left",
                     anchor="w",
-                ).grid(row=2, column=0, sticky="ew", padx=14, pady=(7, 14))
+                ).grid(row=2, column=0, sticky="ew", padx=14, pady=(7, 8 if self.embers_mode else 14))
+                if self.embers_mode:
+                    terms = ", ".join(detect_heat_terms(result.content)) or "-"
+                    ctk.CTkLabel(
+                        item,
+                        text=UI_TEXT["embers_card_meta"].format(
+                            updated_at=result.source_updated_at or result.modified_at,
+                            source_type=result.source_type,
+                            terms=terms,
+                        ),
+                        text_color=COLORS["quiet"],
+                        font=(self.status_font_family, FONT_SIZES["result_meta"]),
+                        anchor="w",
+                    ).grid(row=3, column=0, sticky="ew", padx=14, pady=(0, 6))
+                    ctk.CTkButton(
+                        item,
+                        text=UI_TEXT["button_read"],
+                        width=82,
+                        height=28,
+                        fg_color=COLORS["panel_soft"],
+                        hover_color=COLORS["accent_soft"],
+                        text_color=COLORS["section"],
+                        font=(self.status_font_family, FONT_SIZES["small"]),
+                        command=lambda selected=result: self._select_result(selected),
+                    ).grid(row=4, column=0, sticky="w", padx=14, pady=(0, 12))
 
         def _result_title(self, result: SearchResult) -> str:
             if result.source_type == "chatgpt_export":
                 return f"[chatgpt_export] {result.conversation_title or result.title}"
-            if result.source_type == "slack_inbox":
-                return f"[slack_inbox] {result.title}"
+            if result.source_type in {"slack", "slack_inbox"}:
+                return f"[slack] {result.title}"
             if result.source_type == "slack_task":
                 return f"[slack_task] {result.title}"
             if result.source_type in {"codex_result", "codex_report_auto"}:
@@ -2238,6 +2355,7 @@ def run_gui(launch_check: bool = False) -> int:
             return f"{base} | {UI_TEXT['result_meta_semantic'].format(semantic_score=result.semantic_score)}"
 
         def _select_result(self, result: SearchResult) -> None:
+            self.index_status_var.set(UI_TEXT["status_markdown_loading"])
             preview = UI_TEXT["preview_template"].format(
                 path=result.path,
                 source_type=result.source_type,
@@ -2257,9 +2375,18 @@ def run_gui(launch_check: bool = False) -> int:
                 semantic_score=result.semantic_score,
                 content=result.content[:9000],
             )
+            source_view = UI_TEXT["source_view_template"].format(
+                path=result.path,
+                source_type=result.source_type,
+                source_created_at=result.source_created_at or result.modified_at,
+                content=result.content[:18000],
+            )
+            if hasattr(self, "source_view_box"):
+                set_textbox_text(self.source_view_box, source_view)
             set_textbox_text(self.preview_box, preview)
             self.tags_var.set(self._tags_for_result(result))
             self.selected_result = result
+            self.index_status_var.set(UI_TEXT["status_markdown_loaded"])
             self._start_memory_flow(result)
 
         def _tags_for_result(self, result: SearchResult) -> str:
