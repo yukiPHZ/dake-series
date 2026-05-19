@@ -26,6 +26,19 @@ OIKAWAの前面表示対象:
 
 通知欄は主役にせず、BRAINZが起きているか、記憶庫が応答しているか、今日の提案があるかを控えめに伝える補助表示として扱います。
 
+## QPSC v0.1 正本
+
+OIKAWAはQPSC v0.1で、BRAINZに保存された記憶を探して、戻って、読む前面UIとして固定します。
+
+- BRAINZ状態と取り込み通知を表示します
+- 通知、検索結果、熾火候補、ORBIT候補から原本プレビューへ戻れます
+- 熾火候補はAI判断ではなく、戻るきっかけとして扱います
+- 熱検索入口はルールベースで、未読通知・最近通知・関連パスを優先します
+- ORBITは今日の整理を短く表示し、命令ではなく次に触れられる候補を置きます
+- 原本へ戻った履歴は `data/config/qpsc_recent_returns.json` に保存しますが、Git管理しません
+
+OIKAWAはBRAINZの記憶を直接編集しません。原本主義を維持し、判断は菊田に残します。
+
 ```text
 菊田
 ↓
@@ -176,7 +189,7 @@ dist\DakeBrainz_OIKAWA.exe
   "launcher_description": "BRAINZの記憶層を巡回し、熱の痕跡を静かに浮かび上がらせます。",
   "site_title": "OIKAWA",
   "site_description": "BRAINZ記憶フォルダを横断し、再出現する熱語と関連断片を観測する補助脳アプリです。",
-  "update_summary": "初期実装。Markdown横断スキャン、熱語抽出、OIKAWA提案Markdown保存に対応。",
+  "update_summary": "QPSC v0.1として検索・原本表示・通知・熾火・ORBITの前面UIを正本化しました。",
   "folder_name": "DAKE_Brainz_OIKAWA",
   "exe_name": "DakeBrainz_OIKAWA.exe",
   "release_url": "",

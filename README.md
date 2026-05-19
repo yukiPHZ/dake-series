@@ -36,23 +36,47 @@ Built around the idea:
 
 ---
 
-## QPSC Phase 1
+## QPSC v0.1 現在地
 
-QPSC（Quiet Personal Cognitive System）は、BRAINZ / OIKAWA / DAKE_Wake_Brainz を静かに分担させるための構成方針です。
+QPSC（Quiet Personal Cognitive System）は、記憶を保存し、静かに戻れる入口を置くための構成です。判断は代行せず、最後に選ぶのは菊田です。
 
-- BRAINZ = 深層記憶・取り込み・index・設定
-- OIKAWA = 検索・原本表示・熾火・熱提案・通知
-- DAKE_Wake_Brainz = 起床・遠隔起動・状態確認レイヤー
-- Ollama = ローカル読解補助
-- OpenClaw = ローカルエージェント / Gateway候補
+- BRAINZ = 記憶庫 / 取り込み母艦
+- OIKAWA = 検索 / 原本表示 / 通知 / 熾火 / ORBIT
+- DAKE_Wake_Brainz = 起床 / 状態確認レイヤー
+- Ollama = 将来のローカル読解補助
+- OpenClaw = 将来のGateway / エージェント補助候補
+- DAKE_Approve_Brainz = frozen
 
-Phase 1では完全統合せず、BRAINZが起床状態をローカル状態ファイルへ記録し、OIKAWAが小さな通知欄でその状態を表示します。BRAINZは「見るアプリ」ではなく記憶庫・取り込み母艦へ寄せ、OIKAWAを検索・原本表示・熱検索・熾火・熱提案・通知表示の前面UIとして育てます。
+```text
+Slack / Paste / ChatGPT Export / Codex Report
+↓
+BRAINZ = 記憶庫・取り込み母艦
+↓
+qpsc_notifications / qpsc_status
+↓
+OIKAWA = 通知・検索・原本表示・熾火・ORBIT
+↓
+菊田が選ぶ
+```
 
-Phase 8では、BRAINZを静かな母艦UIへ整理し、OIKAWAを開く導線を追加しました。QPSCは、BRAINZが保存・取り込み・設定・状態、OIKAWAが検索・原本表示・熾火・ORBITを担う分担を優先します。
+### v0.1でできること
 
-## QPSC Frozen Apps
+- BRAINZ起動状態を記録できる
+- BRAINZ heartbeatを更新できる
+- 取り込み通知を保存できる
+- OIKAWAで通知を見られる
+- OIKAWAで原本プレビューできる
+- 熾火候補を表示できる
+- 熱検索入口がある
+- ORBITで今日の整理が見られる
+- BRAINZからOIKAWAを開ける
+- BRAINZは母艦UIへ整理済み
 
-DAKE_Approve_Brainz はQPSC本線から外し、凍結扱いにします。承認導線はCodex公式モバイル承認 / 遠隔操作導線を優先し、QPSCはBRAINZ / OIKAWA / DAKE_Wake_Brainz / Ollama / OpenClaw補助に集中します。
+### v0.1の固定方針
+
+QPSC v0.1では、BRAINZが保存・取り込み・index・設定・状態を担い、OIKAWAが検索・原本表示・通知・熾火・ORBITを担います。DAKE_Wake_Brainzは起床と状態確認に集中し、DAKE_Approve_BrainzはQPSC本線から外して凍結します。
+
+承認導線はCodex公式モバイル承認 / 遠隔操作導線を優先します。OllamaとOpenClawはまだ本線へ入れず、将来の補助候補として扱います。
 
 ---
 

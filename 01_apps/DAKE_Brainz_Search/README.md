@@ -2,9 +2,9 @@
 
 記憶庫 / 取り込み母艦。
 
-補助脳BRAINZ は、ローカルの会話・仕様・メモ・README・Codex結果を忘れず探すための記憶検索アプリです。
+補助脳BRAINZ は、ローカルの会話・仕様・メモ・README・Codex結果を忘れず保存し、OIKAWAへ渡すための記憶庫・取り込み母艦です。
 
-BRAINZはChatGPTやCodexの代替AIではありません。ローカルに置いた記憶を読み込み、全文検索とうろ覚え検索で、過去の思考や作業結果へ再接続するための検索層・橋渡し係です。
+BRAINZはChatGPTやCodexの代替AIではありません。ローカルに置いた記憶を読み込み、取り込み、indexし、過去の思考や作業結果へ再接続するための保存層・橋渡し係です。
 
 ## 思想
 
@@ -30,6 +30,19 @@ BRAINZ側で管理するもの:
 検索・原本表示・熱検索・熾火・熱提案・通知表示は、前面UIであるOIKAWAへ寄せていきます。BRAINZのUIは検索閲覧を主目的にせず、脳をイメージした抽象的で微細な動きが漂う程度に整理していく方針です。
 
 起動時には `data/config/qpsc_brainz_status.json` に `brainz_awake`、`started_at`、`last_heartbeat_at`、`status_message` を記録します。起動中は一定間隔で heartbeat を更新し、OIKAWAやDAKE_Wake_Brainzが状態確認に使える導線にします。
+
+## QPSC v0.1 正本
+
+BRAINZはQPSC v0.1で、前面の読む場所ではなく、記憶庫 / 取り込み母艦として固定します。
+
+- 記憶フォルダ、取り込み、index、接続/設定、awake/heartbeatを担います
+- ペースト投稿、Slack、ChatGPT export、Codex報告を取り込みます
+- 取り込み時に `data/config/qpsc_notifications.json` へ通知イベントを保存します
+- 起動時とheartbeatで `data/config/qpsc_brainz_status.json` を更新します
+- OIKAWAを開く導線を持ちます
+- 検索、原本表示、熾火、ORBITはOIKAWA側を正面にします
+
+v0.1では、BRAINZが判断するのではなく、原本と状態を静かに残します。OIKAWAがそれを前面へ戻し、最後に菊田が選びます。
 
 ## QPSC Phase 2: 取り込み通知
 
@@ -435,7 +448,7 @@ Aru Inbox は、既存の Slack Inbox とは別の「在る」専用取り込み
   "launcher_description": "ローカルの会話・仕様・メモを忘れず探すための記憶検索アプリです。",
   "site_title": "補助脳BRAINZ",
   "site_description": "ChatGPT、Codex、Claude、Geminiのやり取りをローカル記憶として再接続する検索補助脳です。",
-  "update_summary": "QPSC Phase 8で静かな記憶庫・取り込み母艦UIへ整理しました。",
+  "update_summary": "QPSC v0.1として記憶庫・取り込み母艦の現在地を正本化しました。",
   "folder_name": "DAKE_Brainz_Search",
   "exe_name": "DakeBrainz_Search.exe",
   "release_url": "",

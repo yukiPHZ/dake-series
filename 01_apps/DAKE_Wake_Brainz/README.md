@@ -14,6 +14,18 @@ QPSC（Quiet Personal Cognitive System）では、DAKE_Wake_Brainzを起床・�
 
 Phase 1ではBRAINZ本体を操作せず、PC起床と状態確認を担います。BRAINZの起床状態はBRAINZ側のローカル状態ファイル、前面通知はOIKAWA側へ寄せます。
 
+## QPSC v0.1 正本
+
+DAKE_Wake_BrainzはQPSC v0.1で、起床 / 状態確認レイヤーとして固定します。
+
+- LIVA Z 常時ON機から3070Ti PCをWake on LANで起こします
+- LAN / Tailscale上のブラウザから状態を確認します
+- BRAINZの保存・取り込み・検索・原本表示には踏み込みません
+- BRAINZ awake状態はBRAINZ側の `qpsc_brainz_status.json` を正とします
+- OIKAWAが前面UI、BRAINZが記憶庫、Wakeが起床確認という分担を保ちます
+
+WakeはQPSCの判断層ではありません。起こす、見る、止めないための入口です。
+
 ## 起動
 
 ```bat
@@ -128,7 +140,7 @@ Sleep、Queue、Codex 監視、Slack bridge は将来フェーズで追加しま
   "launcher_description": "LIVA Z から 3070Ti PC を Wake / 状態確認する補助脳 GATE。",
   "site_title": "DAKE_Wake_Brainz",
   "site_description": "Android ブラウザから 3070Ti PC を Wake / 状態確認する LAN 用 DAKE GATE。",
-  "update_summary": "Flask Web版の Wake / 状態確認ゲートを追加しました。",
+  "update_summary": "QPSC v0.1として起床 / 状態確認レイヤーの役割を正本化しました。",
   "folder_name": "DAKE_Wake_Brainz",
   "exe_name": "DAKE_Wake_Brainz.exe",
   "release_url": "",
