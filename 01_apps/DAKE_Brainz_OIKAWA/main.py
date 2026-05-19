@@ -15,7 +15,12 @@ import tkinter as tk
 from core.config import AppConfig, ConfigStore, existing_folder, open_path, resolve_memory_folder
 from core.heat_engine import AnalysisResult, analyze_documents
 from core.markdown_writer import write_suggestion
-from core.qpsc_notifications import QpscNotification, mark_qpsc_notification_read, read_qpsc_notifications
+from core.qpsc_notifications import (
+    QpscNotification,
+    mark_qpsc_notification_read,
+    read_qpsc_notification_events,
+    read_qpsc_notifications,
+)
 from core.qpsc_status import is_brainz_awake, read_brainz_status
 from core.scanner import MemoryDocument, scan_memory
 
@@ -30,6 +35,8 @@ UI_TEXT = {
     "app_subtitle": "検索 / 原本 / 熾火 / 通知",
     "button_search": "記憶検索",
     "button_searching": "検索中",
+    "button_heat_search": "熱検索",
+    "button_heat_searching": "熱検索中",
     "button_scan": "巡回する",
     "button_scanning": "巡回中",
     "button_open_output": "保存先を開く",
@@ -39,6 +46,9 @@ UI_TEXT = {
     "status_searching": "記憶を検索中",
     "status_search_complete": "検索完了",
     "status_no_search_results": "検索結果はありません",
+    "status_heat_searching": "熱検索中",
+    "status_heat_search_complete": "熱検索完了",
+    "status_no_heat_results": "熱検索の候補はありません",
     "status_scanning": "記憶層を巡回中",
     "status_complete": "観測完了",
     "status_no_trace": "強い熱の痕跡は見つかりませんでした",
@@ -47,6 +57,7 @@ UI_TEXT = {
     "section_related": "関連断片",
     "section_suggestion": "OIKAWA提案",
     "section_source_preview": "原本プレビュー",
+    "section_heat_candidates": "熾火",
     "label_memory_folder": "記憶フォルダ",
     "memory_folder_missing": "記憶フォルダ未検出",
     "dialog_choose_memory": "記憶フォルダを選択",
@@ -54,6 +65,7 @@ UI_TEXT = {
     "summary_idle": "呼ばれるまで、記憶層の外側で待機します",
     "summary_scan": "files {files} / skipped {skipped} / traces {traces}",
     "summary_search": "results {results} / skipped {skipped}",
+    "summary_heat_search": "heat {results} / skipped {skipped}",
     "summary_saved": "提案Markdownを保存しました",
     "card_file": "該当ファイル",
     "card_excerpt": "抜粋",
@@ -68,6 +80,14 @@ UI_TEXT = {
     "source_preview_path": "PATH: {path}",
     "source_preview_truncated": "\n\n---\n先頭のみ表示しています。",
     "search_result_meta": "{path} / score {score}",
+    "heat_candidate_empty": "まだ熾火候補はありません。",
+    "heat_candidate_title": "まだ熱が残っている記憶",
+    "heat_candidate_message": "{source}から取り込まれた記憶があります。",
+    "heat_candidate_no_related": "原本への道筋はまだありません。",
+    "heat_reason_unread_notification": "未読通知",
+    "heat_reason_recent_import": "最近の取り込み",
+    "heat_reason_related_path": "原本あり",
+    "heat_reason_query_match": "検索語に近い",
     "section_qpsc_notifications": "QPSC通知",
     "qpsc_brainz_awake": "BRAINZ is awake.",
     "qpsc_memory_awake": "記憶庫は起きています。",
@@ -109,22 +129,23 @@ class SearchHit:
     score: int
 
 
+@dataclass(frozen=True)
+class HeatCandidate:
+    id: str
+    title: str
+    message: str
+    reason: str
+    related_path: str
+    score: int
+
+
 def build_search_hits(documents: list[MemoryDocument], query: str, memory_root: Path, limit: int = 20) -> list[SearchHit]:
     terms = [term for term in query.lower().split() if term]
     if not terms:
         return []
     hits: list[SearchHit] = []
     for document in documents:
-        title_text = document.title.lower()
-        path_text = document.relative_path.lower()
-        body_text = document.text.lower()
-        score = 0
-        for term in terms:
-            score += body_text.count(term)
-            if term in title_text:
-                score += 6
-            if term in path_text:
-                score += 3
+        score = _document_search_score(document, terms)
         if score <= 0:
             continue
         hits.append(
@@ -138,6 +159,186 @@ def build_search_hits(documents: list[MemoryDocument], query: str, memory_root: 
         )
     hits.sort(key=lambda item: (item.score, item.path.stat().st_mtime if item.path.exists() else 0), reverse=True)
     return hits[:limit]
+
+
+def build_heat_candidates(
+    notifications: list[QpscNotification],
+    query: str = "",
+    limit: int = 3,
+) -> list[HeatCandidate]:
+    terms = [term for term in query.lower().split() if term]
+    candidates: list[HeatCandidate] = []
+    seen: set[str] = set()
+    for index, notification in enumerate(notifications):
+        key = notification.related_path.strip() or notification.id
+        if key and key in seen:
+            continue
+        if key:
+            seen.add(key)
+        score = _notification_heat_score(notification, index, terms)
+        if score <= 0:
+            continue
+        candidates.append(
+            HeatCandidate(
+                id=notification.id or f"auto-{index}",
+                title=notification.title.strip() or UI_TEXT["heat_candidate_title"],
+                message=notification.message.strip() or UI_TEXT["heat_candidate_message"].format(
+                    source=notification.source.strip() or UI_TEXT["section_qpsc_notifications"],
+                ),
+                reason=_notification_heat_reason(notification, terms),
+                related_path=notification.related_path.strip(),
+                score=score,
+            )
+        )
+    candidates.sort(key=lambda item: item.score, reverse=True)
+    return candidates[:limit]
+
+
+def build_heat_search_hits(
+    documents: list[MemoryDocument],
+    query: str,
+    memory_root: Path,
+    notifications: list[QpscNotification],
+    limit: int = 20,
+) -> list[SearchHit]:
+    terms = [term for term in query.lower().split() if term]
+    if not terms:
+        return []
+    notification_boosts = _notification_boosts(notifications, memory_root, terms)
+    hits: list[SearchHit] = []
+    seen_paths: set[Path] = set()
+    for document in documents:
+        base_score = _document_search_score(document, terms)
+        resolved_path = document.path.resolve()
+        boost = notification_boosts.get(resolved_path, 0)
+        if base_score <= 0 and boost <= 0:
+            continue
+        seen_paths.add(resolved_path)
+        hits.append(
+            SearchHit(
+                title=document.title,
+                path=document.path,
+                relative_path=_relative_path(document.path, memory_root),
+                excerpt=_search_excerpt(document.text, terms),
+                score=base_score + boost,
+            )
+        )
+    for index, notification in enumerate(notifications):
+        related_path = notification.related_path.strip()
+        if not related_path:
+            continue
+        path = _resolve_related_source_path(related_path, memory_root)
+        resolved_path = path.resolve()
+        if resolved_path in seen_paths:
+            continue
+        notification_text_match = any(term in _notification_search_text(notification) for term in terms)
+        preview_text = ""
+        file_score = 0
+        if path.exists() and path.is_file() and path.suffix.lower() in {".md", ".txt"}:
+            preview_text, _truncated = read_source_preview_text(path, limit=24_000)
+            file_score = _text_search_score(preview_text, terms)
+        if not notification_text_match and file_score <= 0:
+            continue
+        score = file_score + _notification_heat_score(notification, index, terms)
+        excerpt_source = preview_text or notification.message or notification.title
+        hits.append(
+            SearchHit(
+                title=notification.title.strip() or path.stem,
+                path=path,
+                relative_path=_relative_path(path, memory_root),
+                excerpt=_search_excerpt(excerpt_source, terms),
+                score=score,
+            )
+        )
+        seen_paths.add(resolved_path)
+    hits.sort(key=lambda item: (item.score, item.path.stat().st_mtime if item.path.exists() else 0), reverse=True)
+    return hits[:limit]
+
+
+def _document_search_score(document: MemoryDocument, terms: list[str]) -> int:
+    title_text = document.title.lower()
+    path_text = document.relative_path.lower()
+    body_text = document.text.lower()
+    score = _text_search_score(body_text, terms)
+    for term in terms:
+        if term in title_text:
+            score += 6
+        if term in path_text:
+            score += 3
+    return score
+
+
+def _text_search_score(text: str, terms: list[str]) -> int:
+    lowered = text.lower()
+    return sum(lowered.count(term) for term in terms)
+
+
+def _notification_heat_score(notification: QpscNotification, index: int, terms: list[str]) -> int:
+    score = max(0, 120 - index)
+    if notification.status == "unread":
+        score += 600
+    if notification.related_path.strip():
+        score += 80
+    text = _notification_search_text(notification)
+    for term in terms:
+        if term in text:
+            score += 180
+    return score
+
+
+def _notification_heat_reason(notification: QpscNotification, terms: list[str]) -> str:
+    if notification.status == "unread":
+        return "unread_notification"
+    text = _notification_search_text(notification)
+    if terms and any(term in text for term in terms):
+        return "query_match"
+    if notification.related_path.strip():
+        return "related_path"
+    return "recent_import"
+
+
+def _notification_boosts(
+    notifications: list[QpscNotification],
+    memory_root: Path,
+    terms: list[str],
+) -> dict[Path, int]:
+    boosts: dict[Path, int] = {}
+    for index, notification in enumerate(notifications):
+        related_path = notification.related_path.strip()
+        if not related_path:
+            continue
+        path = _resolve_related_source_path(related_path, memory_root)
+        score = 0
+        if notification.status == "unread":
+            score += 55
+        score += max(0, 35 - index)
+        score += 10
+        text = _notification_search_text(notification)
+        for term in terms:
+            if term in text:
+                score += 90
+        if score > 0:
+            resolved = path.resolve()
+            boosts[resolved] = max(boosts.get(resolved, 0), score)
+    return boosts
+
+
+def _notification_search_text(notification: QpscNotification) -> str:
+    return " ".join(
+        [
+            notification.title,
+            notification.message,
+            notification.source,
+            notification.kind,
+        ]
+    ).lower()
+
+
+def _resolve_related_source_path(related_path: str | Path, memory_root: Path | None) -> Path:
+    path = Path(str(related_path).strip())
+    if path.is_absolute() or not memory_root:
+        return path
+    return memory_root / path
 
 
 def _relative_path(path: Path, memory_root: Path) -> str:
@@ -235,6 +436,8 @@ class OikawaApp(tk.Tk):
         self.search_thread: threading.Thread | None = None
         self.source_preview_thread: threading.Thread | None = None
         self.source_preview_request_id = 0
+        self.qpsc_notifications_all: list[QpscNotification] = []
+        self.heat_candidates: list[HeatCandidate] = []
         self.scanning = False
         self.particles: list[Particle] = []
         self.last_animation = time.monotonic()
@@ -337,6 +540,13 @@ class OikawaApp(tk.Tk):
             **self._button_style(COLORS["panel_light"]),
         )
         self.search_button.pack(side="left", padx=(8, 0))
+        self.heat_search_button = tk.Button(
+            search_row,
+            text=UI_TEXT["button_heat_search"],
+            command=self._start_heat_search,
+            **self._button_style(COLORS["heat"]),
+        )
+        self.heat_search_button.pack(side="left", padx=(8, 0))
 
         self.missing_frame = tk.Frame(
             self,
@@ -426,6 +636,25 @@ class OikawaApp(tk.Tk):
         self.qpsc_import_frame = tk.Frame(notice, bg=COLORS["background"])
         self.qpsc_import_frame.pack(fill="x", pady=(8, 0))
 
+        heat = tk.Frame(
+            self,
+            bg=COLORS["background"],
+            highlightbackground=COLORS["line_soft"],
+            highlightthickness=1,
+            padx=12,
+            pady=8,
+        )
+        heat.place(relx=0.66, rely=0.34, relwidth=0.31, relheight=0.13)
+        tk.Label(
+            heat,
+            text=UI_TEXT["section_heat_candidates"],
+            fg=COLORS["muted"],
+            bg=COLORS["background"],
+            font=FONT_LABEL,
+        ).pack(anchor="w")
+        self.heat_candidates_frame = tk.Frame(heat, bg=COLORS["background"])
+        self.heat_candidates_frame.pack(fill="both", expand=True, pady=(5, 0))
+
         self.source_preview_status_var = tk.StringVar(value=UI_TEXT["source_preview_empty"])
         source_preview = tk.Frame(
             self,
@@ -506,9 +735,15 @@ class OikawaApp(tk.Tk):
                 line3=UI_TEXT["qpsc_no_suggestion"],
             )
         )
+        self.qpsc_notifications_all = read_qpsc_notification_events(limit=30)
         self._render_qpsc_import_notifications(read_qpsc_notifications(limit=3))
+        self._refresh_heat_candidates()
         if schedule:
             self.after(10000, self._refresh_qpsc_notifications)
+
+    def _refresh_heat_candidates(self, query: str = "") -> None:
+        self.heat_candidates = build_heat_candidates(self.qpsc_notifications_all, query=query, limit=3)
+        self._render_heat_candidates(self.heat_candidates)
 
     def _render_qpsc_import_notifications(self, notifications: list[QpscNotification]) -> None:
         if not hasattr(self, "qpsc_import_frame"):
@@ -565,6 +800,50 @@ class OikawaApp(tk.Tk):
                 **self._small_button_style(COLORS["panel_light"]),
             ).pack(side="left")
 
+    def _render_heat_candidates(self, candidates: list[HeatCandidate]) -> None:
+        if not hasattr(self, "heat_candidates_frame"):
+            return
+        for child in self.heat_candidates_frame.winfo_children():
+            child.destroy()
+        if not candidates:
+            tk.Label(
+                self.heat_candidates_frame,
+                text=UI_TEXT["heat_candidate_empty"],
+                fg=COLORS["muted"],
+                bg=COLORS["background"],
+                font=FONT_JP_SMALL,
+                wraplength=300,
+                justify="left",
+            ).pack(anchor="w")
+            return
+        for candidate in candidates[:3]:
+            row = tk.Frame(self.heat_candidates_frame, bg=COLORS["background"], cursor="hand2")
+            row.pack(fill="x", pady=(0, 4))
+            row.bind("<Button-1>", lambda _event, selected=candidate: self._open_heat_candidate(selected))
+            title_label = tk.Label(
+                row,
+                text=candidate.title,
+                fg=COLORS["text"],
+                bg=COLORS["background"],
+                font=FONT_JP_SMALL,
+                wraplength=250,
+                justify="left",
+                cursor="hand2",
+            )
+            title_label.pack(side="left", fill="x", expand=True)
+            title_label.bind("<Button-1>", lambda _event, selected=candidate: self._open_heat_candidate(selected))
+            reason_text = UI_TEXT.get(f"heat_reason_{candidate.reason}", UI_TEXT["section_heat_candidates"])
+            reason_label = tk.Label(
+                row,
+                text=reason_text,
+                fg=COLORS["muted"],
+                bg=COLORS["background"],
+                font=FONT_LABEL,
+                cursor="hand2",
+            )
+            reason_label.pack(side="right", padx=(8, 0))
+            reason_label.bind("<Button-1>", lambda _event, selected=candidate: self._open_heat_candidate(selected))
+
     def _small_button_style(self, background: str) -> dict[str, object]:
         style = self._button_style(background)
         style.update({"padx": 8, "pady": 4})
@@ -580,6 +859,13 @@ class OikawaApp(tk.Tk):
         if not path_text:
             return
         self._show_source_path(path_text, notification.title)
+
+    def _open_heat_candidate(self, candidate: HeatCandidate) -> None:
+        if candidate.related_path:
+            self._show_source_path(candidate.related_path, candidate.title)
+            return
+        self.source_preview_status_var.set(UI_TEXT["heat_candidate_no_related"])
+        self._set_source_preview_text(f"{candidate.title}\n{UI_TEXT['heat_candidate_no_related']}")
 
     def _button_style(self, background: str) -> dict[str, object]:
         return {
@@ -696,26 +982,74 @@ class OikawaApp(tk.Tk):
         self.status_var.set(UI_TEXT["status_searching"])
         self.summary_var.set(UI_TEXT["status_searching"])
         self.search_button.configure(text=UI_TEXT["button_searching"], state="disabled")
+        self.heat_search_button.configure(state="disabled")
         self._render_loading_card(UI_TEXT["status_searching"])
-        self.search_thread = threading.Thread(target=self._memory_search_worker, args=(self.memory_folder, query), daemon=True)
+        self.search_thread = threading.Thread(
+            target=self._memory_search_worker,
+            args=(self.memory_folder, query, False, []),
+            daemon=True,
+        )
         self.search_thread.start()
 
-    def _memory_search_worker(self, memory_folder: Path, query: str) -> None:
+    def _start_heat_search(self) -> None:
+        if self.search_thread and self.search_thread.is_alive():
+            return
+        if not self.memory_folder:
+            self.status_var.set(UI_TEXT["memory_folder_missing"])
+            self._render_memory_state()
+            return
+        query = self.search_entry.get().strip()
+        if not query:
+            self._refresh_heat_candidates()
+            return
+
+        notifications = read_qpsc_notification_events(limit=30)
+        self.qpsc_notifications_all = notifications
+        self._refresh_heat_candidates(query)
+        self.status_var.set(UI_TEXT["status_heat_searching"])
+        self.summary_var.set(UI_TEXT["status_heat_searching"])
+        self.search_button.configure(state="disabled")
+        self.heat_search_button.configure(text=UI_TEXT["button_heat_searching"], state="disabled")
+        self._render_loading_card(UI_TEXT["status_heat_searching"])
+        self.search_thread = threading.Thread(
+            target=self._memory_search_worker,
+            args=(self.memory_folder, query, True, notifications),
+            daemon=True,
+        )
+        self.search_thread.start()
+
+    def _memory_search_worker(
+        self,
+        memory_folder: Path,
+        query: str,
+        heat_search: bool,
+        notifications: list[QpscNotification],
+    ) -> None:
         try:
             documents, skipped = scan_memory(memory_folder)
-            hits = build_search_hits(documents, query, memory_folder)
-            self.events.put(("search_done", (query, hits, skipped)))
+            if heat_search:
+                hits = build_heat_search_hits(documents, query, memory_folder, notifications)
+            else:
+                hits = build_search_hits(documents, query, memory_folder)
+            self.events.put(("search_done", (heat_search, query, hits, skipped)))
         except Exception as exc:  # noqa: BLE001
-            self.events.put(("search_error", exc))
+            self.events.put(("search_error", (heat_search, exc)))
 
     def _handle_search_done(self, payload: object) -> None:
-        query, hits, skipped = payload
+        heat_search, query, hits, skipped = payload
+        assert isinstance(heat_search, bool)
         assert isinstance(query, str)
         assert isinstance(hits, list)
         self.search_button.configure(text=UI_TEXT["button_search"], state="normal")
-        self.status_var.set(UI_TEXT["status_search_complete"] if hits else UI_TEXT["status_no_search_results"])
+        self.heat_search_button.configure(text=UI_TEXT["button_heat_search"], state="normal")
+        if heat_search:
+            self.status_var.set(UI_TEXT["status_heat_search_complete"] if hits else UI_TEXT["status_no_heat_results"])
+            summary_text = UI_TEXT["summary_heat_search"]
+        else:
+            self.status_var.set(UI_TEXT["status_search_complete"] if hits else UI_TEXT["status_no_search_results"])
+            summary_text = UI_TEXT["summary_search"]
         self.summary_var.set(
-            UI_TEXT["summary_search"].format(
+            summary_text.format(
                 results=len(hits),
                 skipped=skipped,
             )
@@ -723,9 +1057,11 @@ class OikawaApp(tk.Tk):
         self._render_search_hits(hits)
 
     def _handle_search_error(self, payload: object) -> None:
+        _heat_search, error = payload
         self.search_button.configure(text=UI_TEXT["button_search"], state="normal")
+        self.heat_search_button.configure(text=UI_TEXT["button_heat_search"], state="normal")
         self.status_var.set(UI_TEXT["status_error"])
-        self.summary_var.set(str(payload))
+        self.summary_var.set(str(error))
         self._render_loading_card(UI_TEXT["status_error"])
 
     def _start_scan(self) -> None:
@@ -972,10 +1308,7 @@ class OikawaApp(tk.Tk):
         self.source_preview_thread.start()
 
     def _resolve_source_path(self, source_path: str | Path) -> Path:
-        path = Path(str(source_path).strip())
-        if path.is_absolute() or not self.memory_folder:
-            return path
-        return self.memory_folder / path
+        return _resolve_related_source_path(source_path, self.memory_folder)
 
     def _source_preview_worker(self, request_id: int, path: Path, title: str) -> None:
         try:

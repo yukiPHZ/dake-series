@@ -31,11 +31,17 @@ def brainz_notification_candidates() -> list[Path]:
     ]
 
 
-def read_qpsc_notifications(limit: int = 3) -> list[QpscNotification]:
+def read_qpsc_notification_events(limit: int | None = None) -> list[QpscNotification]:
     events = _read_events(_notification_path())
-    unread = [event for event in events if str(event.get("status", "") or "") == "unread"]
-    unread.sort(key=lambda event: str(event.get("created_at", "") or ""), reverse=True)
-    return [_to_notification(event) for event in unread[:limit]]
+    events.sort(key=lambda event: str(event.get("created_at", "") or ""), reverse=True)
+    if limit is not None:
+        events = events[:limit]
+    return [_to_notification(event) for event in events]
+
+
+def read_qpsc_notifications(limit: int = 3) -> list[QpscNotification]:
+    unread = [event for event in read_qpsc_notification_events() if event.status == "unread"]
+    return unread[:limit]
 
 
 def mark_qpsc_notification_read(notification_id: str) -> bool:

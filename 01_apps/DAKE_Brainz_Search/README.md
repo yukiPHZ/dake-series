@@ -40,6 +40,8 @@ Phase 2では、BRAINZで発生した取り込みをOIKAWA側の通知・提案�
 
 Phase 3以降、原本表示と読む導線はOIKAWA側へ寄せます。BRAINZは保存・取り込み・indexを優先し、前面の閲覧体験を増やしすぎない方針です。
 
+Phase 4以降、熾火表示と熱検索入口もOIKAWA側で扱います。BRAINZは通知イベントと原本への `related_path` を残し、候補表示や読み戻しはOIKAWAに寄せます。
+
 ## Phase 1でできること
 
 - ローカル記憶フォルダの指定
