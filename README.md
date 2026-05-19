@@ -36,4 +36,18 @@ Built around the idea:
 
 ---
 
+## QPSC Phase 1
+
+QPSC（Quiet Personal Cognitive System）は、BRAINZ / OIKAWA / DAKE_Wake_Brainz を静かに分担させるための構成方針です。
+
+- BRAINZ = 深層記憶・取り込み・index・設定
+- OIKAWA = 検索・原本表示・熾火・熱提案・通知
+- DAKE_Wake_Brainz = 起床・遠隔起動・状態確認レイヤー
+- Ollama = ローカル読解補助
+- OpenClaw = ローカルエージェント / Gateway候補
+
+Phase 1では完全統合せず、BRAINZが起床状態をローカル状態ファイルへ記録し、OIKAWAが小さな通知欄でその状態を表示します。BRAINZは「見るアプリ」ではなく記憶庫・取り込み母艦へ寄せ、OIKAWAを検索・原本表示・熱検索・熾火・熱提案・通知表示の前面UIとして育てます。
+
+---
+
 © 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta

@@ -2,6 +2,18 @@
 
 LIVA Z 常時ON機で動かす、3070Ti メインPC用の小さな補助脳 GATE です。Android スマホのブラウザから LAN/Tailscale 経由でアクセスし、Phase 1 では Wake on LAN と状態確認だけを行います。
 
+## QPSCでの役割
+
+QPSC（Quiet Personal Cognitive System）では、DAKE_Wake_Brainzを起床・遠隔起動・状態確認レイヤーとして扱います。
+
+- BRAINZ = 深層記憶・取り込み・index・設定
+- OIKAWA = 検索・原本表示・熾火・熱提案・通知
+- DAKE_Wake_Brainz = 起床・遠隔起動・状態確認レイヤー
+- Ollama = ローカル読解補助
+- OpenClaw = ローカルエージェント / Gateway候補
+
+Phase 1ではBRAINZ本体を操作せず、PC起床と状態確認を担います。BRAINZの起床状態はBRAINZ側のローカル状態ファイル、前面通知はOIKAWA側へ寄せます。
+
 ## 起動
 
 ```bat

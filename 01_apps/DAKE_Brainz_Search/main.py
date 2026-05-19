@@ -310,6 +310,7 @@ def run_smoke_test() -> int:
     from core.notifications import NotificationQueue
     from core.ollama_client import check_ollama
     from core.ollama_embeddings import DEFAULT_EMBED_MODEL, check_embedding_status
+    from core.qpsc_status import AWAKE_STATUS_MESSAGE, write_brainz_awake_status
     from core.remote_queue import count_pending_queue_files, process_remote_queue_folder
     from core.search_engine import SearchEngine
     from core.slack_inbox import poll_slack_inbox, slack_ts_float
@@ -368,6 +369,16 @@ def run_smoke_test() -> int:
             or config_data.aru_poll_interval_seconds != 5
         ):
             raise RuntimeError("aru inbox config did not roundtrip")
+        qpsc_status = write_brainz_awake_status(
+            path=root / "qpsc_brainz_status.json",
+            started_at="2026-05-19T00:00:00",
+        )
+        if (
+            qpsc_status.get("brainz_awake") is not True
+            or qpsc_status.get("status_message") != AWAKE_STATUS_MESSAGE
+            or not qpsc_status.get("last_heartbeat_at")
+        ):
+            raise RuntimeError("qpsc awake status did not roundtrip")
         parsed_interval, interval_valid = parse_slack_poll_interval("9")
         if parsed_interval != 9 or not interval_valid:
             raise RuntimeError("slack interval parser rejected a valid value")
@@ -988,6 +999,7 @@ def run_gui(launch_check: bool = False) -> int:
     from core.notifications import NotificationItem, NotificationQueue
     from core.ollama_client import check_ollama
     from core.ollama_embeddings import check_embedding_status
+    from core.qpsc_status import write_brainz_awake_status
     from core.remote_queue import RemoteQueueBatchResult, count_pending_queue_files, process_remote_queue_folder
     from core.search_engine import SearchEngine, SearchResponse
     from core.slack_inbox import SlackInboxResult, SlackTaskResult, poll_slack_inbox
@@ -1067,11 +1079,13 @@ def run_gui(launch_check: bool = False) -> int:
             self.notification_visible = False
             self.last_slack_status = ""
             self.last_aru_status = ""
+            self.qpsc_started_at = now_iso()
 
             self._apply_icon()
             self._build_ui()
             self._set_memory_folder(self.config_data.memory_folder, persist=False)
             self._append_log(UI_TEXT["log_ready"])
+            self._write_qpsc_awake_status()
             self._update_watch_status()
             if self.config_data.watch_folder:
                 self._append_log(UI_TEXT["log_watch_initialized"])
@@ -1091,6 +1105,8 @@ def run_gui(launch_check: bool = False) -> int:
                 self.after(3800, self._poll_aru_inbox)
             if launch_check:
                 self.after(1200, self._launch_check_finish)
+            else:
+                self.after(30000, self._heartbeat_qpsc_status)
 
         def _apply_icon(self) -> None:
             try:
@@ -3352,6 +3368,16 @@ def run_gui(launch_check: bool = False) -> int:
                 self.embedding_var.set(UI_TEXT["status_embedding_unavailable"])
                 self.semantic_status_var.set(UI_TEXT["status_semantic_search_disabled"])
                 self.semantic_checkbox.configure(state="disabled")
+
+        def _write_qpsc_awake_status(self) -> None:
+            try:
+                write_brainz_awake_status(started_at=self.qpsc_started_at)
+            except Exception:
+                pass
+
+        def _heartbeat_qpsc_status(self) -> None:
+            self._write_qpsc_awake_status()
+            self.after(30000, self._heartbeat_qpsc_status)
 
         def _launch_check_finish(self) -> None:
             print(UI_TEXT["launch_check_ok"])

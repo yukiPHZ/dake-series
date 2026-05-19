@@ -15,6 +15,7 @@ import tkinter as tk
 from core.config import AppConfig, ConfigStore, existing_folder, open_path, resolve_memory_folder
 from core.heat_engine import AnalysisResult, analyze_documents
 from core.markdown_writer import write_suggestion
+from core.qpsc_status import is_brainz_awake, read_brainz_status
 from core.scanner import scan_memory
 
 
@@ -24,6 +25,7 @@ COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
 
 UI_TEXT = {
     "app_title": "OIKAWA",
+    "copyright": COPYRIGHT,
     "app_subtitle": "記憶層を巡回する観測装置",
     "button_scan": "巡回する",
     "button_scanning": "巡回中",
@@ -48,6 +50,15 @@ UI_TEXT = {
     "card_excerpt": "抜粋",
     "card_score": "score {score}",
     "card_empty": "まだ浮上したカードはありません",
+    "section_qpsc_notifications": "QPSC通知",
+    "qpsc_brainz_awake": "BRAINZ is awake.",
+    "qpsc_memory_awake": "記憶庫は起きています。",
+    "qpsc_waiting": "BRAINZの起床通知を待っています。",
+    "qpsc_memory_waiting": "記憶庫の状態を確認中です。",
+    "qpsc_heartbeat_quiet": "BRAINZ heartbeat is quiet.",
+    "qpsc_memory_heartbeat_quiet": "記憶庫の鼓動を待っています。",
+    "qpsc_no_suggestion": "今日の提案はまだありません。",
+    "qpsc_notice_template": "{line1}\n{line2}\n{line3}",
     "footer_source": "local scan / no cloud",
     "launch_check_ok": "LAUNCH CHECK OK",
     "gui_smoke_ok": "GUI SMOKE OK",
@@ -112,6 +123,7 @@ class OikawaApp(tk.Tk):
         self._init_particles()
         self._render_memory_state()
         self._render_empty_cards()
+        self._refresh_qpsc_notifications()
 
         self.after(80, self._animate)
         self.after(100, self._poll_events)
@@ -149,6 +161,7 @@ class OikawaApp(tk.Tk):
         self.status_var = tk.StringVar(value=UI_TEXT["status_idle"])
         self.memory_var = tk.StringVar(value="")
         self.summary_var = tk.StringVar(value=UI_TEXT["summary_idle"])
+        self.qpsc_notification_var = tk.StringVar(value=UI_TEXT["qpsc_waiting"])
 
         header = tk.Frame(self, bg=COLORS["background"])
         header.place(x=30, y=24)
@@ -242,11 +255,37 @@ class OikawaApp(tk.Tk):
         )
         self.scan_button.pack(anchor="e")
 
+        notice = tk.Frame(
+            self,
+            bg=COLORS["background"],
+            highlightbackground=COLORS["line_soft"],
+            highlightthickness=1,
+            padx=14,
+            pady=10,
+        )
+        notice.place(relx=0.97, rely=0.08, anchor="ne")
+        tk.Label(
+            notice,
+            text=UI_TEXT["section_qpsc_notifications"],
+            fg=COLORS["muted"],
+            bg=COLORS["background"],
+            font=FONT_LABEL,
+        ).pack(anchor="w")
+        tk.Label(
+            notice,
+            textvariable=self.qpsc_notification_var,
+            fg=COLORS["text"],
+            bg=COLORS["background"],
+            font=FONT_JP_SMALL,
+            justify="left",
+            wraplength=260,
+        ).pack(anchor="w", pady=(6, 0))
+
         footer = tk.Frame(self, bg=COLORS["background"])
         footer.place(relx=0.04, rely=0.96, anchor="sw")
         tk.Label(
             footer,
-            text=COPYRIGHT,
+            text=UI_TEXT["copyright"],
             fg=COLORS["muted"],
             bg=COLORS["background"],
             font=FONT_LABEL,
@@ -258,6 +297,26 @@ class OikawaApp(tk.Tk):
             bg=COLORS["background"],
             font=FONT_MONO,
         ).pack(anchor="w", pady=(4, 0))
+
+    def _refresh_qpsc_notifications(self) -> None:
+        status = read_brainz_status()
+        if is_brainz_awake(status):
+            line1 = UI_TEXT["qpsc_brainz_awake"]
+            line2 = UI_TEXT["qpsc_memory_awake"]
+        elif status:
+            line1 = UI_TEXT["qpsc_heartbeat_quiet"]
+            line2 = UI_TEXT["qpsc_memory_heartbeat_quiet"]
+        else:
+            line1 = UI_TEXT["qpsc_waiting"]
+            line2 = UI_TEXT["qpsc_memory_waiting"]
+        self.qpsc_notification_var.set(
+            UI_TEXT["qpsc_notice_template"].format(
+                line1=line1,
+                line2=line2,
+                line3=UI_TEXT["qpsc_no_suggestion"],
+            )
+        )
+        self.after(10000, self._refresh_qpsc_notifications)
 
     def _button_style(self, background: str) -> dict[str, object]:
         return {

@@ -12,6 +12,23 @@ BRAINZはChatGPTやCodexの代替AIではありません。ローカルに置い
 
 BRAINZの役割は、忘れない、探せる、関連づく、再投入できる、ChatGPT / Codex / Claude / Gemini の橋渡しをすることです。
 
+## QPSCでの役割
+
+QPSC（Quiet Personal Cognitive System）では、BRAINZを「見るアプリ」ではなく、深層記憶・取り込み・index・設定を担う記憶庫として扱います。
+
+BRAINZ側で管理するもの:
+
+- ペースト投稿取り込み
+- Slack取り込み
+- ChatGPT export取り込み
+- Codex報告取り込み
+- 今後増える接続端末設定
+- 接続設定ページ
+
+検索・原本表示・熱検索・熾火・熱提案・通知表示は、前面UIであるOIKAWAへ寄せていきます。BRAINZのUIは検索閲覧を主目的にせず、脳をイメージした抽象的で微細な動きが漂う程度に整理していく方針です。
+
+起動時には `data/config/qpsc_brainz_status.json` に `brainz_awake`、`started_at`、`last_heartbeat_at`、`status_message` を記録します。起動中は一定間隔で heartbeat を更新し、OIKAWAやDAKE_Wake_Brainzが状態確認に使える導線にします。
+
 ## Phase 1でできること
 
 - ローカル記憶フォルダの指定
@@ -26,6 +43,7 @@ BRAINZの役割は、忘れない、探せる、関連づく、再投入でき�
 - ChatGPTに貼る用まとめ生成
 - Codexに貼る用指示素材生成
 - index更新ログ保存
+- QPSC起床状態ファイルの記録
 
 ## Phase 1でやらないこと
 
