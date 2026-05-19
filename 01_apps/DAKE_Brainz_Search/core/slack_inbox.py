@@ -26,6 +26,7 @@ from core.text_splitter import split_text
 SOURCE_TYPE_SLACK = "slack"
 SOURCE_TYPE_SLACK_INBOX = SOURCE_TYPE_SLACK
 SOURCE_TYPE_SLACK_TASK = "slack_task"
+SOURCE_TYPE_ARU = "aru"
 SLACK_HISTORY_URL = "https://slack.com/api/conversations.history"
 SLACK_PERMALINK_URL = "https://slack.com/api/chat.getPermalink"
 DEFAULT_HISTORY_LIMIT = 200
@@ -118,6 +119,10 @@ def poll_slack_inbox(
     last_ts: str = "",
     poll_timeout_seconds: float = 8.0,
     session: SlackSession | None = None,
+    source_type: str = SOURCE_TYPE_SLACK,
+    folder_name: str = "slack",
+    inbox_label: str = "Slack Inbox",
+    process_tasks: bool = True,
 ) -> SlackInboxResult:
     token = token.strip()
     channel_id = channel_id.strip()
@@ -153,7 +158,7 @@ def poll_slack_inbox(
     if status != "ok":
         return _result(status, last_ts, channel_id, message)
 
-    slack_folder = memory_folder / "slack"
+    slack_folder = memory_folder / safe_folder_name(folder_name)
     imported = 0
     skipped = 0
     failed = 0
@@ -183,7 +188,13 @@ def poll_slack_inbox(
                 files=message_item.files,
                 attachments=message_item.attachments,
             )
-            saved_path, markdown, title = save_slack_markdown(slack_folder, channel_id, message_with_permalink)
+            saved_path, markdown, title = save_slack_markdown(
+                slack_folder,
+                channel_id,
+                message_with_permalink,
+                source_type=source_type,
+                inbox_label=inbox_label,
+            )
             document_id, changed = index_slack_markdown(
                 database=database,
                 saved_path=saved_path,
@@ -191,19 +202,23 @@ def poll_slack_inbox(
                 channel_id=channel_id,
                 message=message_with_permalink,
                 title=title,
+                source_type=source_type,
+                inbox_label=inbox_label,
             )
             if changed:
                 generate_embeddings_for_document(database, document_id, session=embedding_session)
                 imported += 1
             else:
                 skipped += 1
-            task_result = process_slack_task(
-                database=database,
-                memory_folder=memory_folder,
-                channel_id=channel_id,
-                message=message_with_permalink,
-                embedding_session=embedding_session,
-            )
+            task_result = None
+            if process_tasks:
+                task_result = process_slack_task(
+                    database=database,
+                    memory_folder=memory_folder,
+                    channel_id=channel_id,
+                    message=message_with_permalink,
+                    embedding_session=embedding_session,
+                )
             if task_result is not None:
                 task_results.append(task_result)
             saved_files.append(str(saved_path))
@@ -228,6 +243,8 @@ def poll_slack_inbox(
     if items or failed:
         log_path = write_slack_inbox_log(
             channel_id=channel_id,
+            inbox_label=inbox_label,
+            source_type=source_type,
             status=status,
             imported=imported,
             skipped=skipped,
@@ -245,7 +262,7 @@ def poll_slack_inbox(
         saved_files=saved_files,
         channel_id=channel_id,
         channel_label=channel_id,
-        message="slack inbox imported" if imported else "slack connected",
+        message=f"{source_type} inbox imported" if imported else f"{source_type} connected",
         log_path=log_path,
         items=items,
         task_results=task_results,
@@ -349,16 +366,24 @@ def slack_get_json(
     raise ValueError("invalid slack response")
 
 
-def save_slack_markdown(slack_folder: Path, channel_id: str, message: SlackInboxMessage) -> tuple[Path, str, str]:
+def save_slack_markdown(
+    slack_folder: Path,
+    channel_id: str,
+    message: SlackInboxMessage,
+    source_type: str = SOURCE_TYPE_SLACK,
+    inbox_label: str = "Slack Inbox",
+) -> tuple[Path, str, str]:
     slack_folder.mkdir(parents=True, exist_ok=True)
     timestamp = slack_timestamp(message.ts)
-    filename = f"{timestamp.strftime('%Y-%m-%d_%H%M%S')}_{safe_ts(message.ts)}_slack.md"
+    filename = f"{timestamp.strftime('%Y-%m-%d_%H%M%S')}_{safe_ts(message.ts)}_{safe_file_part(source_type)}.md"
     title = build_title(message.text, timestamp)
     markdown = build_slack_markdown(
         title=title,
         channel_id=channel_id,
         message=message,
         timestamp=timestamp,
+        source_type=source_type,
+        inbox_label=inbox_label,
     )
     path = slack_folder / filename
     path.write_text(markdown, encoding="utf-8")
@@ -370,12 +395,14 @@ def build_slack_markdown(
     channel_id: str,
     message: SlackInboxMessage,
     timestamp: datetime,
+    source_type: str = SOURCE_TYPE_SLACK,
+    inbox_label: str = "Slack Inbox",
 ) -> str:
     urls = extract_urls(message.text)
     lines = [
-        "# Slack Inbox",
+        f"# {inbox_label}",
         "",
-        f"source: {SOURCE_TYPE_SLACK}",
+        f"source: {source_type}",
         f"channel: {channel_id}",
         f"user: {message.user}",
         f"timestamp: {timestamp.strftime('%Y-%m-%d %H:%M:%S')}",
@@ -420,6 +447,8 @@ def index_slack_markdown(
     channel_id: str,
     message: SlackInboxMessage,
     title: str,
+    source_type: str = SOURCE_TYPE_SLACK,
+    inbox_label: str = "Slack Inbox",
 ) -> tuple[int, bool]:
     timestamp = slack_timestamp(message.ts).isoformat(timespec="seconds")
     digest = hashlib.sha256(markdown.encode("utf-8", errors="replace")).hexdigest()
@@ -427,13 +456,13 @@ def index_slack_markdown(
     record = DocumentRecord(
         path=str(saved_path.resolve()),
         title=title,
-        source_type=SOURCE_TYPE_SLACK_INBOX,
+        source_type=source_type,
         created_at=timestamp,
         modified_at=timestamp,
         indexed_at=indexed_at,
         hash=digest,
         content=markdown,
-        source_label=f"Slack / {channel_id} / {message.user}",
+        source_label=f"{inbox_label} / {channel_id} / {message.user}",
         conversation_id=channel_id,
         conversation_title=channel_id,
         role=message.user,
@@ -766,6 +795,16 @@ def existing_task_destination(queue_folder: Path, file_name: str) -> Path | None
     return None
 
 
+def safe_folder_name(value: str) -> str:
+    clean = re.sub(r"[^0-9A-Za-z_.-]+", "_", (value or "").strip()).strip("._")
+    return clean or "slack"
+
+
+def safe_file_part(value: str) -> str:
+    clean = re.sub(r"[^0-9A-Za-z_-]+", "_", (value or "").strip()).strip("_")
+    return clean or "slack"
+
+
 def normalize_files(raw_files: Any) -> list[dict[str, str]]:
     if not isinstance(raw_files, list):
         return []
@@ -854,6 +893,8 @@ def safe_ts(ts: str) -> str:
 
 def write_slack_inbox_log(
     channel_id: str,
+    inbox_label: str,
+    source_type: str,
     status: str,
     imported: int,
     skipped: int,
@@ -863,9 +904,11 @@ def write_slack_inbox_log(
     task_results: list[SlackTaskResult],
 ) -> str:
     logs_dir().mkdir(parents=True, exist_ok=True)
-    path = logs_dir() / f"slack_inbox_{now_iso().replace(':', '').replace('-', '').replace('T', '_')}.log"
+    log_prefix = safe_file_part(source_type)
+    path = logs_dir() / f"{log_prefix}_inbox_{now_iso().replace(':', '').replace('-', '').replace('T', '_')}.log"
     lines = [
-        "SLACK INBOX:",
+        f"{inbox_label.upper()}:",
+        f"source_type={source_type}",
         f"channel={channel_id}",
         f"status={status}",
         f"imported={imported}",

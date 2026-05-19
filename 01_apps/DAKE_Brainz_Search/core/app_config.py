@@ -32,6 +32,11 @@ class AppConfig:
     slack_channel_id: str = ""
     slack_poll_interval_seconds: int = 10
     slack_last_ts: str = ""
+    enable_aru_inbox: bool = False
+    aru_slack_token: str = ""
+    aru_channel_id: str = ""
+    aru_poll_interval_seconds: int = 10
+    aru_last_ts: str = ""
     enable_notifications: bool = True
     last_query: str = ""
     last_indexed_at: str = ""
@@ -132,6 +137,11 @@ class ConfigStore:
             slack_channel_id=str(data.get("slack_channel_id", "") or ""),
             slack_poll_interval_seconds=parse_int(data.get("slack_poll_interval_seconds", 10), default=10, minimum=5, maximum=15),
             slack_last_ts=str(data.get("slack_last_ts", "") or ""),
+            enable_aru_inbox=bool(data.get("enable_aru_inbox", False)),
+            aru_slack_token=str(data.get("aru_slack_token", "") or ""),
+            aru_channel_id=str(data.get("aru_channel_id", "") or ""),
+            aru_poll_interval_seconds=parse_int(data.get("aru_poll_interval_seconds", 10), default=10, minimum=5, maximum=15),
+            aru_last_ts=str(data.get("aru_last_ts", "") or ""),
             enable_notifications=bool(data.get("enable_notifications", True)),
             last_query=str(data.get("last_query", "") or ""),
             last_indexed_at=str(data.get("last_indexed_at", "") or ""),

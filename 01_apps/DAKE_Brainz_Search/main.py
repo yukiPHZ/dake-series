@@ -53,6 +53,11 @@ UI_TEXT = {
     "label_slack_channel": "Channel ID",
     "label_slack_interval": "Poll sec 5-15",
     "button_save_slack": "Save Slack",
+    "section_aru_inbox": "Aru Inbox",
+    "checkbox_enable_aru_inbox": "Enable Aru Inbox",
+    "label_aru_token": "Aru Slack Token",
+    "label_aru_channel": "Aru Channel ID",
+    "button_save_aru": "Save Aru",
     "results_title": "Search Results",
     "embers_results_title": "熾火",
     "source_view_title": "Markdown正本",
@@ -133,8 +138,21 @@ UI_TEXT = {
     "status_slack_task_detected": "SLACK TASK DETECTED",
     "status_slack_task_processed": "SLACK TASK PROCESSED",
     "status_slack_task_failed": "SLACK TASK FAILED",
+    "status_aru_connected": "ARU: CONNECTED",
+    "status_aru_import_complete": "ARU IMPORT COMPLETE",
+    "status_aru_config_missing": "ARU CONFIG MISSING",
+    "status_aru_auth_failed": "ARU AUTH FAILED",
+    "status_aru_channel_not_found": "ARU CHANNEL NOT FOUND",
+    "status_aru_timeout": "ARU TIMEOUT",
+    "status_aru_disabled": "ARU: OFF",
+    "status_aru_ready": "ARU: READY",
+    "status_aru_error": "ARU ERROR",
+    "status_aru_config_saved": "ARU CONFIG SAVED",
+    "status_aru_config_save_failed": "ARU CONFIG SAVE FAILED",
     "label_slack_last_import": "LAST IMPORT: {time}",
     "label_slack_channel_status": "CHANNEL: {channel}",
+    "label_aru_last_import": "ARU LAST IMPORT: {time}",
+    "label_aru_channel_status": "ARU CHANNEL: {channel}",
     "label_last_task": "LAST TASK: {task}",
     "log_slack_import": "SLACK INBOX: New message imported. imported={imported} skipped={skipped} failed={failed}",
     "log_slack_status": "SLACK INBOX: {status} {message}",
@@ -142,11 +160,18 @@ UI_TEXT = {
     "log_slack_config_saved": "SLACK CONFIG SAVED: enabled={enabled} channel={channel} interval={interval}s",
     "log_slack_config_save_failed": "SLACK CONFIG SAVE FAILED: missing={missing}",
     "log_slack_config_reloaded": "SLACK CONFIG RELOADED: enabled={enabled} channel={channel} interval={interval}s",
+    "log_aru_import": "ARU INBOX: New fragment imported. imported={imported} skipped={skipped} failed={failed}",
+    "log_aru_status": "ARU INBOX: {status} {message}",
+    "log_aru_file": "ARU LOG: {path}",
+    "log_aru_config_saved": "ARU CONFIG SAVED: enabled={enabled} channel={channel}",
+    "log_aru_config_save_failed": "ARU CONFIG SAVE FAILED: missing={missing}",
+    "log_aru_config_reloaded": "ARU CONFIG RELOADED: enabled={enabled} channel={channel}",
     "log_slack_task_detected": "SLACK TASK: {task_type} / {query}",
     "log_slack_task_processed": "Slack task processed: status={status} changed={changed} duplicate={duplicate}",
     "log_slack_task_failed": "Slack task failed: {task_type} / {error}",
     "phrase_slack_memory_saved": "\u88dc\u52a9\u8133\uff1aSlack Inbox\u3092\u53d6\u308a\u8fbc\u307f\u307e\u3057\u305f\u3002",
     "phrase_slack_task_received": "\u88dc\u52a9\u8133\uff1aSlack task\u3092\u53d7\u4fe1\u3057\u307e\u3057\u305f\u3002",
+    "phrase_aru_memory_saved": "補助脳：在る断片を記憶しました。",
     "log_embers_search": "EMBERS: {query}",
     "status_markdown_loading": "READING SOURCE...",
     "status_markdown_loaded": "SOURCE LOADED",
@@ -215,6 +240,8 @@ UI_TEXT = {
     "notify_slack_import_complete": "Slack Inboxを取り込みました。",
     "notify_slack_import_failed": "Slack Inboxの取得に失敗しました。",
     "notify_slack_task_received": "Slack taskを受信しました。",
+    "notify_aru_import_complete": "Aru Inboxを取り込みました。",
+    "notify_aru_import_failed": "Aru Inboxの取得に失敗しました。",
     "notify_handoff_complete": "{kind} handoffを生成しました。",
     "notify_remote_queue_detected": "Remote Queueを受け取りました。",
     "notify_remote_queue_processed": "Remote Queueを処理しました。",
@@ -312,6 +339,11 @@ def run_smoke_test() -> int:
                 slack_channel_id="C123SMOKE",
                 slack_poll_interval_seconds=5,
                 slack_last_ts="0",
+                enable_aru_inbox=True,
+                aru_slack_token="xoxb-aru-token",
+                aru_channel_id="CARUSMOKE",
+                aru_poll_interval_seconds=5,
+                aru_last_ts="0",
                 enable_notifications=False,
             )
         )
@@ -329,6 +361,13 @@ def run_smoke_test() -> int:
             or config_data.slack_poll_interval_seconds != 5
         ):
             raise RuntimeError("slack inbox config did not roundtrip")
+        if (
+            not config_data.enable_aru_inbox
+            or config_data.aru_slack_token != "xoxb-aru-token"
+            or config_data.aru_channel_id != "CARUSMOKE"
+            or config_data.aru_poll_interval_seconds != 5
+        ):
+            raise RuntimeError("aru inbox config did not roundtrip")
         parsed_interval, interval_valid = parse_slack_poll_interval("9")
         if parsed_interval != 9 or not interval_valid:
             raise RuntimeError("slack interval parser rejected a valid value")
@@ -600,6 +639,43 @@ def run_smoke_test() -> int:
         )
         if backlog_result.imported != 1 or slack_ts_float(backlog_result.latest_ts) <= slack_ts_float(slack_ts):
             raise RuntimeError("slack backlog sync did not import only newer messages")
+        aru_ts = f"{int(time.time()) + 2}.{str(time.time_ns())[-6:]}"
+        aru_text = f"#aru 火照りが解けた 在る断片 {unique_suffix}\nnote:\nこれはtaskではなく正本です。"
+        aru_result = poll_slack_inbox(
+            database=database,
+            memory_folder=root,
+            token="xoxb-aru-token",
+            channel_id="CARUSMOKE",
+            last_ts="",
+            session=FakeSlackSession(messages=[{"ts": aru_ts, "user": "UARU", "text": aru_text}]),
+            source_type="aru",
+            folder_name="aru",
+            inbox_label="Aru Inbox",
+            process_tasks=False,
+        )
+        if aru_result.imported != 1 or aru_result.task_results:
+            raise RuntimeError("aru inbox import failed")
+        if not aru_result.saved_files or "\\aru\\" not in str(aru_result.saved_files[0]).lower():
+            raise RuntimeError("aru markdown was not saved under aru folder")
+        aru_backlog_result = poll_slack_inbox(
+            database=database,
+            memory_folder=root,
+            token="xoxb-aru-token",
+            channel_id="CARUSMOKE",
+            last_ts=aru_ts,
+            session=FakeSlackSession(
+                messages=[
+                    {"ts": f"{int(slack_ts_float(aru_ts)) - 1}.000001", "user": "UARU", "text": f"older aru {unique_suffix}"},
+                    {"ts": f"{int(slack_ts_float(aru_ts)) + 1}.000002", "user": "UARU", "text": f"#embers 在る backlog {unique_suffix}"},
+                ]
+            ),
+            source_type="aru",
+            folder_name="aru",
+            inbox_label="Aru Inbox",
+            process_tasks=False,
+        )
+        if aru_backlog_result.imported != 1:
+            raise RuntimeError("aru backlog sync did not import newer message")
         slack_auth = poll_slack_inbox(
             database=database,
             memory_folder=root,
@@ -676,11 +752,17 @@ def run_smoke_test() -> int:
         raise RuntimeError("slack note task was not indexed as remote_queue_note")
     if not engine.search("Slack import task target memory", limit=10):
         raise RuntimeError("slack import task did not index target file")
+    aru_results = engine.search(f"在る断片 {unique_suffix}", limit=10)
+    aru_match = next((result for result in aru_results if result.source_type == "aru"), None)
+    if aru_match is None:
+        raise RuntimeError("aru source search returned no result")
+    if "これはtaskではなく正本です。" not in aru_match.content:
+        raise RuntimeError("aru canonical text was not preserved")
 
     file_results = engine.search(UI_TEXT["smoke_query_memory"], limit=10)
     if not file_results:
         raise RuntimeError("file search returned no results")
-    non_file_sources = {"chatgpt_export", "codex_result", "codex_report_auto", "slack", "slack_inbox", "slack_task"}
+    non_file_sources = {"chatgpt_export", "codex_result", "codex_report_auto", "slack", "slack_inbox", "slack_task", "aru"}
     file_match = next((result for result in file_results if result.source_type not in non_file_sources), None)
     if file_match is None:
         file_match_results = engine.search(UI_TEXT["smoke_query_git"], limit=10)
@@ -759,6 +841,9 @@ def run_smoke_test() -> int:
     flow_slack = engine.memory_flow(slack_match, semantic_enabled=False, ascending=True)
     if not any(item.result.source_type in {"slack", "slack_inbox"} for item in flow_slack.items):
         raise RuntimeError("slack memory flow did not include slack")
+    flow_aru = engine.memory_flow(aru_match, semantic_enabled=False, ascending=True)
+    if not any(item.result.source_type == "aru" for item in flow_aru.items):
+        raise RuntimeError("aru memory flow did not include aru")
 
     flow_file = engine.memory_flow(file_match, semantic_enabled=False, ascending=True)
     if not any(item.result.source_type not in non_file_sources for item in flow_file.items):
@@ -794,6 +879,7 @@ def run_smoke_test() -> int:
     print(f"memory_flow_codex={len(flow_codex.items)}")
     print(f"memory_flow_codex_report={len(flow_codex_report.items)}")
     print(f"memory_flow_slack={len(flow_slack.items)}")
+    print(f"memory_flow_aru={len(flow_aru.items)}")
     print(f"memory_flow_file={len(flow_file.items)}")
     print(f"memory_flow_semantic={flow_semantic.semantic_available}")
     print(f"watch_new_detected={len(watch_detection.changed_files)}")
@@ -809,6 +895,7 @@ def run_smoke_test() -> int:
     print(f"slack_duplicate_skipped={slack_duplicate.skipped}")
     print(f"slack_tasks={len(slack_task_result.task_results)}")
     print(f"slack_task_duplicates={sum(1 for task in slack_task_duplicate.task_results if task.skipped_duplicate)}")
+    print(f"aru_imported={aru_result.imported}")
     print(f"gpu_detected={gpu_status.gpu_detected}")
     return 0
 
@@ -950,6 +1037,7 @@ def run_gui(launch_check: bool = False) -> int:
             self.remote_queue_thread: threading.Thread | None = None
             self.codex_report_thread: threading.Thread | None = None
             self.slack_thread: threading.Thread | None = None
+            self.aru_thread: threading.Thread | None = None
             self.current_results: list[SearchResult] = []
             self.current_related_results: list[SearchResult] = []
             self.current_flow_items: list[MemoryFlowItem] = []
@@ -963,6 +1051,7 @@ def run_gui(launch_check: bool = False) -> int:
             self.notifications_var = ctk.BooleanVar(value=self.config_data.enable_notifications)
             self.remote_queue_var = ctk.BooleanVar(value=self.config_data.enable_remote_queue)
             self.slack_inbox_var = ctk.BooleanVar(value=self.config_data.enable_slack_inbox)
+            self.aru_inbox_var = ctk.BooleanVar(value=self.config_data.enable_aru_inbox)
             self.flow_sort_ascending = True
             self.flow_request_id = 0
             self.flow_cache: dict[tuple[int, bool, bool], MemoryFlowResponse] = {}
@@ -973,9 +1062,11 @@ def run_gui(launch_check: bool = False) -> int:
             self.remote_queue_poll_interval_ms = 8000
             self.codex_report_poll_interval_ms = 8000
             self.slack_poll_interval_ms = max(5000, int(self.config_data.slack_poll_interval_seconds) * 1000)
+            self.aru_poll_interval_ms = max(5000, int(self.config_data.aru_poll_interval_seconds) * 1000)
             self.notification_queue = NotificationQueue(history_limit=3)
             self.notification_visible = False
             self.last_slack_status = ""
+            self.last_aru_status = ""
 
             self._apply_icon()
             self._build_ui()
@@ -990,12 +1081,14 @@ def run_gui(launch_check: bool = False) -> int:
             self._update_remote_queue_status()
             self._update_codex_report_status()
             self._update_slack_status()
+            self._update_aru_status()
             self.after(100, self._poll_events)
             if not launch_check:
                 self.after(1500, self._poll_watch_folder)
                 self.after(2200, self._poll_remote_queue)
                 self.after(2800, self._poll_codex_reports)
                 self.after(3400, self._poll_slack_inbox)
+                self.after(3800, self._poll_aru_inbox)
             if launch_check:
                 self.after(1200, self._launch_check_finish)
 
@@ -1342,20 +1435,83 @@ def run_gui(launch_check: bool = False) -> int:
                     anchor="w",
                 ).grid(row=slack_index, column=0, sticky="ew", padx=16, pady=1)
 
-            self._section_title(left, UI_TEXT["index_title"], 29)
+            self._section_title(left, UI_TEXT["section_aru_inbox"], 29)
+            self.aru_token_entry = ctk.CTkEntry(
+                left,
+                height=28,
+                placeholder_text=UI_TEXT["label_aru_token"],
+                show="*",
+                fg_color=COLORS["input"],
+                border_color=COLORS["border"],
+                text_color=COLORS["text"],
+                font=(self.status_font_family, FONT_SIZES["micro"]),
+            )
+            self.aru_token_entry.grid(row=30, column=0, sticky="ew", padx=16, pady=(0, 5))
+            self.aru_token_entry.insert(0, self.config_data.aru_slack_token)
+            self.aru_channel_entry = ctk.CTkEntry(
+                left,
+                height=28,
+                placeholder_text=UI_TEXT["label_aru_channel"],
+                fg_color=COLORS["input"],
+                border_color=COLORS["border"],
+                text_color=COLORS["text"],
+                font=(self.status_font_family, FONT_SIZES["micro"]),
+            )
+            self.aru_channel_entry.grid(row=31, column=0, sticky="ew", padx=16, pady=(0, 5))
+            self.aru_channel_entry.insert(0, self.config_data.aru_channel_id)
+            aru_control_row = ctk.CTkFrame(left, fg_color="transparent")
+            aru_control_row.grid(row=32, column=0, sticky="ew", padx=16, pady=(0, 5))
+            aru_control_row.grid_columnconfigure((0, 1), weight=1)
+            self.aru_inbox_checkbox = ctk.CTkCheckBox(
+                aru_control_row,
+                text=UI_TEXT["checkbox_enable_aru_inbox"],
+                variable=self.aru_inbox_var,
+                text_color=COLORS["muted"],
+                fg_color=COLORS["accent"],
+                hover_color=COLORS["accent_hover"],
+                border_color=COLORS["border"],
+                font=(self.status_font_family, FONT_SIZES["micro"]),
+                command=self._toggle_aru_inbox,
+            )
+            self.aru_inbox_checkbox.grid(row=0, column=0, sticky="w", padx=(0, 6))
+            ctk.CTkButton(
+                aru_control_row,
+                text=UI_TEXT["button_save_aru"],
+                height=28,
+                fg_color=COLORS["panel_soft"],
+                hover_color=COLORS["accent_soft"],
+                font=(self.status_font_family, FONT_SIZES["micro"]),
+                command=self._save_aru_settings,
+            ).grid(row=0, column=1, sticky="ew", padx=(6, 0))
+            self.aru_status_var = ctk.StringVar(value=UI_TEXT["status_aru_disabled"])
+            self.aru_last_import_var = ctk.StringVar(value=UI_TEXT["label_aru_last_import"].format(time="-"))
+            self.aru_channel_var = ctk.StringVar(value=UI_TEXT["label_aru_channel_status"].format(channel="-"))
+            for aru_index, variable in enumerate(
+                (self.aru_status_var, self.aru_last_import_var, self.aru_channel_var),
+                start=33,
+            ):
+                ctk.CTkLabel(
+                    left,
+                    textvariable=variable,
+                    text_color=COLORS["muted"],
+                    font=(self.status_font_family, FONT_SIZES["micro"]),
+                    anchor="w",
+                ).grid(row=aru_index, column=0, sticky="ew", padx=16, pady=1)
+
+            self._section_title(left, UI_TEXT["index_title"], 36)
             self.index_status_var = ctk.StringVar(value=UI_TEXT["index_idle"])
             ctk.CTkLabel(
                 left,
                 textvariable=self.index_status_var,
                 text_color=COLORS["section"],
                 font=(self.status_font_family, FONT_SIZES["body"]),
-            ).grid(row=30, column=0, sticky="w", padx=16, pady=(0, 8))
+            ).grid(row=37, column=0, sticky="w", padx=16, pady=(0, 8))
             self.progress = ctk.CTkProgressBar(left, height=10, progress_color=COLORS["accent"])
             self.progress.set(0)
-            self.progress.grid(row=31, column=0, sticky="ew", padx=16, pady=(0, 12))
+            self.progress.grid(row=38, column=0, sticky="ew", padx=16, pady=(0, 12))
 
             button_row = ctk.CTkFrame(left, fg_color="transparent")
-            button_row.grid(row=32, column=0, sticky="ew", padx=16, pady=(0, 18))
+            button_row.grid(row=39, column=0, sticky="ew", padx=16, pady=(0, 18))
             button_row.grid_columnconfigure((0, 1), weight=1)
             self.index_button = ctk.CTkButton(
                 button_row,
@@ -1379,7 +1535,7 @@ def run_gui(launch_check: bool = False) -> int:
             )
             self.cancel_button.grid(row=0, column=1, sticky="ew", padx=(6, 0))
 
-            self._section_title(left, UI_TEXT["system_title"], 33)
+            self._section_title(left, UI_TEXT["system_title"], 40)
             self.sqlite_var = ctk.StringVar(value=UI_TEXT["status_sqlite_ready"])
             self.cuda_var = ctk.StringVar(value=UI_TEXT["status_cuda_unavailable"])
             self.gpu_var = ctk.StringVar(value=UI_TEXT["status_gpu_missing"])
@@ -1397,7 +1553,7 @@ def run_gui(launch_check: bool = False) -> int:
                     self.semantic_status_var,
                     self.docs_var,
                 ),
-                start=34,
+                start=41,
             ):
                 ctk.CTkLabel(
                     left,
@@ -1407,7 +1563,7 @@ def run_gui(launch_check: bool = False) -> int:
                     anchor="w",
                 ).grid(row=index, column=0, sticky="ew", padx=16, pady=2)
 
-            self._section_title(left, UI_TEXT["section_notifications"], 41)
+            self._section_title(left, UI_TEXT["section_notifications"], 48)
             self.notifications_checkbox = ctk.CTkCheckBox(
                 left,
                 text=UI_TEXT["checkbox_enable_notifications"],
@@ -1419,7 +1575,7 @@ def run_gui(launch_check: bool = False) -> int:
                 font=(self.status_font_family, FONT_SIZES["small"]),
                 command=self._toggle_notifications,
             )
-            self.notifications_checkbox.grid(row=42, column=0, sticky="w", padx=16, pady=(0, 10))
+            self.notifications_checkbox.grid(row=49, column=0, sticky="w", padx=16, pady=(0, 10))
 
             center = self._panel(self, 0)
             center.grid(row=1, column=1, sticky="nsew", padx=8, pady=(0, 12))
@@ -1683,6 +1839,7 @@ def run_gui(launch_check: bool = False) -> int:
                 self.config_data.codex_reports_folder = str(Path(clean) / "codex_reports")
                 self._update_codex_report_status()
             self._update_slack_status()
+            self._update_aru_status()
             if persist:
                 self.config_store.save(self.config_data)
                 if clean:
@@ -1783,6 +1940,54 @@ def run_gui(launch_check: bool = False) -> int:
 
         def _toggle_slack_inbox(self) -> None:
             self._save_slack_settings()
+
+        def _save_aru_settings(self) -> None:
+            token = self.aru_token_entry.get().strip() if hasattr(self, "aru_token_entry") else ""
+            channel_id = self.aru_channel_entry.get().strip() if hasattr(self, "aru_channel_entry") else ""
+            enabled = bool(self.aru_inbox_var.get())
+            missing = []
+            if enabled:
+                missing = slack_config_missing_fields(
+                    memory_folder=self.config_data.memory_folder,
+                    token=token,
+                    channel_id=channel_id,
+                    interval_valid=True,
+                )
+            try:
+                self.config_data.enable_aru_inbox = enabled
+                self.config_data.aru_slack_token = token
+                self.config_data.aru_channel_id = channel_id
+                self.config_data.aru_poll_interval_seconds = max(5, int(self.config_data.aru_poll_interval_seconds or 10))
+                self.config_store.save(self.config_data)
+                self.config_data = self.config_store.load()
+                self.aru_inbox_var.set(self.config_data.enable_aru_inbox)
+                self.aru_poll_interval_ms = max(5000, int(self.config_data.aru_poll_interval_seconds) * 1000)
+                self._append_log(
+                    UI_TEXT["log_aru_config_reloaded"].format(
+                        enabled=self.config_data.enable_aru_inbox,
+                        channel=self.config_data.aru_channel_id or "-",
+                    )
+                )
+                self._update_aru_status()
+                if missing:
+                    self.aru_status_var.set(UI_TEXT["status_aru_config_save_failed"])
+                    self._append_log(UI_TEXT["log_aru_config_save_failed"].format(missing=", ".join(missing)))
+                else:
+                    self.aru_status_var.set(UI_TEXT["status_aru_config_saved"])
+                    self._append_log(
+                        UI_TEXT["log_aru_config_saved"].format(
+                            enabled=self.config_data.enable_aru_inbox,
+                            channel=self.config_data.aru_channel_id,
+                        )
+                    )
+                if self.config_data.enable_aru_inbox and not missing:
+                    self._start_aru_poll_worker_if_ready()
+            except Exception as exc:
+                self.aru_status_var.set(UI_TEXT["status_aru_config_save_failed"])
+                self._append_log(UI_TEXT["log_aru_config_save_failed"].format(missing=str(exc)))
+
+        def _toggle_aru_inbox(self) -> None:
+            self._save_aru_settings()
 
         def _toggle_auto_index(self) -> None:
             self.config_data.auto_index_enabled = bool(self.auto_index_var.get())
@@ -1897,6 +2102,18 @@ def run_gui(launch_check: bool = False) -> int:
                 self.slack_status_var.set(UI_TEXT["status_slack_config_missing"])
             elif self.slack_status_var.get() in {UI_TEXT["status_slack_disabled"], UI_TEXT["status_slack_config_missing"]}:
                 self.slack_status_var.set(UI_TEXT["status_slack_ready"])
+
+        def _update_aru_status(self) -> None:
+            if not hasattr(self, "aru_status_var"):
+                return
+            channel_id = self.config_data.aru_channel_id or "-"
+            self.aru_channel_var.set(UI_TEXT["label_aru_channel_status"].format(channel=channel_id))
+            if not self.aru_inbox_var.get():
+                self.aru_status_var.set(UI_TEXT["status_aru_disabled"])
+            elif not self.config_data.memory_folder or not self.config_data.aru_slack_token or not self.config_data.aru_channel_id:
+                self.aru_status_var.set(UI_TEXT["status_aru_config_missing"])
+            elif self.aru_status_var.get() in {UI_TEXT["status_aru_disabled"], UI_TEXT["status_aru_config_missing"]}:
+                self.aru_status_var.set(UI_TEXT["status_aru_ready"])
 
         def _choose_chatgpt_export(self) -> None:
             file_path = filedialog.askopenfilename(
@@ -2185,6 +2402,51 @@ def run_gui(launch_check: bool = False) -> int:
             except Exception as exc:
                 self.events.put(("slack_inbox_error", str(exc)))
 
+        def _poll_aru_inbox(self) -> None:
+            try:
+                self._start_aru_poll_worker_if_ready()
+            finally:
+                self.after(self.aru_poll_interval_ms, self._poll_aru_inbox)
+
+        def _start_aru_poll_worker_if_ready(self) -> None:
+            if not self.config_data.enable_aru_inbox:
+                return
+            if not self.config_data.memory_folder:
+                return
+            if not self.config_data.aru_slack_token or not self.config_data.aru_channel_id:
+                return
+            if self.aru_thread and self.aru_thread.is_alive():
+                return
+            self.aru_thread = threading.Thread(
+                target=self._aru_inbox_worker,
+                args=(
+                    Path(self.config_data.memory_folder),
+                    self.config_data.aru_slack_token,
+                    self.config_data.aru_channel_id,
+                    self.config_data.aru_last_ts,
+                ),
+                daemon=True,
+            )
+            self.aru_thread.start()
+
+        def _aru_inbox_worker(self, memory_folder: Path, token: str, channel_id: str, last_ts: str) -> None:
+            try:
+                result = poll_slack_inbox(
+                    database=self.database,
+                    memory_folder=memory_folder,
+                    token=token,
+                    channel_id=channel_id,
+                    last_ts=last_ts,
+                    poll_timeout_seconds=8.0,
+                    source_type="aru",
+                    folder_name="aru",
+                    inbox_label="Aru Inbox",
+                    process_tasks=False,
+                )
+                self.events.put(("aru_inbox_done", result))
+            except Exception as exc:
+                self.events.put(("aru_inbox_error", str(exc)))
+
         def _start_auto_index(self, memory_folder: Path) -> None:
             if self.index_thread and self.index_thread.is_alive():
                 self.pending_auto_index_folder = memory_folder
@@ -2330,6 +2592,8 @@ def run_gui(launch_check: bool = False) -> int:
                 return f"[chatgpt_export] {result.conversation_title or result.title}"
             if result.source_type in {"slack", "slack_inbox"}:
                 return f"[slack] {result.title}"
+            if result.source_type == "aru":
+                return f"[aru] {result.title}"
             if result.source_type == "slack_task":
                 return f"[slack_task] {result.title}"
             if result.source_type in {"codex_result", "codex_report_auto"}:
@@ -2598,6 +2862,10 @@ def run_gui(launch_check: bool = False) -> int:
                     self._handle_slack_inbox_done(payload)
                 elif event == "slack_inbox_error":
                     self._handle_slack_inbox_error(str(payload))
+                elif event == "aru_inbox_done":
+                    self._handle_aru_inbox_done(payload)
+                elif event == "aru_inbox_error":
+                    self._handle_aru_inbox_error(str(payload))
 
             self.after(100, self._poll_events)
 
@@ -2781,6 +3049,41 @@ def run_gui(launch_check: bool = False) -> int:
             self._notify(UI_TEXT["notify_slack_import_failed"])
             self.last_slack_status = "error"
 
+        def _handle_aru_inbox_done(self, result: SlackInboxResult) -> None:
+            status_text = self._aru_status_text(result.status)
+            self.aru_status_var.set(status_text)
+            self.aru_channel_var.set(UI_TEXT["label_aru_channel_status"].format(channel=result.channel_label or result.channel_id or "-"))
+            if result.latest_ts and result.latest_ts != self.config_data.aru_last_ts:
+                self.config_data.aru_last_ts = result.latest_ts
+                self.config_store.save(self.config_data)
+            if result.imported:
+                self.aru_last_import_var.set(UI_TEXT["label_aru_last_import"].format(time=now_iso()))
+                self._append_log(
+                    UI_TEXT["log_aru_import"].format(
+                        imported=result.imported,
+                        skipped=result.skipped,
+                        failed=result.failed,
+                    )
+                )
+                self._append_log(UI_TEXT["phrase_aru_memory_saved"])
+                if result.log_path:
+                    self._append_log(UI_TEXT["log_aru_file"].format(path=result.log_path))
+                self._refresh_stats()
+                self._notify(UI_TEXT["notify_aru_import_complete"])
+                if self.semantic_available:
+                    self._notify(UI_TEXT["notify_semantic_updated"])
+            elif result.status not in {"connected"} and result.status != self.last_aru_status:
+                self._append_log(UI_TEXT["log_aru_status"].format(status=result.status, message=result.message))
+                if result.status in {"auth_failed", "channel_not_found", "timeout", "error"}:
+                    self._notify(UI_TEXT["notify_aru_import_failed"])
+            self.last_aru_status = result.status
+
+        def _handle_aru_inbox_error(self, error_text: str) -> None:
+            self.aru_status_var.set(UI_TEXT["status_aru_error"])
+            self._append_log(UI_TEXT["log_aru_status"].format(status="error", message=error_text))
+            self._notify(UI_TEXT["notify_aru_import_failed"])
+            self.last_aru_status = "error"
+
         def _slack_status_text(self, status: str) -> str:
             return {
                 "imported": UI_TEXT["status_slack_import_complete"],
@@ -2791,6 +3094,17 @@ def run_gui(launch_check: bool = False) -> int:
                 "config_missing": UI_TEXT["status_slack_config_missing"],
                 "error": UI_TEXT["status_slack_error"],
             }.get(status, UI_TEXT["status_slack_error"])
+
+        def _aru_status_text(self, status: str) -> str:
+            return {
+                "imported": UI_TEXT["status_aru_import_complete"],
+                "connected": UI_TEXT["status_aru_connected"],
+                "auth_failed": UI_TEXT["status_aru_auth_failed"],
+                "channel_not_found": UI_TEXT["status_aru_channel_not_found"],
+                "timeout": UI_TEXT["status_aru_timeout"],
+                "config_missing": UI_TEXT["status_aru_config_missing"],
+                "error": UI_TEXT["status_aru_error"],
+            }.get(status, UI_TEXT["status_aru_error"])
 
         def _handle_watch_scan_done(self, result: WatchScanResult) -> None:
             self._update_watch_status()
@@ -2973,6 +3287,8 @@ def run_gui(launch_check: bool = False) -> int:
 
         def _handle_search_done(self, query_text: str, response: SearchResponse, semantic_enabled: bool) -> None:
             results = response.results
+            if self.embers_mode:
+                results = sorted(results, key=lambda item: (item.source_type != "aru", -item.score, item.title.lower()))
             self.current_results = results
             self.current_related_results = response.related
             self._set_search_running(False)

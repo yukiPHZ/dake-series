@@ -365,6 +365,21 @@ Codex Report Auto Import
 
 常駐・タスクトレイ構成は今後の拡張候補です。現段階では既存のwatch / pollingをバックグラウンドで動かし、UIを開いて巡回・確認します。
 
+## Aru Inbox
+
+Aru Inbox は、既存の Slack Inbox とは別の「在る」専用取り込み導線です。
+
+- 既存Slack Inboxは実務 / handoff / note / bookmark / Remote Queue 用として維持します
+- Aru Inboxは `#aru` などの在る断片、熱、巡り、未完、火照り、散文素材、創作素材を受け取ります
+- Aru Slack Token / Aru Channel ID / Enable Aru Inbox をSlack Inboxとは別に保存します
+- `slack_last_ts` とは別に `aru_last_ts` を保持し、PCスリープ中の投稿も起床後に差分取得します
+- 投稿本文そのものを `brainz_memory/aru/` にMarkdown正本として保存します
+- `source_type=aru` として検索 / Semantic Search / Related Memory / Memory Flow / 熾火モードの対象になります
+- Aru側では `note:` や `handoff:` などのprefixは不要です
+- prefixが含まれていてもRemote Queue taskとして処理せず、本文正本として保持します
+- attachments / unfurl は補助情報として保存し、本文の代替にはしません
+- 将来的に記事 / 小説 / 散文素材へ戻すための素材箱として使います
+
 ## DAKE_META
 
 ```json
@@ -375,7 +390,7 @@ Codex Report Auto Import
   "launcher_description": "ローカルの会話・仕様・メモを忘れず探すための記憶検索アプリです。",
   "site_title": "補助脳BRAINZ",
   "site_description": "ChatGPT、Codex、Claude、Geminiのやり取りをローカル記憶として再接続する検索補助脳です。",
-  "update_summary": "熾火UIとSlack正本保存を強化しました。",
+  "update_summary": "Aru Inbox に対応しました。",
   "folder_name": "DAKE_Brainz_Search",
   "exe_name": "DakeBrainz_Search.exe",
   "release_url": "",
@@ -389,11 +404,19 @@ Codex Report Auto Import
 ## RELEASE_BODY
 
 ```markdown
-# 補助脳BRAINZ v1.2.0
+# 補助脳BRAINZ v1.3.0
 
 ローカルの会話・仕様・Codex実装結果・Slack断片を、記憶へ戻るための正本として保持する補助脳です。
 
 ## 追加
+
+- Aru Inbox
+- `source_type=aru`
+- Aru専用 `last_ts`
+- `brainz_memory/aru/` 正本保存
+- 熾火モードでのAru優先巡回
+
+## 継続
 
 - 熾火モード
 - Slack正本保存の強化
@@ -401,9 +424,6 @@ Codex Report Auto Import
 - `source_type=slack`
 - embers_index メタデータ
 - BRAINZ内Markdown読書導線
-
-## 継続
-
 - Slack Inbox Import
 - Slack Task Parser
 - Codex Report Auto Import

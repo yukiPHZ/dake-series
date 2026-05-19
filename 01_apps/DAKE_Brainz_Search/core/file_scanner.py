@@ -11,7 +11,7 @@ from threading import Event
 SUPPORTED_EXTENSIONS = {".txt", ".md", ".json"}
 MAX_FILE_BYTES = 10 * 1024 * 1024
 IGNORED_DIR_NAMES = {"build", "dist", "__pycache__", ".git", ".venv", "node_modules"}
-IGNORED_RELATIVE_PARTS = {("data", "logs"), ("data", "exports"), ("codex_reports",), ("slack",), ("slack_tasks",)}
+IGNORED_RELATIVE_PARTS = {("data", "logs"), ("data", "exports"), ("codex_reports",), ("slack",), ("aru",), ("slack_tasks",)}
 
 
 @dataclass(frozen=True)
