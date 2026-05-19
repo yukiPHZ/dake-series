@@ -12,6 +12,17 @@ from .logger import BackupLogger, make_timestamp
 ARCHIVE_DIR_NAME = "backup_archive"
 CHUNK_SIZE = 1024 * 1024
 
+ERROR_TEXT = {
+    "source_label": "正本フォルダ",
+    "destination_label": "避難先フォルダ",
+    "folder_required": "{label}を選択してください。",
+    "source_missing": "正本フォルダが見つかりません。",
+    "same_folder": "正本フォルダと避難先フォルダは同じ場所にできません。",
+    "nested_folder": "正本フォルダと避難先フォルダは親子関係にしないでください。",
+    "destination_name_conflict": "避難先に同名フォルダがあります: {path}",
+    "destination_parent_conflict": "避難先の親パスがフォルダではありません: {path}",
+}
+
 
 class BackupError(RuntimeError):
     pass
@@ -79,24 +90,24 @@ def _is_relative_to(child: Path, parent: Path) -> bool:
 def _normalize_folder(path_text: str, label: str) -> Path:
     text = str(path_text or "").strip()
     if not text:
-        raise BackupError(f"{label}を選択してください。")
+        raise BackupError(ERROR_TEXT["folder_required"].format(label=label))
     return Path(text).expanduser()
 
 
 def validate_folders(source_folder: str, destination_folder: str) -> tuple[Path, Path]:
-    source = _normalize_folder(source_folder, "正本フォルダ")
-    destination = _normalize_folder(destination_folder, "避難先フォルダ")
+    source = _normalize_folder(source_folder, ERROR_TEXT["source_label"])
+    destination = _normalize_folder(destination_folder, ERROR_TEXT["destination_label"])
     if not source.exists() or not source.is_dir():
-        raise BackupError("正本フォルダが見つかりません。")
+        raise BackupError(ERROR_TEXT["source_missing"])
 
     source_resolved = source.resolve(strict=True)
     destination_resolved = destination.resolve(strict=False)
     if source_resolved == destination_resolved:
-        raise BackupError("正本フォルダと避難先フォルダは同じ場所にできません。")
+        raise BackupError(ERROR_TEXT["same_folder"])
     if _is_relative_to(destination_resolved, source_resolved) or _is_relative_to(
         source_resolved, destination_resolved
     ):
-        raise BackupError("正本フォルダと避難先フォルダは親子関係にしないでください。")
+        raise BackupError(ERROR_TEXT["nested_folder"])
     return source, destination
 
 
@@ -148,7 +159,7 @@ def scan_diff(source_folder: str, destination_folder: str) -> DiffResult:
         rel_text = rel_path.as_posix()
         destination_path = destination / rel_path
         if destination_path.exists() and destination_path.is_dir():
-            raise BackupError(f"避難先に同名フォルダがあります: {rel_text}")
+            raise BackupError(ERROR_TEXT["destination_name_conflict"].format(path=rel_text))
         item = BackupItem(
             relative_path=rel_text,
             source_path=str(source_path),
@@ -169,7 +180,7 @@ def scan_diff(source_folder: str, destination_folder: str) -> DiffResult:
 
 def _copy_file(source_path: Path, destination_path: Path) -> None:
     if destination_path.parent.exists() and not destination_path.parent.is_dir():
-        raise BackupError(f"避難先の親パスがフォルダではありません: {destination_path.parent}")
+        raise BackupError(ERROR_TEXT["destination_parent_conflict"].format(path=destination_path.parent))
     destination_path.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(source_path, destination_path)
 
@@ -225,4 +236,3 @@ def execute_backup(
         timestamp=run_timestamp,
         log_path=str(backup_logger.path),
     )
-

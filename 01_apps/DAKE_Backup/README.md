@@ -26,7 +26,8 @@ Drive は記憶庫ではなく避難先。正本はローカルにある、と�
 - 退避先は `backup_archive/YYYYMMDD_HHMMSS/` 配下です。
 - 差分表示の削除予定は常に `0` です。
 - ログは `data/logs/backup_YYYYMMDD_HHMMSS.log` に保存します。
-- 設定は `data/settings.json` に保存します。
+- 設定は実行時に自動生成される `data/settings.json` に保存します。
+- `data/settings.json` は個人パスを含むため Git 管理しません。初期値は `data/settings.example.json` を参照してください。
 - 初回起動時の設定は空欄で問題ありません。
 - 手動実行のみです。自動実行、USB自動検知は実装していません。
 
@@ -63,4 +64,3 @@ build.bat
 ```
 
 PyInstaller が使える環境では `dist\DakeBackup.exe` を作成します。
-
