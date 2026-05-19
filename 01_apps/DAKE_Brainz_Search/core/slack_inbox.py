@@ -13,6 +13,8 @@ from core.app_config import logs_dir, now_iso
 from core.db import BrainzDatabase, DocumentRecord
 from core.embers import build_ember_metadata
 from core.ollama_embeddings import EmbeddingSession, generate_embeddings_for_document
+from core.qpsc_notifications import UI_TEXT as QPSC_NOTIFICATION_TEXT
+from core.qpsc_notifications import append_saved_count_notification
 from core.remote_queue import (
     RemoteQueueTask,
     destination_for,
@@ -248,10 +250,22 @@ def poll_slack_inbox(
             status=status,
             imported=imported,
             skipped=skipped,
-        failed=failed,
-        latest_ts=latest_ts,
-        items=items,
-        task_results=task_results,
+            failed=failed,
+            latest_ts=latest_ts,
+            items=items,
+            task_results=task_results,
+        )
+    changed_paths = [item.saved_path for item in items if item.changed]
+    is_paste_source = source_type == SOURCE_TYPE_ARU
+    append_saved_count_notification(
+        source="paste" if is_paste_source else source_type,
+        title=(
+            QPSC_NOTIFICATION_TEXT["title_paste_import"]
+            if is_paste_source
+            else QPSC_NOTIFICATION_TEXT["title_slack_import"]
+        ),
+        count=imported,
+        related_path=changed_paths[0] if changed_paths else "",
     )
     return SlackInboxResult(
         status=status,

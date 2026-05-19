@@ -42,6 +42,16 @@ OIKAWA提案Markdown生成
 BRAINZへ保存
 ```
 
+## QPSC Phase 2: BRAINZ取り込み通知
+
+Phase 2では、BRAINZが保存する `data/config/qpsc_notifications.json` を読み、OIKAWAのQPSC通知欄に未読通知を最大3件まで表示します。
+
+- BRAINZは取り込みイベントを保存します
+- OIKAWAは通知・提案として静かに表示します
+- 小さな既読操作で `status` を `read` に変更できます
+- `related_path` がある通知は原本へ戻れます
+- 原本主義を維持し、全文プレビューではなく導線だけを置きます
+
 ## 使い方
 
 1. `python main.py` で起動します。

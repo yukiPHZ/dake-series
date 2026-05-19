@@ -15,6 +15,7 @@ import tkinter as tk
 from core.config import AppConfig, ConfigStore, existing_folder, open_path, resolve_memory_folder
 from core.heat_engine import AnalysisResult, analyze_documents
 from core.markdown_writer import write_suggestion
+from core.qpsc_notifications import QpscNotification, mark_qpsc_notification_read, read_qpsc_notifications
 from core.qpsc_status import is_brainz_awake, read_brainz_status
 from core.scanner import scan_memory
 
@@ -59,6 +60,10 @@ UI_TEXT = {
     "qpsc_memory_heartbeat_quiet": "記憶庫の鼓動を待っています。",
     "qpsc_no_suggestion": "今日の提案はまだありません。",
     "qpsc_notice_template": "{line1}\n{line2}\n{line3}",
+    "qpsc_notification_empty": "取り込み通知はありません。",
+    "qpsc_notification_open_related": "原本",
+    "qpsc_notification_read": "既読",
+    "qpsc_related_missing": "原本が見つかりません。",
     "footer_source": "local scan / no cloud",
     "launch_check_ok": "LAUNCH CHECK OK",
     "gui_smoke_ok": "GUI SMOKE OK",
@@ -271,7 +276,7 @@ class OikawaApp(tk.Tk):
             bg=COLORS["background"],
             font=FONT_LABEL,
         ).pack(anchor="w")
-        tk.Label(
+        self.qpsc_status_label = tk.Label(
             notice,
             textvariable=self.qpsc_notification_var,
             fg=COLORS["text"],
@@ -279,7 +284,10 @@ class OikawaApp(tk.Tk):
             font=FONT_JP_SMALL,
             justify="left",
             wraplength=260,
-        ).pack(anchor="w", pady=(6, 0))
+        )
+        self.qpsc_status_label.pack(anchor="w", pady=(6, 0))
+        self.qpsc_import_frame = tk.Frame(notice, bg=COLORS["background"])
+        self.qpsc_import_frame.pack(fill="x", pady=(8, 0))
 
         footer = tk.Frame(self, bg=COLORS["background"])
         footer.place(relx=0.04, rely=0.96, anchor="sw")
@@ -298,7 +306,7 @@ class OikawaApp(tk.Tk):
             font=FONT_MONO,
         ).pack(anchor="w", pady=(4, 0))
 
-    def _refresh_qpsc_notifications(self) -> None:
+    def _refresh_qpsc_notifications(self, schedule: bool = True) -> None:
         status = read_brainz_status()
         if is_brainz_awake(status):
             line1 = UI_TEXT["qpsc_brainz_awake"]
@@ -316,7 +324,86 @@ class OikawaApp(tk.Tk):
                 line3=UI_TEXT["qpsc_no_suggestion"],
             )
         )
-        self.after(10000, self._refresh_qpsc_notifications)
+        self._render_qpsc_import_notifications(read_qpsc_notifications(limit=3))
+        if schedule:
+            self.after(10000, self._refresh_qpsc_notifications)
+
+    def _render_qpsc_import_notifications(self, notifications: list[QpscNotification]) -> None:
+        if not hasattr(self, "qpsc_import_frame"):
+            return
+        for child in self.qpsc_import_frame.winfo_children():
+            child.destroy()
+        if not notifications:
+            tk.Label(
+                self.qpsc_import_frame,
+                text=UI_TEXT["qpsc_notification_empty"],
+                fg=COLORS["muted"],
+                bg=COLORS["background"],
+                font=FONT_JP_SMALL,
+                wraplength=260,
+                justify="left",
+            ).pack(anchor="w")
+            return
+
+        for notification in notifications:
+            event_frame = tk.Frame(self.qpsc_import_frame, bg=COLORS["background"])
+            event_frame.pack(fill="x", pady=(0, 8))
+            tk.Label(
+                event_frame,
+                text=notification.title,
+                fg=COLORS["text"],
+                bg=COLORS["background"],
+                font=FONT_JP_SMALL,
+                wraplength=250,
+                justify="left",
+            ).pack(anchor="w")
+            if notification.message:
+                tk.Label(
+                    event_frame,
+                    text=notification.message,
+                    fg=COLORS["muted"],
+                    bg=COLORS["background"],
+                    font=FONT_JP_SMALL,
+                    wraplength=250,
+                    justify="left",
+                ).pack(anchor="w", pady=(2, 0))
+            controls = tk.Frame(event_frame, bg=COLORS["background"])
+            controls.pack(anchor="w", pady=(4, 0))
+            if notification.related_path:
+                tk.Button(
+                    controls,
+                    text=UI_TEXT["qpsc_notification_open_related"],
+                    command=lambda item=notification: self._open_qpsc_related_path(item),
+                    **self._small_button_style(COLORS["panel_light"]),
+                ).pack(side="left", padx=(0, 6))
+            tk.Button(
+                controls,
+                text=UI_TEXT["qpsc_notification_read"],
+                command=lambda item=notification: self._mark_qpsc_notification_read(item),
+                **self._small_button_style(COLORS["panel_light"]),
+            ).pack(side="left")
+
+    def _small_button_style(self, background: str) -> dict[str, object]:
+        style = self._button_style(background)
+        style.update({"padx": 8, "pady": 4})
+        return style
+
+    def _mark_qpsc_notification_read(self, notification: QpscNotification) -> None:
+        if notification.id:
+            mark_qpsc_notification_read(notification.id)
+        self._refresh_qpsc_notifications(schedule=False)
+
+    def _open_qpsc_related_path(self, notification: QpscNotification) -> None:
+        path_text = notification.related_path.strip()
+        if not path_text:
+            return
+        path = Path(path_text)
+        if not path.is_absolute() and self.memory_folder:
+            path = self.memory_folder / path
+        if not path.exists():
+            messagebox.showwarning(UI_TEXT["dialog_title"], UI_TEXT["qpsc_related_missing"])
+            return
+        open_path(path)
 
     def _button_style(self, background: str) -> dict[str, object]:
         return {

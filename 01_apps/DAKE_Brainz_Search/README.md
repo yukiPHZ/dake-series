@@ -29,6 +29,15 @@ BRAINZ側で管理するもの:
 
 起動時には `data/config/qpsc_brainz_status.json` に `brainz_awake`、`started_at`、`last_heartbeat_at`、`status_message` を記録します。起動中は一定間隔で heartbeat を更新し、OIKAWAやDAKE_Wake_Brainzが状態確認に使える導線にします。
 
+## QPSC Phase 2: 取り込み通知
+
+Phase 2では、BRAINZで発生した取り込みをOIKAWA側の通知・提案欄へ静かに渡す導線を追加しました。
+
+- BRAINZは取り込み完了時に `data/config/qpsc_notifications.json` へ通知イベントを保存します
+- 対象はペースト投稿、Slack、Codex報告、ChatGPT exportの取り込みです
+- 通知イベントには `source`、`title`、`message`、`status`、`kind`、`related_path` を保持します
+- 原本主義を維持し、`related_path` がある通知はOIKAWAから元のMarkdownや取り込み元へ戻れる設計です
+
 ## Phase 1でできること
 
 - ローカル記憶フォルダの指定

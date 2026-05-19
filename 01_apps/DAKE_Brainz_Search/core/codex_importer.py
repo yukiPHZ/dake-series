@@ -9,6 +9,8 @@ from pathlib import Path
 from core.app_config import logs_dir, now_iso, read_text_safe
 from core.db import BrainzDatabase, DocumentRecord
 from core.ollama_embeddings import generate_embeddings_for_document
+from core.qpsc_notifications import UI_TEXT as QPSC_NOTIFICATION_TEXT
+from core.qpsc_notifications import append_saved_count_notification
 from core.text_splitter import split_text
 
 
@@ -98,6 +100,18 @@ def import_codex_text(
         log_path="",
     )
     log_path = write_import_log(result_without_log)
+    if source_type != SOURCE_TYPE_CODEX_REPORT_AUTO:
+        is_paste_source = source_label.strip().lower() == "codex result paste"
+        append_saved_count_notification(
+            source="paste" if is_paste_source else source_type,
+            title=(
+                QPSC_NOTIFICATION_TEXT["title_paste_import"]
+                if is_paste_source
+                else QPSC_NOTIFICATION_TEXT["title_codex_result"]
+            ),
+            count=1 if changed else 0,
+            related_path="" if is_paste_source else source_label,
+        )
     return CodexImportResult(
         title=result_without_log.title,
         changed=result_without_log.changed,

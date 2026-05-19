@@ -13,6 +13,8 @@ from typing import Any
 from core.app_config import logs_dir, now_iso
 from core.db import BrainzDatabase, DocumentRecord
 from core.ollama_embeddings import EmbeddingSession, generate_embeddings_for_document
+from core.qpsc_notifications import UI_TEXT as QPSC_NOTIFICATION_TEXT
+from core.qpsc_notifications import append_saved_count_notification
 from core.text_splitter import split_text
 
 
@@ -99,6 +101,12 @@ def _import_from_root(original_path: Path, root: Path, database: BrainzDatabase)
         log_path="",
     )
     log_path = write_import_log(result_without_log)
+    append_saved_count_notification(
+        source=SOURCE_TYPE_CHATGPT,
+        title=QPSC_NOTIFICATION_TEXT["title_chatgpt_export"],
+        count=result_without_log.messages_indexed,
+        related_path=str(original_path),
+    )
     return ChatGPTImportResult(
         source_path=result_without_log.source_path,
         conversations_json_path=result_without_log.conversations_json_path,
