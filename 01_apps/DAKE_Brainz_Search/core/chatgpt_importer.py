@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import shutil
 import tempfile
 import zipfile
@@ -19,6 +20,7 @@ from core.text_splitter import split_text
 
 
 SOURCE_TYPE_CHATGPT = "chatgpt_export"
+SPLIT_CONVERSATIONS_PATTERN = re.compile(r"^conversations-\d+\.json$", re.IGNORECASE)
 
 
 class ConversationsJsonNotFound(FileNotFoundError):
@@ -63,11 +65,11 @@ def import_chatgpt_export(source_path: Path, database: BrainzDatabase) -> ChatGP
 
 
 def _import_from_root(original_path: Path, root: Path, database: BrainzDatabase) -> ChatGPTImportResult:
-    conversations_path = find_conversations_json(root)
-    if conversations_path is None:
-        raise ConversationsJsonNotFound("conversations.json not found")
+    conversation_paths = find_conversation_json_files(root)
+    if not conversation_paths:
+        raise ConversationsJsonNotFound("chatgpt export conversations json not found")
 
-    records = parse_conversations_json(conversations_path)
+    records = parse_conversations_json_files(conversation_paths)
     conversations = {record.conversation_id for record in records}
     messages_indexed = 0
     skipped_duplicates = 0
@@ -92,7 +94,7 @@ def _import_from_root(original_path: Path, root: Path, database: BrainzDatabase)
 
     result_without_log = ChatGPTImportResult(
         source_path=str(original_path),
-        conversations_json_path=str(conversations_path),
+        conversations_json_path="; ".join(str(path) for path in conversation_paths),
         conversations_imported=len(conversations),
         messages_seen=len(records),
         messages_indexed=messages_indexed,
@@ -136,14 +138,42 @@ def safe_extract_zip(zip_path: Path, destination: Path) -> None:
 
 
 def find_conversations_json(root: Path) -> Path | None:
-    if root.is_file() and root.name.lower() == "conversations.json":
-        return root
+    paths = find_conversation_json_files(root)
+    return paths[0] if paths else None
+
+
+def find_conversation_json_files(root: Path) -> list[Path]:
+    if root.is_file():
+        name = root.name.lower()
+        if name == "conversations.json":
+            return [root]
+        if SPLIT_CONVERSATIONS_PATTERN.match(name):
+            return sorted(
+                [path for path in root.parent.iterdir() if path.is_file() and SPLIT_CONVERSATIONS_PATTERN.match(path.name)],
+                key=lambda path: path.name.lower(),
+            )
+        return []
     if not root.exists() or not root.is_dir():
-        return None
-    for path in root.rglob("*"):
-        if path.is_file() and path.name.lower() == "conversations.json":
-            return path
-    return None
+        return []
+
+    exact_files = sorted(
+        [path for path in root.rglob("*") if path.is_file() and path.name.lower() == "conversations.json"],
+        key=lambda path: str(path).lower(),
+    )
+    if exact_files:
+        return exact_files
+
+    return sorted(
+        [path for path in root.rglob("*") if path.is_file() and SPLIT_CONVERSATIONS_PATTERN.match(path.name)],
+        key=lambda path: str(path).lower(),
+    )
+
+
+def parse_conversations_json_files(paths: list[Path]) -> list[ChatGPTMessageRecord]:
+    records: list[ChatGPTMessageRecord] = []
+    for path in paths:
+        records.extend(parse_conversations_json(path))
+    return records
 
 
 def parse_conversations_json(path: Path) -> list[ChatGPTMessageRecord]:

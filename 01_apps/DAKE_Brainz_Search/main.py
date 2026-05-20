@@ -58,7 +58,7 @@ UI_TEXT = {
     "button_choose": "Choose",
     "button_import_chatgpt_export": "ChatGPT export取込",
     "chatgpt_import_title": "ChatGPT exportを取り込む",
-    "chatgpt_import_helper": "zip / フォルダ / conversations.json に対応",
+    "chatgpt_import_helper": "zip / フォルダ / conversations.json / conversations-*.json に対応",
     "chatgpt_import_note": "取り込むとBRAINZに保存され、OIKAWAで読めます。",
     "chatgpt_import_waiting": "選んだexportを静かに取り込みます。",
     "chatgpt_import_importing": "ChatGPT exportを取り込んでいます。",
@@ -117,7 +117,7 @@ UI_TEXT = {
     "dialog_export_done": "ファイルを生成しました",
     "dialog_select_chatgpt_export": "ChatGPT export zipを選択（キャンセルでフォルダ選択）",
     "dialog_select_chatgpt_export_folder": "展開済みChatGPT exportフォルダを選択",
-    "dialog_select_chatgpt_conversations_json": "conversations.jsonを選択",
+    "dialog_select_chatgpt_conversations_json": "conversations.json / conversations-000.jsonを選択",
     "dialog_import_codex_result": "Codex結果を取り込む",
     "dialog_select_codex_result_file": "Codex結果ファイルを選択",
     "label_codex_result_input": "Codexの完了報告・修正結果・commit/push結果を貼り付け",
@@ -137,7 +137,7 @@ UI_TEXT = {
     "chatgpt_import_failed_short": "取り込みできませんでした。",
     "status_importing_codex": "CODEX RESULT IMPORTING...",
     "status_codex_import_complete": "CODEX RESULT IMPORT COMPLETE",
-    "error_conversations_json_not_found": "conversations.json が見つかりませんでした。zipまたは展開済みフォルダを確認してください。",
+    "error_conversations_json_not_found": "ChatGPT export を確認できませんでした。zip または展開済みフォルダを選択してください。",
     "error_chatgpt_import_failed": "ChatGPT exportを取り込めませんでした。",
     "error_codex_result_empty": "Codex結果が空です。テキストを貼り付けるか、txt / md ファイルを選択してください。",
     "error_codex_import_failed": "Codex結果を取り込めませんでした。",
@@ -230,9 +230,12 @@ UI_TEXT = {
     "smoke_json_role": "local memory bridge",
     "smoke_chatgpt_zip_title": "補助脳BRAINZの話",
     "smoke_chatgpt_folder_title": "Cloudflare Pages整理",
+    "smoke_chatgpt_split_title": "ChatGPT export 分割形式",
     "smoke_chatgpt_user_text": "ChatGPT export zipから補助脳BRAINZの記憶を取り込みたい。",
     "smoke_chatgpt_assistant_text": "BRAINZは会話タイトル、role、本文をsource_type=chatgpt_exportとして検索できます。",
     "smoke_chatgpt_folder_text": "展開済みフォルダのconversations.jsonもローカルで解析します。",
+    "smoke_chatgpt_split_text_a": "conversations-000.json から分割形式の記憶を読みます。",
+    "smoke_chatgpt_split_text_b": "conversations-001.json も同じexportとして結合します。",
     "smoke_chatgpt_query": "source_type chatgpt_export 補助脳BRAINZ",
     "smoke_codex_title": "Add Codex result import to Brainz",
     "smoke_codex_text": "# Add Codex result import to Brainz\n\n完了しました。\n\n主な変更:\n- 追加: core/codex_importer.py\n- 更新: main.py, core/db.py, core/handoff_writer.py, README.md\n\n確認結果:\n- python main.py --launch-check: OK\n- python main.py --smoke-test: OK\n- build.bat: OK\n- dist/DakeBrainz_Search.exe --launch-check: OK\n\nGit:\n- commit: `abc1234def567890abc1234def567890abc1234d`\n- push: `origin/main` 成功\n- git status clean\n\nPhase 4候補: 関連タグ自動生成",
@@ -577,8 +580,10 @@ def run_smoke_test() -> int:
         unique_suffix = str(time.time_ns())
         zip_export = root / "chatgpt_export_zip"
         folder_export = root / "chatgpt_export_folder"
+        split_export = root / "chatgpt_export_split"
         zip_export.mkdir()
         folder_export.mkdir()
+        split_export.mkdir()
 
         zip_conversations = sample_conversations(
             f"brainz_zip_{unique_suffix}",
@@ -592,8 +597,24 @@ def run_smoke_test() -> int:
             UI_TEXT["smoke_chatgpt_folder_text"],
             UI_TEXT["smoke_chatgpt_assistant_text"],
         )
+        split_conversations_a = sample_conversations(
+            f"brainz_split_a_{unique_suffix}",
+            UI_TEXT["smoke_chatgpt_split_title"],
+            UI_TEXT["smoke_chatgpt_split_text_a"],
+            UI_TEXT["smoke_chatgpt_assistant_text"],
+        )
+        split_conversations_b = sample_conversations(
+            f"brainz_split_b_{unique_suffix}",
+            UI_TEXT["smoke_chatgpt_split_title"],
+            UI_TEXT["smoke_chatgpt_split_text_b"],
+            UI_TEXT["smoke_chatgpt_assistant_text"],
+        )
         (zip_export / "conversations.json").write_text(json.dumps(zip_conversations, ensure_ascii=False), encoding="utf-8")
         (folder_export / "conversations.json").write_text(json.dumps(folder_conversations, ensure_ascii=False), encoding="utf-8")
+        (split_export / "conversations-000.json").write_text(json.dumps(split_conversations_a, ensure_ascii=False), encoding="utf-8")
+        (split_export / "conversations-001.json").write_text(json.dumps(split_conversations_b, ensure_ascii=False), encoding="utf-8")
+        (split_export / "shared_conversations.json").write_text("[]", encoding="utf-8")
+        (split_export / "chat.html").write_text("<!doctype html><title>chat</title>", encoding="utf-8")
 
         zip_path = root / "chatgpt_export.zip"
         with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
@@ -601,12 +622,18 @@ def run_smoke_test() -> int:
 
         zip_result = import_chatgpt_export(zip_path, database)
         folder_result = import_chatgpt_export(folder_export, database)
+        split_result = import_chatgpt_export(split_export, database)
+        split_file_duplicate = import_chatgpt_export(split_export / "conversations-000.json", database)
         duplicate_result = import_chatgpt_export(zip_path, database)
 
         if zip_result.messages_indexed < 2:
             raise RuntimeError("zip import did not index messages")
         if folder_result.messages_indexed < 2:
             raise RuntimeError("folder import did not index messages")
+        if split_result.conversations_imported < 2 or split_result.messages_indexed < 4:
+            raise RuntimeError("split chatgpt export import failed")
+        if split_file_duplicate.skipped_duplicates < 4:
+            raise RuntimeError("split chatgpt export file selection did not include sibling files")
         if duplicate_result.skipped_duplicates < 2:
             raise RuntimeError("duplicate import was not skipped")
 
