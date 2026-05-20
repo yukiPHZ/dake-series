@@ -469,10 +469,11 @@ def run_smoke_test() -> int:
     from core.notifications import NotificationQueue
     from core.ollama_client import check_ollama
     from core.ollama_embeddings import DEFAULT_EMBED_MODEL, check_embedding_status
+    from core.qpsc_notifications import read_notification_events
     from core.qpsc_status import AWAKE_STATUS_MESSAGE, write_brainz_awake_status
     from core.remote_queue import count_pending_queue_files, process_remote_queue_folder
     from core.search_engine import SearchEngine
-    from core.slack_inbox import poll_slack_inbox, slack_ts_float
+    from core.slack_inbox import poll_slack_inbox, slack_timestamp, slack_ts_float
     from core.watch_folder import detect_changed_files
 
     ensure_app_dirs()
@@ -927,6 +928,55 @@ def run_smoke_test() -> int:
         )
         if slack_duplicate.skipped < 1:
             raise RuntimeError("slack duplicate was not skipped")
+        note_ts = f"{int(time.time()) + 1}.{str(time.time_ns())[-6:]}"
+        note_title = f"正しさを握りすぎて苦しかった俺へ {unique_suffix}"
+        note_url = f"https://note.com/borinef/n/n{time.time_ns():x}"
+        note_text = f"{note_title}\n{note_url}"
+        note_event_ids_before = {event.get("id") for event in read_notification_events()}
+        note_result = poll_slack_inbox(
+            database=database,
+            memory_folder=root,
+            token="xoxb-smoke-token",
+            channel_id="CBORINEF",
+            last_ts="",
+            session=FakeSlackSession(messages=[{"ts": note_ts, "user": "UBORINEF", "text": note_text}]),
+        )
+        note_paths = [
+            Path(path)
+            for path in note_result.saved_files
+            if "borinef" in str(path).lower() and "published" in str(path).lower()
+        ]
+        if not note_paths:
+            raise RuntimeError("borinef note markdown was not saved")
+        note_path = note_paths[0]
+        note_markdown = note_path.read_text(encoding="utf-8")
+        if "status: published" not in note_markdown or note_url not in note_markdown or note_title not in note_markdown:
+            raise RuntimeError("borinef note markdown was not canonical")
+        if not note_path.name.startswith(f"{slack_timestamp(note_ts).strftime('%Y-%m-%d')}_"):
+            raise RuntimeError("borinef note filename date prefix missing")
+        note_duplicate = poll_slack_inbox(
+            database=database,
+            memory_folder=root,
+            token="xoxb-smoke-token",
+            channel_id="CBORINEF",
+            last_ts="",
+            session=FakeSlackSession(messages=[{"ts": note_ts, "user": "UBORINEF", "text": note_text}]),
+        )
+        note_matches = [
+            path
+            for path in (root / "BORINEF" / "note" / "published").rglob("*.md")
+            if note_url in path.read_text(encoding="utf-8")
+        ]
+        if len(note_matches) != 1 or note_duplicate.skipped < 1:
+            raise RuntimeError("borinef note duplicate was not skipped")
+        note_events = read_notification_events()
+        if not any(
+            event.get("source") == "borinef_note"
+            and event.get("related_path") == str(note_path)
+            and event.get("id") not in note_event_ids_before
+            for event in note_events
+        ):
+            raise RuntimeError("borinef note qpsc notification missing")
         backlog_messages = [
             {"ts": f"{int(slack_ts_float(slack_ts)) - 1}.000001", "user": "U123", "text": f"older slack memory {unique_suffix}"},
             {"ts": f"{int(slack_ts_float(slack_ts)) + 1}.000002", "user": "U123", "text": f"#embers backlog slack memory {unique_suffix}"},

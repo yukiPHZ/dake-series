@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Protocol
+from urllib.parse import urlsplit, urlunsplit
 
 import requests
 
@@ -30,6 +32,8 @@ SOURCE_TYPE_SLACK = "slack"
 SOURCE_TYPE_SLACK_INBOX = SOURCE_TYPE_SLACK
 SOURCE_TYPE_SLACK_TASK = "slack_task"
 SOURCE_TYPE_ARU = "aru"
+SOURCE_TYPE_BORINEF_NOTE = "borinef_note"
+NOTE_URL_PREFIX = "https://note.com/"
 SLACK_HISTORY_URL = "https://slack.com/api/conversations.history"
 SLACK_PERMALINK_URL = "https://slack.com/api/chat.getPermalink"
 DEFAULT_HISTORY_LIMIT = 200
@@ -76,6 +80,15 @@ class SlackInboxImportItem:
     title: str = ""
     notification_kind: str = "slack_memory"
     task_result: SlackTaskResult | None = None
+
+
+@dataclass(frozen=True)
+class BorinefNoteImport:
+    saved_path: Path
+    markdown: str
+    title: str
+    url: str
+    changed: bool
 
 
 @dataclass(frozen=True)
@@ -229,6 +242,7 @@ def poll_slack_inbox(
     items: list[SlackInboxImportItem] = []
     task_results: list[SlackTaskResult] = []
     embedding_session = EmbeddingSession()
+    note_changed_paths: list[str] = []
 
     for message_item in sorted(messages, key=lambda item: slack_ts_float(item.ts)):
         if slack_ts_float(message_item.ts) <= slack_ts_float(last_ts):
@@ -272,6 +286,28 @@ def poll_slack_inbox(
                 imported += 1
             else:
                 skipped += 1
+            note_import = save_borinef_note_from_slack(
+                memory_folder=memory_folder,
+                message=message_with_permalink,
+                timestamp=slack_timestamp(message_item.ts),
+            )
+            if note_import is not None:
+                if note_import.changed:
+                    note_document_id, note_index_changed = index_published_note_markdown(
+                        database=database,
+                        saved_path=note_import.saved_path,
+                        markdown=note_import.markdown,
+                        message=message_with_permalink,
+                        timestamp=slack_timestamp(message_item.ts),
+                        title=note_import.title,
+                    )
+                    if note_index_changed:
+                        generate_embeddings_for_document(database, note_document_id, session=embedding_session)
+                    note_changed_paths.append(str(note_import.saved_path))
+                    saved_files.append(str(note_import.saved_path))
+                    imported += 1
+                else:
+                    skipped += 1
             task_result = None
             if process_tasks:
                 task_result = process_slack_task(
@@ -326,6 +362,8 @@ def poll_slack_inbox(
             count=imported,
             related_path=changed_paths[0] if changed_paths else "",
         )
+    elif note_changed_paths:
+        append_borinef_note_notification(note_changed_paths[0])
     else:
         append_slack_import_notification(
             items=items,
@@ -445,6 +483,152 @@ def slack_get_json(
     raise ValueError("invalid slack response")
 
 
+def append_borinef_note_notification(related_path: str) -> None:
+    try:
+        append_import_notification(
+            source=SOURCE_TYPE_BORINEF_NOTE,
+            title=QPSC_NOTIFICATION_TEXT["title_borinef_note_published"],
+            message=QPSC_NOTIFICATION_TEXT["message_borinef_note_returned"],
+            related_path=related_path,
+        )
+    except OSError:
+        return
+
+
+def save_borinef_note_from_slack(
+    memory_folder: Path,
+    message: SlackInboxMessage,
+    timestamp: datetime,
+) -> BorinefNoteImport | None:
+    note_url = extract_note_url(message.text)
+    if not note_url:
+        return None
+    title = extract_borinef_note_title(message.text, note_url)
+    existing = find_existing_borinef_note_path(memory_folder, note_url)
+    if existing:
+        return BorinefNoteImport(
+            saved_path=existing,
+            markdown="",
+            title=title,
+            url=note_url,
+            changed=False,
+        )
+
+    published_date = timestamp.strftime("%Y-%m-%d")
+    note_folder = memory_folder / "BORINEF" / "note" / "published" / timestamp.strftime("%Y")
+    note_folder.mkdir(parents=True, exist_ok=True)
+    filename = f"{published_date}_{safe_note_filename_part(title)}.md"
+    path = next_available_path(note_folder / filename)
+    markdown = build_borinef_note_markdown(title=title, url=note_url, published_at=published_date)
+    path.write_text(markdown, encoding="utf-8")
+    return BorinefNoteImport(
+        saved_path=path.resolve(),
+        markdown=markdown,
+        title=title,
+        url=note_url,
+        changed=True,
+    )
+
+
+def extract_note_url(text: str) -> str:
+    for url in extract_urls(text):
+        normalized = normalize_note_url(url)
+        if normalized.startswith(NOTE_URL_PREFIX):
+            return normalized
+    return ""
+
+
+def normalize_note_url(url: str) -> str:
+    cleaned = str(url or "").strip().rstrip(".,、。)")
+    parsed = urlsplit(cleaned)
+    if parsed.scheme != "https" or parsed.netloc != "note.com":
+        return cleaned
+    path = parsed.path.rstrip("/")
+    return urlunsplit((parsed.scheme, parsed.netloc, path, "", ""))
+
+
+def extract_borinef_note_title(text: str, note_url: str) -> str:
+    lines = [clean_slack_title_line(line) for line in (text or "").replace("\r", "\n").split("\n")]
+    note_index = next((index for index, line in enumerate(lines) if note_url in line or "note.com/" in line), -1)
+    if note_index > 0:
+        for line in reversed(lines[:note_index]):
+            candidate = remove_urls_from_title(line)
+            if candidate:
+                return candidate[:120]
+    for line in lines:
+        candidate = remove_urls_from_title(line)
+        if candidate:
+            return candidate[:120]
+    return "BORINEF note"
+
+
+def clean_slack_title_line(line: str) -> str:
+    text = re.sub(r"<(https?://[^>|]+)\|([^>]+)>", r"\2", line or "")
+    text = re.sub(r"<(https?://[^>]+)>", r"\1", text)
+    return " ".join(text.strip().split())
+
+
+def remove_urls_from_title(line: str) -> str:
+    candidate = re.sub(r"https?://\S+", "", line or "").strip()
+    return candidate.strip(" -:：|")
+
+
+def safe_note_filename_part(title: str) -> str:
+    clean = re.sub(r'[<>:"/\\|?*\x00-\x1f]+', "", title or "").strip()
+    clean = re.sub(r"\s+", "_", clean).strip("._ ")
+    return clean[:80] or "note"
+
+
+def next_available_path(path: Path) -> Path:
+    if not path.exists():
+        return path
+    stem = path.stem
+    suffix = path.suffix
+    for index in range(2, 100):
+        candidate = path.with_name(f"{stem}_{index}{suffix}")
+        if not candidate.exists():
+            return candidate
+    return path.with_name(f"{stem}_{safe_ts(str(datetime.now().timestamp()))}{suffix}")
+
+
+def find_existing_borinef_note_path(memory_folder: Path, note_url: str) -> Path | None:
+    root = memory_folder / "BORINEF" / "note" / "published"
+    if not root.exists():
+        return None
+    for path in root.rglob("*.md"):
+        try:
+            if note_url in path.read_text(encoding="utf-8"):
+                return path.resolve()
+        except OSError:
+            continue
+    return None
+
+
+def build_borinef_note_markdown(title: str, url: str, published_at: str) -> str:
+    lines = [
+        "---",
+        f"title: {json.dumps(title, ensure_ascii=False)}",
+        "series: BORINEF",
+        "status: published",
+        f"published_at: {published_at}",
+        "platform: note",
+        f"url: {json.dumps(url, ensure_ascii=False)}",
+        "tags:",
+        "  - BORINEF",
+        "  - 在る",
+        "---",
+        "",
+        f"# {title}",
+        "",
+        "URL:",
+        url,
+        "",
+        "memo:",
+        "Slack自動保存",
+    ]
+    return "\n".join(lines).rstrip() + "\n"
+
+
 def save_slack_markdown(
     slack_folder: Path,
     channel_id: str,
@@ -561,6 +745,50 @@ def index_slack_markdown(
         source_path=str(saved_path.resolve()),
         created_at=timestamp,
         updated_at=timestamp,
+        excerpt=metadata.excerpt,
+    )
+    return document_id, changed
+
+
+def index_published_note_markdown(
+    database: BrainzDatabase,
+    saved_path: Path,
+    markdown: str,
+    message: SlackInboxMessage,
+    timestamp: datetime,
+    title: str,
+) -> tuple[int, bool]:
+    timestamp_text = timestamp.isoformat(timespec="seconds")
+    digest = hashlib.sha256(markdown.encode("utf-8", errors="replace")).hexdigest()
+    record = DocumentRecord(
+        path=str(saved_path.resolve()),
+        title=title,
+        source_type=SOURCE_TYPE_BORINEF_NOTE,
+        created_at=timestamp_text,
+        modified_at=timestamp_text,
+        indexed_at=now_iso(),
+        hash=digest,
+        content=markdown,
+        source_label="BORINEF note / published",
+        conversation_id="BORINEF/note/published",
+        conversation_title="BORINEF published note",
+        role=message.user,
+        message_index=0,
+        source_created_at=timestamp_text,
+        source_updated_at=timestamp_text,
+    )
+    document_id, changed = database.upsert_document(record, split_text(markdown))
+    metadata = build_ember_metadata(markdown)
+    database.upsert_ember_index(
+        document_id=document_id,
+        heat_tags=metadata.heat_tags,
+        temperature=metadata.temperature,
+        unfinished_score=metadata.unfinished_score,
+        reignition_score=metadata.reignition_score,
+        related_terms=metadata.related_terms,
+        source_path=str(saved_path.resolve()),
+        created_at=timestamp_text,
+        updated_at=timestamp_text,
         excerpt=metadata.excerpt,
     )
     return document_id, changed

@@ -163,6 +163,18 @@ Phase 18では、QPSC内部で静かに浮いた記憶をSlackへ小さく置く
 - 大量通知は避け、初期値では1日最大3件に抑えます
 - OpenClaw本格導入前の軽い外部導線です
 
+## QPSC Phase 20: BORINEF note循環
+
+Phase 20では、SlackへnoteタイトルとURLを投げるだけで、公開済noteをBRAINZへ戻す循環を追加しました。
+
+- `https://note.com/` を含むSlack投稿を検出します
+- URL直前行、または先頭行をタイトルとして扱います
+- 保存先は `brainz_memory/BORINEF/note/published/YYYY/` です
+- Markdownは `status: published`、`platform: note`、`url` を持つpublished正本として保存します
+- 同じnote URLが既に保存済みなら、再保存せず静かにskipします
+- 保存後は `borinef_note` 通知を `qpsc_notifications.json` に残し、OIKAWAの巡回・熾火・熱検索対象に自然に混ざります
+- reactions保存は今後 `brainz_memory/BORINEF/note/reactions/` に寄せる予定です
+
 ## Phase 1でできること
 
 - ローカル記憶フォルダの指定
