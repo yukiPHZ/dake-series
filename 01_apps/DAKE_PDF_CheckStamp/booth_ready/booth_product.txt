@@ -1,0 +1,31 @@
+# 商品名
+Dake確認印
+
+# 価格案
+500円
+
+# 商品紹介文
+PDFに名字と日付入りの確認印を押します。
+
+・PDF確認印アプリ
+・名字と日付入りの印影に対応
+・クリック位置へ押印
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。
+
+# タグ
+PDF
+Windows
+実務
+ツール
+仕事効率化
+軽量
+シンプル
+
+# BOOTH商品画像
+assets/screenshot.jpg
+
+# 作品ファイル
+booth_ready/Dake_Check_Stamp.zip

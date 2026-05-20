@@ -1,0 +1,31 @@
+# 商品名
+DakePDF結合mini
+
+# 価格案
+500円
+
+# 商品紹介文
+最大5ファイルまでのPDFを並べ替えて結合します。
+
+・PDF結合miniアプリ
+・最大5ファイルまで対応
+・サムネイル並べ替え対応
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。
+
+# タグ
+PDF
+Windows
+実務
+ツール
+仕事効率化
+軽量
+シンプル
+
+# BOOTH商品画像
+assets/screenshot.jpg
+
+# 作品ファイル
+booth_ready/DakePDF_Merge_Mini.zip

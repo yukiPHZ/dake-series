@@ -17,3 +17,6 @@ desktop.ini
 # Local app config
 *_config.json
 qpsc_notifications.json
+
+# BOOTH generated archives
+**/booth_ready/*.zip

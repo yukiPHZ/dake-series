@@ -1,0 +1,15 @@
+Dakeランチャー
+
+DAKEシリーズ各アプリを1クリックで起動します。
+
+主な特徴：
+・DAKEシリーズ各アプリを1クリックで起動するランチャー
+・各アプリの `README.md` にある `DAKE_META` から一覧生成
+・exe 未検出時の場所指定に対応
+・最近使ったアプリを最大2件まで記録
+・勝手な整理・移動・削除は行いません
+
+PEAKHEADZ
+https://peakheadz.com
+
+Vibe-Coded by Yukihiko Kikuta

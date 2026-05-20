@@ -1,0 +1,344 @@
+from __future__ import annotations
+
+import json
+import re
+import shutil
+import zipfile
+from dataclasses import dataclass, field
+from pathlib import Path
+
+from PIL import Image
+
+
+ROOT = Path(__file__).resolve().parents[1]
+APPS_DIR = ROOT / "01_apps"
+NOTICE_TEXT = """【注意事項】
+
+・Windows向けアプリです
+・ご利用は自己責任でお願いいたします
+・大切なファイルは事前にバックアップを推奨します
+・本ソフトウェアの無断転載・再配布を禁止します
+・環境によっては起動時にWindowsの警告が表示される場合があります
+
+PEAKHEADZ
+https://peakheadz.com
+"""
+
+
+@dataclass
+class AppResult:
+    folder: str
+    ok: bool = True
+    missing: list[str] = field(default_factory=list)
+    generated: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    zip_name: str = ""
+    product_title: str = ""
+    price: int = 300
+
+
+def read_text(path: Path) -> str:
+    return path.read_text(encoding="utf-8")
+
+
+def write_text(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8", newline="\n")
+
+
+def extract_meta(readme_text: str) -> dict | None:
+    match = re.search(r"(?s)## DAKE_META\s*```json\s*(\{.*?\})\s*```", readme_text)
+    if not match:
+        match = re.search(r"(?s)## DAKE_META.*?(\{.*?\})", readme_text)
+    if not match:
+        return None
+    return json.loads(match.group(1))
+
+
+def extract_release_body(readme_text: str) -> str:
+    match = re.search(r"(?s)## RELEASE_BODY\s*(.*?)(?:\n## |\Z)", readme_text)
+    if not match:
+        return ""
+    body = match.group(1).strip()
+    body = re.sub(r"^```[a-zA-Z0-9_-]*\s*", "", body)
+    body = re.sub(r"\s*```$", "", body).strip()
+    return body
+
+
+def normalize_features(body: str, fallback: str) -> list[str]:
+    lines: list[str] = []
+    for raw_line in body.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or line.startswith("```"):
+            continue
+        if line.startswith("- "):
+            line = line[2:].strip()
+        if line.startswith("・"):
+            line = line[1:].strip()
+        lines.append(line)
+    if not lines and fallback:
+        lines.append(fallback)
+    cleaned: list[str] = []
+    for line in lines:
+        if line not in cleaned:
+            cleaned.append(line)
+    return cleaned[:5]
+
+
+def product_title(meta: dict) -> str:
+    return meta.get("site_title") or meta.get("display_name") or meta.get("folder_name", "DAKE App")
+
+
+def short_description(meta: dict) -> str:
+    return (
+        meta.get("launcher_description")
+        or meta.get("site_description")
+        or meta.get("update_summary")
+        or product_title(meta)
+    )
+
+
+def price_for(folder: str, title: str, features: list[str]) -> int:
+    blob = f"{folder} {title} {' '.join(features)}"
+    if "PDF" in blob:
+        return 500
+    if any(token in blob for token in ["Git", "Brainz", "BRAINZ", "OIKAWA", "Wake", "Backup", "バックアップ"]):
+        return 500
+    if "Memo" in blob or "メモ" in blob:
+        return 300
+    if "Image" in blob or "画像" in blob or "HEIC" in blob:
+        return 500
+    return 300
+
+
+def tags_for(folder: str, title: str, features: list[str]) -> list[str]:
+    blob = f"{folder} {title} {' '.join(features)}"
+    tags: list[str] = []
+    if "PDF" in blob:
+        tags.append("PDF")
+    if "Memo" in blob or "メモ" in blob:
+        tags.append("メモ")
+    if "Image" in blob or "画像" in blob or "HEIC" in blob or "写真" in blob:
+        tags.append("画像")
+    if "Mail" in blob or "メール" in blob:
+        tags.append("メール")
+    if any(token in blob for token in ["Git", "Brainz", "BRAINZ", "OIKAWA", "Wake"]):
+        tags.append("開発")
+    for tag in ["Windows", "実務", "ツール", "仕事効率化", "軽量", "シンプル"]:
+        tags.append(tag)
+    unique: list[str] = []
+    for tag in tags:
+        if tag not in unique:
+            unique.append(tag)
+    return unique
+
+
+def make_readme_txt(title: str, description: str, features: list[str]) -> str:
+    feature_lines = "\n".join(f"・{feature}" for feature in features[:5])
+    return f"""{title}
+
+{description}
+
+主な特徴：
+{feature_lines}
+
+PEAKHEADZ
+https://peakheadz.com
+
+Vibe-Coded by Yukihiko Kikuta
+"""
+
+
+def make_product_txt(title: str, price: int, description: str, features: list[str], tags: list[str], zip_name: str) -> str:
+    feature_lines = "\n".join(f"・{feature}" for feature in features[:5])
+    tag_lines = "\n".join(tags)
+    intro = f"""{description}
+
+{feature_lines}
+
+実務の流れを、
+少し静かにするための道具です。"""
+    return f"""# 商品名
+{title}
+
+# 価格案
+{price}円
+
+# 商品紹介文
+{intro}
+
+# タグ
+{tag_lines}
+
+# BOOTH商品画像
+assets/screenshot.jpg
+
+# 作品ファイル
+booth_ready/{zip_name}
+"""
+
+
+def convert_webp_to_jpg(src: Path, dst: Path) -> None:
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    with Image.open(src) as image:
+        if image.mode in {"RGBA", "LA"}:
+            background = Image.new("RGB", image.size, (255, 255, 255))
+            alpha = image.getchannel("A") if image.mode == "RGBA" else image.getchannel(1)
+            background.paste(image.convert("RGBA"), mask=alpha)
+            image = background
+        else:
+            image = image.convert("RGB")
+        image.save(dst, "JPEG", quality=95, optimize=True)
+
+
+def create_zip(zip_path: Path, exe_path: Path, readme_path: Path, notice_path: Path) -> None:
+    zip_path.parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.write(exe_path, arcname=exe_path.name)
+        archive.write(readme_path, arcname="README.txt")
+        archive.write(notice_path, arcname="注意事項.txt")
+
+
+def find_exe(app_dir: Path, meta: dict | None) -> Path | None:
+    if meta and meta.get("exe_name"):
+        expected = app_dir / "dist" / meta["exe_name"]
+        if expected.exists():
+            return expected
+    exes = sorted((app_dir / "dist").glob("*.exe"))
+    return exes[0] if exes else None
+
+
+def process_app(app_dir: Path) -> AppResult:
+    result = AppResult(folder=app_dir.name)
+    readme_path = app_dir / "README.md"
+    if not readme_path.exists():
+        result.missing.append("README.md")
+        result.ok = False
+        return result
+
+    readme_text = read_text(readme_path)
+    try:
+        meta = extract_meta(readme_text)
+    except json.JSONDecodeError as exc:
+        result.missing.append(f"DAKE_META invalid JSON: {exc}")
+        result.ok = False
+        meta = None
+
+    if meta is None:
+        result.missing.append("DAKE_META")
+        result.ok = False
+        return result
+
+    release_body = extract_release_body(readme_text)
+    if not release_body:
+        result.missing.append("RELEASE_BODY")
+
+    release_body_path = app_dir / "release_body.md"
+    if not release_body_path.exists() and release_body:
+        write_text(release_body_path, release_body + "\n")
+        result.generated.append("release_body.md")
+    elif not release_body_path.exists():
+        result.missing.append("release_body.md")
+    else:
+        existing_body = read_text(release_body_path).strip()
+        if existing_body and not release_body:
+            release_body = existing_body
+
+    title = product_title(meta)
+    result.product_title = title
+    description = short_description(meta)
+    features = normalize_features(release_body, description)
+    if not any("Windows" in feature for feature in features):
+        features.append("Windows向け")
+    features = features[:5]
+    result.price = price_for(app_dir.name, title, features)
+
+    screenshot_webp = app_dir / meta.get("screenshot_path", "assets/screenshot.webp")
+    screenshot_jpg = app_dir / "assets" / "screenshot.jpg"
+    booth_dir = app_dir / "booth_ready"
+    booth_jpg = booth_dir / "screenshot.jpg"
+    booth_dir.mkdir(parents=True, exist_ok=True)
+
+    if screenshot_webp.exists():
+        try:
+            convert_webp_to_jpg(screenshot_webp, screenshot_jpg)
+            shutil.copy2(screenshot_jpg, booth_jpg)
+            result.generated.extend(["assets/screenshot.jpg", "booth_ready/screenshot.jpg"])
+        except Exception as exc:  # noqa: BLE001
+            result.missing.append(f"screenshot.jpg conversion failed: {exc}")
+            result.ok = False
+    else:
+        result.missing.append("assets/screenshot.webp")
+        result.warnings.append("screenshot.jpg not generated")
+
+    readme_txt = booth_dir / "README.txt"
+    notice_txt = booth_dir / "注意事項.txt"
+    product_txt = booth_dir / "booth_product.txt"
+    write_text(readme_txt, make_readme_txt(title, description, features))
+    write_text(notice_txt, NOTICE_TEXT)
+
+    exe_path = find_exe(app_dir, meta)
+    if exe_path is None:
+        result.missing.append("dist/*.exe")
+        zip_name = f"{meta.get('exe_name') or app_dir.name}.zip".replace(".exe.zip", ".zip")
+    else:
+        zip_name = f"{exe_path.stem}.zip"
+    result.zip_name = zip_name
+
+    product = make_product_txt(
+        title=title,
+        price=result.price,
+        description=description,
+        features=features,
+        tags=tags_for(app_dir.name, title, features),
+        zip_name=zip_name,
+    )
+    write_text(product_txt, product)
+    result.generated.extend(["booth_ready/README.txt", "booth_ready/注意事項.txt", "booth_ready/booth_product.txt"])
+
+    if exe_path is not None:
+        create_zip(booth_dir / zip_name, exe_path, readme_txt, notice_txt)
+        result.generated.append(f"booth_ready/{zip_name}")
+
+    for required in ["build.bat", ".gitignore"]:
+        if not (app_dir / required).exists():
+            result.missing.append(required)
+
+    if meta.get("release_url") == "":
+        result.warnings.append("release_url empty")
+
+    if result.missing:
+        result.ok = False
+    return result
+
+
+def main() -> int:
+    app_dirs = sorted(path for path in APPS_DIR.iterdir() if path.is_dir() and path.name.startswith("DAKE_"))
+    results = [process_app(app_dir) for app_dir in app_dirs]
+
+    print(f"対象アプリ数: {len(results)}")
+    print(f"screenshot.jpg生成成功: {sum('assets/screenshot.jpg' in r.generated for r in results)}")
+    print(f"booth_ready生成成功: {sum((APPS_DIR / r.folder / 'booth_ready').exists() for r in results)}")
+    print(f"zip生成成功: {sum(any(item.endswith('.zip') for item in r.generated) for r in results)}")
+    print("")
+    print("不足/警告:")
+    for result in results:
+        if result.missing or result.warnings:
+            parts = []
+            if result.missing:
+                parts.append("missing=" + ", ".join(result.missing))
+            if result.warnings:
+                parts.append("warnings=" + ", ".join(result.warnings))
+            print(f"- {result.folder}: {'; '.join(parts)}")
+
+    print("")
+    print("BOOTH初期候補:")
+    for name in ["DAKE_PDF_Merge", "DAKE_Sticky_Memo", "DAKE_Maji_Memo", "DAKE_Git_Memo", "DAKE_Yesterday_Task_Memo"]:
+        match = next((r for r in results if r.folder == name), None)
+        if match:
+            print(f"- {match.folder}: {match.product_title} / {match.price}円 / {match.zip_name}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

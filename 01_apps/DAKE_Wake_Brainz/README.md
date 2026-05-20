@@ -159,3 +159,10 @@ Sleep、Queue、Codex 監視、Slack bridge は将来フェーズで追加しま
   "show_on_site": false
 }
 ```
+
+## RELEASE_BODY
+
+- Wake-on-LANで補助脳PCを起動
+- LAN内ブラウザから状態確認
+- MAC AddressとBroadcast IPを保存
+- Windows向けexe

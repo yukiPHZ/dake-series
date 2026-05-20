@@ -1,0 +1,5 @@
+OIKAWA 初期版
+BRAINZ記憶フォルダを巡回
+熱の痕跡と関連断片を観測
+提案MarkdownをBRAINZへ保存
+Windows向けexe

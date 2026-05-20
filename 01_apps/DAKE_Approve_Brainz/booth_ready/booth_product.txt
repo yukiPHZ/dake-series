@@ -1,0 +1,32 @@
+# 商品名
+承認Brainz
+
+# 価格案
+500円
+
+# 商品紹介文
+家PC上の承認待ちをスマホブラウザから確認します。
+
+・承認Brainz
+・スマホブラウザから承認待ちを確認
+・承認 / 却下をresult.jsonへ保存
+・BRAINZ連携前提の最小承認パネル
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。
+
+# タグ
+開発
+Windows
+実務
+ツール
+仕事効率化
+軽量
+シンプル
+
+# BOOTH商品画像
+assets/screenshot.jpg
+
+# 作品ファイル
+booth_ready/DakeApproveBrainz.zip

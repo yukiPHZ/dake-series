@@ -1,0 +1,31 @@
+# 商品名
+DakeImage_Receiver
+
+# 価格案
+500円
+
+# 商品紹介文
+スマホから画像をこのPCへ送ります。
+
+・スマホ画像受信アプリ
+・QRコード接続に対応
+・画像をPC側へ保存
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。
+
+# タグ
+画像
+Windows
+実務
+ツール
+仕事効率化
+軽量
+シンプル
+
+# BOOTH商品画像
+assets/screenshot.jpg
+
+# 作品ファイル
+booth_ready/DakeImage_Receiver.zip

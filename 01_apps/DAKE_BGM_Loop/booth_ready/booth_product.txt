@@ -1,0 +1,31 @@
+# 商品名
+Dake BGM Loop
+
+# 価格案
+300円
+
+# 商品紹介文
+のんきなループを、静かに作る。
+
+・短いBGMループ生成補助ツール
+・Phase 3でMock音の傾向分け、seed再現性、ループ改善を追加
+・seed、metadata、お気に入りコピーに対応
+・生成音声の商用利用可否は使用モデル・素材・公開先の規約に依存
+・Windows向け
+
+実務の流れを、
+少し静かにするための道具です。
+
+# タグ
+Windows
+実務
+ツール
+仕事効率化
+軽量
+シンプル
+
+# BOOTH商品画像
+assets/screenshot.jpg
+
+# 作品ファイル
+booth_ready/DakeBGM_Loop.zip

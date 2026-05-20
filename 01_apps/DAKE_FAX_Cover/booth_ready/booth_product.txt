@@ -1,0 +1,31 @@
+# 商品名
+DakeFAX送付状
+
+# 価格案
+500円
+
+# 商品紹介文
+送信先と内容を入力してA4縦のFAX送付状PDFを作成します。
+
+・FAX送付状PDF作成アプリ
+・送信先・FAX情報・送信内容に対応
+・A4縦PDF出力
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。
+
+# タグ
+PDF
+Windows
+実務
+ツール
+仕事効率化
+軽量
+シンプル
+
+# BOOTH商品画像
+assets/screenshot.jpg
+
+# 作品ファイル
+booth_ready/DakeFAX_Cover.zip

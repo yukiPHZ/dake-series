@@ -1,0 +1,32 @@
+# 商品名
+OIKAWA
+
+# 価格案
+500円
+
+# 商品紹介文
+BRAINZの記憶層を巡回し、熱の痕跡を静かに浮かび上がらせます。
+
+・OIKAWA 初期版
+・BRAINZ記憶フォルダを巡回
+・熱の痕跡と関連断片を観測
+・提案MarkdownをBRAINZへ保存
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。
+
+# タグ
+開発
+Windows
+実務
+ツール
+仕事効率化
+軽量
+シンプル
+
+# BOOTH商品画像
+assets/screenshot.jpg
+
+# 作品ファイル
+booth_ready/DakeBrainz_OIKAWA.zip

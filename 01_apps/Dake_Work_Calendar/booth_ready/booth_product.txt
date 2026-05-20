@@ -1,0 +1,31 @@
+# 商品名
+Dake工程カレンダー
+
+# 価格案
+500円
+
+# 商品紹介文
+指定期間の日付枠をA4縦PDFに並べます。
+
+・工程カレンダーPDF作成アプリ
+・指定期間の日付枠に対応
+・A4縦PDF出力
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。
+
+# タグ
+PDF
+Windows
+実務
+ツール
+仕事効率化
+軽量
+シンプル
+
+# BOOTH商品画像
+assets/screenshot.jpg
+
+# 作品ファイル
+booth_ready/DakeWork_Calendar.zip

@@ -1,0 +1,32 @@
+# 商品名
+DakePDFto画像
+
+# 価格案
+500円
+
+# 商品紹介文
+PDFの各ページをPNG画像に変換します。
+
+・PDF→画像変換アプリ
+・ページごとのPNG保存に対応
+・複数PDFの追加に対応
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。
+
+# タグ
+PDF
+画像
+Windows
+実務
+ツール
+仕事効率化
+軽量
+シンプル
+
+# BOOTH商品画像
+assets/screenshot.jpg
+
+# 作品ファイル
+booth_ready/DakePDF_to_Images.zip

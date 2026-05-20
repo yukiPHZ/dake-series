@@ -64,3 +64,31 @@ build.bat
 ```
 
 PyInstaller が使える環境では `dist\DakeBackup.exe` を作成します。
+
+## DAKE_META
+
+```json
+{
+  "app_key": "DAKE_Backup",
+  "display_name": "Dakeバックアップ",
+  "launcher_title": "バックアップ",
+  "launcher_description": "正本フォルダを、指定した避難先へ静かに残します。",
+  "site_title": "Dakeバックアップ",
+  "site_description": "ローカル正本フォルダを、指定した避難先フォルダへ一方向にコピー保存するWindows向けアプリです。",
+  "update_summary": "ローカル正本を削除伝播させずに残すバックアップアプリを追加しました。",
+  "folder_name": "DAKE_Backup",
+  "exe_name": "DakeBackup.exe",
+  "release_url": "",
+  "screenshot_path": "assets/screenshot.webp",
+  "status": "available",
+  "show_in_launcher": true,
+  "show_on_site": false
+}
+```
+
+## RELEASE_BODY
+
+- 正本フォルダを避難先へコピー保存
+- 削除は伝播しない一方向バックアップ
+- 差分確認と退避保存に対応
+- Windows向けexe

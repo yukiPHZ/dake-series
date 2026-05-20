@@ -1,0 +1,30 @@
+# 商品名
+YUKIZ BLOG 投稿DAKE
+
+# 価格案
+300円
+
+# 商品紹介文
+YUKIZ BLOG用の投稿HTMLとJSONを反映します。
+
+・YUKIZ BLOG投稿アプリ
+・本文入力だけの投稿導線
+・HTML・JSON反映に対応
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。
+
+# タグ
+Windows
+実務
+ツール
+仕事効率化
+軽量
+シンプル
+
+# BOOTH商品画像
+assets/screenshot.jpg
+
+# 作品ファイル
+booth_ready/Dake_YukizBlog_Post.zip
