@@ -485,6 +485,21 @@ Smart Horizontal Edit の fallback sequence を強化しました。3秒程度�
 - FOCUS MODE は Memory 保存後に `Generate Upload Package` を次候補として案内し、完了後は `Open Upload Package` へ進みます
 - 最終確認と公開判断はユーザーが行います
 
+## Phase 4.1 THUMBNAIL FLOW
+
+`THUMBNAIL FLOW` を追加しました。動画の中からYouTubeサムネ向きの静かな入口を探し、候補PNGとして `selected/thumbnails/` に整理します。
+
+- `Generate Thumbnail Candidates` で `thumb_01.png` 〜 `thumb_05.png` を生成
+- 入力は `selected/smart_horizontal_edit.mp4` → `selected/horizontal_video.mp4` → `selected/horizontal_edit.mp4` → source video の順で選択
+- OpenCV / frame sampling で暗すぎ、白すぎ、ブレすぎ、止まりすぎのフレームを避けるスコアリングを行います
+- 出力サイズは YouTube向けの `1280x720`
+- `thumbnail_candidates.json` に `quiet work`、`desk light`、`afterglow` などの方向性と理由を保存
+- Ollama READY時は review / recommendation / memory を参考に短い方向性を整え、失敗時はテンプレートで継続
+- `Preview Thumbnail` は選択中PNGをOS既定ビューアで開くだけです
+- `Add Thumbnail To Upload Package` で `selected/upload_ready/thumbnails/` へコピーし、同名は連番で回避します
+- Photoshop置き換え、レイヤー編集、テキスト編集、AI画像生成は行いません
+- FOCUS MODE は Upload Package生成後、サムネ未生成なら `Generate Thumbnail Candidates`、生成済みなら `Open Upload Package` を案内します
+
 ## Phase 2候補
 
 - YouTube LIVE URLからyt-dlpで本取得

@@ -192,3 +192,12 @@
 - thumbnails は存在する場合だけコピーし、ない場合はchecklistに記録
 - 動画は再エンコードせずコピーのみ
 - YouTube自動投稿、自動公開、YouTube APIアップロードは行わない
+
+## Phase 4.1
+
+- THUMBNAIL FLOW を追加
+- 動画から `1280x720` のサムネ候補 `thumb_01.png` 〜 `thumb_05.png` を生成
+- 暗すぎ、白すぎ、ブレすぎ、止まりすぎのフレームを避ける簡易スコアリングに対応
+- `thumbnail_candidates.json` に方向性、理由、タイトル相性を保存
+- 選択サムネを `selected/upload_ready/thumbnails/` へコピー可能
+- Photoshop置き換えやAI画像生成は行わず、サムネ候補整理に限定

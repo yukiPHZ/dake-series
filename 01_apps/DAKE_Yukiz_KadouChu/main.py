@@ -92,6 +92,11 @@ from core.sequence_builder import (
 from core.shorts_analyzer import create_shorts_candidates, write_shorts_candidates
 from core.shorts_pack import generate_shorts_pack
 from core.smart_horizontal_edit import generate_smart_horizontal_edit, plan_smart_horizontal_sequence
+from core.thumbnail_flow import (
+    add_thumbnail_to_upload_package,
+    generate_thumbnail_candidates,
+    read_thumbnail_candidates,
+)
 from core.transcription import is_faster_whisper_available, transcribe_media
 from core.upload_package import generate_upload_package
 from ui.theme import COLORS, FONT_FAMILY, setup_theme
@@ -130,6 +135,7 @@ UI_TEXT = {
     "focus_desc_export": "Export horizontal video, smart edit, then Shorts if needed.",
     "focus_desc_memory": "Save this production flow into assistant memory.",
     "focus_desc_upload": "Prepare the upload_ready set for YouTube Studio handoff.",
+    "focus_desc_thumbnail": "Generate quiet thumbnail candidates for the upload set.",
     "focus_desc_completed": "整っています。",
     "focus_progress_done": "done",
     "focus_progress_next": "next",
@@ -204,6 +210,11 @@ UI_TEXT = {
     "live_phase_upload_metadata": "Preparing metadata...",
     "live_phase_upload_checklist": "Building upload checklist...",
     "live_upload_failed": "Upload package export failed. See log.",
+    "live_phase_thumbnail_sample": "Sampling video frames...",
+    "live_phase_thumbnail_quiet": "Checking quiet moments...",
+    "live_phase_thumbnail_generate": "Generating thumbnail candidates...",
+    "live_phase_thumbnail_export": "Exporting 1280x720 PNGs...",
+    "live_thumbnail_failed": "Thumbnail Flow failed. See log.",
     "live_phase_completed": "Completed.",
     "button_generating": "Generating...",
     "button_rendering": "Rendering...",
@@ -356,6 +367,24 @@ UI_TEXT = {
     "shorts_pack_content": "shorts pack",
     "review_content": "review",
     "upload_checklist": "upload checklist",
+    "thumbnail_flow": "THUMBNAIL FLOW",
+    "generate_thumbnail_candidates": "Generate Thumbnail Candidates",
+    "open_thumbnail_folder": "Open Thumbnail Folder",
+    "preview_thumbnail": "Preview Thumbnail",
+    "add_thumbnail_to_upload": "Add Thumbnail To Upload Package",
+    "thumbnail_ready_hint": "Generate quiet 1280x720 thumbnail candidates from the video flow.",
+    "thumbnail_running": "Status: RUNNING",
+    "thumbnail_completed": "Completed",
+    "thumbnail_failed": "FAILED",
+    "thumbnail_unavailable": "Thumbnail candidates are not ready yet.",
+    "open_thumbnail_failed": "Could not open thumbnail folder.",
+    "preview_thumbnail_failed": "Could not preview thumbnail.",
+    "thumbnail_upload_failed": "Could not add thumbnail to upload package.",
+    "thumbnail_added": "Thumbnail added to upload_ready.",
+    "candidates": "Candidates",
+    "direction": "Direction",
+    "quiet_midnight_work": "quiet midnight work",
+    "no_thumbnails": "No thumbnails found",
     "sequence_builder": "SEQUENCE BUILDER",
     "sequence": "SEQUENCE",
     "add_sequence_video": "Add Sequence Video",
@@ -513,6 +542,9 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.shorts_pack_dir: Path | None = None
         self.upload_package_dir: Path | None = None
         self.upload_checklist_path: Path | None = None
+        self.thumbnail_dir: Path | None = None
+        self.thumbnail_preview_path: Path | None = None
+        self.thumbnail_candidates: list[dict[str, object]] = []
         self.horizontal_edit_path: Path | None = None
         self.preview_source_video_path: Path | None = None
         self.sequence_items: list[dict[str, object]] = []
@@ -536,6 +568,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.smart_horizontal_running = False
         self.shorts_pack_running = False
         self.upload_package_running = False
+        self.thumbnail_running = False
         self.sequence_running = False
         self.project_bridge_running = False
         self.memory_running = False
@@ -556,6 +589,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.smart_horizontal_summary_var = ctk.StringVar(value=UI_TEXT["smart_horizontal_ready_hint"])
         self.shorts_pack_summary_var = ctk.StringVar(value=UI_TEXT["shorts_pack_ready_hint"])
         self.upload_package_summary_var = ctk.StringVar(value=UI_TEXT["upload_package_ready_hint"])
+        self.thumbnail_summary_var = ctk.StringVar(value=UI_TEXT["thumbnail_ready_hint"])
         self.sequence_summary_var = ctk.StringVar(value=UI_TEXT["horizontal_edit_ready_hint"])
         self.project_bridge_summary_var = ctk.StringVar(value=UI_TEXT["project_bridge_ready_hint"])
         self.memory_summary_var = ctk.StringVar(value=UI_TEXT["memory_ready_hint"])
@@ -565,6 +599,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.sequence_choice_var = ctk.StringVar(value=UI_TEXT["sequence_empty"])
         self.project_choice_var = ctk.StringVar(value=UI_TEXT["no_project_boxes"])
         self.project_bgm_choice_var = ctk.StringVar(value=UI_TEXT["bgm_none"])
+        self.thumbnail_choice_var = ctk.StringVar(value=UI_TEXT["no_thumbnails"])
         self.youtube_var = ctk.StringVar(value="")
         self.youtube_status_var = ctk.StringVar(value=UI_TEXT["metadata_fetch_optional"])
         self.system_check_status_var = ctk.StringVar(value=UI_TEXT["system_check_not_run"])
@@ -1471,8 +1506,81 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         )
         self.preview_upload_set_button.grid(row=3, column=0, columnspan=2, sticky="ew", padx=12, pady=(4, 10))
 
+        thumbnail_box = ctk.CTkFrame(body, fg_color=COLORS["panel_alt"], border_width=1, border_color=COLORS["line"], corner_radius=8)
+        thumbnail_box.grid(row=6, column=0, sticky="ew", pady=(12, 0))
+        thumbnail_box.grid_columnconfigure(0, weight=1)
+        thumbnail_box.grid_columnconfigure(1, weight=1)
+        ctk.CTkLabel(
+            thumbnail_box,
+            text=UI_TEXT["thumbnail_flow"],
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
+            text_color=COLORS["accent_soft"],
+        ).grid(row=0, column=0, columnspan=2, sticky="w", padx=12, pady=(10, 4))
+        ctk.CTkLabel(
+            thumbnail_box,
+            textvariable=self.thumbnail_summary_var,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            text_color=COLORS["text"],
+            wraplength=330,
+            justify="left",
+        ).grid(row=1, column=0, columnspan=2, sticky="ew", padx=12, pady=(0, 8))
+        self.thumbnail_choice_menu = ctk.CTkOptionMenu(
+            thumbnail_box,
+            variable=self.thumbnail_choice_var,
+            values=[UI_TEXT["no_thumbnails"]],
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            button_color=COLORS["button"],
+            button_hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+        )
+        self.thumbnail_choice_menu.grid(row=2, column=0, columnspan=2, sticky="ew", padx=12, pady=4)
+        self.generate_thumbnail_button = ctk.CTkButton(
+            thumbnail_box,
+            text=UI_TEXT["generate_thumbnail_candidates"],
+            command=self._start_generate_thumbnail_candidates,
+            height=30,
+            fg_color=COLORS["button"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+        )
+        self.generate_thumbnail_button.grid(row=3, column=0, sticky="ew", padx=(12, 4), pady=4)
+        self.open_thumbnail_folder_button = ctk.CTkButton(
+            thumbnail_box,
+            text=UI_TEXT["open_thumbnail_folder"],
+            command=self._open_thumbnail_folder,
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+            state="disabled",
+        )
+        self.open_thumbnail_folder_button.grid(row=3, column=1, sticky="ew", padx=(4, 12), pady=4)
+        self.preview_thumbnail_button = ctk.CTkButton(
+            thumbnail_box,
+            text=UI_TEXT["preview_thumbnail"],
+            command=self._preview_thumbnail,
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+            state="disabled",
+        )
+        self.preview_thumbnail_button.grid(row=4, column=0, sticky="ew", padx=(12, 4), pady=(4, 10))
+        self.add_thumbnail_upload_button = ctk.CTkButton(
+            thumbnail_box,
+            text=UI_TEXT["add_thumbnail_to_upload"],
+            command=self._start_add_thumbnail_to_upload,
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+            state="disabled",
+        )
+        self.add_thumbnail_upload_button.grid(row=4, column=1, sticky="ew", padx=(4, 12), pady=(4, 10))
+
         sequence_box = ctk.CTkFrame(body, fg_color=COLORS["panel_alt"], border_width=1, border_color=COLORS["line"], corner_radius=8)
-        sequence_box.grid(row=6, column=0, sticky="ew", pady=(12, 0))
+        sequence_box.grid(row=7, column=0, sticky="ew", pady=(12, 0))
         sequence_box.grid_columnconfigure(0, weight=1)
         sequence_box.grid_columnconfigure(1, weight=1)
         ctk.CTkLabel(
@@ -1563,7 +1671,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.open_horizontal_edit_button.grid(row=5, column=1, sticky="ew", padx=(4, 12), pady=(4, 10))
 
         bridge_box = ctk.CTkFrame(body, fg_color=COLORS["panel_alt"], border_width=1, border_color=COLORS["line"], corner_radius=8)
-        bridge_box.grid(row=7, column=0, sticky="ew", pady=(12, 0))
+        bridge_box.grid(row=8, column=0, sticky="ew", pady=(12, 0))
         bridge_box.grid_columnconfigure(0, weight=1)
         bridge_box.grid_columnconfigure(1, weight=1)
         ctk.CTkLabel(
@@ -1655,7 +1763,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.generate_bridge_metadata_button.grid(row=5, column=0, columnspan=2, sticky="ew", padx=12, pady=(4, 10))
 
         memory_box = ctk.CTkFrame(body, fg_color=COLORS["panel_alt"], border_width=1, border_color=COLORS["line"], corner_radius=8)
-        memory_box.grid(row=8, column=0, sticky="ew", pady=(12, 0))
+        memory_box.grid(row=9, column=0, sticky="ew", pady=(12, 0))
         memory_box.grid_columnconfigure(0, weight=1)
         memory_box.grid_columnconfigure(1, weight=1)
         ctk.CTkLabel(
@@ -1704,7 +1812,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.generate_memory_summary_button.grid(row=3, column=0, columnspan=2, sticky="ew", padx=12, pady=(4, 10))
 
         recommend_box = ctk.CTkFrame(body, fg_color=COLORS["panel_alt"], border_width=1, border_color=COLORS["line"], corner_radius=8)
-        recommend_box.grid(row=9, column=0, sticky="ew", pady=(12, 0))
+        recommend_box.grid(row=10, column=0, sticky="ew", pady=(12, 0))
         recommend_box.grid_columnconfigure(0, weight=1)
         recommend_box.grid_columnconfigure(1, weight=1)
         ctk.CTkLabel(
@@ -1763,7 +1871,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             text_color=COLORS["text"],
             state="disabled",
         )
-        self.open_button.grid(row=10, column=0, sticky="ew", pady=(12, 0))
+        self.open_button.grid(row=11, column=0, sticky="ew", pady=(12, 0))
         return panel
 
     def _build_system_panel(self, parent: ctk.CTkFrame) -> ctk.CTkFrame:
@@ -1881,6 +1989,23 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         if hasattr(self, "preview_upload_set_button"):
             self.preview_upload_set_button.configure(state="disabled")
 
+    def _reset_thumbnail_state(self) -> None:
+        self.thumbnail_dir = None
+        self.thumbnail_preview_path = None
+        self.thumbnail_candidates = []
+        if hasattr(self, "thumbnail_summary_var"):
+            self.thumbnail_summary_var.set(UI_TEXT["thumbnail_ready_hint"])
+        if hasattr(self, "thumbnail_choice_var"):
+            self.thumbnail_choice_var.set(UI_TEXT["no_thumbnails"])
+        if hasattr(self, "thumbnail_choice_menu"):
+            self.thumbnail_choice_menu.configure(values=[UI_TEXT["no_thumbnails"]])
+        if hasattr(self, "open_thumbnail_folder_button"):
+            self.open_thumbnail_folder_button.configure(state="disabled")
+        if hasattr(self, "preview_thumbnail_button"):
+            self.preview_thumbnail_button.configure(state="disabled")
+        if hasattr(self, "add_thumbnail_upload_button"):
+            self.add_thumbnail_upload_button.configure(state="disabled")
+
     def _dashboard_memory_saved(self, package_dir: Path | None) -> bool:
         if package_dir is None:
             return False
@@ -1922,6 +2047,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.smart_horizontal_running,
                 self.shorts_pack_running,
                 self.upload_package_running,
+                self.thumbnail_running,
                 self.sequence_running,
                 self.project_bridge_running,
                 self.memory_running,
@@ -2262,6 +2388,16 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 sequence_ready,
             )
 
+        if not self._dashboard_file_ready(package_dir, "selected/thumbnails/thumbnail_candidates.json", None):
+            return self._focus_step_state(
+                6,
+                "focus_step_memory",
+                "focus_desc_thumbnail",
+                "generate_thumbnail_candidates",
+                "generate_thumbnail_candidates",
+                sequence_ready,
+            )
+
         return {
             "index": 6,
             "completed": True,
@@ -2328,6 +2464,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             "generate_horizontal_edit": self._start_generate_horizontal_edit,
             "save_to_memory": self._start_save_memory,
             "generate_upload_package": self._start_generate_upload_package,
+            "generate_thumbnail_candidates": self._start_generate_thumbnail_candidates,
             "open_upload_package": self._open_upload_package,
             "open_package_folder": self._open_package_folder,
         }
@@ -2387,6 +2524,9 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.preview_shorts_pack_button.configure(state="disabled")
         self.open_upload_package_button.configure(state="disabled")
         self.preview_upload_set_button.configure(state="disabled")
+        self.open_thumbnail_folder_button.configure(state="disabled")
+        self.preview_thumbnail_button.configure(state="disabled")
+        self.add_thumbnail_upload_button.configure(state="disabled")
         self.open_recommendation_button.configure(state="disabled")
         self.selected_output_dir = None
         self.short_preview_path = None
@@ -2397,6 +2537,9 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.shorts_pack_dir = None
         self.upload_package_dir = None
         self.upload_checklist_path = None
+        self.thumbnail_dir = None
+        self.thumbnail_preview_path = None
+        self.thumbnail_candidates = []
         self.horizontal_edit_path = None
         self.recommendation_path = None
         self.preview_source_video_path = None
@@ -2415,6 +2558,9 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.vertical_short_summary_var.set(UI_TEXT["vertical_short_ready_hint"])
         self.shorts_pack_summary_var.set(UI_TEXT["shorts_pack_ready_hint"])
         self.upload_package_summary_var.set(UI_TEXT["upload_package_ready_hint"])
+        self.thumbnail_summary_var.set(UI_TEXT["thumbnail_ready_hint"])
+        self.thumbnail_choice_var.set(UI_TEXT["no_thumbnails"])
+        self.thumbnail_choice_menu.configure(values=[UI_TEXT["no_thumbnails"]])
         self.sequence_summary_var.set(UI_TEXT["horizontal_edit_ready_hint"])
         self.sequence_choice_var.set(UI_TEXT["sequence_empty"])
         self.sequence_choice_menu.configure(values=[UI_TEXT["sequence_empty"]])
@@ -2505,6 +2651,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.upload_package_summary_var.set(self._format_upload_package_existing(self.upload_package_dir) if self.upload_package_dir else UI_TEXT["upload_package_ready_hint"])
         self.open_upload_package_button.configure(state="normal" if self.upload_package_dir else "disabled")
         self.preview_upload_set_button.configure(state="normal" if self.upload_checklist_path else "disabled")
+        self._load_thumbnails_for_package(package_dir)
         self.review_summary_var.set(
             "\n".join(
                 [
@@ -2723,6 +2870,72 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.selected_summary_var.set(self._format_selected_candidates_summary(data))
         self._log(LOG_TEXT["selected_candidates_refreshed"])
         self._update_dashboard()
+
+    def _thumbnail_labels(self, candidates: list[dict[str, object]] | None = None) -> list[str]:
+        rows = candidates if candidates is not None else self.thumbnail_candidates
+        labels: list[str] = []
+        for index, item in enumerate(rows, start=1):
+            file_name = str(item.get("file") or f"thumb_{index:02d}.png")
+            direction = str(item.get("direction") or UI_TEXT["quiet_midnight_work"])
+            labels.append(f"#{index} {file_name} / {direction}")
+        return self._compact_options(labels)
+
+    def _load_thumbnails_for_package(self, package_dir: Path | None = None) -> None:
+        package = package_dir or self._dashboard_package_dir()
+        if package is None:
+            self._reset_thumbnail_state()
+            return
+        thumbnail_dir = package / "selected" / "thumbnails"
+        candidates = read_thumbnail_candidates(package)
+        if not candidates:
+            png_files = sorted(thumbnail_dir.glob("thumb_*.png")) if thumbnail_dir.exists() else []
+            candidates = [{"file": path.name, "direction": UI_TEXT["quiet_midnight_work"], "reason": ""} for path in png_files]
+        self.thumbnail_candidates = candidates
+        self.thumbnail_dir = thumbnail_dir if thumbnail_dir.exists() and candidates else None
+        first_path = thumbnail_dir / str(candidates[0].get("file")) if candidates else None
+        self.thumbnail_preview_path = first_path if first_path and first_path.exists() else None
+        labels = self._thumbnail_labels(candidates)
+        values = labels if labels else [UI_TEXT["no_thumbnails"]]
+        self.thumbnail_choice_menu.configure(values=values)
+        self.thumbnail_choice_var.set(values[0])
+        self.thumbnail_summary_var.set(
+            self._format_thumbnail_summary(
+                {
+                    "status": "COMPLETED" if candidates else UI_TEXT["ready"],
+                    "thumbnail_dir": str(thumbnail_dir if thumbnail_dir.exists() else ""),
+                    "candidate_count": len(candidates),
+                    "candidates": candidates,
+                    "source_label": "--",
+                    "used_ollama": False,
+                }
+            )
+            if candidates
+            else UI_TEXT["thumbnail_ready_hint"]
+        )
+        state = "normal" if candidates else "disabled"
+        self.open_thumbnail_folder_button.configure(state=state if self.thumbnail_dir else "disabled")
+        self.preview_thumbnail_button.configure(state=state if self.thumbnail_preview_path else "disabled")
+        self.add_thumbnail_upload_button.configure(state=state if self.thumbnail_preview_path else "disabled")
+
+    def _thumbnail_choice_path(self) -> Path | None:
+        package_dir = self._resolve_package_for_review()
+        if package_dir is None:
+            return None
+        value = self.thumbnail_choice_var.get().strip()
+        index = 0
+        if value.startswith("#"):
+            try:
+                index = max(0, int(value.split(" ", 1)[0].lstrip("#")) - 1)
+            except ValueError:
+                index = 0
+        candidates = self.thumbnail_candidates or read_thumbnail_candidates(package_dir)
+        if not candidates:
+            files = sorted((package_dir / "selected" / "thumbnails").glob("thumb_*.png"))
+            return files[0] if files else None
+        index = min(index, len(candidates) - 1)
+        file_name = str(candidates[index].get("file") or "")
+        path = package_dir / "selected" / "thumbnails" / file_name
+        return path if path.exists() else None
 
     def _sequence_labels(self) -> list[str]:
         labels: list[str] = []
@@ -3401,6 +3614,116 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.events.put({"type": "upload_package_result", "result": result})
             except Exception as exc:
                 self.events.put({"type": "upload_package_error", "message": str(exc)})
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _start_generate_thumbnail_candidates(self) -> None:
+        if self.thumbnail_running:
+            return
+        package_dir = self._resolve_package_for_review()
+        if package_dir is None:
+            messagebox.showinfo(APP_NAME, UI_TEXT["selected_requires_package"])
+            return
+
+        self.thumbnail_running = True
+        self._button_config("generate_thumbnail_button", "disabled", "button_generating")
+        self.open_thumbnail_folder_button.configure(state="disabled")
+        self.preview_thumbnail_button.configure(state="disabled")
+        self.add_thumbnail_upload_button.configure(state="disabled")
+        self.status_var.set(UI_TEXT["running"])
+        self.progress_var.set(0.10)
+        self._set_live_status(
+            UI_TEXT["live_state_running"],
+            UI_TEXT["live_phase_thumbnail_sample"],
+            detail="\n".join([UI_TEXT["live_phase_thumbnail_quiet"], UI_TEXT["live_phase_thumbnail_export"]]),
+            progress=0.10,
+            eta_seconds=45,
+            operation="thumbnail_flow",
+        )
+        self._log(LOG_TEXT["thumbnail_flow_start"])
+        self.thumbnail_summary_var.set(
+            "\n".join(
+                [
+                    UI_TEXT["thumbnail_flow"],
+                    f"{UI_TEXT['candidates']}: --",
+                    f"{UI_TEXT['direction']}: {UI_TEXT['quiet_midnight_work']}",
+                    UI_TEXT["thumbnail_running"],
+                    f"{UI_TEXT['package']}: {package_dir}",
+                ]
+            )
+        )
+
+        def worker() -> None:
+            try:
+                self._post_live_status(
+                    UI_TEXT["live_state_running"],
+                    "live_phase_thumbnail_quiet",
+                    progress=0.34,
+                    log_key="thumbnail_flow_search",
+                )
+                system = run_system_check()
+                self.events.put(
+                    {
+                        "type": "cli",
+                        "statuses": system["cli"],
+                        "nvenc": system["nvenc"],
+                        "gpu": system["gpu"],
+                        "install_guide": system["install_guide"],
+                        "install_commands": system["install_commands"],
+                    }
+                )
+                statuses = system["cli"]
+                self._post_live_status(
+                    UI_TEXT["live_state_running"],
+                    "live_phase_thumbnail_generate",
+                    detail=UI_TEXT["live_phase_thumbnail_export"],
+                    progress=0.68,
+                )
+                result = generate_thumbnail_candidates(
+                    package_dir=package_dir,
+                    ffmpeg_path=statuses.get("ffmpeg", {}).get("path"),
+                    ollama_ready=statuses.get("ollama", {}).get("state") == "READY",
+                    log=lambda message: self.events.put({"type": "log", "message": message}),
+                )
+                self.events.put({"type": "thumbnail_result", "result": result})
+            except Exception as exc:
+                self.events.put({"type": "thumbnail_error", "message": str(exc)})
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _start_add_thumbnail_to_upload(self) -> None:
+        if self.thumbnail_running:
+            return
+        package_dir = self._resolve_package_for_review()
+        if package_dir is None:
+            messagebox.showinfo(APP_NAME, UI_TEXT["selected_requires_package"])
+            return
+        thumbnail_path = self._thumbnail_choice_path()
+        if thumbnail_path is None:
+            messagebox.showinfo(APP_NAME, UI_TEXT["thumbnail_unavailable"])
+            return
+
+        self.thumbnail_running = True
+        self._button_config("add_thumbnail_upload_button", "disabled", "button_exporting")
+        self._set_live_status(
+            UI_TEXT["live_state_running"],
+            UI_TEXT["live_phase_upload_collect"],
+            detail=UI_TEXT["add_thumbnail_to_upload"],
+            progress=0.35,
+            eta_seconds=10,
+            operation="thumbnail_upload",
+        )
+
+        def worker() -> None:
+            try:
+                result = add_thumbnail_to_upload_package(
+                    package_dir=package_dir,
+                    thumbnail_path=thumbnail_path,
+                    log=lambda message: self.events.put({"type": "log", "message": message}),
+                )
+                self.events.put({"type": "thumbnail_upload_result", "result": result})
+            except Exception as exc:
+                self.events.put({"type": "thumbnail_upload_error", "message": str(exc)})
 
         threading.Thread(target=worker, daemon=True).start()
 
@@ -4337,6 +4660,30 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         except Exception as exc:
             messagebox.showerror(APP_NAME, f"{UI_TEXT['preview_upload_set_failed']}\n{exc}")
 
+    def _open_thumbnail_folder(self) -> None:
+        package_dir = self._resolve_package_for_review()
+        thumbnail_dir = self.thumbnail_dir
+        if thumbnail_dir is None and package_dir is not None:
+            candidate = package_dir / "selected" / "thumbnails"
+            thumbnail_dir = candidate if candidate.exists() else None
+        if thumbnail_dir is None or not thumbnail_dir.exists():
+            messagebox.showinfo(APP_NAME, UI_TEXT["thumbnail_unavailable"])
+            return
+        try:
+            os.startfile(str(thumbnail_dir))  # type: ignore[attr-defined]
+        except Exception as exc:
+            messagebox.showerror(APP_NAME, f"{UI_TEXT['open_thumbnail_failed']}\n{exc}")
+
+    def _preview_thumbnail(self) -> None:
+        thumbnail_path = self._thumbnail_choice_path() or self.thumbnail_preview_path
+        if thumbnail_path is None or not thumbnail_path.exists():
+            messagebox.showinfo(APP_NAME, UI_TEXT["thumbnail_unavailable"])
+            return
+        try:
+            os.startfile(str(thumbnail_path))  # type: ignore[attr-defined]
+        except Exception as exc:
+            messagebox.showerror(APP_NAME, f"{UI_TEXT['preview_thumbnail_failed']}\n{exc}")
+
     def _open_horizontal_edit(self) -> None:
         horizontal_path = self.horizontal_edit_path
         if horizontal_path is None:
@@ -4693,6 +5040,25 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             }
         )
 
+    def _format_thumbnail_summary(self, result: dict[str, object]) -> str:
+        candidates = result.get("candidates")
+        candidate_rows = [item for item in candidates if isinstance(item, dict)] if isinstance(candidates, list) else []
+        first_direction = str(candidate_rows[0].get("direction") or UI_TEXT["quiet_midnight_work"]) if candidate_rows else UI_TEXT["quiet_midnight_work"]
+        lines = [
+            UI_TEXT["thumbnail_flow"],
+            f"{UI_TEXT['candidates']}: {result.get('candidate_count', len(candidate_rows))}",
+            f"{UI_TEXT['direction']}: {first_direction}",
+            f"{UI_TEXT['package_status']}: {result.get('status', UI_TEXT['thumbnail_failed'])}",
+            f"{UI_TEXT['output_size']}: {result.get('size', '1280x720')}",
+            f"{UI_TEXT['preview_output']}: {result.get('thumbnail_dir', '--') or '--'}",
+        ]
+        source_label = str(result.get("source_label") or "")
+        if source_label:
+            lines.append(f"{UI_TEXT['smart_horizontal_source']}: {source_label}")
+        if result.get("used_ollama"):
+            lines.append(f"{UI_TEXT['ollama']}: {UI_TEXT['used']}")
+        return "\n".join(lines)
+
     def _format_project_bridge_summary(self, data: dict[str, object], extra: str = "") -> str:
         suggested_use = [str(item) for item in data.get("suggested_use", []) if str(item)]
         bgm_files = [item for item in data.get("bgm_files", []) if isinstance(item, dict)]
@@ -4905,6 +5271,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.recommendation_summary_var.set(UI_TEXT["recommend_ready_hint"])
                 self.open_recommendation_button.configure(state="disabled")
                 self._reset_upload_package_state()
+                self._reset_thumbnail_state()
                 self.open_button.configure(state="normal")
                 self.progress_var.set(1.0)
                 status = str(result.get("status") or "")
@@ -4990,6 +5357,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.open_recommendation_button.configure(state="disabled")
                 self.recommendation_summary_var.set(UI_TEXT["recommend_ready_hint"])
                 self._reset_upload_package_state()
+                self._reset_thumbnail_state()
                 self.output_var.set(str(selected_dir))
                 self.progress_var.set(1.0)
                 self.status_var.set(UI_TEXT["complete"])
@@ -5055,6 +5423,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.preview_shorts_pack_button.configure(state="disabled")
                 self.shorts_pack_summary_var.set(UI_TEXT["shorts_pack_ready_hint"])
                 self._reset_upload_package_state()
+                self._reset_thumbnail_state()
                 self.progress_var.set(1.0)
                 if result.get("status") == "COMPLETED":
                     self.status_var.set(UI_TEXT["complete"])
@@ -5091,6 +5460,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.open_smart_horizontal_button.configure(state="normal" if self.smart_horizontal_path else "disabled")
                 self.preview_smart_sequence_button.configure(state="normal" if self.smart_horizontal_sequence_path else "disabled")
                 self._reset_upload_package_state()
+                self._reset_thumbnail_state()
                 self.progress_var.set(1.0)
                 if result.get("status") == "COMPLETED":
                     self.status_var.set(UI_TEXT["complete"])
@@ -5200,6 +5570,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.open_selected_button.configure(state="normal" if self.selected_output_dir else "disabled")
                 self.open_horizontal_edit_button.configure(state="normal" if self.horizontal_edit_path else "disabled")
                 self._reset_upload_package_state()
+                self._reset_thumbnail_state()
                 self.progress_var.set(1.0)
                 if result.get("status") == "COMPLETED":
                     self.status_var.set(UI_TEXT["complete"])
@@ -5392,6 +5763,81 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             self.upload_package_summary_var.set(str(event.get("message", "")))
             self._set_live_failed(event.get("message", ""), UI_TEXT["live_upload_failed"])
             self._log(LOG_TEXT["upload_package_failed"])
+        elif event_type == "thumbnail_result":
+            result = event.get("result", {})
+            if isinstance(result, dict):
+                package_dir = Path(str(result.get("package_dir") or packages_dir()))
+                thumbnail_dir = Path(str(result.get("thumbnail_dir") or package_dir / "selected" / "thumbnails"))
+                self.package_output_dir = package_dir
+                self.current_project = ProjectPaths.from_root(package_dir)
+                self._load_thumbnails_for_package(package_dir)
+                self.thumbnail_summary_var.set(self._format_thumbnail_summary(result))
+                self.output_var.set(str(thumbnail_dir))
+                self.open_button.configure(state="normal")
+                self.open_package_button.configure(state="normal")
+                self.progress_var.set(1.0)
+                if result.get("status") == "COMPLETED":
+                    self.status_var.set(UI_TEXT["complete"])
+                    self.eta_var.set(UI_TEXT["thumbnail_completed"])
+                    self.finish_var.set(UI_TEXT["complete"])
+                    self._set_live_completed(
+                        thumbnail_dir,
+                        detail=f"{result.get('candidate_count', 0)} thumbnail candidates created.",
+                    )
+                    self._log(LOG_TEXT["thumbnail_flow_ready"])
+                else:
+                    self.status_var.set(UI_TEXT["error"])
+                    self.eta_var.set(UI_TEXT["thumbnail_failed"])
+                    self._set_live_failed(result.get("message") or UI_TEXT["thumbnail_failed"], UI_TEXT["live_thumbnail_failed"])
+                    self._log(LOG_TEXT["thumbnail_flow_failed"])
+            self.thumbnail_running = False
+            self._button_config("generate_thumbnail_button", "normal", "generate_thumbnail_candidates")
+        elif event_type == "thumbnail_error":
+            self.thumbnail_running = False
+            self._button_config("generate_thumbnail_button", "normal", "generate_thumbnail_candidates")
+            self.status_var.set(UI_TEXT["error"])
+            self.thumbnail_summary_var.set(str(event.get("message", "")))
+            self._set_live_failed(event.get("message", ""), UI_TEXT["live_thumbnail_failed"])
+            self._log(LOG_TEXT["thumbnail_flow_failed"])
+        elif event_type == "thumbnail_upload_result":
+            result = event.get("result", {})
+            if isinstance(result, dict):
+                package_dir = Path(str(result.get("package_dir") or packages_dir()))
+                copied_raw = str(result.get("copied_path") or "")
+                copied_path = Path(copied_raw) if copied_raw else None
+                upload_dir = package_dir / "selected" / "upload_ready"
+                self.package_output_dir = package_dir
+                self.current_project = ProjectPaths.from_root(package_dir)
+                self.upload_package_dir = upload_dir if upload_dir.exists() else self.upload_package_dir
+                checklist_path = upload_dir / "metadata" / "upload_checklist.md"
+                self.upload_checklist_path = checklist_path if checklist_path.exists() else self.upload_checklist_path
+                self.open_upload_package_button.configure(state="normal" if self.upload_package_dir else "disabled")
+                self.preview_upload_set_button.configure(state="normal" if self.upload_checklist_path else "disabled")
+                summary = self.thumbnail_summary_var.get().strip()
+                extra = f"{UI_TEXT['thumbnail_added']}\n{copied_path}" if copied_path is not None and copied_path.exists() else str(result.get("message") or "")
+                self.thumbnail_summary_var.set("\n".join([part for part in [summary, extra] if part]))
+                self.output_var.set(str(copied_path if copied_path is not None and copied_path.exists() else upload_dir))
+                self.progress_var.set(1.0)
+                if result.get("status") == "COMPLETED":
+                    self.status_var.set(UI_TEXT["complete"])
+                    self.eta_var.set(UI_TEXT["complete"])
+                    self.finish_var.set(UI_TEXT["complete"])
+                    self._set_live_completed(copied_path, detail=UI_TEXT["thumbnail_added"])
+                    self._log(LOG_TEXT["thumbnail_flow_added"])
+                else:
+                    self.status_var.set(UI_TEXT["error"])
+                    self._set_live_failed(result.get("message") or UI_TEXT["thumbnail_upload_failed"])
+                    self._log(LOG_TEXT["thumbnail_flow_failed"])
+            self.thumbnail_running = False
+            self._button_config("add_thumbnail_upload_button", "normal", "add_thumbnail_to_upload")
+            self.open_thumbnail_folder_button.configure(state="normal" if self.thumbnail_dir else "disabled")
+            self.preview_thumbnail_button.configure(state="normal" if self.thumbnail_preview_path else "disabled")
+        elif event_type == "thumbnail_upload_error":
+            self.thumbnail_running = False
+            self._button_config("add_thumbnail_upload_button", "normal", "add_thumbnail_to_upload")
+            self.status_var.set(UI_TEXT["error"])
+            self._set_live_failed(event.get("message", ""), UI_TEXT["thumbnail_upload_failed"])
+            self._log(LOG_TEXT["thumbnail_flow_failed"])
         elif event_type == "youtube":
             self.youtube_status_var.set(str(event.get("message", "")))
         elif event_type == "progress":
