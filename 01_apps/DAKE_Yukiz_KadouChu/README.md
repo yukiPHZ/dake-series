@@ -456,6 +456,20 @@ NEXT ACTION は、System Check、動画選択、Posting Package、Assistant Revi
 - FOCUS MODEは `Horizontal Video` → `Smart Horizontal Edit` → `9:16 Short` → `Shorts Pack` → `Save to Memory` の順で案内します
 - Premiere化やタイムライン編集ソフト化はせず、良い区間を静かに繋いで出せる形へ整えます
 
+## Phase 3.9 Smart Horizontal Edit 区間選定強化
+
+Smart Horizontal Edit の fallback sequence を強化しました。3秒程度の短すぎる区間だけで横編集版が終わらないように、候補を横動画向けの尺へ整えてから書き出します。
+
+- 3秒fallbackを廃止
+- 入力優先順を `shorts_candidates.json` → `selected/shorts_pack/shorts_pack.json` → `selected/selected_short.json` → source duration fallback に変更
+- 1区間は原則20秒以上、推奨30〜60秒、最大90秒
+- 区間数は3〜5件
+- 合計尺は2〜6分を目安に構成
+- `shorts_candidates.json` が短い場合も、source duration から20秒以上へ拡張
+- 候補がない場合は source video duration から `INTRO` / `WORK` / `WORK` / `AFTERGLOW` などを自動生成
+- `smart_horizontal_sequence.json` には `duration` と `duration_timecode` を保存
+- LIVE STATUS に区間数と合計尺を表示
+
 ## Phase 2候補
 
 - YouTube LIVE URLからyt-dlpで本取得

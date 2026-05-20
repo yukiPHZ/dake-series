@@ -174,3 +174,12 @@
 - 微細なfade in / fade outで静かな流れを整える
 - `selected/bgm/` のBGMを小さめに添える処理に対応
 - FOCUS MODE の Export step を Horizontal Video → Smart Horizontal Edit → Shorts の順に更新
+
+## Phase 3.9
+
+- Smart Horizontal Edit の区間選定を強化
+- 3秒fallbackを廃止し、20〜90秒の区間へ拡張
+- `shorts_candidates.json` を優先し、短すぎる候補はsource durationから横編集向けに補正
+- 候補がない場合はsource durationから3〜5区間を自動生成
+- `smart_horizontal_sequence.json` にdurationを保存
+- LIVE STATUSに区間数と合計尺を表示

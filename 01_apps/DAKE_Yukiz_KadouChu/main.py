@@ -91,7 +91,7 @@ from core.sequence_builder import (
 )
 from core.shorts_analyzer import create_shorts_candidates, write_shorts_candidates
 from core.shorts_pack import generate_shorts_pack
-from core.smart_horizontal_edit import generate_smart_horizontal_edit
+from core.smart_horizontal_edit import generate_smart_horizontal_edit, plan_smart_horizontal_sequence
 from core.transcription import is_faster_whisper_available, transcribe_media
 from ui.theme import COLORS, FONT_FAMILY, setup_theme
 
@@ -175,7 +175,9 @@ UI_TEXT = {
     "live_phase_horizontal_video_final": "Finalizing export...",
     "live_horizontal_video_failed": "Horizontal video export failed. See log.",
     "live_phase_smart_horizontal_start": "Building smart sequence...",
-    "live_phase_smart_horizontal_select": "Selecting quiet moments...",
+    "live_phase_smart_horizontal_select": "Selecting edit segments...",
+    "live_phase_smart_horizontal_build": "Building {count}-part sequence...",
+    "live_phase_smart_horizontal_total": "Total edit length",
     "live_phase_smart_horizontal_fade": "Applying fade...",
     "live_phase_smart_horizontal_render": "Rendering horizontal edit...",
     "live_phase_smart_horizontal_audio": "Writing AAC audio...",
@@ -305,7 +307,7 @@ UI_TEXT = {
     "smart_horizontal_source": "Source",
     "smart_horizontal_source_candidates": "Shorts Candidates / Selected Shorts",
     "smart_horizontal_target": "Target",
-    "smart_horizontal_target_range": "5m - 15m",
+    "smart_horizontal_target_range": "2m - 6m",
     "generate_smart_horizontal_edit": "Generate Smart Horizontal Edit",
     "open_smart_horizontal_edit": "Open Smart Horizontal Edit",
     "preview_smart_sequence": "Preview Sequence",
@@ -3537,9 +3539,18 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
 
         def worker() -> None:
             try:
+                plan = plan_smart_horizontal_sequence(package_dir)
+                segment_count = int(plan.get("segment_count") or 0)
+                total_duration = float(plan.get("total_duration") or 0)
                 self._post_live_status(
                     UI_TEXT["live_state_running"],
                     "live_phase_smart_horizontal_select",
+                    detail="\n".join(
+                        [
+                            UI_TEXT["live_phase_smart_horizontal_build"].format(count=segment_count),
+                            f"{UI_TEXT['live_phase_smart_horizontal_total']}: {format_duration(total_duration)}",
+                        ]
+                    ),
                     progress=0.24,
                     log_key="smart_horizontal_flow",
                 )

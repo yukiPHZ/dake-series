@@ -25,8 +25,26 @@ BGM_VOLUME = 0.07
 FADE_IN_SECONDS = 0.55
 FADE_OUT_SECONDS = 0.65
 MIN_SEGMENTS = 3
-MAX_SEGMENTS = 10
+MAX_SEGMENTS = 5
+MIN_SEGMENT_SECONDS = 20.0
+PREFERRED_MIN_SECONDS = 30.0
+PREFERRED_MAX_SECONDS = 60.0
 MAX_SEGMENT_SECONDS = 90.0
+TARGET_MIN_TOTAL_SECONDS = 120.0
+TARGET_MAX_TOTAL_SECONDS = 360.0
+
+ROLE_PATTERNS = {
+    3: ["INTRO", "WORK", "AFTERGLOW"],
+    4: ["INTRO", "WORK", "WORK", "AFTERGLOW"],
+    5: ["INTRO", "WORK", "DETAIL", "WORK", "AFTERGLOW"],
+}
+REASON_BY_ROLE = {
+    "INTRO": "静かな導入",
+    "WORK": "作業感",
+    "DETAIL": "手元の流れ",
+    "AFTERGLOW": "余熱",
+    "SELECTED": "選択済み候補",
+}
 
 
 def _read_json(path: Path) -> Any:
@@ -87,9 +105,6 @@ def _range_seconds(item: dict[str, Any]) -> tuple[float, float, float]:
         duration = end - start
     if end <= start and duration > 0:
         end = start + duration
-    if duration > MAX_SEGMENT_SECONDS:
-        duration = MAX_SEGMENT_SECONDS
-        end = start + duration
     return start, end, duration
 
 
@@ -121,20 +136,91 @@ def _selected_bgm(package_dir: Path) -> Path | None:
     return files[0] if files else None
 
 
-def _normal_segment(item: dict[str, Any], fallback_type: str, fallback_reason: str) -> dict[str, Any] | None:
-    start, end, duration = _range_seconds(item)
-    if duration < 1.0:
+def _target_count(source_duration: float, available_count: int = 0) -> int:
+    if source_duration <= 0:
+        return 4 if available_count >= 4 else MIN_SEGMENTS
+    if source_duration >= 480:
+        return MAX_SEGMENTS
+    if source_duration >= 180:
+        return 4
+    return MIN_SEGMENTS
+
+
+def _minimum_usable_duration(source_duration: float) -> float:
+    if source_duration <= 0:
+        return MIN_SEGMENT_SECONDS
+    if source_duration < MIN_SEGMENT_SECONDS * MIN_SEGMENTS:
+        return max(3.0, source_duration / (MIN_SEGMENTS + 0.75))
+    return MIN_SEGMENT_SECONDS
+
+
+def _target_segment_duration(source_duration: float, count: int) -> float:
+    if count <= 0:
+        count = MIN_SEGMENTS
+    if source_duration <= 0:
+        return PREFERRED_MIN_SECONDS
+    if source_duration < MIN_SEGMENT_SECONDS * MIN_SEGMENTS:
+        return _minimum_usable_duration(source_duration)
+    if source_duration < TARGET_MIN_TOTAL_SECONDS:
+        return min(PREFERRED_MIN_SECONDS, max(MIN_SEGMENT_SECONDS, source_duration / (count + 0.3)))
+    duration = max(PREFERRED_MIN_SECONDS, source_duration / (count + 4.0))
+    duration = max(duration, min(PREFERRED_MAX_SECONDS, TARGET_MIN_TOTAL_SECONDS / count))
+    duration = min(duration, PREFERRED_MAX_SECONDS)
+    if duration * count > TARGET_MAX_TOTAL_SECONDS:
+        duration = TARGET_MAX_TOTAL_SECONDS / count
+    return min(MAX_SEGMENT_SECONDS, max(_minimum_usable_duration(source_duration), duration))
+
+
+def _clean_reason(value: object, role: str) -> str:
+    text = str(value or "").strip()
+    if not text or "�" in text or len(text) > 48:
+        return REASON_BY_ROLE.get(role, "静かな流れ")
+    return text
+
+
+def _normal_segment(
+    item: dict[str, Any],
+    fallback_type: str,
+    fallback_reason: str,
+    source_duration: float,
+    preferred_duration: float,
+    source_name: str,
+) -> dict[str, Any] | None:
+    start, _end, duration = _range_seconds(item)
+    role = str(item.get("type") or fallback_type or "WORK").upper()
+    minimum = _minimum_usable_duration(source_duration)
+    desired = duration if duration > 0 else preferred_duration
+    if desired < minimum:
+        desired = preferred_duration if preferred_duration >= minimum else minimum
+    desired = min(MAX_SEGMENT_SECONDS, max(minimum, desired))
+
+    if source_duration > 0:
+        desired = min(desired, source_duration)
+        if start >= source_duration:
+            start = max(0.0, source_duration - desired)
+        if start + desired > source_duration:
+            start = max(0.0, source_duration - desired)
+        end = min(source_duration, start + desired)
+        duration = max(0.0, end - start)
+    else:
+        end = start + desired
+        duration = desired
+
+    if duration < max(1.0, min(3.0, minimum)):
         return None
+    reason = _clean_reason(item.get("reason") or fallback_reason, role)
     return {
         "start": seconds_to_timecode(start),
         "end": seconds_to_timecode(end),
-        "duration": seconds_to_timecode(duration),
+        "duration": round(duration, 3),
+        "duration_timecode": seconds_to_timecode(duration),
         "start_seconds": round(start, 3),
         "end_seconds": round(end, 3),
         "duration_seconds": round(duration, 3),
-        "type": str(item.get("type") or fallback_type or "WORK").upper(),
-        "reason": str(item.get("reason") or fallback_reason),
+        "type": role,
+        "reason": reason,
         "status": "candidate",
+        "source": source_name,
     }
 
 
@@ -147,96 +233,182 @@ def _dedupe_segments(segments: list[dict[str, Any]]) -> list[dict[str, Any]]:
             continue
         seen.add(key)
         clean.append(item)
-    return clean[:MAX_SEGMENTS]
+    return clean
 
 
-def _read_selected_short(package_dir: Path) -> list[dict[str, Any]]:
-    selected = _read_json(package_dir / "selected" / "selected_short.json")
-    if isinstance(selected, dict):
-        segment = _normal_segment(selected, "SELECTED", "選択済みShorts候補")
-        return [segment] if segment else []
-    return []
-
-
-def _read_pack_segments(package_dir: Path) -> list[dict[str, Any]]:
-    payload = _read_json(package_dir / "selected" / "shorts_pack" / "shorts_pack.json")
-    clips = payload.get("clips") if isinstance(payload, dict) else []
-    if not isinstance(clips, list):
-        return []
-    segments: list[dict[str, Any]] = []
-    for clip in clips:
-        if not isinstance(clip, dict):
+def _pick_evenly(segments: list[dict[str, Any]], count: int) -> list[dict[str, Any]]:
+    if len(segments) <= count:
+        return segments
+    if count <= 1:
+        return [segments[0]]
+    indexes = [round(index * (len(segments) - 1) / (count - 1)) for index in range(count)]
+    picked: list[dict[str, Any]] = []
+    used: set[int] = set()
+    for index in indexes:
+        safe_index = min(max(0, index), len(segments) - 1)
+        if safe_index in used:
             continue
-        segment = _normal_segment(clip, str(clip.get("type") or "WORK"), str(clip.get("reason") or "Shorts Pack候補"))
-        if segment:
-            segments.append(segment)
-    return segments
+        used.add(safe_index)
+        picked.append(segments[safe_index])
+    return picked
 
 
-def _read_candidate_segments(package_dir: Path) -> list[dict[str, Any]]:
-    payload = _read_json(package_dir / "shorts_candidates.json")
-    if not isinstance(payload, list):
-        return []
+def _assign_roles(segments: list[dict[str, Any]], force_reason: bool = False) -> list[dict[str, Any]]:
+    roles = ROLE_PATTERNS.get(len(segments), ROLE_PATTERNS[MAX_SEGMENTS])
+    updated: list[dict[str, Any]] = []
+    for index, segment in enumerate(segments):
+        role = roles[min(index, len(roles) - 1)]
+        item = dict(segment)
+        item["type"] = role
+        if force_reason or not item.get("reason") or "�" in str(item.get("reason")):
+            item["reason"] = REASON_BY_ROLE.get(role, "静かな流れ")
+        updated.append(item)
+    return updated
+
+
+def _fallback_segments(source_duration: float, count: int | None = None) -> list[dict[str, Any]]:
+    fallback_duration = source_duration if source_duration > 0 else 180.0
+    target_count = count or _target_count(fallback_duration, 0)
+    target_count = min(MAX_SEGMENTS, max(MIN_SEGMENTS, target_count))
+    clip_length = _target_segment_duration(fallback_duration, target_count)
+    roles = ROLE_PATTERNS.get(target_count, ROLE_PATTERNS[MAX_SEGMENTS])
+    if target_count == 3:
+        ratios = [0.05, 0.43, 0.78]
+    elif target_count == 4:
+        ratios = [0.04, 0.30, 0.58, 0.84]
+    else:
+        ratios = [0.04, 0.24, 0.44, 0.64, 0.84]
+    max_start = max(0.0, fallback_duration - clip_length)
     segments: list[dict[str, Any]] = []
-    role_cycle = ["INTRO", "WORK", "AFTERGLOW", "WORK"]
-    for index, item in enumerate(payload):
-        if not isinstance(item, dict):
-            continue
-        segment = _normal_segment(item, role_cycle[index % len(role_cycle)], str(item.get("reason") or "Shorts候補"))
-        if segment:
-            segments.append(segment)
-    return segments
-
-
-def _fallback_segments(duration: float) -> list[dict[str, Any]]:
-    if duration <= 0:
-        duration = 180.0
-    count = max(MIN_SEGMENTS, min(5, int(max(3, duration // 90))))
-    clip_floor = 6.0 if duration >= 30 else 2.0
-    clip_length = min(60.0, max(clip_floor, min(45.0, duration / (count + 1))))
-    span = max(0.0, duration - clip_length)
-    roles = ["INTRO", "WORK", "AFTERGLOW", "WORK", "AFTERGLOW"]
-    reasons = ["静かな導入", "作業感", "余熱", "流れの継続", "静かな終わり"]
-    segments: list[dict[str, Any]] = []
-    for index in range(count):
-        ratio = 0.0 if count == 1 else index / max(1, count - 1)
-        start = span * ratio
-        end = min(duration, start + clip_length)
+    for index in range(target_count):
+        role = roles[index]
+        if index == 0 and fallback_duration >= 90:
+            start = min(10.0, max_start)
+        elif index == target_count - 1:
+            start = max_start
+        else:
+            start = min(max_start, max(0.0, fallback_duration * ratios[index]))
+        end = min(fallback_duration, start + clip_length)
+        duration = max(1.0, end - start)
         segments.append(
             {
                 "start": seconds_to_timecode(start),
                 "end": seconds_to_timecode(end),
-                "duration": seconds_to_timecode(max(1.0, end - start)),
+                "duration": round(duration, 3),
+                "duration_timecode": seconds_to_timecode(duration),
                 "start_seconds": round(start, 3),
                 "end_seconds": round(end, 3),
-                "duration_seconds": round(max(1.0, end - start), 3),
-                "type": roles[index % len(roles)],
-                "reason": reasons[index % len(reasons)],
+                "duration_seconds": round(duration, 3),
+                "type": role,
+                "reason": REASON_BY_ROLE.get(role, "静かな流れ"),
                 "status": "candidate",
+                "source": "source_duration",
             }
         )
     return segments
 
 
-def _build_template_sequence(package_dir: Path) -> list[dict[str, Any]]:
-    segments = [
-        *_read_selected_short(package_dir),
-        *_read_pack_segments(package_dir),
-        *_read_candidate_segments(package_dir),
+def _raw_candidate_items(package_dir: Path) -> list[dict[str, Any]]:
+    payload = _read_json(package_dir / "shorts_candidates.json")
+    if not isinstance(payload, list):
+        return []
+    return [dict(item) for item in payload if isinstance(item, dict)]
+
+
+def _raw_pack_items(package_dir: Path) -> list[dict[str, Any]]:
+    payload = _read_json(package_dir / "selected" / "shorts_pack" / "shorts_pack.json")
+    clips = payload.get("clips") if isinstance(payload, dict) else []
+    if not isinstance(clips, list):
+        return []
+    return [dict(item) for item in clips if isinstance(item, dict)]
+
+
+def _raw_selected_items(package_dir: Path) -> list[dict[str, Any]]:
+    selected = _read_json(package_dir / "selected" / "selected_short.json")
+    return [dict(selected)] if isinstance(selected, dict) else []
+
+
+def _prepare_source_segments(
+    raw_items: list[dict[str, Any]],
+    source_duration: float,
+    source_name: str,
+) -> list[dict[str, Any]]:
+    target_count = _target_count(source_duration, len(raw_items))
+    preferred_duration = _target_segment_duration(source_duration, target_count)
+    role_cycle = ROLE_PATTERNS.get(target_count, ROLE_PATTERNS[MAX_SEGMENTS])
+    segments: list[dict[str, Any]] = []
+    for index, item in enumerate(raw_items):
+        fallback_role = role_cycle[min(index, len(role_cycle) - 1)]
+        fallback_reason = REASON_BY_ROLE.get(fallback_role, "静かな流れ")
+        segment = _normal_segment(item, fallback_role, fallback_reason, source_duration, preferred_duration, source_name)
+        if segment:
+            segments.append(segment)
+    return _shape_sequence(segments, source_duration, target_count, source_name)
+
+
+def _shape_sequence(
+    segments: list[dict[str, Any]],
+    source_duration: float,
+    target_count: int | None = None,
+    source_name: str = "source_duration",
+) -> list[dict[str, Any]]:
+    safe_count = target_count or _target_count(source_duration, len(segments))
+    safe_count = min(MAX_SEGMENTS, max(MIN_SEGMENTS, safe_count))
+    clean = _dedupe_segments(segments)
+    if len(clean) < safe_count:
+        clean = _dedupe_segments([*clean, *_fallback_segments(source_duration, safe_count)])
+    clean = _pick_evenly(clean, safe_count)
+    force_reason = source_name == "source_duration"
+    return _assign_roles(clean, force_reason=force_reason)
+
+
+def plan_smart_horizontal_sequence(package_dir: Path) -> dict[str, Any]:
+    source_duration = _media_duration(package_dir)
+    sources = [
+        ("shorts_candidates", _raw_candidate_items(package_dir)),
+        ("shorts_pack", _raw_pack_items(package_dir)),
+        ("selected_short", _raw_selected_items(package_dir)),
     ]
-    segments = _dedupe_segments(segments)
-    if len(segments) < MIN_SEGMENTS:
-        segments = _dedupe_segments([*segments, *_fallback_segments(_media_duration(package_dir))])
-    return segments[:MAX_SEGMENTS]
+    for source_name, raw_items in sources:
+        if not raw_items:
+            continue
+        segments = _prepare_source_segments(raw_items, source_duration, source_name)
+        if segments:
+            return _plan_result(segments, source_name, source_duration)
+    segments = _fallback_segments(source_duration)
+    return _plan_result(segments, "source_duration", source_duration)
 
 
-def _ollama_sequence(package_dir: Path, segments: list[dict[str, Any]], ollama_ready: bool) -> tuple[list[dict[str, Any]], bool, str]:
+def _plan_result(segments: list[dict[str, Any]], source_name: str, source_duration: float) -> dict[str, Any]:
+    total_duration = sum(float(segment.get("duration_seconds") or 0) for segment in segments)
+    return {
+        "segments": segments,
+        "segment_count": len(segments),
+        "total_duration": round(total_duration, 3),
+        "total_duration_timecode": seconds_to_timecode(total_duration),
+        "source": source_name,
+        "source_duration": round(source_duration, 3),
+    }
+
+
+def _ollama_sequence(
+    package_dir: Path,
+    segments: list[dict[str, Any]],
+    source_duration: float,
+    ollama_ready: bool,
+) -> tuple[list[dict[str, Any]], bool, str]:
     if not ollama_ready or not segments:
         return segments, False, ""
     memory_summary = app_root() / "data" / "memory" / "memory_summary.md"
     context = {
-        "target": "5m-15m quiet horizontal edit",
-        "segments": segments[:MAX_SEGMENTS],
+        "target": "2m-6m quiet horizontal edit",
+        "rules": {
+            "segment_seconds": "20-90",
+            "preferred_seconds": "30-60",
+            "segment_count": "3-5",
+            "total_seconds": "120-360",
+        },
+        "segments": segments,
         "assistant_review": _read_text(package_dir / "assistant_review.md", limit=1000),
         "assistant_recommendation": _read_text(package_dir / "assistant_recommendation.md", limit=1000),
         "memory_summary": _read_text(memory_summary, limit=800),
@@ -245,8 +417,9 @@ def _ollama_sequence(package_dir: Path, segments: list[dict[str, Any]], ollama_r
     }
     prompt = (
         "You are the local assistant brain for Dakeユキズ稼働中.\n"
-        "Choose 3 to 10 quiet segments for a horizontal edit. This is not timeline editing.\n"
+        "Choose 3 to 5 quiet segments for a horizontal edit. This is not timeline editing.\n"
         "Keep chronological flow. Avoid hype and flashy edits.\n"
+        "Do not return segments shorter than 20 seconds unless the source video is very short.\n"
         "Return only JSON array with keys: start_seconds, end_seconds, type, reason.\n\n"
         f"{json.dumps(context, ensure_ascii=False)}"
     )
@@ -264,6 +437,9 @@ def _ollama_sequence(package_dir: Path, segments: list[dict[str, Any]], ollama_r
         return segments, False, str(exc)
     if not isinstance(parsed, list):
         return segments, False, "Ollama response was not a list."
+
+    target_count = min(MAX_SEGMENTS, max(MIN_SEGMENTS, len(segments)))
+    preferred_duration = _target_segment_duration(source_duration, target_count)
     updated: list[dict[str, Any]] = []
     for index, item in enumerate(parsed[:MAX_SEGMENTS]):
         if not isinstance(item, dict):
@@ -271,10 +447,12 @@ def _ollama_sequence(package_dir: Path, segments: list[dict[str, Any]], ollama_r
         fallback = segments[min(index, len(segments) - 1)] if segments else {}
         merged = dict(fallback)
         merged.update(item)
-        segment = _normal_segment(merged, str(fallback.get("type") or "WORK"), str(fallback.get("reason") or "静かな流れ"))
+        fallback_role = str(fallback.get("type") or "WORK")
+        fallback_reason = str(fallback.get("reason") or REASON_BY_ROLE.get(fallback_role, "静かな流れ"))
+        segment = _normal_segment(merged, fallback_role, fallback_reason, source_duration, preferred_duration, "ollama")
         if segment:
             updated.append(segment)
-    updated = _dedupe_segments(updated)
+    updated = _shape_sequence(updated, source_duration, target_count, "ollama")
     if len(updated) < MIN_SEGMENTS:
         return segments, False, "Ollama returned too few valid segments."
     return updated, True, str(response.get("model") or "")
@@ -435,8 +613,10 @@ def generate_smart_horizontal_edit(
     emit(LOG_TEXT["smart_horizontal_start"])
     source_video = source_video_path or find_source_video_path(package_dir)
     bgm_path = _selected_bgm(package_dir)
-    segments = _build_template_sequence(package_dir)
-    segments, used_ollama, ollama_note = _ollama_sequence(package_dir, segments, ollama_ready)
+    plan = plan_smart_horizontal_sequence(package_dir)
+    segments = [dict(item) for item in plan["segments"]]
+    source_duration = float(plan.get("source_duration") or 0)
+    segments, used_ollama, ollama_note = _ollama_sequence(package_dir, segments, source_duration, ollama_ready)
     sequence_path = _write_sequence(selected_dir, segments)
     total_duration = sum(float(segment.get("duration_seconds") or 0) for segment in segments)
     if bgm_path:
@@ -446,9 +626,11 @@ def generate_smart_horizontal_edit(
         f"executed_at: {datetime.now().isoformat(timespec='seconds')}",
         f"package_dir: {package_dir}",
         f"source_video: {source_video or ''}",
+        f"selection_source: {plan.get('source', '')}",
         f"sequence_path: {sequence_path}",
         f"segment_count: {len(segments)}",
         f"total_duration: {round(total_duration, 3)}",
+        f"total_duration_timecode: {seconds_to_timecode(total_duration)}",
         f"output_size: {OUTPUT_SIZE}",
         f"policy: {OUTPUT_POLICY}",
         f"fade_used: true",
@@ -545,7 +727,7 @@ def generate_smart_horizontal_edit(
             f"bgm_used: {str(bgm_used).lower()}",
             f"output_path: {output_path}",
             "segments:",
-            *[f"- {item.get('start')} - {item.get('end')} / {item.get('type')} / {item.get('reason')}" for item in segments],
+            *[f"- {item.get('start')} - {item.get('end')} / {item.get('duration')}s / {item.get('type')} / {item.get('reason')}" for item in segments],
             "errors:",
             *[f"- {error}" for error in errors[:12]],
         ],
@@ -582,6 +764,7 @@ def _result(
     used_ollama: bool,
     message: str,
 ) -> dict[str, Any]:
+    total_duration = sum(float(item.get("duration_seconds") or 0) for item in segments)
     return {
         "status": status,
         "package_dir": str(package_dir),
@@ -591,7 +774,8 @@ def _result(
         "log_path": str(log_path),
         "segments": segments,
         "segment_count": len(segments),
-        "total_duration": round(sum(float(item.get("duration_seconds") or 0) for item in segments), 3),
+        "total_duration": round(total_duration, 3),
+        "total_duration_timecode": seconds_to_timecode(total_duration),
         "size": OUTPUT_SIZE,
         "encoder": encoder,
         "nvenc_used": nvenc_used,
