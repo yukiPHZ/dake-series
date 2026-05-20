@@ -21,6 +21,7 @@ UI_TEXT = {
     "message_side_memory": "側に残っている記憶です。",
     "message_heat_hint": "熱の気配があります。",
     "message_quiet_float": "静かに浮いています。",
+    "message_quiet_memory": "しばらく静かでした。",
     "message_oikawa_return": "OIKAWAから原本へ戻れます。",
     "label_title": "記憶",
     "label_path": "原本",
@@ -193,17 +194,18 @@ def _candidate_is_eligible(
 ) -> bool:
     if not candidate.related_path.strip():
         return False
-    if candidate.type not in {"side_memory", "revisit", "heat_candidate", "heat_hint"}:
+    if candidate.type not in {"side_memory", "revisit", "quiet_memory", "heat_candidate", "heat_hint"}:
         return False
     if _recently_sent(candidate, history, now):
         return False
 
     quiet_now = is_quiet_hour(now, quiet_hours)
-    has_revisit = candidate.opened_count > 1 or candidate.reason in {"recent", "night"}
+    has_revisit = candidate.opened_count > 1 or candidate.reason in {"recent", "night", "long_gap", "continuing"}
     has_heat = candidate.has_heat_hint or candidate.reason == "heat" or candidate.type in {"heat_candidate", "heat_hint"}
+    has_time_flow = candidate.type == "quiet_memory" and candidate.reason in {"long_gap", "night", "recent", "continuing"}
     if quiet_now:
-        return has_revisit or has_heat or candidate.score >= 4
-    return has_heat or candidate.opened_count > 1 or candidate.score >= 6
+        return has_revisit or has_heat or has_time_flow or candidate.score >= 4
+    return has_heat or has_time_flow or candidate.opened_count > 1 or candidate.score >= 6
 
 
 def is_quiet_hour(now: datetime, quiet_hours: str) -> bool:
@@ -249,6 +251,10 @@ def _sent_count_today(history: list[dict[str, Any]], today: date) -> int:
 
 
 def _lead_message(candidate: SlackNotifyCandidate) -> str:
+    if candidate.reason == "long_gap":
+        return f"{UI_TEXT['message_quiet_memory']}\n\n{UI_TEXT['message_return_again']}"
+    if candidate.reason == "continuing":
+        return f"{candidate.message.strip()}\n\n{UI_TEXT['message_quiet_float']}"
     if candidate.has_heat_hint or candidate.reason == "heat":
         return f"{UI_TEXT['message_heat_hint']}\n\n{UI_TEXT['message_quiet_float']}"
     if candidate.reason == "night":
