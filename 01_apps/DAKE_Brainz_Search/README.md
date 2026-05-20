@@ -44,6 +44,17 @@ BRAINZはQPSC v0.1で、前面の読む場所ではなく、記憶庫 / 取り�
 
 v0.1では、BRAINZが判断するのではなく、原本と状態を静かに残します。OIKAWAがそれを前面へ戻し、最後に菊田が選びます。
 
+## QPSC v0.2 現在地
+
+BRAINZはv0.2でも、読む前面ではなく記憶庫 / 取り込み母艦です。検索、原本表示、熾火、ORBIT、巡回、側に在る表示はOIKAWA側へ寄せます。
+
+- ChatGPT exportは `zip`、展開済みフォルダ、`conversations.json`、`conversations-000.json` 形式に対応します
+- 巨大会話はchunk分割し、Ollama embeddingのcontext超過を避けます
+- Slack通知文はログではなく、記憶へ戻る入口として整流します
+- Codex報告は要約ではなく、正本Markdown / TXTとして保存します
+- BRAINZは取り込み、index、通知保存、awake/heartbeat、設定、OIKAWA起動導線に集中します
+- OpenClaw GatewayとSlack通知本格化はまだ先です
+
 ## QPSC Phase 2: 取り込み通知
 
 Phase 2では、BRAINZで発生した取り込みをOIKAWA側の通知・提案欄へ静かに渡す導線を追加しました。

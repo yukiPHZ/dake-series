@@ -78,6 +78,56 @@ QPSC v0.1では、BRAINZが保存・取り込み・index・設定・状態を担
 
 承認導線はCodex公式モバイル承認 / 遠隔操作導線を優先します。OllamaとOpenClawはまだ本線へ入れず、将来の補助候補として扱います。
 
+## QPSC v0.2 現在地
+
+QPSC v0.2では、取り込みから原本へ戻る導線に加えて、OIKAWA側で「熱」「巡回」「側に在る」を扱える現在地まで固定します。QPSCは通知アプリでもタスク管理アプリでもなく、忘れていいための記憶庫です。判断は代行せず、AIは熱の気配を小さく添えるだけにします。
+
+- BRAINZ = 記憶庫 / 取り込み母艦 / 状態 / 設定
+- OIKAWA = 原本表示 / 通知 / 熾火 / ORBIT / 巡回 / 側に在る
+- Ollama = 熱補助のみ。判断代行しない
+- DAKE_Wake_Brainz = 起床 / 状態確認レイヤー
+- OpenClaw = 将来のGateway候補。まだ本線未導入
+- Slack通知本格化 = まだ先。まずOIKAWA内部循環を優先
+
+### v0.2で追加されたもの
+
+- QPSC状態確認
+- ChatGPT export新形式対応
+- 巨大会話chunk分割
+- Slack通知文の整流
+- Codex報告の正本入口化
+- OIKAWAの黒基調 / 日本語可読性改善
+- OIKAWAウインドウ外観BRAINZ寄せ
+- Ollama熱補助
+- 巡回 / 再訪
+- 側に在る
+
+### v0.2でできること
+
+- ChatGPT exportをzip / フォルダ / 分割JSONで取り込める
+- 巨大会話をchunk分割して扱える
+- Slack投稿を記憶入口として通知できる
+- Codex報告を正本として保存し、OIKAWAから戻れる
+- OIKAWAで原本を中央に表示できる
+- 熾火候補を表示できる
+- Ollamaで熱の気配を小さく添えられる
+- 何度も戻る記憶を巡回として扱える
+- 側に在る記憶を静かに浮かべられる
+- QPSC状態確認ができる
+
+### v0.2思想メモ
+
+OIKAWAは、必要な記憶が静かに側へ戻ってくる場所です。QPSCは「これをやるべき」と言わず、原本へ戻れる入口だけを置きます。
+
+### 今後候補
+
+- Phase 18: 実使用レビュー
+- Phase 19: OIKAWA表示密度調整
+- Phase 20: BRAINZ接続 / 設定ページ
+- Phase 21: Slack通知本格化
+- Phase 22: OpenClaw Gateway検証
+- Phase 23: Wake / スマホ起動連携整理
+
 ---
 
 © 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta
