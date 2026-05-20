@@ -7,6 +7,7 @@ import json
 import math
 import queue
 import random
+import tempfile
 import threading
 import time
 from dataclasses import dataclass
@@ -18,6 +19,17 @@ import tkinter as tk
 from core.config import ConfigStore, app_dir, existing_folder, open_path, resolve_memory_folder, series_root, write_json_file
 from core.heat_engine import AnalysisResult, analyze_documents
 from core.markdown_writer import write_suggestion
+from core.ollama_heat import (
+    HeatHintInput,
+    HeatHintResult,
+    OLLAMA_HEAT_SOURCE_LIMIT,
+    build_heat_prompt,
+    heat_hint_key,
+    heat_hints_path,
+    read_cached_heat_hint,
+    request_heat_hint,
+    save_heat_hint,
+)
 from core.qpsc_notifications import (
     QpscNotification,
     brainz_notification_candidates,
@@ -41,6 +53,7 @@ UI_TEXT = {
     "button_searching": "検索中",
     "button_heat_search": "熱検索",
     "button_heat_searching": "熱検索中",
+    "button_read_heat": "熱を読む",
     "button_scan": "巡回する",
     "button_scanning": "巡回中",
     "button_open_output": "保存先を開く",
@@ -94,6 +107,13 @@ UI_TEXT = {
     "heat_candidate_title": "まだ熱が残っている記憶",
     "heat_candidate_message": "{source}から取り込まれた記憶があります。",
     "heat_candidate_no_related": "原本への道筋はまだありません。",
+    "heat_hint_idle": "熱補助はまだ静かです。",
+    "heat_hint_reading": "熱の気配を読んでいます。",
+    "heat_hint_sleeping": "熱補助はまだ眠っています。",
+    "heat_hint_unavailable": "Ollamaに接続できませんでした。",
+    "heat_hint_invalid": "熱補助を整えられませんでした。",
+    "heat_hint_template": "熱の気配: {hint}\n理由: {reason}\nconfidence: {confidence}",
+    "heat_hint_cached": "保存済みの熱補助を表示しています。",
     "heat_reason_unread_notification": "未読通知",
     "heat_reason_recent_import": "最近の取り込み",
     "heat_reason_related_path": "原本あり",
@@ -164,6 +184,7 @@ UI_TEXT = {
     "footer_source": "記憶はBRAINZに在り、OIKAWAが静かに呼び戻します。",
     "launch_check_ok": "LAUNCH CHECK OK",
     "gui_smoke_ok": "GUI SMOKE OK",
+    "smoke_ok": "SMOKE OK",
     "scan_check_ok": "SCAN CHECK OK",
     "ghost_words": ["熾火", "巡り", "側に", "在る", "余白", "記憶", "痕跡"],
 }
@@ -199,6 +220,7 @@ class HeatCandidate:
     reason: str
     related_path: str
     score: int
+    source: str = ""
 
 
 @dataclass(frozen=True)
@@ -344,6 +366,7 @@ def build_heat_candidates(
                 reason=_notification_heat_reason(notification, terms),
                 related_path=notification.related_path.strip(),
                 score=score,
+                source=notification.source.strip(),
             )
         )
     candidates.sort(key=lambda item: item.score, reverse=True)
@@ -1086,8 +1109,10 @@ class OikawaApp(tk.Tk):
         self.orbit_thread: threading.Thread | None = None
         self.source_preview_thread: threading.Thread | None = None
         self.self_check_thread: threading.Thread | None = None
+        self.heat_hint_thread: threading.Thread | None = None
         self.source_preview_request_id = 0
         self.orbit_request_id = 0
+        self.heat_hint_request_id = 0
         self.source_preview_loaded = False
         self.qpsc_notifications_all: list[QpscNotification] = []
         self.heat_candidates: list[HeatCandidate] = []
@@ -1395,6 +1420,16 @@ class OikawaApp(tk.Tk):
         ).pack(anchor="w")
         self.heat_candidates_frame = tk.Frame(heat, bg=COLORS["background"])
         self.heat_candidates_frame.pack(fill="both", expand=True, pady=(5, 0))
+        self.heat_hint_var = tk.StringVar(value=UI_TEXT["heat_hint_idle"])
+        tk.Label(
+            heat,
+            textvariable=self.heat_hint_var,
+            fg=COLORS["muted"],
+            bg=COLORS["background"],
+            font=FONT_LABEL,
+            wraplength=250,
+            justify="left",
+        ).pack(anchor="w", pady=(6, 0))
 
         orbit = tk.Frame(
             right_panel,
@@ -1677,6 +1712,12 @@ class OikawaApp(tk.Tk):
             )
             title_label.pack(side="left", fill="x", expand=True)
             title_label.bind("<Button-1>", lambda _event, selected=candidate: self._open_heat_candidate(selected))
+            tk.Button(
+                row,
+                text=UI_TEXT["button_read_heat"],
+                command=lambda selected=candidate: self._start_heat_hint(selected),
+                **self._small_button_style(COLORS["panel_light"]),
+            ).pack(side="right", padx=(8, 0))
             reason_text = UI_TEXT.get(f"heat_reason_{candidate.reason}", UI_TEXT["section_heat_candidates"])
             reason_label = tk.Label(
                 row,
@@ -1772,6 +1813,66 @@ class OikawaApp(tk.Tk):
             return
         self.source_preview_status_var.set(UI_TEXT["heat_candidate_no_related"])
         self._set_source_preview_text(f"{candidate.title}\n{UI_TEXT['heat_candidate_no_related']}")
+
+    def _start_heat_hint(self, candidate: HeatCandidate) -> None:
+        self.heat_hint_request_id += 1
+        request_id = self.heat_hint_request_id
+        self.heat_hint_var.set(UI_TEXT["heat_hint_reading"])
+        self.heat_hint_thread = threading.Thread(
+            target=self._heat_hint_worker,
+            args=(request_id, candidate),
+            daemon=True,
+        )
+        self.heat_hint_thread.start()
+
+    def _heat_hint_worker(self, request_id: int, candidate: HeatCandidate) -> None:
+        try:
+            input_item = self._heat_hint_input_for_candidate(candidate)
+            result = request_heat_hint(input_item)
+            self.events.put(("heat_hint_done", (request_id, result)))
+        except Exception as exc:  # noqa: BLE001
+            self.events.put(("heat_hint_error", (request_id, exc)))
+
+    def _heat_hint_input_for_candidate(self, candidate: HeatCandidate) -> HeatHintInput:
+        source_excerpt = ""
+        if candidate.related_path:
+            path = self._resolve_source_path(candidate.related_path)
+            if path.exists() and path.is_file() and path.suffix.lower() in {".md", ".txt"}:
+                source_excerpt, _truncated = read_source_preview_text(path, limit=OLLAMA_HEAT_SOURCE_LIMIT)
+        return HeatHintInput(
+            title=candidate.title,
+            message=candidate.message,
+            source=candidate.source,
+            related_path=candidate.related_path,
+            source_excerpt=source_excerpt,
+        )
+
+    def _handle_heat_hint_done(self, payload: object) -> None:
+        request_id, result = payload
+        assert isinstance(request_id, int)
+        assert isinstance(result, HeatHintResult)
+        if request_id != self.heat_hint_request_id:
+            return
+        if result.ok:
+            self.heat_hint_var.set(
+                UI_TEXT["heat_hint_template"].format(
+                    hint=result.heat_hint,
+                    reason=result.reason,
+                    confidence=result.confidence,
+                )
+            )
+            return
+        if result.status == "ollama_unavailable":
+            self.heat_hint_var.set(f"{UI_TEXT['heat_hint_sleeping']}\n{UI_TEXT['heat_hint_unavailable']}")
+            return
+        self.heat_hint_var.set(UI_TEXT["heat_hint_invalid"])
+
+    def _handle_heat_hint_error(self, payload: object) -> None:
+        request_id, _error = payload
+        assert isinstance(request_id, int)
+        if request_id != self.heat_hint_request_id:
+            return
+        self.heat_hint_var.set(f"{UI_TEXT['heat_hint_sleeping']}\n{UI_TEXT['heat_hint_unavailable']}")
 
     def _open_orbit_candidate(self, candidate: OrbitCandidate) -> None:
         if candidate.related_path:
@@ -2033,6 +2134,10 @@ class OikawaApp(tk.Tk):
                     self._handle_source_preview_error(payload)
                 elif event_name == "self_check_done":
                     self._handle_self_check_done(payload)
+                elif event_name == "heat_hint_done":
+                    self._handle_heat_hint_done(payload)
+                elif event_name == "heat_hint_error":
+                    self._handle_heat_hint_error(payload)
         except queue.Empty:
             pass
         self.after(100, self._poll_events)
@@ -2339,13 +2444,90 @@ def run_scan_check(memory_folder: str) -> int:
     return 0
 
 
+def run_smoke_test() -> int:
+    import core.ollama_heat as ollama_heat
+
+    with tempfile.TemporaryDirectory(prefix="oikawa_heat_") as tmp:
+        root = Path(tmp)
+        source_path = root / "source.md"
+        source_path.write_text("heat source " * 400, encoding="utf-8")
+        notification = QpscNotification(
+            id="smoke-heat",
+            created_at=datetime.now().astimezone().isoformat(timespec="seconds"),
+            source="slack",
+            title="Smoke heat",
+            message="まだ熱が残っているかもしれない記憶",
+            status="unread",
+            kind="import",
+            related_path=str(source_path),
+        )
+        candidates = build_heat_candidates([notification], limit=3)
+        if not candidates or candidates[0].source != "slack":
+            raise RuntimeError("heat candidate smoke failed")
+
+        excerpt, _truncated = read_source_preview_text(source_path, limit=OLLAMA_HEAT_SOURCE_LIMIT)
+        if len(excerpt) > OLLAMA_HEAT_SOURCE_LIMIT:
+            raise RuntimeError("heat excerpt exceeded source limit")
+        input_item = HeatHintInput(
+            title=candidates[0].title,
+            message=candidates[0].message,
+            source=candidates[0].source,
+            related_path=candidates[0].related_path,
+            source_excerpt=excerpt,
+        )
+        prompt = build_heat_prompt(input_item)
+        if "heat source" not in prompt or len(input_item.source_excerpt) > OLLAMA_HEAT_SOURCE_LIMIT:
+            raise RuntimeError("heat prompt smoke failed")
+
+        cache_path = root / "qpsc_heat_hints.json"
+        result = HeatHintResult(
+            ok=True,
+            key=heat_hint_key(input_item),
+            generated_at=datetime.now().astimezone().isoformat(timespec="seconds"),
+            heat_hint="まだ熱が残っているかも",
+            reason="短い断片に続きの気配があります",
+            confidence="low",
+            related_path=input_item.related_path,
+            title=input_item.title,
+            source=input_item.source,
+            status="ok",
+        )
+        save_heat_hint(result, cache_path=cache_path)
+        cached = read_cached_heat_hint(input_item, cache_path=cache_path)
+        if cached is None or not cached.ok or not cached.cached or not cache_path.exists():
+            raise RuntimeError("heat hint cache smoke failed")
+
+        unavailable_input = HeatHintInput(
+            title="missing",
+            message="missing",
+            source="smoke",
+            related_path=str(root / "missing.md"),
+        )
+        original_tags_url = ollama_heat.OLLAMA_TAGS_URL
+        try:
+            ollama_heat.OLLAMA_TAGS_URL = "http://127.0.0.1:9/api/tags"
+            unavailable = ollama_heat.request_heat_hint(unavailable_input, cache_path=root / "missing_cache.json", timeout=0.1)
+        finally:
+            ollama_heat.OLLAMA_TAGS_URL = original_tags_url
+        if unavailable.ok or unavailable.status != "ollama_unavailable":
+            raise RuntimeError("heat hint unavailable fallback failed")
+
+    print(UI_TEXT["smoke_ok"])
+    print(heat_hints_path())
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--launch-check", action="store_true")
     parser.add_argument("--gui-smoke-seconds", type=float, default=0.0)
     parser.add_argument("--memory-folder", default="")
     parser.add_argument("--scan-check", default="")
+    parser.add_argument("--smoke-test", action="store_true")
     args = parser.parse_args()
+
+    if args.smoke_test:
+        return run_smoke_test()
 
     if args.scan_check:
         return run_scan_check(args.scan_check)

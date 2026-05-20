@@ -173,6 +173,16 @@ Phase 13では、Codex由来の通知を正本へ戻る入口として表示し�
 - `related_path` があるCodex報告は、熾火候補として少し浮上しやすくします
 - OIKAWAはCodex報告を編集せず、読む場所として扱います
 
+## QPSC Phase 14: Ollama熱補助
+
+Phase 14では、熾火候補に対してOllamaの弱い熱補助を追加しました。
+
+- AIは判断代行ではなく、熾火候補の補助として扱います
+- 「熱を読む」操作で1件だけOllamaに短い断片を渡します
+- 原本全文は送らず、title / message / source / related_path / 原本先頭だけを読みます
+- Ollama未起動でもQPSCは動き、熱補助は眠っている状態として表示します
+- 結果は `data/config/qpsc_heat_hints.json` に保存しますが、Git管理しません
+
 ## 使い方
 
 1. `python main.py` で起動します。
