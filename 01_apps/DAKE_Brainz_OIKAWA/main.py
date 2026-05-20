@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import ctypes
 import json
 import math
 import queue
@@ -14,7 +15,7 @@ from pathlib import Path
 from tkinter import filedialog, messagebox
 import tkinter as tk
 
-from core.config import ConfigStore, app_dir, existing_folder, open_path, resolve_memory_folder, write_json_file
+from core.config import ConfigStore, app_dir, existing_folder, open_path, resolve_memory_folder, series_root, write_json_file
 from core.heat_engine import AnalysisResult, analyze_documents
 from core.markdown_writer import write_suggestion
 from core.qpsc_notifications import (
@@ -1007,6 +1008,46 @@ FONT_JP_SMALL = ("Yu Gothic UI", 10)
 FONT_TITLE = ("Yu Gothic UI", 20)
 FONT_LABEL = ("Yu Gothic UI", 10)
 FONT_MONO = ("Cascadia Mono", 10)
+WINDOW_GEOMETRY = "1240x760"
+WINDOW_MIN_SIZE = (1120, 680)
+WINDOW_TITLEBAR_DARK_ATTRIBUTES = (20, 19)
+
+
+def oikawa_icon_candidates() -> list[Path]:
+    return [
+        app_dir() / "assets" / "peakheadz_logo.ico",
+        series_root() / "02_assets" / "dake_icon.ico",
+    ]
+
+
+def apply_window_icon(window: tk.Tk) -> None:
+    for icon_path in oikawa_icon_candidates():
+        try:
+            if icon_path.exists():
+                window.iconbitmap(str(icon_path))
+                return
+        except Exception:
+            continue
+
+
+def apply_windows_titlebar_dark_mode(window: tk.Tk) -> None:
+    if not str(window.tk.call("tk", "windowingsystem")).lower().startswith("win"):
+        return
+    try:
+        window.update_idletasks()
+        hwnd = ctypes.c_void_p(window.winfo_id())
+        value = ctypes.c_int(1)
+        for attribute in WINDOW_TITLEBAR_DARK_ATTRIBUTES:
+            result = ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                hwnd,
+                ctypes.c_int(attribute),
+                ctypes.byref(value),
+                ctypes.sizeof(value),
+            )
+            if result == 0:
+                break
+    except Exception:
+        return
 
 
 @dataclass
@@ -1028,9 +1069,12 @@ class OikawaApp(tk.Tk):
     ) -> None:
         super().__init__()
         self.title(WINDOW_TITLE)
-        self.geometry("1240x760")
-        self.minsize(1120, 680)
+        self.geometry(WINDOW_GEOMETRY)
+        self.minsize(*WINDOW_MIN_SIZE)
         self.configure(bg=COLORS["background"])
+        apply_window_icon(self)
+        apply_windows_titlebar_dark_mode(self)
+        self.after(250, lambda: apply_windows_titlebar_dark_mode(self))
 
         self.config_store = ConfigStore()
         self.config_data = self.config_store.load()
