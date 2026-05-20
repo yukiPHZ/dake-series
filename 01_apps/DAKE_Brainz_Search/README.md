@@ -84,6 +84,7 @@ Phase 11では、BRAINZの取り込み入口にChatGPT export専用カードを�
 - `zip`、展開済みフォルダ、`conversations.json` を選んで取り込めます
 - 新形式の `conversations-000.json` / `conversations-001.json` 形式も、ファイル名順に結合して取り込めます
 - `chat.html` は現時点では取り込み対象にせず、JSON正本を優先します
+- 巨大会話は小さめのchunkに分割し、Ollama embeddingのcontext超過を避けます
 - 取り込み処理は既存の `core/chatgpt_importer.py` を使い、重複した取り込みロジックは持ちません
 - 取り込み中と結果はBRAINZ画面内に短く表示します
 - 取り込み成功時は `data/config/qpsc_notifications.json` に `chatgpt_export` 通知を保存します

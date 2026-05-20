@@ -231,11 +231,13 @@ UI_TEXT = {
     "smoke_chatgpt_zip_title": "補助脳BRAINZの話",
     "smoke_chatgpt_folder_title": "Cloudflare Pages整理",
     "smoke_chatgpt_split_title": "ChatGPT export 分割形式",
+    "smoke_chatgpt_long_title": "ChatGPT export 長文chunk",
     "smoke_chatgpt_user_text": "ChatGPT export zipから補助脳BRAINZの記憶を取り込みたい。",
     "smoke_chatgpt_assistant_text": "BRAINZは会話タイトル、role、本文をsource_type=chatgpt_exportとして検索できます。",
     "smoke_chatgpt_folder_text": "展開済みフォルダのconversations.jsonもローカルで解析します。",
     "smoke_chatgpt_split_text_a": "conversations-000.json から分割形式の記憶を読みます。",
     "smoke_chatgpt_split_text_b": "conversations-001.json も同じexportとして結合します。",
+    "smoke_chatgpt_long_text": "ChatGPT export の長い会話を小さなchunkへ分けて保存します。",
     "smoke_chatgpt_query": "source_type chatgpt_export 補助脳BRAINZ",
     "smoke_codex_title": "Add Codex result import to Brainz",
     "smoke_codex_text": "# Add Codex result import to Brainz\n\n完了しました。\n\n主な変更:\n- 追加: core/codex_importer.py\n- 更新: main.py, core/db.py, core/handoff_writer.py, README.md\n\n確認結果:\n- python main.py --launch-check: OK\n- python main.py --smoke-test: OK\n- build.bat: OK\n- dist/DakeBrainz_Search.exe --launch-check: OK\n\nGit:\n- commit: `abc1234def567890abc1234def567890abc1234d`\n- push: `origin/main` 成功\n- git status clean\n\nPhase 4候補: 関連タグ自動生成",
@@ -368,7 +370,7 @@ def run_smoke_test() -> int:
     import requests
 
     from core.app_config import AppConfig, ConfigStore, ensure_app_dirs
-    from core.chatgpt_importer import import_chatgpt_export
+    from core.chatgpt_importer import CHATGPT_IMPORT_CHUNK_SIZE, import_chatgpt_export
     from core.codex_importer import import_codex_file, import_codex_text
     from core.codex_report_auto import count_pending_reports, process_codex_reports_folder
     from core.db import BrainzDatabase
@@ -385,11 +387,11 @@ def run_smoke_test() -> int:
     from core.watch_folder import detect_changed_files
 
     ensure_app_dirs()
-    database = BrainzDatabase()
-    database.ensure_schema()
 
-    with tempfile.TemporaryDirectory(prefix="brainz_memory_") as tmp:
+    with tempfile.TemporaryDirectory(prefix="brainz_memory_", ignore_cleanup_errors=True) as tmp:
         root = Path(tmp)
+        database = BrainzDatabase(root / "brainz_smoke.sqlite3")
+        database.ensure_schema()
         default_config = ConfigStore(root / "default_config.json").load()
         if not default_config.enable_notifications:
             raise RuntimeError("notifications should default to enabled")
@@ -581,9 +583,11 @@ def run_smoke_test() -> int:
         zip_export = root / "chatgpt_export_zip"
         folder_export = root / "chatgpt_export_folder"
         split_export = root / "chatgpt_export_split"
+        long_export = root / "chatgpt_export_long"
         zip_export.mkdir()
         folder_export.mkdir()
         split_export.mkdir()
+        long_export.mkdir()
 
         zip_conversations = sample_conversations(
             f"brainz_zip_{unique_suffix}",
@@ -609,12 +613,20 @@ def run_smoke_test() -> int:
             UI_TEXT["smoke_chatgpt_split_text_b"],
             UI_TEXT["smoke_chatgpt_assistant_text"],
         )
+        long_user_text = " ".join([UI_TEXT["smoke_chatgpt_long_text"]] * 90)
+        long_conversations = sample_conversations(
+            f"brainz_long_{unique_suffix}",
+            UI_TEXT["smoke_chatgpt_long_title"],
+            long_user_text,
+            UI_TEXT["smoke_chatgpt_assistant_text"],
+        )
         (zip_export / "conversations.json").write_text(json.dumps(zip_conversations, ensure_ascii=False), encoding="utf-8")
         (folder_export / "conversations.json").write_text(json.dumps(folder_conversations, ensure_ascii=False), encoding="utf-8")
         (split_export / "conversations-000.json").write_text(json.dumps(split_conversations_a, ensure_ascii=False), encoding="utf-8")
         (split_export / "conversations-001.json").write_text(json.dumps(split_conversations_b, ensure_ascii=False), encoding="utf-8")
         (split_export / "shared_conversations.json").write_text("[]", encoding="utf-8")
         (split_export / "chat.html").write_text("<!doctype html><title>chat</title>", encoding="utf-8")
+        (long_export / "conversations.json").write_text(json.dumps(long_conversations, ensure_ascii=False), encoding="utf-8")
 
         zip_path = root / "chatgpt_export.zip"
         with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
@@ -624,6 +636,7 @@ def run_smoke_test() -> int:
         folder_result = import_chatgpt_export(folder_export, database)
         split_result = import_chatgpt_export(split_export, database)
         split_file_duplicate = import_chatgpt_export(split_export / "conversations-000.json", database)
+        long_result = import_chatgpt_export(long_export, database)
         duplicate_result = import_chatgpt_export(zip_path, database)
 
         if zip_result.messages_indexed < 2:
@@ -634,6 +647,21 @@ def run_smoke_test() -> int:
             raise RuntimeError("split chatgpt export import failed")
         if split_file_duplicate.skipped_duplicates < 4:
             raise RuntimeError("split chatgpt export file selection did not include sibling files")
+        if long_result.messages_indexed < 2:
+            raise RuntimeError("long chatgpt export import failed")
+        long_document_path = f"chatgpt_export://brainz_long_{unique_suffix}/000001/user"
+        with database.connect() as conn:
+            long_row = conn.execute("SELECT id FROM documents WHERE path = ?", (long_document_path,)).fetchone()
+            if long_row is None:
+                raise RuntimeError("long chatgpt document was not stored")
+            long_chunks = conn.execute(
+                "SELECT content FROM chunks WHERE document_id = ? ORDER BY chunk_index",
+                (int(long_row["id"]),),
+            ).fetchall()
+        if len(long_chunks) < 3:
+            raise RuntimeError("long chatgpt document was not split into chunks")
+        if max(len(str(row["content"] or "")) for row in long_chunks) > CHATGPT_IMPORT_CHUNK_SIZE:
+            raise RuntimeError("long chatgpt chunk exceeded embedding-safe size")
         if duplicate_result.skipped_duplicates < 2:
             raise RuntimeError("duplicate import was not skipped")
 

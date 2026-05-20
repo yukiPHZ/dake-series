@@ -14,7 +14,12 @@ from core.app_config import logs_dir, now_iso
 OLLAMA_BASE_URL = "http://127.0.0.1:11434"
 OLLAMA_EMBEDDINGS_URL = f"{OLLAMA_BASE_URL}/api/embeddings"
 DEFAULT_EMBED_MODEL = "nomic-embed-text"
-MAX_EMBED_TEXT_CHARS = 8000
+MAX_EMBED_TEXT_CHARS = 1800
+EMBED_CONTEXT_RETRY_CHARS = (1200, 800, 500)
+CONTEXT_LENGTH_ERROR_MARKERS = (
+    "input length exceeds the context length",
+    "context length",
+)
 
 
 class EmbeddingDatabase(Protocol):
@@ -75,7 +80,20 @@ def embed_text(text: str, model_name: str = DEFAULT_EMBED_MODEL, timeout: float 
     if not clean:
         return EmbeddingResult(False, [], "empty text", model_name)
 
-    payload = json.dumps({"model": model_name, "prompt": clean[:MAX_EMBED_TEXT_CHARS]}).encode("utf-8")
+    last_context_error = ""
+    for limit in _embedding_text_limits(len(clean)):
+        result = _request_embedding(clean[:limit], model_name=model_name, timeout=timeout)
+        if result.available:
+            return result
+        if not _is_context_length_error(result.message):
+            return result
+        last_context_error = result.message
+
+    return EmbeddingResult(False, [], last_context_error or "embedding context length exceeded", model_name)
+
+
+def _request_embedding(prompt: str, model_name: str, timeout: float) -> EmbeddingResult:
+    payload = json.dumps({"model": model_name, "prompt": prompt}).encode("utf-8")
     req = request.Request(
         OLLAMA_EMBEDDINGS_URL,
         data=payload,
@@ -138,6 +156,10 @@ def generate_embeddings_for_document(
         content = str(chunk["content"] or "")
         result = embed_text(content, model_name=session.model_name)
         if not result.available:
+            if _is_context_length_error(result.message):
+                database.mark_embedding_status(chunk_id, "unavailable")
+                failed += 1
+                continue
             session.mark_unavailable(result.message)
             database.mark_embedding_status(chunk_id, "unavailable")
             failed += 1
@@ -191,6 +213,20 @@ def write_semantic_log(lines: list[str]) -> Path:
 def _mark_unavailable(database: EmbeddingDatabase, chunks: list[dict[str, object]]) -> None:
     for chunk in chunks:
         database.mark_embedding_status(int(chunk["id"]), "unavailable")
+
+
+def _embedding_text_limits(clean_length: int) -> list[int]:
+    limits = [min(clean_length, MAX_EMBED_TEXT_CHARS)]
+    for retry_limit in EMBED_CONTEXT_RETRY_CHARS:
+        limit = min(clean_length, retry_limit)
+        if limit > 0 and limit not in limits:
+            limits.append(limit)
+    return limits
+
+
+def _is_context_length_error(message: str) -> bool:
+    lowered = (message or "").lower()
+    return any(marker in lowered for marker in CONTEXT_LENGTH_ERROR_MARKERS)
 
 
 def _http_error_message(exc: error.HTTPError) -> str:

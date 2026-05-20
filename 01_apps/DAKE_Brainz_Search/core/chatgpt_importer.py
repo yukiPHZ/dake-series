@@ -21,6 +21,8 @@ from core.text_splitter import split_text
 
 SOURCE_TYPE_CHATGPT = "chatgpt_export"
 SPLIT_CONVERSATIONS_PATTERN = re.compile(r"^conversations-\d+\.json$", re.IGNORECASE)
+CHATGPT_IMPORT_CHUNK_SIZE = 1200
+CHATGPT_IMPORT_CHUNK_OVERLAP = 120
 
 
 class ConversationsJsonNotFound(FileNotFoundError):
@@ -79,7 +81,11 @@ def _import_from_root(original_path: Path, root: Path, database: BrainzDatabase)
     for record in records:
         try:
             document = build_document_record(record)
-            chunks = split_text(document.content)
+            chunks = split_text(
+                document.content,
+                chunk_size=CHATGPT_IMPORT_CHUNK_SIZE,
+                overlap=CHATGPT_IMPORT_CHUNK_OVERLAP,
+            )
             document_id, changed = database.upsert_document(document, chunks)
             if changed:
                 messages_indexed += 1
