@@ -26,6 +26,7 @@ from core.ollama_heat import (
     build_heat_prompt,
     heat_hint_key,
     heat_hints_path,
+    read_heat_hint_cache,
     read_cached_heat_hint,
     request_heat_hint,
     save_heat_hint,
@@ -80,6 +81,7 @@ UI_TEXT = {
     "section_orbit_today": "今日の整理",
     "section_orbit_flow": "今日の流れ",
     "section_orbit_next": "次の候補",
+    "section_revisit": "巡回",
     "section_qpsc_state": "QPSC状態",
     "label_memory_folder": "記憶フォルダ",
     "memory_folder_missing": "記憶フォルダ未検出",
@@ -125,6 +127,8 @@ UI_TEXT = {
     "orbit_metric_quieted": "今日静かになった通知: {count}件",
     "orbit_metric_ember": "熾火候補: {count}件",
     "orbit_metric_recent_returns": "最近戻った原本: {count}件",
+    "orbit_metric_revisit_today": "今日の巡回: {count}件",
+    "orbit_metric_side_memory": "側に残っている記憶: {count}件",
     "orbit_metric_awake": "記憶庫は起きています",
     "orbit_metric_quiet": "記憶庫は静かです",
     "orbit_flow_import_source": "{source}から記憶が入りました",
@@ -134,6 +138,8 @@ UI_TEXT = {
     "orbit_flow_quieted": "静かになった通知が{count}件あります",
     "orbit_flow_ember": "熾火候補が{count}件あります",
     "orbit_flow_recent_returns": "最近戻った原本が{count}件あります",
+    "orbit_flow_revisit_today": "今日の巡回が{count}件あります",
+    "orbit_flow_side_memory": "側に残っている記憶が{count}件あります",
     "orbit_flow_query": "検索語: {query}",
     "orbit_flow_awake": "記憶庫は起きています",
     "orbit_flow_quiet": "今日は静かです",
@@ -146,6 +152,12 @@ UI_TEXT = {
     "orbit_next_query": "検索語に近い記憶です",
     "orbit_next_no_related": "原本への道筋はまだありません。",
     "orbit_next_template": "{message}: {title}",
+    "revisit_empty": "まだ巡回の記録はありません。",
+    "revisit_reason_often": "何度か戻っています",
+    "revisit_reason_recent": "最近また開かれました",
+    "revisit_reason_side": "側に残っている記憶です",
+    "revisit_no_related": "原本への道筋はまだありません。",
+    "revisit_template": "{message}: {title}",
     "section_qpsc_notifications": "QPSC通知",
     "qpsc_brainz_awake": "BRAINZ is awake.",
     "qpsc_memory_awake": "記憶庫は起きています。",
@@ -192,6 +204,7 @@ UI_TEXT = {
 MAX_PREVIEW_CHARS = 240_000
 ORBIT_FILE_NAME = "qpsc_orbit_today.json"
 RECENT_RETURNS_FILE_NAME = "qpsc_recent_returns.json"
+REVISIT_LOG_FILE_NAME = "qpsc_revisit_log.json"
 
 
 @dataclass(frozen=True)
@@ -242,6 +255,31 @@ class OrbitCandidate:
 
 
 @dataclass(frozen=True)
+class RecentReturn:
+    opened_at: str
+    title: str
+    related_path: str
+
+
+@dataclass(frozen=True)
+class RevisitLogItem:
+    opened_at: str
+    title: str
+    related_path: str
+
+
+@dataclass(frozen=True)
+class RevisitCandidate:
+    title: str
+    message: str
+    reason: str
+    related_path: str
+    score: int
+    opened_count: int
+    last_opened_at: str
+
+
+@dataclass(frozen=True)
 class OrbitToday:
     generated_at: str
     date: str
@@ -251,15 +289,10 @@ class OrbitToday:
     quieted_count: int
     ember_count: int
     recent_return_count: int
+    revisit_count_today: int
+    side_memory_count: int
     summary_lines: list[str]
     next_candidates: list[OrbitCandidate]
-
-
-@dataclass(frozen=True)
-class RecentReturn:
-    opened_at: str
-    title: str
-    related_path: str
 
 
 @dataclass(frozen=True)
@@ -462,11 +495,86 @@ def build_notification_view(
     return view_items[:limit], sedimented_count
 
 
+def build_revisit_candidates(
+    revisit_log: list[RevisitLogItem],
+    heat_candidates: list[HeatCandidate] | None = None,
+    heat_hint_records: list[dict[str, object]] | None = None,
+    memory_root: Path | None = None,
+    today: date | None = None,
+    limit: int = 3,
+) -> list[RevisitCandidate]:
+    if not revisit_log:
+        return []
+    now = datetime.now().astimezone()
+    target_date = today or now.date()
+    heat_keys = _revisit_related_key_set(
+        [candidate.related_path for candidate in heat_candidates or []],
+        memory_root,
+    )
+    hint_keys = _revisit_related_key_set(
+        [str(item.get("related_path", "") or "") for item in heat_hint_records or []],
+        memory_root,
+    )
+    grouped: dict[str, list[RevisitLogItem]] = {}
+    for item in revisit_log:
+        related_path = item.related_path.strip()
+        if not related_path:
+            continue
+        key = _revisit_primary_key(related_path, memory_root)
+        grouped.setdefault(key, []).append(item)
+
+    candidates: list[RevisitCandidate] = []
+    for items in grouped.values():
+        parsed_items = [(item, _parse_notification_datetime(item.opened_at)) for item in items]
+        parsed_items.sort(key=lambda pair: pair[1].timestamp() if pair[1] else 0.0, reverse=True)
+        latest_item = parsed_items[0][0]
+        latest_dt = parsed_items[0][1]
+        count = len(items)
+        score = min(count, 5) * 2
+        if latest_dt:
+            age_hours = max(0.0, (now - latest_dt).total_seconds() / 3600)
+            if age_hours <= 24:
+                score += 6
+            elif age_hours <= 24 * 7:
+                score += 3
+        if any(_is_late_night_revisit(parsed) for _item, parsed in parsed_items):
+            score += 2
+        if _revisit_matches(latest_item.related_path, heat_keys, memory_root):
+            score += 3
+        if _revisit_matches(latest_item.related_path, hint_keys, memory_root):
+            score += 2
+
+        if count >= 3:
+            reason = "often"
+        elif latest_dt and latest_dt.date() == target_date:
+            reason = "recent"
+        else:
+            reason = "side"
+        message = UI_TEXT[f"revisit_reason_{reason}"]
+        candidates.append(
+            RevisitCandidate(
+                title=latest_item.title.strip() or Path(latest_item.related_path).stem,
+                message=message,
+                reason=reason,
+                related_path=latest_item.related_path,
+                score=score,
+                opened_count=count,
+                last_opened_at=latest_item.opened_at,
+            )
+        )
+
+    candidates.sort(key=lambda item: (item.score, item.last_opened_at), reverse=True)
+    return candidates[:limit]
+
+
 def build_orbit_today(
     notifications: list[QpscNotification],
     heat_candidates: list[HeatCandidate],
     brainz_awake: bool,
     recent_returns: list[RecentReturn] | None = None,
+    revisit_log: list[RevisitLogItem] | None = None,
+    heat_hint_records: list[dict[str, object]] | None = None,
+    memory_root: Path | None = None,
     query: str = "",
     today: date | None = None,
 ) -> OrbitToday:
@@ -475,13 +583,26 @@ def build_orbit_today(
     today_notifications = [item for item in notifications if _notification_is_today(item, orbit_date)]
     unread_count = sum(1 for item in notifications if item.status == "unread")
     quieted_count = sum(1 for item in notifications if _notification_quieted_today(item, orbit_date))
-    recent_return_count = _count_recent_returns(recent_returns or [], orbit_date)
+    recent_return_count = len(recent_returns or [])
+    revisit_count_today = _count_revisits_today(revisit_log or [], orbit_date)
+    side_memory_count = len(
+        build_revisit_candidates(
+            revisit_log or [],
+            heat_candidates=heat_candidates,
+            heat_hint_records=heat_hint_records or [],
+            memory_root=memory_root,
+            today=orbit_date,
+            limit=3,
+        )
+    )
     summary_lines = _build_orbit_summary_lines(
         today_notifications,
         unread_count,
         quieted_count,
         len(heat_candidates),
         recent_return_count,
+        revisit_count_today,
+        side_memory_count,
         brainz_awake,
         query,
     )
@@ -495,6 +616,8 @@ def build_orbit_today(
         quieted_count=quieted_count,
         ember_count=len(heat_candidates),
         recent_return_count=recent_return_count,
+        revisit_count_today=revisit_count_today,
+        side_memory_count=side_memory_count,
         summary_lines=summary_lines,
         next_candidates=next_candidates,
     )
@@ -576,6 +699,8 @@ def save_orbit_today(orbit: OrbitToday) -> Path:
             "quieted_count": orbit.quieted_count,
             "ember_count": orbit.ember_count,
             "recent_return_count": orbit.recent_return_count,
+            "revisit_count_today": orbit.revisit_count_today,
+            "side_memory_count": orbit.side_memory_count,
             "summary_lines": orbit.summary_lines,
             "next_candidates": [
                 {
@@ -598,6 +723,8 @@ def _build_orbit_summary_lines(
     quieted_count: int,
     ember_count: int,
     recent_return_count: int,
+    revisit_count_today: int,
+    side_memory_count: int,
     brainz_awake: bool,
     query: str,
 ) -> list[str]:
@@ -616,6 +743,10 @@ def _build_orbit_summary_lines(
         lines.append(UI_TEXT["orbit_flow_ember"].format(count=ember_count))
     if recent_return_count:
         lines.append(UI_TEXT["orbit_flow_recent_returns"].format(count=recent_return_count))
+    if revisit_count_today:
+        lines.append(UI_TEXT["orbit_flow_revisit_today"].format(count=revisit_count_today))
+    if side_memory_count:
+        lines.append(UI_TEXT["orbit_flow_side_memory"].format(count=side_memory_count))
     if query.strip():
         lines.append(UI_TEXT["orbit_flow_query"].format(query=query.strip()))
     if brainz_awake:
@@ -647,6 +778,47 @@ def _append_orbit_candidate(candidates: list[OrbitCandidate], seen: set[str], ca
         return
     seen.add(key)
     candidates.append(candidate)
+
+
+def _revisit_related_key_set(values: list[str], memory_root: Path | None) -> set[str]:
+    keys: set[str] = set()
+    for value in values:
+        keys.update(_revisit_match_keys(value, memory_root))
+    return keys
+
+
+def _revisit_primary_key(value: str, memory_root: Path | None) -> str:
+    keys = _revisit_match_keys(value, memory_root)
+    if not keys:
+        return value.strip()
+    resolved_keys = [key for key in keys if Path(key).is_absolute()]
+    return sorted(resolved_keys or keys)[0]
+
+
+def _revisit_match_keys(value: str, memory_root: Path | None) -> set[str]:
+    text = str(value or "").strip()
+    if not text:
+        return set()
+    keys = {text}
+    path = _resolve_related_source_path(text, memory_root)
+    keys.add(str(path))
+    try:
+        keys.add(str(path.resolve()))
+    except OSError:
+        pass
+    return {key for key in keys if key}
+
+
+def _revisit_matches(value: str, keys: set[str], memory_root: Path | None) -> bool:
+    if not keys:
+        return False
+    return bool(_revisit_match_keys(value, memory_root) & keys)
+
+
+def _is_late_night_revisit(parsed: datetime | None) -> bool:
+    if parsed is None:
+        return False
+    return parsed.hour >= 23 or parsed.hour < 5
 
 
 def _notification_view_priority(notification: QpscNotification, heat_related: bool, target_date: date) -> int:
@@ -722,6 +894,10 @@ def _recent_returns_path() -> Path:
     return app_dir() / "data" / "config" / RECENT_RETURNS_FILE_NAME
 
 
+def _revisit_log_path() -> Path:
+    return app_dir() / "data" / "config" / REVISIT_LOG_FILE_NAME
+
+
 def read_recent_returns(limit: int = 30) -> list[RecentReturn]:
     path = _recent_returns_path()
     try:
@@ -761,6 +937,41 @@ def _write_recent_returns(items: list[RecentReturn]) -> None:
             "opened_at": item.opened_at,
             "title": item.title,
             "related_path": item.related_path,
+        }
+        for item in items
+    ]
+    temp_path = path.with_suffix(path.suffix + ".tmp")
+    temp_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    temp_path.replace(path)
+
+
+def read_revisit_log(limit: int = 200, log_path: Path | None = None) -> list[RevisitLogItem]:
+    path = log_path or _revisit_log_path()
+    return _read_revisit_log_from_path(path)[:limit]
+
+
+def record_revisit_log(path: Path, title: str, log_path: Path | None = None) -> None:
+    opened_at = datetime.now().astimezone().isoformat(timespec="seconds")
+    current = read_revisit_log(limit=200, log_path=log_path)
+    current.insert(
+        0,
+        RevisitLogItem(
+            opened_at=opened_at,
+            title=title.strip() or path.stem,
+            related_path=str(path),
+        ),
+    )
+    _write_revisit_log(current[:200], log_path=log_path)
+
+
+def _write_revisit_log(items: list[RevisitLogItem], log_path: Path | None = None) -> None:
+    path = log_path or _revisit_log_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = [
+        {
+            "related_path": item.related_path,
+            "title": item.title,
+            "opened_at": item.opened_at,
         }
         for item in items
     ]
@@ -861,6 +1072,22 @@ def _read_recent_returns_from_path(path: Path) -> list[RecentReturn]:
     return returns
 
 
+def _read_revisit_log_from_path(path: Path) -> list[RevisitLogItem]:
+    exists, data = _read_json_list(path)
+    if not exists:
+        return []
+    items: list[RevisitLogItem] = []
+    for item in data:
+        items.append(
+            RevisitLogItem(
+                opened_at=str(item.get("opened_at", "") or ""),
+                title=str(item.get("title", "") or ""),
+                related_path=str(item.get("related_path", "") or ""),
+            )
+        )
+    return items
+
+
 def _self_check_related_path_line(notification_items: list[dict[str, object]], memory_root: Path | None) -> str:
     related_paths = [str(item.get("related_path", "") or "").strip() for item in notification_items]
     related_paths = [path for path in related_paths if path]
@@ -878,6 +1105,15 @@ def _count_recent_returns(recent_returns: list[RecentReturn], target_date: date)
 
 
 def _recent_return_is_today(item: RecentReturn, target_date: date) -> bool:
+    parsed = _parse_notification_datetime(item.opened_at)
+    return bool(parsed and parsed.date() == target_date)
+
+
+def _count_revisits_today(items: list[RevisitLogItem], target_date: date) -> int:
+    return sum(1 for item in items if _revisit_is_today(item, target_date))
+
+
+def _revisit_is_today(item: RevisitLogItem, target_date: date) -> bool:
     parsed = _parse_notification_datetime(item.opened_at)
     return bool(parsed and parsed.date() == target_date)
 
@@ -1116,6 +1352,7 @@ class OikawaApp(tk.Tk):
         self.source_preview_loaded = False
         self.qpsc_notifications_all: list[QpscNotification] = []
         self.heat_candidates: list[HeatCandidate] = []
+        self.revisit_candidates: list[RevisitCandidate] = []
         self.last_search_query = ""
         self.scanning = False
         self.particles: list[Particle] = []
@@ -1490,6 +1727,25 @@ class OikawaApp(tk.Tk):
         self.orbit_next_frame = tk.Frame(orbit_next, bg=COLORS["background"])
         self.orbit_next_frame.pack(fill="both", expand=True, pady=(3, 0))
 
+        revisit = tk.Frame(
+            right_panel,
+            bg=COLORS["background"],
+            highlightbackground=COLORS["line_soft"],
+            highlightthickness=1,
+            padx=12,
+            pady=8,
+        )
+        revisit.pack(fill="x", pady=(0, 10), before=notice)
+        tk.Label(
+            revisit,
+            text=UI_TEXT["section_revisit"],
+            fg=COLORS["muted"],
+            bg=COLORS["background"],
+            font=FONT_LABEL,
+        ).pack(anchor="w")
+        self.revisit_candidates_frame = tk.Frame(revisit, bg=COLORS["background"])
+        self.revisit_candidates_frame.pack(fill="x", pady=(5, 0))
+
         footer = tk.Frame(self, bg=COLORS["background"])
         footer.place(relx=0.03, rely=0.93, relwidth=0.94, relheight=0.055)
         tk.Label(
@@ -1569,6 +1825,7 @@ class OikawaApp(tk.Tk):
         )
         self.qpsc_notifications_all = read_qpsc_notification_events(limit=30)
         self._refresh_heat_candidates()
+        self._refresh_revisit_candidates()
         notifications, sedimented_count = build_notification_view(self.qpsc_notifications_all, self.heat_candidates, limit=3)
         self._render_qpsc_import_notifications(notifications, sedimented_count)
         self._start_orbit_refresh(brainz_awake=brainz_awake)
@@ -1578,6 +1835,16 @@ class OikawaApp(tk.Tk):
     def _refresh_heat_candidates(self, query: str = "") -> None:
         self.heat_candidates = build_heat_candidates(self.qpsc_notifications_all, query=query, limit=3)
         self._render_heat_candidates(self.heat_candidates)
+
+    def _refresh_revisit_candidates(self) -> None:
+        self.revisit_candidates = build_revisit_candidates(
+            read_revisit_log(),
+            heat_candidates=self.heat_candidates,
+            heat_hint_records=read_heat_hint_cache(),
+            memory_root=self.memory_folder,
+            limit=3,
+        )
+        self._render_revisit_candidates(self.revisit_candidates)
 
     def _start_orbit_refresh(self, query: str = "", brainz_awake: bool | None = None) -> None:
         self.orbit_request_id += 1
@@ -1590,7 +1857,7 @@ class OikawaApp(tk.Tk):
             query = self.search_entry.get().strip() or self.last_search_query
         self.orbit_thread = threading.Thread(
             target=self._orbit_worker,
-            args=(request_id, notifications, heat_candidates, brainz_awake, query),
+            args=(request_id, notifications, heat_candidates, brainz_awake, query, self.memory_folder),
             daemon=True,
         )
         self.orbit_thread.start()
@@ -1602,9 +1869,19 @@ class OikawaApp(tk.Tk):
         heat_candidates: list[HeatCandidate],
         brainz_awake: bool,
         query: str,
+        memory_root: Path | None,
     ) -> None:
         try:
-            orbit = build_orbit_today(notifications, heat_candidates, brainz_awake, recent_returns=read_recent_returns(), query=query)
+            orbit = build_orbit_today(
+                notifications,
+                heat_candidates,
+                brainz_awake,
+                recent_returns=read_recent_returns(),
+                revisit_log=read_revisit_log(),
+                heat_hint_records=read_heat_hint_cache(),
+                memory_root=memory_root,
+                query=query,
+            )
             save_orbit_today(orbit)
             self.events.put(("orbit_done", (request_id, orbit)))
         except Exception as exc:  # noqa: BLE001
@@ -1730,6 +2007,39 @@ class OikawaApp(tk.Tk):
             reason_label.pack(side="right", padx=(8, 0))
             reason_label.bind("<Button-1>", lambda _event, selected=candidate: self._open_heat_candidate(selected))
 
+    def _render_revisit_candidates(self, candidates: list[RevisitCandidate]) -> None:
+        if not hasattr(self, "revisit_candidates_frame"):
+            return
+        for child in self.revisit_candidates_frame.winfo_children():
+            child.destroy()
+        if not candidates:
+            tk.Label(
+                self.revisit_candidates_frame,
+                text=UI_TEXT["revisit_empty"],
+                fg=COLORS["muted"],
+                bg=COLORS["background"],
+                font=FONT_JP_SMALL,
+                wraplength=230,
+                justify="left",
+            ).pack(anchor="w")
+            return
+        for candidate in candidates[:3]:
+            row = tk.Frame(self.revisit_candidates_frame, bg=COLORS["background"], cursor="hand2")
+            row.pack(fill="x", pady=(0, 4))
+            row.bind("<Button-1>", lambda _event, selected=candidate: self._open_revisit_candidate(selected))
+            tk.Label(
+                row,
+                text=UI_TEXT["revisit_template"].format(message=candidate.message, title=candidate.title),
+                fg=COLORS["text"],
+                bg=COLORS["background"],
+                font=FONT_JP_SMALL,
+                wraplength=230,
+                justify="left",
+                cursor="hand2",
+            ).pack(anchor="w")
+            for child in row.winfo_children():
+                child.bind("<Button-1>", lambda _event, selected=candidate: self._open_revisit_candidate(selected))
+
     def _handle_orbit_done(self, payload: object) -> None:
         request_id, orbit = payload
         assert isinstance(request_id, int)
@@ -1742,6 +2052,8 @@ class OikawaApp(tk.Tk):
             UI_TEXT["orbit_metric_quieted"].format(count=orbit.quieted_count),
             UI_TEXT["orbit_metric_ember"].format(count=orbit.ember_count),
             UI_TEXT["orbit_metric_recent_returns"].format(count=orbit.recent_return_count),
+            UI_TEXT["orbit_metric_revisit_today"].format(count=orbit.revisit_count_today),
+            UI_TEXT["orbit_metric_side_memory"].format(count=orbit.side_memory_count),
             UI_TEXT["orbit_metric_awake"] if orbit.brainz_awake else UI_TEXT["orbit_metric_quiet"],
         ]
         self.orbit_metrics_var.set("\n".join(metrics))
@@ -1861,6 +2173,8 @@ class OikawaApp(tk.Tk):
                     confidence=result.confidence,
                 )
             )
+            self._refresh_revisit_candidates()
+            self._start_orbit_refresh()
             return
         if result.status == "ollama_unavailable":
             self.heat_hint_var.set(f"{UI_TEXT['heat_hint_sleeping']}\n{UI_TEXT['heat_hint_unavailable']}")
@@ -1880,6 +2194,13 @@ class OikawaApp(tk.Tk):
             return
         self.source_preview_status_var.set(UI_TEXT["orbit_next_no_related"])
         self._set_source_preview_text(f"{candidate.title}\n{UI_TEXT['orbit_next_no_related']}")
+
+    def _open_revisit_candidate(self, candidate: RevisitCandidate) -> None:
+        if candidate.related_path:
+            self._show_source_path(candidate.related_path, candidate.title)
+            return
+        self.source_preview_status_var.set(UI_TEXT["revisit_no_related"])
+        self._set_source_preview_text(f"{candidate.title}\n{UI_TEXT['revisit_no_related']}")
 
     def _button_style(self, background: str) -> dict[str, object]:
         return {
@@ -2350,6 +2671,7 @@ class OikawaApp(tk.Tk):
             text, truncated = read_source_preview_text(path)
             try:
                 record_recent_return(path, title)
+                record_revisit_log(path, title)
             except OSError:
                 pass
             self.events.put(("source_preview_done", SourcePreviewResult(request_id, path, title, text, truncated)))
@@ -2372,6 +2694,8 @@ class OikawaApp(tk.Tk):
         self.source_preview_loaded = True
         self.source_preview_status_var.set(UI_TEXT["source_preview_loaded"])
         self._set_source_preview_text(content)
+        self._refresh_revisit_candidates()
+        self._start_orbit_refresh()
 
     def _handle_source_preview_error(self, payload: object) -> None:
         request_id, path, message = payload
@@ -2496,6 +2820,33 @@ def run_smoke_test() -> int:
         cached = read_cached_heat_hint(input_item, cache_path=cache_path)
         if cached is None or not cached.ok or not cached.cached or not cache_path.exists():
             raise RuntimeError("heat hint cache smoke failed")
+
+        revisit_path = root / "qpsc_revisit_log.json"
+        record_revisit_log(source_path, "Smoke heat", log_path=revisit_path)
+        record_revisit_log(source_path, "Smoke heat", log_path=revisit_path)
+        revisit_log = read_revisit_log(limit=20, log_path=revisit_path)
+        if len(revisit_log) != 2 or not revisit_path.exists():
+            raise RuntimeError("revisit log smoke failed")
+        revisit_candidates = build_revisit_candidates(
+            revisit_log,
+            heat_candidates=candidates,
+            heat_hint_records=read_heat_hint_cache(cache_path=cache_path),
+            memory_root=root,
+            limit=3,
+        )
+        if len(revisit_candidates) != 1 or revisit_candidates[0].opened_count != 2:
+            raise RuntimeError("revisit candidate smoke failed")
+        orbit = build_orbit_today(
+            [notification],
+            candidates,
+            True,
+            recent_returns=[RecentReturn(opened_at=revisit_log[0].opened_at, title="Smoke heat", related_path=str(source_path))],
+            revisit_log=revisit_log,
+            heat_hint_records=read_heat_hint_cache(cache_path=cache_path),
+            memory_root=root,
+        )
+        if orbit.revisit_count_today < 2 or orbit.side_memory_count != 1:
+            raise RuntimeError("revisit orbit smoke failed")
 
         unavailable_input = HeatHintInput(
             title="missing",

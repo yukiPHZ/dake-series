@@ -4,6 +4,7 @@ dist/
 *_config.json
 data/config/qpsc_orbit_today.json
 data/config/qpsc_recent_returns.json
+data/config/qpsc_revisit_log.json
 data/config/qpsc_heat_hints.json
 __pycache__/
 *.pyc
