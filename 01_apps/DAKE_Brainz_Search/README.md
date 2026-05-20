@@ -73,9 +73,11 @@ Phase 8では、BRAINZを「見るアプリ」ではなく、記憶庫・取り�
 
 BRAINZからOIKAWAを開く時は、まず `DAKE_Brainz_OIKAWA/dist/DakeBrainz_OIKAWA.exe` を優先します。
 
+完全一致で見つからない場合も、`dist` 内の `.exe` を探索します。1つだけある場合はそれを使い、複数ある場合は `OIKAWA` / `Oikawa` / `Brainz` を含むexeを優先します。
+
 exeがない開発中の状態では、`DAKE_Brainz_OIKAWA/main.py` を `python main.py` として起動します。buildされていない場合でも、開発起動できる導線です。
 
-exeと `main.py` のどちらも見つからない場合は、削除や強制終了はせず、OIKAWAのbuildまたは配置確認を促す静かな状態表示だけにします。
+exeと `main.py` のどちらも見つからない場合は、削除や強制終了はせず、OIKAWAのbuildまたは配置確認を促す静かな状態表示だけにします。BRAINZ Logには探索した候補パスを短く残します。
 
 ## QPSC Phase 11: ChatGPT export取り込み導線
 

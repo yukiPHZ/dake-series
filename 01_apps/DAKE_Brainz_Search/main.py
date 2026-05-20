@@ -273,6 +273,7 @@ UI_TEXT = {
     "log_export": "EXPORT: {path}",
     "log_oikawa_open": "OIKAWA OPEN: {mode} / {path}",
     "log_oikawa_missing": "OIKAWA NOT FOUND",
+    "log_oikawa_missing_checked": "OIKAWA NOT FOUND\nchecked:\n{paths}",
     "oikawa_mode_exe": "dist exe",
     "oikawa_mode_python": "python main.py",
     "log_settings_entry": "SETTINGS ENTRY: Slack / Queue / Codex reports",
@@ -345,25 +346,111 @@ UI_TEXT = {
 }
 
 
+OIKAWA_EXE_CANDIDATE_NAMES = (
+    "DakeBrainz_OIKAWA.exe",
+    "DakeBrainz_Oikawa.exe",
+    "DakeBrainz_oikawa.exe",
+    "DAKE_Brainz_OIKAWA.exe",
+)
+OIKAWA_EXE_PREFERRED_KEYWORDS = ("oikawa", "brainz")
+
+
+def unique_paths(paths: list[Path]) -> list[Path]:
+    unique: list[Path] = []
+    seen: set[str] = set()
+    for path in paths:
+        key = str(path).lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(path)
+    return unique
+
+
+def oikawa_app_dir_candidates(brainz_app_dir: Path | None = None) -> list[Path]:
+    file_app_dir = Path(__file__).resolve().parent
+    if brainz_app_dir is not None:
+        base_dirs = [brainz_app_dir]
+    else:
+        base_dirs = [file_app_dir, Path.cwd()]
+    if brainz_app_dir is None and getattr(sys, "frozen", False):
+        executable_dir = Path(sys.executable).resolve().parent
+        base_dirs.extend([executable_dir, executable_dir.parent])
+
+    oikawa_dirs: list[Path] = []
+    for base in unique_paths([path.resolve() for path in base_dirs]):
+        brainz_dir = base.parent if base.name.lower() == "dist" else base
+        oikawa_dirs.append(brainz_dir.parent / "DAKE_Brainz_OIKAWA")
+        oikawa_dirs.append(base / "01_apps" / "DAKE_Brainz_OIKAWA")
+    return unique_paths(oikawa_dirs)
+
+
+def preferred_dist_exes(dist_dir: Path) -> list[Path]:
+    if not dist_dir.exists() or not dist_dir.is_dir():
+        return []
+    exes = sorted((path for path in dist_dir.glob("*.exe") if path.is_file()), key=lambda path: path.name.lower())
+    if len(exes) <= 1:
+        return exes
+    preferred = [
+        path
+        for path in exes
+        if any(keyword in path.name.lower() for keyword in OIKAWA_EXE_PREFERRED_KEYWORDS)
+    ]
+    return unique_paths(preferred + exes)
+
+
+def oikawa_launch_candidate_paths(brainz_app_dir: Path | None = None) -> list[Path]:
+    oikawa_dirs = oikawa_app_dir_candidates(brainz_app_dir)
+    exact_exes = [
+        oikawa_dir / "dist" / exe_name
+        for oikawa_dir in oikawa_dirs
+        for exe_name in OIKAWA_EXE_CANDIDATE_NAMES
+    ]
+    dist_exes = [
+        exe_path
+        for oikawa_dir in oikawa_dirs
+        for exe_path in preferred_dist_exes(oikawa_dir / "dist")
+    ]
+    main_paths = [oikawa_dir / "main.py" for oikawa_dir in oikawa_dirs]
+    return unique_paths(exact_exes + dist_exes + main_paths)
+
+
+def format_checked_oikawa_paths(paths: list[Path]) -> str:
+    if not paths:
+        return "-"
+    return "\n".join(f"- {path}" for path in paths)
+
+
+def resolve_oikawa_launch_target_with_diagnostics(brainz_app_dir: Path | None = None) -> tuple[Path | None, str, list[Path]]:
+    checked_paths = oikawa_launch_candidate_paths(brainz_app_dir)
+    for path in checked_paths:
+        if path.exists():
+            if path.suffix.lower() == ".py":
+                return path, UI_TEXT["oikawa_mode_python"], checked_paths
+            if path.suffix.lower() == ".exe":
+                return path, UI_TEXT["oikawa_mode_exe"], checked_paths
+    return None, "", checked_paths
+
+
 def resolve_oikawa_launch_target(brainz_app_dir: Path | None = None) -> tuple[Path | None, str]:
-    app_dir = brainz_app_dir or Path(__file__).resolve().parent
-    oikawa_dir = app_dir.parent / "DAKE_Brainz_OIKAWA"
-    exe_path = oikawa_dir / "dist" / "DakeBrainz_OIKAWA.exe"
-    if exe_path.exists():
-        return exe_path, UI_TEXT["oikawa_mode_exe"]
-    main_path = oikawa_dir / "main.py"
-    if main_path.exists():
-        return main_path, UI_TEXT["oikawa_mode_python"]
-    return None, ""
+    target, mode, _ = resolve_oikawa_launch_target_with_diagnostics(brainz_app_dir)
+    return target, mode
+
+
+def resolve_oikawa_launch_command_with_diagnostics(
+    brainz_app_dir: Path | None = None,
+) -> tuple[list[str], Path | None, str, list[Path]]:
+    target, mode, checked_paths = resolve_oikawa_launch_target_with_diagnostics(brainz_app_dir)
+    if target is None:
+        return [], None, "", checked_paths
+    if target.suffix.lower() == ".py":
+        return [sys.executable, str(target)], target, mode, checked_paths
+    return [str(target)], target, mode, checked_paths
 
 
 def resolve_oikawa_launch_command(brainz_app_dir: Path | None = None) -> tuple[list[str], Path | None, str]:
-    target, mode = resolve_oikawa_launch_target(brainz_app_dir)
-    if target is None:
-        return [], None, ""
-    if target.suffix.lower() == ".py":
-        return [sys.executable, str(target)], target, mode
-    return [str(target)], target, mode
+    command, target, mode, _ = resolve_oikawa_launch_command_with_diagnostics(brainz_app_dir)
+    return command, target, mode
 
 
 def run_smoke_test() -> int:
@@ -454,14 +541,41 @@ def run_smoke_test() -> int:
             raise RuntimeError("oikawa launch target was not resolved")
         if oikawa_mode not in {UI_TEXT["oikawa_mode_exe"], UI_TEXT["oikawa_mode_python"]}:
             raise RuntimeError("oikawa launch mode was not resolved")
+        expected_oikawa_exe = Path(__file__).resolve().parent.parent / "DAKE_Brainz_OIKAWA" / "dist" / "DakeBrainz_OIKAWA.exe"
+        if expected_oikawa_exe.exists() and oikawa_target != expected_oikawa_exe:
+            raise RuntimeError("actual oikawa dist exe was not detected")
         fake_apps = root / "fake_apps"
         fake_brainz = fake_apps / "DAKE_Brainz_Search"
         fake_oikawa = fake_apps / "DAKE_Brainz_OIKAWA"
         fake_dist = fake_oikawa / "dist"
         fake_brainz.mkdir(parents=True)
-        command, target, mode = resolve_oikawa_launch_command(fake_brainz)
+        command, target, mode, checked_paths = resolve_oikawa_launch_command_with_diagnostics(fake_brainz)
         if command or target is not None or mode:
             raise RuntimeError("missing oikawa fallback did not return quiet missing state")
+        if not checked_paths:
+            raise RuntimeError("missing oikawa fallback did not report checked paths")
+        fake_single_apps = root / "fake_single_apps"
+        fake_single_brainz = fake_single_apps / "DAKE_Brainz_Search"
+        fake_single_dist = fake_single_apps / "DAKE_Brainz_OIKAWA" / "dist"
+        fake_single_brainz.mkdir(parents=True)
+        fake_single_dist.mkdir(parents=True)
+        fake_single_exe = fake_single_dist / "QuietOikawaCustom.exe"
+        fake_single_exe.write_text("", encoding="utf-8")
+        command, target, mode = resolve_oikawa_launch_command(fake_single_brainz)
+        if not command or target != fake_single_exe or mode != UI_TEXT["oikawa_mode_exe"]:
+            raise RuntimeError("oikawa single dist exe fallback was not selected")
+        fake_multi_apps = root / "fake_multi_apps"
+        fake_multi_brainz = fake_multi_apps / "DAKE_Brainz_Search"
+        fake_multi_dist = fake_multi_apps / "DAKE_Brainz_OIKAWA" / "dist"
+        fake_multi_brainz.mkdir(parents=True)
+        fake_multi_dist.mkdir(parents=True)
+        fake_multi_other = fake_multi_dist / "Utility.exe"
+        fake_multi_preferred = fake_multi_dist / "DakeBrainz_Custom.exe"
+        fake_multi_other.write_text("", encoding="utf-8")
+        fake_multi_preferred.write_text("", encoding="utf-8")
+        command, target, mode = resolve_oikawa_launch_command(fake_multi_brainz)
+        if not command or target != fake_multi_preferred or mode != UI_TEXT["oikawa_mode_exe"]:
+            raise RuntimeError("oikawa preferred dist exe fallback was not selected")
         fake_oikawa.mkdir(parents=True)
         fake_main = fake_oikawa / "main.py"
         fake_main.write_text("print('ok')\n", encoding="utf-8")
@@ -474,6 +588,11 @@ def run_smoke_test() -> int:
         command, target, mode = resolve_oikawa_launch_command(fake_brainz)
         if not command or target != fake_exe or mode != UI_TEXT["oikawa_mode_exe"]:
             raise RuntimeError("oikawa dist exe was not prioritized")
+        fake_brainz_dist = fake_brainz / "dist"
+        fake_brainz_dist.mkdir()
+        command, target, mode = resolve_oikawa_launch_command(fake_brainz_dist)
+        if not command or target != fake_exe or mode != UI_TEXT["oikawa_mode_exe"]:
+            raise RuntimeError("oikawa dist-relative exe path was not resolved")
         parsed_interval, interval_valid = parse_slack_poll_interval("9")
         if parsed_interval != 9 or not interval_valid:
             raise RuntimeError("slack interval parser rejected a valid value")
@@ -2337,9 +2456,11 @@ def run_gui(launch_check: bool = False) -> int:
             self._notify(UI_TEXT["settings_entry_hint"])
 
         def _open_oikawa(self) -> None:
-            command, target, mode = resolve_oikawa_launch_command()
+            command, target, mode, checked_paths = resolve_oikawa_launch_command_with_diagnostics()
             if not command or target is None:
-                self._append_log(UI_TEXT["log_oikawa_missing"])
+                self._append_log(
+                    UI_TEXT["log_oikawa_missing_checked"].format(paths=format_checked_oikawa_paths(checked_paths))
+                )
                 self._notify(UI_TEXT["notify_oikawa_missing"])
                 return
             try:
@@ -2353,7 +2474,9 @@ def run_gui(launch_check: bool = False) -> int:
                     close_fds=True,
                 )
             except Exception:
-                self._append_log(UI_TEXT["log_oikawa_missing"])
+                self._append_log(
+                    UI_TEXT["log_oikawa_missing_checked"].format(paths=format_checked_oikawa_paths(checked_paths))
+                )
                 self._notify(UI_TEXT["notify_oikawa_missing"])
                 return
             self._append_log(UI_TEXT["log_oikawa_open"].format(mode=mode, path=target))
