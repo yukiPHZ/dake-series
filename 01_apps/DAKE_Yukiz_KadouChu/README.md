@@ -439,8 +439,22 @@ NEXT ACTION は、System Check、動画選択、Posting Package、Assistant Revi
 - 先頭と末尾に微細な黒fadeを入れ、静かな呼吸感だけを整えます
 - `selected/bgm/` にBGMがある場合は小さめの音量で添え、元音声を優先します
 - BGMが無い場合もそのまま生成します
-- FOCUS MODEは `Horizontal Video` → `9:16 Short` → `Generate Shorts Pack` → `Save to Memory` の順で案内します
+- FOCUS MODEは `Horizontal Video` → `Smart Horizontal Edit` → `9:16 Short` → `Generate Shorts Pack` → `Save to Memory` の順で案内します
 - これは編集ソフト化ではなく、素材の流れを静かに整えるための出力機能です
+
+## Phase 3.8 SMART HORIZONTAL EDIT
+
+`SMART HORIZONTAL EDIT` を追加しました。`selected_short.json`、`selected/shorts_pack/shorts_pack.json`、`shorts_candidates.json` から良い区間だけを読み取り、静かな横編集版として `selected/smart_horizontal_edit.mp4` を生成します。
+
+- 入力優先順は `selected/selected_short.json` → `selected/shorts_pack/` → `shorts_candidates.json`
+- 3〜10区間程度を `selected/smart_horizontal_sequence.json` に保存します
+- 出力は `selected/smart_horizontal_edit.mp4`
+- 処理ログは `selected/smart_horizontal_edit_log.txt`
+- 各区間に微細な fade in / fade out を入れ、派手な演出ではなく呼吸感だけを整えます
+- `selected/bgm/` にBGMがある場合は小さめの音量で添え、元音声を優先します
+- NVENC が使える場合は `h264_nvenc` を優先し、失敗時は `libx264` へフォールバックします
+- FOCUS MODEは `Horizontal Video` → `Smart Horizontal Edit` → `9:16 Short` → `Shorts Pack` → `Save to Memory` の順で案内します
+- Premiere化やタイムライン編集ソフト化はせず、良い区間を静かに繋いで出せる形へ整えます
 
 ## Phase 2候補
 

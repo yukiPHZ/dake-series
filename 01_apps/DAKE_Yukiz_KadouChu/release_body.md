@@ -165,3 +165,12 @@
 - 微細なfade in / fade outで呼吸感を整える
 - `selected/bgm/` のBGMを小さめに添える処理に対応
 - FOCUS MODE の Export step を Shorts Pack まで案内
+
+## Phase 3.8
+
+- SMART HORIZONTAL EDIT を追加
+- `selected_short.json` / Shorts Pack / `shorts_candidates.json` から良い区間を選んで横編集版を生成
+- `selected/smart_horizontal_edit.mp4` と `smart_horizontal_sequence.json` を保存
+- 微細なfade in / fade outで静かな流れを整える
+- `selected/bgm/` のBGMを小さめに添える処理に対応
+- FOCUS MODE の Export step を Horizontal Video → Smart Horizontal Edit → Shorts の順に更新
