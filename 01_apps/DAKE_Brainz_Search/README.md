@@ -105,6 +105,7 @@ Phase 11では、BRAINZの取り込み入口にChatGPT export専用カードを�
 - `zip`、展開済みフォルダ、`conversations.json` を選んで取り込めます
 - 新形式の `conversations-000.json` / `conversations-001.json` 形式も、ファイル名順に結合して取り込めます
 - `chat.html` は現時点では取り込み対象にせず、JSON正本を優先します
+- 各メッセージは、chunk分割やembeddingより先に `brainz_memory/chatgpt/` へMarkdown原本として保存します
 - 巨大会話は小さめのchunkに分割し、Ollama embeddingのcontext超過を避けます
 - 取り込み処理は既存の `core/chatgpt_importer.py` を使い、重複した取り込みロジックは持ちません
 - 取り込み中と結果はBRAINZ画面内に短く表示します
@@ -283,6 +284,7 @@ PyInstallerで `dist/DakeBrainz_Search.exe` を作成します。exeアイコン
 - ChatGPT公式Export zipに対応
 - 展開済みフォルダに対応
 - `conversations.json` をローカルで解析
+- 会話メッセージを `brainz_memory/chatgpt/` にMarkdown原本として先に保存
 - 会話タイトル・発言者・本文をindex化
 - 取り込んだ会話は `source_type=chatgpt_export` として検索可能
 - 同じexportを再取り込みしても重複を避ける

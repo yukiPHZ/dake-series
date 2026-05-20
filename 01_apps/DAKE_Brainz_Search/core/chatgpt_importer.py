@@ -46,13 +46,19 @@ class ChatGPTImportResult:
     conversations_json_path: str
     conversations_imported: int
     messages_seen: int
+    files_saved: int
+    saved_files: tuple[str, ...]
     messages_indexed: int
     skipped_duplicates: int
     errors: int
     log_path: str
 
 
-def import_chatgpt_export(source_path: Path, database: BrainzDatabase) -> ChatGPTImportResult:
+def import_chatgpt_export(
+    source_path: Path,
+    database: BrainzDatabase,
+    memory_folder: Path | None = None,
+) -> ChatGPTImportResult:
     source_path = source_path.expanduser().resolve()
     if not source_path.exists():
         raise FileNotFoundError(str(source_path))
@@ -61,18 +67,24 @@ def import_chatgpt_export(source_path: Path, database: BrainzDatabase) -> ChatGP
         with tempfile.TemporaryDirectory(prefix="brainz_chatgpt_export_") as temp_dir:
             root = Path(temp_dir)
             safe_extract_zip(source_path, root)
-            return _import_from_root(source_path, root, database)
+            return _import_from_root(source_path, root, database, memory_folder=memory_folder)
 
-    return _import_from_root(source_path, source_path, database)
+    return _import_from_root(source_path, source_path, database, memory_folder=memory_folder)
 
 
-def _import_from_root(original_path: Path, root: Path, database: BrainzDatabase) -> ChatGPTImportResult:
+def _import_from_root(
+    original_path: Path,
+    root: Path,
+    database: BrainzDatabase,
+    memory_folder: Path | None = None,
+) -> ChatGPTImportResult:
     conversation_paths = find_conversation_json_files(root)
     if not conversation_paths:
         raise ConversationsJsonNotFound("chatgpt export conversations json not found")
 
     records = parse_conversations_json_files(conversation_paths)
     conversations = {record.conversation_id for record in records}
+    saved_files: list[str] = []
     messages_indexed = 0
     skipped_duplicates = 0
     errors = 0
@@ -80,7 +92,20 @@ def _import_from_root(original_path: Path, root: Path, database: BrainzDatabase)
 
     for record in records:
         try:
-            document = build_document_record(record)
+            content = build_document_content(record)
+            content_hash = hashlib.sha256(content.encode("utf-8", errors="replace")).hexdigest()
+            document_path = ""
+            if memory_folder:
+                saved_path, saved_changed = save_chatgpt_source_markdown(memory_folder, record, content)
+                document_path = str(saved_path)
+                if saved_changed:
+                    saved_files.append(str(saved_path))
+            document = build_document_record(
+                record,
+                content=content,
+                content_hash=content_hash,
+                document_path=document_path,
+            )
             chunks = split_text(
                 document.content,
                 chunk_size=CHATGPT_IMPORT_CHUNK_SIZE,
@@ -103,6 +128,8 @@ def _import_from_root(original_path: Path, root: Path, database: BrainzDatabase)
         conversations_json_path="; ".join(str(path) for path in conversation_paths),
         conversations_imported=len(conversations),
         messages_seen=len(records),
+        files_saved=len(saved_files),
+        saved_files=tuple(saved_files),
         messages_indexed=messages_indexed,
         skipped_duplicates=skipped_duplicates,
         errors=errors,
@@ -112,7 +139,7 @@ def _import_from_root(original_path: Path, root: Path, database: BrainzDatabase)
     append_saved_count_notification(
         source=SOURCE_TYPE_CHATGPT,
         title=QPSC_NOTIFICATION_TEXT["title_chatgpt_export"],
-        count=result_without_log.messages_indexed,
+        count=result_without_log.files_saved or result_without_log.messages_indexed,
         related_path=str(log_path),
     )
     return ChatGPTImportResult(
@@ -120,6 +147,8 @@ def _import_from_root(original_path: Path, root: Path, database: BrainzDatabase)
         conversations_json_path=result_without_log.conversations_json_path,
         conversations_imported=result_without_log.conversations_imported,
         messages_seen=result_without_log.messages_seen,
+        files_saved=result_without_log.files_saved,
+        saved_files=result_without_log.saved_files,
         messages_indexed=result_without_log.messages_indexed,
         skipped_duplicates=result_without_log.skipped_duplicates,
         errors=result_without_log.errors,
@@ -312,13 +341,8 @@ def extract_text_parts(value: Any) -> list[str]:
     return []
 
 
-def build_document_record(record: ChatGPTMessageRecord) -> DocumentRecord:
-    content_hash = hashlib.sha256(
-        f"{record.conversation_id}\n{record.message_index}\n{record.role}\n{record.message_text}".encode("utf-8")
-    ).hexdigest()
-    source_path = f"chatgpt_export://{record.conversation_id}/{record.message_index:06d}/{record.role}"
-    source_label = f"ChatGPT / {record.title} / {record.role}"
-    content = "\n".join(
+def build_document_content(record: ChatGPTMessageRecord) -> str:
+    return "\n".join(
         [
             f"Conversation: {record.title}",
             f"Conversation ID: {record.conversation_id}",
@@ -328,6 +352,18 @@ def build_document_record(record: ChatGPTMessageRecord) -> DocumentRecord:
             record.message_text,
         ]
     )
+
+
+def build_document_record(
+    record: ChatGPTMessageRecord,
+    content: str | None = None,
+    content_hash: str | None = None,
+    document_path: str = "",
+) -> DocumentRecord:
+    content = content if content is not None else build_document_content(record)
+    content_hash = content_hash or hashlib.sha256(content.encode("utf-8", errors="replace")).hexdigest()
+    source_path = document_path or f"chatgpt_export://{record.conversation_id}/{record.message_index:06d}/{record.role}"
+    source_label = f"ChatGPT / {record.title} / {record.role}"
     return DocumentRecord(
         path=source_path,
         title=record.title,
@@ -345,6 +381,47 @@ def build_document_record(record: ChatGPTMessageRecord) -> DocumentRecord:
         hash=content_hash,
         content=content,
     )
+
+
+def save_chatgpt_source_markdown(
+    memory_folder: Path,
+    record: ChatGPTMessageRecord,
+    content: str,
+) -> tuple[Path, bool]:
+    target = chatgpt_source_markdown_path(memory_folder, record)
+    changed = write_text_if_changed(target, content)
+    return target.resolve(), changed
+
+
+def chatgpt_source_markdown_path(memory_folder: Path, record: ChatGPTMessageRecord) -> Path:
+    conversation_folder = (
+        memory_folder.expanduser()
+        / "chatgpt"
+        / f"{safe_file_part(record.conversation_id)}_{safe_file_part(record.title)[:48]}"
+    )
+    filename = f"{record.message_index:06d}_{safe_file_part(record.role)}.md"
+    return conversation_folder / filename
+
+
+def write_text_if_changed(path: Path, text: str) -> bool:
+    if path.exists():
+        try:
+            if path.read_text(encoding="utf-8") == text:
+                return False
+        except OSError:
+            pass
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = path.with_suffix(path.suffix + ".tmp")
+    temp_path.write_text(text, encoding="utf-8")
+    temp_path.replace(path)
+    return True
+
+
+def safe_file_part(value: Any) -> str:
+    text = str(value or "").strip().lower()
+    text = re.sub(r"[^\w.-]+", "_", text, flags=re.UNICODE)
+    text = text.strip("._-")
+    return text[:80] or "untitled"
 
 
 def clean_identifier(value: Any) -> str:
@@ -388,6 +465,8 @@ def write_import_log(result: ChatGPTImportResult) -> Path:
         f"conversations.json found: {result.conversations_json_path}",
         f"conversations_imported={result.conversations_imported}",
         f"messages_seen={result.messages_seen}",
+        f"files_saved={result.files_saved}",
+        f"saved_files={'; '.join(result.saved_files)}",
         f"messages_indexed={result.messages_indexed}",
         f"skipped_duplicates={result.skipped_duplicates}",
         f"errors={result.errors}",

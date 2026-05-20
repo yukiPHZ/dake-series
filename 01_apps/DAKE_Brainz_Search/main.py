@@ -139,11 +139,13 @@ UI_TEXT = {
     "status_codex_import_complete": "CODEX RESULT IMPORT COMPLETE",
     "error_conversations_json_not_found": "ChatGPT export を確認できませんでした。zip または展開済みフォルダを選択してください。",
     "error_chatgpt_import_failed": "ChatGPT exportを取り込めませんでした。",
+    "error_chatgpt_memory_folder_required": "ChatGPT exportの原本保存には記憶フォルダが必要です。",
     "error_codex_result_empty": "Codex結果が空です。テキストを貼り付けるか、txt / md ファイルを選択してください。",
     "error_codex_import_failed": "Codex結果を取り込めませんでした。",
     "log_chatgpt_export_detected": "ChatGPT export detected.",
     "log_conversations_json_found": "conversations.json found: {path}",
     "log_chatgpt_import_complete": "{conversations} conversations imported. {messages} messages indexed. Skipped duplicates: {skipped}. Errors: {errors}.",
+    "log_chatgpt_source_saved": "CHATGPT SOURCE SAVED: {count} files",
     "log_chatgpt_memory_imported": "補助脳：ChatGPTの記憶を取り込みました。",
     "log_chatgpt_import_file": "IMPORT LOG: {path}",
     "log_codex_result_detected": "Codex result detected.",
@@ -762,28 +764,42 @@ def run_smoke_test() -> int:
         with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
             archive.write(zip_export / "conversations.json", "chatgpt_export/conversations.json")
 
-        zip_result = import_chatgpt_export(zip_path, database)
-        folder_result = import_chatgpt_export(folder_export, database)
-        split_result = import_chatgpt_export(split_export, database)
-        split_file_duplicate = import_chatgpt_export(split_export / "conversations-000.json", database)
-        long_result = import_chatgpt_export(long_export, database)
-        duplicate_result = import_chatgpt_export(zip_path, database)
+        zip_result = import_chatgpt_export(zip_path, database, memory_folder=root)
+        folder_result = import_chatgpt_export(folder_export, database, memory_folder=root)
+        split_result = import_chatgpt_export(split_export, database, memory_folder=root)
+        split_file_duplicate = import_chatgpt_export(split_export / "conversations-000.json", database, memory_folder=root)
+        long_result = import_chatgpt_export(long_export, database, memory_folder=root)
+        duplicate_result = import_chatgpt_export(zip_path, database, memory_folder=root)
 
         if zip_result.messages_indexed < 2:
             raise RuntimeError("zip import did not index messages")
+        if zip_result.files_saved < 2 or not all(Path(path).exists() for path in zip_result.saved_files):
+            raise RuntimeError("zip import did not save source markdown")
         if folder_result.messages_indexed < 2:
             raise RuntimeError("folder import did not index messages")
+        if folder_result.files_saved < 2:
+            raise RuntimeError("folder import did not save source markdown")
         if split_result.conversations_imported < 2 or split_result.messages_indexed < 4:
             raise RuntimeError("split chatgpt export import failed")
+        if split_result.files_saved < 4:
+            raise RuntimeError("split chatgpt export source markdown was not saved")
         if split_file_duplicate.skipped_duplicates < 4:
             raise RuntimeError("split chatgpt export file selection did not include sibling files")
         if long_result.messages_indexed < 2:
             raise RuntimeError("long chatgpt export import failed")
-        long_document_path = f"chatgpt_export://brainz_long_{unique_suffix}/000001/user"
+        if long_result.files_saved < 2:
+            raise RuntimeError("long chatgpt source markdown was not saved")
+        if duplicate_result.files_saved:
+            raise RuntimeError("duplicate chatgpt import rewrote source markdown")
         with database.connect() as conn:
-            long_row = conn.execute("SELECT id FROM documents WHERE path = ?", (long_document_path,)).fetchone()
+            long_row = conn.execute(
+                "SELECT id, path FROM documents WHERE conversation_id = ? AND message_index = ? AND role = ?",
+                (f"brainz_long_{unique_suffix}", 1, "user"),
+            ).fetchone()
             if long_row is None:
                 raise RuntimeError("long chatgpt document was not stored")
+            if not Path(str(long_row["path"])).exists():
+                raise RuntimeError("long chatgpt document path does not point to saved markdown")
             long_chunks = conn.execute(
                 "SELECT content FROM chunks WHERE document_id = ? ORDER BY chunk_index",
                 (int(long_row["id"]),),
@@ -2644,18 +2660,35 @@ def run_gui(launch_check: bool = False) -> int:
         def _start_chatgpt_import(self, source_path: Path) -> None:
             if self.import_thread and self.import_thread.is_alive():
                 return
+            if not self.config_data.memory_folder:
+                self.index_status_var.set(UI_TEXT["index_idle"])
+                if hasattr(self, "chatgpt_import_status_var"):
+                    self.chatgpt_import_status_var.set(UI_TEXT["error_chatgpt_memory_folder_required"])
+                messagebox.showwarning(UI_TEXT["dialog_title"], UI_TEXT["error_chatgpt_memory_folder_required"])
+                return
+            memory_folder = Path(self.config_data.memory_folder)
+            if not memory_folder.exists():
+                self.index_status_var.set(UI_TEXT["index_idle"])
+                if hasattr(self, "chatgpt_import_status_var"):
+                    self.chatgpt_import_status_var.set(UI_TEXT["dialog_memory_missing"])
+                messagebox.showwarning(UI_TEXT["dialog_title"], UI_TEXT["dialog_memory_missing"])
+                return
             self._set_import_buttons_state("disabled")
             self.index_status_var.set(UI_TEXT["status_importing_chatgpt"])
             if hasattr(self, "chatgpt_import_status_var"):
                 self.chatgpt_import_status_var.set(UI_TEXT["chatgpt_import_importing"])
             self.progress.set(0)
             self._append_log(UI_TEXT["log_chatgpt_export_detected"])
-            self.import_thread = threading.Thread(target=self._chatgpt_import_worker, args=(source_path,), daemon=True)
+            self.import_thread = threading.Thread(
+                target=self._chatgpt_import_worker,
+                args=(source_path, memory_folder),
+                daemon=True,
+            )
             self.import_thread.start()
 
-        def _chatgpt_import_worker(self, source_path: Path) -> None:
+        def _chatgpt_import_worker(self, source_path: Path, memory_folder: Path) -> None:
             try:
-                result = import_chatgpt_export(source_path, self.database)
+                result = import_chatgpt_export(source_path, self.database, memory_folder=memory_folder)
                 self.events.put(("chatgpt_import_done", result))
             except ConversationsJsonNotFound as exc:
                 self.events.put(("chatgpt_import_missing", str(exc)))
@@ -3726,17 +3759,19 @@ def run_gui(launch_check: bool = False) -> int:
             self.index_status_var.set(UI_TEXT["status_chatgpt_import_complete"])
             self.progress.set(1)
             if hasattr(self, "chatgpt_import_status_var"):
-                if result.messages_indexed:
+                saved_count = result.files_saved or result.messages_indexed
+                if saved_count:
                     self.chatgpt_import_status_var.set(
                         UI_TEXT["chatgpt_import_result"].format(
                             conversations=result.conversations_imported,
-                            messages=result.messages_indexed,
+                            messages=saved_count,
                         )
                     )
                 else:
                     self.chatgpt_import_status_var.set(UI_TEXT["chatgpt_import_result_no_new"])
             self._refresh_stats()
             self._append_log(UI_TEXT["log_conversations_json_found"].format(path=result.conversations_json_path))
+            self._append_log(UI_TEXT["log_chatgpt_source_saved"].format(count=result.files_saved))
             self._append_log(
                 UI_TEXT["log_chatgpt_import_complete"].format(
                     conversations=result.conversations_imported,
