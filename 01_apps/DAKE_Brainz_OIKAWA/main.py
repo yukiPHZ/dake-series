@@ -37,6 +37,12 @@ from core.qpsc_notifications import (
     mark_qpsc_notification_read,
     read_qpsc_notification_events,
 )
+from core.qpsc_slack_notify import (
+    SlackNotifyCandidate,
+    SlackNotifyConfig,
+    SlackNotifyResult,
+    maybe_send_slack_notification,
+)
 from core.qpsc_status import brainz_status_candidates, is_brainz_awake, read_brainz_status
 from core.scanner import MemoryDocument, scan_memory
 
@@ -170,6 +176,8 @@ UI_TEXT = {
     "side_memory_reason_heat": "熱の気配があります",
     "side_memory_no_related": "原本への道筋はまだありません。",
     "side_memory_template": "{message}: {title}",
+    "slack_notify_sent": "静かな通知をSlackへ置きました。",
+    "slack_notify_failed": "Slackへはまだ届きませんでした。",
     "section_qpsc_notifications": "QPSC通知",
     "qpsc_brainz_awake": "BRAINZ is awake.",
     "qpsc_memory_awake": "記憶庫は起きています。",
@@ -1564,6 +1572,8 @@ class OikawaApp(tk.Tk):
         self.source_preview_thread: threading.Thread | None = None
         self.self_check_thread: threading.Thread | None = None
         self.heat_hint_thread: threading.Thread | None = None
+        self.slack_notify_thread: threading.Thread | None = None
+        self.slack_notify_last_attempt = 0.0
         self.source_preview_request_id = 0
         self.orbit_request_id = 0
         self.heat_hint_request_id = 0
@@ -2095,6 +2105,76 @@ class OikawaApp(tk.Tk):
             limit=3,
         )
         self._render_side_memory_candidates(self.side_memory_candidates)
+        self._start_slack_notify_if_ready()
+
+    def _start_slack_notify_if_ready(self) -> None:
+        if self.slack_notify_thread and self.slack_notify_thread.is_alive():
+            return
+        if time.monotonic() - self.slack_notify_last_attempt < 300:
+            return
+        candidates = self._slack_notify_candidates()
+        if not candidates:
+            return
+        self.slack_notify_last_attempt = time.monotonic()
+        self.slack_notify_thread = threading.Thread(
+            target=self._slack_notify_worker,
+            args=(candidates,),
+            daemon=True,
+        )
+        self.slack_notify_thread.start()
+
+    def _slack_notify_candidates(self) -> list[SlackNotifyCandidate]:
+        heat_hint_paths = set(_heat_hint_related_paths(read_heat_hint_cache()))
+        items: list[SlackNotifyCandidate] = []
+        for candidate in self.side_memory_candidates:
+            items.append(
+                SlackNotifyCandidate(
+                    type="side_memory",
+                    title=candidate.title,
+                    message=candidate.message,
+                    related_path=candidate.related_path,
+                    reason=candidate.reason,
+                    score=candidate.score,
+                    opened_count=candidate.opened_count,
+                    has_heat_hint=candidate.related_path in heat_hint_paths,
+                )
+            )
+        for candidate in self.revisit_candidates:
+            items.append(
+                SlackNotifyCandidate(
+                    type="revisit",
+                    title=candidate.title,
+                    message=candidate.message,
+                    related_path=candidate.related_path,
+                    reason=candidate.reason,
+                    score=candidate.score,
+                    opened_count=candidate.opened_count,
+                    has_heat_hint=candidate.related_path in heat_hint_paths,
+                )
+            )
+        for candidate in self.heat_candidates:
+            if not candidate.related_path:
+                continue
+            items.append(
+                SlackNotifyCandidate(
+                    type="heat_candidate",
+                    title=candidate.title,
+                    message=candidate.message,
+                    related_path=candidate.related_path,
+                    reason=candidate.reason,
+                    score=candidate.score,
+                    opened_count=0,
+                    has_heat_hint=candidate.related_path in heat_hint_paths,
+                )
+            )
+        return items
+
+    def _slack_notify_worker(self, candidates: list[SlackNotifyCandidate]) -> None:
+        try:
+            result = maybe_send_slack_notification(candidates)
+        except Exception:  # noqa: BLE001
+            result = SlackNotifyResult(status="failed")
+        self.events.put(("slack_notify_done", result))
 
     def _start_orbit_refresh(self, query: str = "", brainz_awake: bool | None = None) -> None:
         self.orbit_request_id += 1
@@ -2474,6 +2554,13 @@ class OikawaApp(tk.Tk):
             return
         self.heat_hint_var.set(f"{UI_TEXT['heat_hint_sleeping']}\n{UI_TEXT['heat_hint_unavailable']}")
 
+    def _handle_slack_notify_done(self, payload: object) -> None:
+        assert isinstance(payload, SlackNotifyResult)
+        if payload.status == "sent":
+            self.summary_var.set(UI_TEXT["slack_notify_sent"])
+        elif payload.status == "failed":
+            self.summary_var.set(UI_TEXT["slack_notify_failed"])
+
     def _open_orbit_candidate(self, candidate: OrbitCandidate) -> None:
         if candidate.related_path:
             self._show_source_path(candidate.related_path, candidate.title)
@@ -2754,6 +2841,8 @@ class OikawaApp(tk.Tk):
                     self._handle_heat_hint_done(payload)
                 elif event_name == "heat_hint_error":
                     self._handle_heat_hint_error(payload)
+                elif event_name == "slack_notify_done":
+                    self._handle_slack_notify_done(payload)
         except queue.Empty:
             pass
         self.after(100, self._poll_events)
@@ -3147,6 +3236,46 @@ def run_smoke_test() -> int:
         )
         if not side_candidates or len(side_candidates) > 3:
             raise RuntimeError("side memory candidate smoke failed")
+        slack_sent: list[str] = []
+        slack_history_path = root / "qpsc_slack_notify_history.json"
+        slack_result = maybe_send_slack_notification(
+            [
+                SlackNotifyCandidate(
+                    type="side_memory",
+                    title=side_candidates[0].title,
+                    message=side_candidates[0].message,
+                    related_path=side_candidates[0].related_path,
+                    reason=side_candidates[0].reason,
+                    score=side_candidates[0].score,
+                    opened_count=side_candidates[0].opened_count,
+                    has_heat_hint=True,
+                )
+            ],
+            config=SlackNotifyConfig(enabled=True, webhook_url="https://hooks.slack.test/services/SMOKE"),
+            history_path=slack_history_path,
+            sender=lambda _url, text: slack_sent.append(text),
+        )
+        if not slack_result.sent or not slack_sent or not slack_history_path.exists():
+            raise RuntimeError("slack quiet notify smoke failed")
+        duplicate_result = maybe_send_slack_notification(
+            [
+                SlackNotifyCandidate(
+                    type="side_memory",
+                    title=side_candidates[0].title,
+                    message=side_candidates[0].message,
+                    related_path=side_candidates[0].related_path,
+                    reason=side_candidates[0].reason,
+                    score=side_candidates[0].score,
+                    opened_count=side_candidates[0].opened_count,
+                    has_heat_hint=True,
+                )
+            ],
+            config=SlackNotifyConfig(enabled=True, webhook_url="https://hooks.slack.test/services/SMOKE"),
+            history_path=slack_history_path,
+            sender=lambda _url, text: slack_sent.append(text),
+        )
+        if duplicate_result.sent or len(slack_sent) != 1:
+            raise RuntimeError("slack quiet notify duplicate guard failed")
         orbit = build_orbit_today(
             [notification],
             candidates,

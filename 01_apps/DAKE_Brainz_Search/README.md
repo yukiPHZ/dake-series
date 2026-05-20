@@ -150,6 +150,16 @@ Phase 13では、Codex結果・Codex報告の通知を、正本へ戻る入口�
 - commit、push、修正ファイル、確認が必要な報告は軽く分類してmessageへ反映します
 - OIKAWAではCodex報告通知、熾火、ORBITから原本へ戻れます
 
+## QPSC Phase 18: Slack静かな通知導線
+
+Phase 18では、QPSC内部で静かに浮いた記憶をSlackへ小さく置くための設定を追加しました。
+
+- 設定は `data/config/brainz_config.json` の `slack_notify_enabled`、`slack_webhook_url`、`slack_notify_max_per_day`、`slack_notify_quiet_hours` で扱います
+- Webhook URLはローカルconfigに保存し、Git管理しません
+- 通知は命令ではなく、OIKAWAへ戻るための再接続として扱います
+- 大量通知は避け、初期値では1日最大3件に抑えます
+- OpenClaw本格導入前の軽い外部導線です
+
 ## Phase 1でできること
 
 - ローカル記憶フォルダの指定

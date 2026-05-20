@@ -502,6 +502,10 @@ def run_smoke_test() -> int:
                 aru_channel_id="CARUSMOKE",
                 aru_poll_interval_seconds=5,
                 aru_last_ts="0",
+                slack_notify_enabled=True,
+                slack_webhook_url="https://hooks.slack.test/services/SMOKE",
+                slack_notify_max_per_day=3,
+                slack_notify_quiet_hours="22:00-04:00",
                 enable_notifications=False,
             )
         )
@@ -526,6 +530,13 @@ def run_smoke_test() -> int:
             or config_data.aru_poll_interval_seconds != 5
         ):
             raise RuntimeError("aru inbox config did not roundtrip")
+        if (
+            not config_data.slack_notify_enabled
+            or config_data.slack_webhook_url != "https://hooks.slack.test/services/SMOKE"
+            or config_data.slack_notify_max_per_day != 3
+            or config_data.slack_notify_quiet_hours != "22:00-04:00"
+        ):
+            raise RuntimeError("qpsc slack notify config did not roundtrip")
         qpsc_status = write_brainz_awake_status(
             path=root / "qpsc_brainz_status.json",
             started_at="2026-05-19T00:00:00",

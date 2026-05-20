@@ -37,6 +37,10 @@ class AppConfig:
     aru_channel_id: str = ""
     aru_poll_interval_seconds: int = 10
     aru_last_ts: str = ""
+    slack_notify_enabled: bool = False
+    slack_webhook_url: str = ""
+    slack_notify_max_per_day: int = 3
+    slack_notify_quiet_hours: str = "22:00-04:00"
     enable_notifications: bool = True
     last_query: str = ""
     last_indexed_at: str = ""
@@ -142,6 +146,10 @@ class ConfigStore:
             aru_channel_id=str(data.get("aru_channel_id", "") or ""),
             aru_poll_interval_seconds=parse_int(data.get("aru_poll_interval_seconds", 10), default=10, minimum=5, maximum=15),
             aru_last_ts=str(data.get("aru_last_ts", "") or ""),
+            slack_notify_enabled=bool(data.get("slack_notify_enabled", False)),
+            slack_webhook_url=str(data.get("slack_webhook_url", "") or ""),
+            slack_notify_max_per_day=parse_int(data.get("slack_notify_max_per_day", 3), default=3, minimum=1, maximum=5),
+            slack_notify_quiet_hours=str(data.get("slack_notify_quiet_hours", "22:00-04:00") or "22:00-04:00"),
             enable_notifications=bool(data.get("enable_notifications", True)),
             last_query=str(data.get("last_query", "") or ""),
             last_indexed_at=str(data.get("last_indexed_at", "") or ""),
