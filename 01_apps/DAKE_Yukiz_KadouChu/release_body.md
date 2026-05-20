@@ -210,3 +210,13 @@
 - Best Pair のサムネを `selected/upload_ready/thumbnails/best_thumbnail.png` へコピー可能
 - Upload Package Export に Title Match metadata のコピーを追加
 - 自動投稿、自動公開は行わず、最終判断はユーザーが行う
+
+## Phase 4.3
+
+- FINAL POLISH を追加
+- `selected/final_polish/final_check.json` と `final_polish_note.md` を生成
+- Final Title / Best Thumbnail / Horizontal Video / Shorts Count / BGM / Memory / Upload Ready を確認
+- PREVIEW WALL で投稿前セットの雰囲気を一覧表示
+- `Open Final Preview` で best thumbnail、final title、upload_ready をOS標準で確認
+- FOCUS MODE は Upload Package後に Final Polish を案内
+- YouTube投稿、自動公開は行わず、最終判断はユーザーが行う

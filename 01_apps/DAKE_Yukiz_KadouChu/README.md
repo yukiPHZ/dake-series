@@ -515,6 +515,19 @@ Smart Horizontal Edit の fallback sequence を強化しました。3秒程度�
 - `Generate Upload Package` 実行時も、既存の Title Match を upload_ready に含めます
 - YouTube投稿、自動公開、外部API送信は行いません。最終判断はユーザーが行います
 
+## Phase 4.3 FINAL POLISH
+
+`FINAL POLISH` を追加しました。Upload Package、Title Match、サムネ候補、Shorts、BGM、memory を読み取り、投稿前に静かに見直す最終確認空間を作ります。
+
+- `Refresh Final Polish` で `selected/final_polish/final_check.json` と `final_polish_note.md` を生成
+- FINAL POLISH には Final Title、Best Thumbnail、Horizontal Video、Shorts Count、BGM、Memory Status、Upload Package Status を表示
+- PREVIEW WALL で Thumbnail / Title / Shorts / Horizontal の見え方をひとまとめに確認
+- `Open Final Preview` は best thumbnail、final title、upload_ready をOS標準で開きます
+- Ollama READY時は review / recommendation / title_match / memory / upload_ready metadata を短くまとめて最終雰囲気を整理
+- Ollama不可時もテンプレートで継続し、処理は止めません
+- FOCUS MODE は Upload Package生成後に `Refresh Final Polish` を案内し、生成済みなら `Open Upload Ready` へ進みます
+- YouTube Studio置き換え、自動投稿、自動公開は行いません。最後の判断はユーザーが行います
+
 ## Phase 2候補
 
 - YouTube LIVE URLからyt-dlpで本取得

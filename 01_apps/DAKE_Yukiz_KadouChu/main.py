@@ -64,6 +64,7 @@ from core.cli_checker import (
 from core.assistant_review import find_latest_package_dir, run_assistant_review
 from core.ffmpeg_runner import create_preview_clip
 from core.first_video_test import first_video_test_dir, run_first_video_test
+from core.final_polish import generate_final_polish, read_final_check
 from core.media_probe import MediaInfo, probe_media
 from core.ollama_client import build_metadata_draft
 from core.posting_package import generate_posting_package, packages_dir
@@ -142,6 +143,7 @@ UI_TEXT = {
     "focus_desc_upload": "Prepare the upload_ready set for YouTube Studio handoff.",
     "focus_desc_thumbnail": "Generate quiet thumbnail candidates for the upload set.",
     "focus_desc_title_match": "Match thumbnail candidates with calm title directions.",
+    "focus_desc_final_polish": "Review the final title, thumbnail, videos, Shorts, memory, and upload_ready set.",
     "focus_desc_completed": "整っています。",
     "focus_progress_done": "done",
     "focus_progress_next": "next",
@@ -225,6 +227,11 @@ UI_TEXT = {
     "live_phase_title_match_titles": "Reading title ideas...",
     "live_phase_title_match_build": "Building entrance set...",
     "live_title_match_failed": "Title Match failed. See log.",
+    "live_phase_final_polish_build": "Building final polish...",
+    "live_phase_final_polish_upload": "Checking upload package...",
+    "live_phase_final_polish_thumbnail": "Loading thumbnail preview...",
+    "live_phase_final_polish_note": "Preparing final note...",
+    "live_final_polish_failed": "Final Polish failed. See log.",
     "live_phase_completed": "Completed.",
     "button_generating": "Generating...",
     "button_rendering": "Rendering...",
@@ -409,6 +416,23 @@ UI_TEXT = {
     "title_match_added": "Title Match added to upload_ready.",
     "best_pair": "Best Pair",
     "thumbnail": "Thumbnail",
+    "final_polish": "FINAL POLISH",
+    "open_final_preview": "Open Final Preview",
+    "open_upload_ready": "Open Upload Ready",
+    "refresh_final_polish": "Refresh Final Polish",
+    "final_polish_ready_hint": "Refresh the final pre-upload preview from upload_ready, title match, thumbnails, Shorts, and memory.",
+    "final_polish_running": "Status: RUNNING",
+    "final_polish_completed": "COMPLETED",
+    "final_polish_failed": "FAILED",
+    "final_polish_unavailable": "Final Polish is not ready yet.",
+    "open_final_preview_failed": "Could not open Final Preview.",
+    "preview_wall": "PREVIEW WALL",
+    "final_title": "Final Title",
+    "best_thumbnail": "Best Thumbnail",
+    "horizontal_video_label": "Horizontal Video",
+    "shorts_count": "Shorts Count",
+    "final_memory_status": "Memory Status",
+    "final_upload_ready_status": "Upload Package Status",
     "sequence_builder": "SEQUENCE BUILDER",
     "sequence": "SEQUENCE",
     "add_sequence_video": "Add Sequence Video",
@@ -572,6 +596,9 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.title_match_dir: Path | None = None
         self.title_match_file_path: Path | None = None
         self.title_match_json_path: Path | None = None
+        self.final_polish_dir: Path | None = None
+        self.final_check_path: Path | None = None
+        self.final_polish_note_path: Path | None = None
         self.horizontal_edit_path: Path | None = None
         self.preview_source_video_path: Path | None = None
         self.sequence_items: list[dict[str, object]] = []
@@ -597,6 +624,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.upload_package_running = False
         self.thumbnail_running = False
         self.title_match_running = False
+        self.final_polish_running = False
         self.sequence_running = False
         self.project_bridge_running = False
         self.memory_running = False
@@ -619,6 +647,8 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.upload_package_summary_var = ctk.StringVar(value=UI_TEXT["upload_package_ready_hint"])
         self.thumbnail_summary_var = ctk.StringVar(value=UI_TEXT["thumbnail_ready_hint"])
         self.title_match_summary_var = ctk.StringVar(value=UI_TEXT["title_match_ready_hint"])
+        self.final_polish_summary_var = ctk.StringVar(value=UI_TEXT["final_polish_ready_hint"])
+        self.preview_wall_var = ctk.StringVar(value=UI_TEXT["final_polish_ready_hint"])
         self.sequence_summary_var = ctk.StringVar(value=UI_TEXT["horizontal_edit_ready_hint"])
         self.project_bridge_summary_var = ctk.StringVar(value=UI_TEXT["project_bridge_ready_hint"])
         self.memory_summary_var = ctk.StringVar(value=UI_TEXT["memory_ready_hint"])
@@ -1659,8 +1689,73 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         )
         self.add_title_match_upload_button.grid(row=3, column=0, columnspan=2, sticky="ew", padx=12, pady=(4, 10))
 
+        final_polish_box = ctk.CTkFrame(body, fg_color=COLORS["panel_alt"], border_width=1, border_color=COLORS["line"], corner_radius=8)
+        final_polish_box.grid(row=8, column=0, sticky="ew", pady=(12, 0))
+        final_polish_box.grid_columnconfigure(0, weight=1)
+        final_polish_box.grid_columnconfigure(1, weight=1)
+        ctk.CTkLabel(
+            final_polish_box,
+            text=UI_TEXT["final_polish"],
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
+            text_color=COLORS["accent_soft"],
+        ).grid(row=0, column=0, columnspan=2, sticky="w", padx=12, pady=(10, 4))
+        ctk.CTkLabel(
+            final_polish_box,
+            textvariable=self.final_polish_summary_var,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            text_color=COLORS["text"],
+            wraplength=330,
+            justify="left",
+        ).grid(row=1, column=0, columnspan=2, sticky="ew", padx=12, pady=(0, 8))
+        ctk.CTkLabel(
+            final_polish_box,
+            text=UI_TEXT["preview_wall"],
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            text_color=COLORS["muted"],
+        ).grid(row=2, column=0, columnspan=2, sticky="w", padx=12, pady=(0, 2))
+        ctk.CTkLabel(
+            final_polish_box,
+            textvariable=self.preview_wall_var,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            text_color=COLORS["text"],
+            wraplength=330,
+            justify="left",
+        ).grid(row=3, column=0, columnspan=2, sticky="ew", padx=12, pady=(0, 8))
+        self.refresh_final_polish_button = ctk.CTkButton(
+            final_polish_box,
+            text=UI_TEXT["refresh_final_polish"],
+            command=self._start_refresh_final_polish,
+            height=30,
+            fg_color=COLORS["button"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+        )
+        self.refresh_final_polish_button.grid(row=4, column=0, sticky="ew", padx=(12, 4), pady=4)
+        self.open_final_preview_button = ctk.CTkButton(
+            final_polish_box,
+            text=UI_TEXT["open_final_preview"],
+            command=self._open_final_preview,
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+            state="disabled",
+        )
+        self.open_final_preview_button.grid(row=4, column=1, sticky="ew", padx=(4, 12), pady=4)
+        self.open_final_upload_button = ctk.CTkButton(
+            final_polish_box,
+            text=UI_TEXT["open_upload_ready"],
+            command=self._open_upload_package,
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+            state="disabled",
+        )
+        self.open_final_upload_button.grid(row=5, column=0, columnspan=2, sticky="ew", padx=12, pady=(4, 10))
+
         sequence_box = ctk.CTkFrame(body, fg_color=COLORS["panel_alt"], border_width=1, border_color=COLORS["line"], corner_radius=8)
-        sequence_box.grid(row=8, column=0, sticky="ew", pady=(12, 0))
+        sequence_box.grid(row=9, column=0, sticky="ew", pady=(12, 0))
         sequence_box.grid_columnconfigure(0, weight=1)
         sequence_box.grid_columnconfigure(1, weight=1)
         ctk.CTkLabel(
@@ -1751,7 +1846,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.open_horizontal_edit_button.grid(row=5, column=1, sticky="ew", padx=(4, 12), pady=(4, 10))
 
         bridge_box = ctk.CTkFrame(body, fg_color=COLORS["panel_alt"], border_width=1, border_color=COLORS["line"], corner_radius=8)
-        bridge_box.grid(row=9, column=0, sticky="ew", pady=(12, 0))
+        bridge_box.grid(row=10, column=0, sticky="ew", pady=(12, 0))
         bridge_box.grid_columnconfigure(0, weight=1)
         bridge_box.grid_columnconfigure(1, weight=1)
         ctk.CTkLabel(
@@ -1843,7 +1938,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.generate_bridge_metadata_button.grid(row=5, column=0, columnspan=2, sticky="ew", padx=12, pady=(4, 10))
 
         memory_box = ctk.CTkFrame(body, fg_color=COLORS["panel_alt"], border_width=1, border_color=COLORS["line"], corner_radius=8)
-        memory_box.grid(row=10, column=0, sticky="ew", pady=(12, 0))
+        memory_box.grid(row=11, column=0, sticky="ew", pady=(12, 0))
         memory_box.grid_columnconfigure(0, weight=1)
         memory_box.grid_columnconfigure(1, weight=1)
         ctk.CTkLabel(
@@ -1892,7 +1987,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.generate_memory_summary_button.grid(row=3, column=0, columnspan=2, sticky="ew", padx=12, pady=(4, 10))
 
         recommend_box = ctk.CTkFrame(body, fg_color=COLORS["panel_alt"], border_width=1, border_color=COLORS["line"], corner_radius=8)
-        recommend_box.grid(row=11, column=0, sticky="ew", pady=(12, 0))
+        recommend_box.grid(row=12, column=0, sticky="ew", pady=(12, 0))
         recommend_box.grid_columnconfigure(0, weight=1)
         recommend_box.grid_columnconfigure(1, weight=1)
         ctk.CTkLabel(
@@ -1951,7 +2046,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             text_color=COLORS["text"],
             state="disabled",
         )
-        self.open_button.grid(row=12, column=0, sticky="ew", pady=(12, 0))
+        self.open_button.grid(row=13, column=0, sticky="ew", pady=(12, 0))
         return panel
 
     def _build_system_panel(self, parent: ctk.CTkFrame) -> ctk.CTkFrame:
@@ -2073,6 +2168,23 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 return False
         return True
 
+    def _final_polish_current(self, package_dir: Path | None) -> bool:
+        if package_dir is None:
+            return False
+        final_check = package_dir / "selected" / "final_polish" / "final_check.json"
+        if not final_check.exists():
+            return False
+        dependencies = [
+            package_dir / "selected" / "upload_ready" / "metadata" / "upload_checklist.md",
+            package_dir / "selected" / "title_match" / "title_match.json",
+            package_dir / "selected" / "thumbnails" / "thumbnail_candidates.json",
+        ]
+        try:
+            final_mtime = final_check.stat().st_mtime
+            return all(not path.exists() or final_mtime >= path.stat().st_mtime for path in dependencies)
+        except OSError:
+            return False
+
     def _reset_upload_package_state(self) -> None:
         self.upload_package_dir = None
         self.upload_checklist_path = None
@@ -2082,6 +2194,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             self.open_upload_package_button.configure(state="disabled")
         if hasattr(self, "preview_upload_set_button"):
             self.preview_upload_set_button.configure(state="disabled")
+        self._reset_final_polish_state()
 
     def _reset_thumbnail_state(self) -> None:
         self.thumbnail_dir = None
@@ -2110,6 +2223,19 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             self.open_title_match_button.configure(state="disabled")
         if hasattr(self, "add_title_match_upload_button"):
             self.add_title_match_upload_button.configure(state="disabled")
+
+    def _reset_final_polish_state(self) -> None:
+        self.final_polish_dir = None
+        self.final_check_path = None
+        self.final_polish_note_path = None
+        if hasattr(self, "final_polish_summary_var"):
+            self.final_polish_summary_var.set(UI_TEXT["final_polish_ready_hint"])
+        if hasattr(self, "preview_wall_var"):
+            self.preview_wall_var.set(UI_TEXT["final_polish_ready_hint"])
+        if hasattr(self, "open_final_preview_button"):
+            self.open_final_preview_button.configure(state="disabled")
+        if hasattr(self, "open_final_upload_button"):
+            self.open_final_upload_button.configure(state="disabled")
 
     def _dashboard_memory_saved(self, package_dir: Path | None) -> bool:
         if package_dir is None:
@@ -2154,6 +2280,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.upload_package_running,
                 self.thumbnail_running,
                 self.title_match_running,
+                self.final_polish_running,
                 self.sequence_running,
                 self.project_bridge_running,
                 self.memory_running,
@@ -2514,13 +2641,23 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 sequence_ready,
             )
 
+        if not self._final_polish_current(package_dir):
+            return self._focus_step_state(
+                6,
+                "focus_step_memory",
+                "focus_desc_final_polish",
+                "refresh_final_polish",
+                "refresh_final_polish",
+                sequence_ready,
+            )
+
         return {
             "index": 6,
             "completed": True,
             "step_label": UI_TEXT["focus_step_completed"],
             "description": UI_TEXT["focus_desc_completed"],
             "action_key": "open_upload_package",
-            "action_label": UI_TEXT["open_upload_package"],
+            "action_label": UI_TEXT["open_upload_ready"],
             "sequence_ready": sequence_ready,
         }
 
@@ -2582,6 +2719,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             "generate_upload_package": self._start_generate_upload_package,
             "generate_thumbnail_candidates": self._start_generate_thumbnail_candidates,
             "generate_title_match": self._start_generate_title_match,
+            "refresh_final_polish": self._start_refresh_final_polish,
             "open_upload_package": self._open_upload_package,
             "open_package_folder": self._open_package_folder,
         }
@@ -2646,6 +2784,8 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.add_thumbnail_upload_button.configure(state="disabled")
         self.open_title_match_button.configure(state="disabled")
         self.add_title_match_upload_button.configure(state="disabled")
+        self.open_final_preview_button.configure(state="disabled")
+        self.open_final_upload_button.configure(state="disabled")
         self.open_recommendation_button.configure(state="disabled")
         self.selected_output_dir = None
         self.short_preview_path = None
@@ -2662,6 +2802,9 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.title_match_dir = None
         self.title_match_file_path = None
         self.title_match_json_path = None
+        self.final_polish_dir = None
+        self.final_check_path = None
+        self.final_polish_note_path = None
         self.horizontal_edit_path = None
         self.recommendation_path = None
         self.preview_source_video_path = None
@@ -2684,6 +2827,8 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.thumbnail_choice_var.set(UI_TEXT["no_thumbnails"])
         self.thumbnail_choice_menu.configure(values=[UI_TEXT["no_thumbnails"]])
         self.title_match_summary_var.set(UI_TEXT["title_match_ready_hint"])
+        self.final_polish_summary_var.set(UI_TEXT["final_polish_ready_hint"])
+        self.preview_wall_var.set(UI_TEXT["final_polish_ready_hint"])
         self.sequence_summary_var.set(UI_TEXT["horizontal_edit_ready_hint"])
         self.sequence_choice_var.set(UI_TEXT["sequence_empty"])
         self.sequence_choice_menu.configure(values=[UI_TEXT["sequence_empty"]])
@@ -2776,6 +2921,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.preview_upload_set_button.configure(state="normal" if self.upload_checklist_path else "disabled")
         self._load_thumbnails_for_package(package_dir)
         self._load_title_match_for_package(package_dir)
+        self._load_final_polish_for_package(package_dir)
         self.review_summary_var.set(
             "\n".join(
                 [
@@ -3071,6 +3217,62 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         state = "normal" if self.title_match_file_path or self.title_match_json_path else "disabled"
         self.open_title_match_button.configure(state=state)
         self.add_title_match_upload_button.configure(state=state)
+
+    def _format_final_polish_summary(self, result: dict[str, object]) -> str:
+        check = result.get("final_check")
+        if not isinstance(check, dict):
+            check = result
+        lines = [
+            UI_TEXT["final_polish"],
+            f"{UI_TEXT['final_title']}: {check.get('title', '--')}",
+            f"{UI_TEXT['best_thumbnail']}: {check.get('thumbnail', '--')}",
+            f"{UI_TEXT['horizontal_video_label']}: {check.get('horizontal_video', '--')}",
+            f"{UI_TEXT['shorts_count']}: {check.get('shorts_count', 0)}",
+            f"{UI_TEXT['bgm']}: {check.get('bgm', '--')}",
+            f"{UI_TEXT['final_memory_status']}: {UI_TEXT['memory_saved'] if check.get('memory_saved') else UI_TEXT['selected_missing']}",
+            f"{UI_TEXT['final_upload_ready_status']}: {'OK' if check.get('upload_ready') else UI_TEXT['selected_missing']}",
+            f"{UI_TEXT['package_status']}: {result.get('status', check.get('status', UI_TEXT['ready']))}",
+        ]
+        if result.get("used_ollama"):
+            lines.append(f"{UI_TEXT['ollama']}: {UI_TEXT['used']}")
+        return "\n".join(lines)
+
+    def _format_preview_wall(self, check: dict[str, object]) -> str:
+        roles = check.get("shorts_roles")
+        role_lines = [str(item) for item in roles if str(item)] if isinstance(roles, list) else ["INTRO", "WORK", "AFTERGLOW"]
+        return "\n".join(
+            [
+                f"[ {UI_TEXT['thumbnail']} ] {check.get('thumbnail', '--')}",
+                f"{UI_TEXT['final_title']}: {check.get('title', '--')}",
+                f"[ {UI_TEXT['shorts']} ] {', '.join(role_lines[:3]) if role_lines else '--'}",
+                f"[ {UI_TEXT['horizontal_video_label']} ] {check.get('horizontal_video', '--')}",
+            ]
+        )
+
+    def _load_final_polish_for_package(self, package_dir: Path | None = None) -> None:
+        package = package_dir or self._dashboard_package_dir()
+        if package is None:
+            self._reset_final_polish_state()
+            return
+        final_dir = package / "selected" / "final_polish"
+        check_path = final_dir / "final_check.json"
+        note_path = final_dir / "final_polish_note.md"
+        check = read_final_check(package)
+        self.final_polish_dir = final_dir if check_path.exists() or note_path.exists() else None
+        self.final_check_path = check_path if check_path.exists() else None
+        self.final_polish_note_path = note_path if note_path.exists() else None
+        if check:
+            self.final_polish_summary_var.set(
+                self._format_final_polish_summary({"status": "COMPLETED", "final_check": check})
+            )
+            self.preview_wall_var.set(self._format_preview_wall(check))
+        else:
+            self.final_polish_summary_var.set(UI_TEXT["final_polish_ready_hint"])
+            self.preview_wall_var.set(UI_TEXT["final_polish_ready_hint"])
+        state = "normal" if self.final_check_path or self.final_polish_note_path else "disabled"
+        self.open_final_preview_button.configure(state=state)
+        upload_dir, _checklist = self._resolve_upload_package_dir()
+        self.open_final_upload_button.configure(state="normal" if upload_dir else "disabled")
 
     def _thumbnail_choice_path(self) -> Path | None:
         package_dir = self._resolve_package_for_review()
@@ -3769,6 +3971,82 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.events.put({"type": "upload_package_result", "result": result})
             except Exception as exc:
                 self.events.put({"type": "upload_package_error", "message": str(exc)})
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _start_refresh_final_polish(self) -> None:
+        if self.final_polish_running:
+            return
+        package_dir = self._resolve_package_for_review()
+        if package_dir is None:
+            messagebox.showinfo(APP_NAME, UI_TEXT["selected_requires_package"])
+            return
+
+        self.final_polish_running = True
+        self._button_config("refresh_final_polish_button", "disabled", "button_generating")
+        self.open_final_preview_button.configure(state="disabled")
+        self.open_final_upload_button.configure(state="disabled")
+        self.status_var.set(UI_TEXT["running"])
+        self.progress_var.set(0.12)
+        self._set_live_status(
+            UI_TEXT["live_state_running"],
+            UI_TEXT["live_phase_final_polish_build"],
+            detail=UI_TEXT["live_phase_final_polish_upload"],
+            progress=0.12,
+            eta_seconds=20,
+            operation="final_polish",
+        )
+        self._log(LOG_TEXT["final_polish_start"])
+        self.final_polish_summary_var.set(
+            "\n".join(
+                [
+                    UI_TEXT["final_polish"],
+                    UI_TEXT["final_polish_running"],
+                    f"{UI_TEXT['package']}: {package_dir}",
+                ]
+            )
+        )
+        self.preview_wall_var.set(UI_TEXT["live_phase_final_polish_build"])
+
+        def worker() -> None:
+            try:
+                self._post_live_status(
+                    UI_TEXT["live_state_running"],
+                    "live_phase_final_polish_upload",
+                    progress=0.35,
+                    log_key="final_polish_upload",
+                )
+                system = run_system_check()
+                self.events.put(
+                    {
+                        "type": "cli",
+                        "statuses": system["cli"],
+                        "nvenc": system["nvenc"],
+                        "gpu": system["gpu"],
+                        "install_guide": system["install_guide"],
+                        "install_commands": system["install_commands"],
+                    }
+                )
+                statuses = system["cli"]
+                self._post_live_status(
+                    UI_TEXT["live_state_running"],
+                    "live_phase_final_polish_thumbnail",
+                    progress=0.62,
+                    log_key="final_polish_preview",
+                )
+                self._post_live_status(
+                    UI_TEXT["live_state_running"],
+                    "live_phase_final_polish_note",
+                    progress=0.82,
+                )
+                result = generate_final_polish(
+                    package_dir=package_dir,
+                    ollama_ready=statuses.get("ollama", {}).get("state") == "READY",
+                    log=lambda message: self.events.put({"type": "log", "message": message}),
+                )
+                self.events.put({"type": "final_polish_result", "result": result})
+            except Exception as exc:
+                self.events.put({"type": "final_polish_error", "message": str(exc)})
 
         threading.Thread(target=worker, daemon=True).start()
 
@@ -4918,6 +5196,38 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         except Exception as exc:
             messagebox.showerror(APP_NAME, f"{UI_TEXT['preview_upload_set_failed']}\n{exc}")
 
+    def _open_final_preview(self) -> None:
+        package_dir = self._resolve_package_for_review()
+        if package_dir is None:
+            messagebox.showinfo(APP_NAME, UI_TEXT["selected_requires_package"])
+            return
+        check = read_final_check(package_dir)
+        if not check:
+            messagebox.showinfo(APP_NAME, UI_TEXT["final_polish_unavailable"])
+            return
+        upload_dir = package_dir / "selected" / "upload_ready"
+        targets: list[Path] = []
+        thumbnail_path = Path(str(check.get("thumbnail_path") or ""))
+        if thumbnail_path.exists():
+            targets.append(thumbnail_path)
+        final_title = upload_dir / "metadata" / "final_title.txt"
+        if final_title.exists():
+            targets.append(final_title)
+        if upload_dir.exists():
+            targets.append(upload_dir)
+        if not targets:
+            note_path = package_dir / "selected" / "final_polish" / "final_polish_note.md"
+            if note_path.exists():
+                targets.append(note_path)
+        if not targets:
+            messagebox.showinfo(APP_NAME, UI_TEXT["final_polish_unavailable"])
+            return
+        try:
+            for target in targets[:3]:
+                os.startfile(str(target))  # type: ignore[attr-defined]
+        except Exception as exc:
+            messagebox.showerror(APP_NAME, f"{UI_TEXT['open_final_preview_failed']}\n{exc}")
+
     def _open_thumbnail_folder(self) -> None:
         package_dir = self._resolve_package_for_review()
         thumbnail_dir = self.thumbnail_dir
@@ -6043,6 +6353,8 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.output_var.set(str(upload_dir))
                 self.open_upload_package_button.configure(state="normal" if self.upload_package_dir else "disabled")
                 self.preview_upload_set_button.configure(state="normal" if self.upload_checklist_path else "disabled")
+                self._reset_final_polish_state()
+                self.open_final_upload_button.configure(state="normal" if self.upload_package_dir else "disabled")
                 self.open_package_button.configure(state="normal")
                 self.open_button.configure(state="normal")
                 self.progress_var.set(1.0)
@@ -6067,6 +6379,49 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             self.upload_package_summary_var.set(str(event.get("message", "")))
             self._set_live_failed(event.get("message", ""), UI_TEXT["live_upload_failed"])
             self._log(LOG_TEXT["upload_package_failed"])
+        elif event_type == "final_polish_result":
+            result = event.get("result", {})
+            if isinstance(result, dict):
+                package_dir = Path(str(result.get("package_dir") or packages_dir()))
+                final_dir = Path(str(result.get("final_polish_dir") or package_dir / "selected" / "final_polish"))
+                check_path = Path(str(result.get("final_check_path") or final_dir / "final_check.json"))
+                note_path = Path(str(result.get("final_polish_note_path") or final_dir / "final_polish_note.md"))
+                check = result.get("final_check") if isinstance(result.get("final_check"), dict) else read_final_check(package_dir)
+                self.package_output_dir = package_dir
+                self.current_project = ProjectPaths.from_root(package_dir)
+                self.final_polish_dir = final_dir if final_dir.exists() else None
+                self.final_check_path = check_path if check_path.exists() else None
+                self.final_polish_note_path = note_path if note_path.exists() else None
+                self.final_polish_summary_var.set(self._format_final_polish_summary(result))
+                self.preview_wall_var.set(self._format_preview_wall(check if isinstance(check, dict) else {}))
+                self.output_var.set(str(final_dir))
+                self.open_final_preview_button.configure(state="normal" if self.final_check_path or self.final_polish_note_path else "disabled")
+                upload_dir, _checklist = self._resolve_upload_package_dir()
+                self.open_final_upload_button.configure(state="normal" if upload_dir else "disabled")
+                self.open_upload_package_button.configure(state="normal" if upload_dir else "disabled")
+                self.open_package_button.configure(state="normal")
+                self.open_button.configure(state="normal")
+                self.progress_var.set(1.0)
+                if result.get("status") == "COMPLETED":
+                    self.status_var.set(UI_TEXT["complete"])
+                    self.eta_var.set(UI_TEXT["final_polish_completed"])
+                    self.finish_var.set(UI_TEXT["complete"])
+                    self._set_live_completed(final_dir, detail="Final Polish ready.")
+                    self._log(LOG_TEXT["final_polish_ready"])
+                else:
+                    self.status_var.set(UI_TEXT["error"])
+                    self.eta_var.set(UI_TEXT["final_polish_failed"])
+                    self._set_live_failed(result.get("message") or UI_TEXT["final_polish_failed"], UI_TEXT["live_final_polish_failed"])
+                    self._log(LOG_TEXT["final_polish_failed"])
+            self.final_polish_running = False
+            self._button_config("refresh_final_polish_button", "normal", "refresh_final_polish")
+        elif event_type == "final_polish_error":
+            self.final_polish_running = False
+            self._button_config("refresh_final_polish_button", "normal", "refresh_final_polish")
+            self.status_var.set(UI_TEXT["error"])
+            self.final_polish_summary_var.set(str(event.get("message", "")))
+            self._set_live_failed(event.get("message", ""), UI_TEXT["live_final_polish_failed"])
+            self._log(LOG_TEXT["final_polish_failed"])
         elif event_type == "thumbnail_result":
             result = event.get("result", {})
             if isinstance(result, dict):
@@ -6117,8 +6472,10 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.upload_package_dir = upload_dir if upload_dir.exists() else self.upload_package_dir
                 checklist_path = upload_dir / "metadata" / "upload_checklist.md"
                 self.upload_checklist_path = checklist_path if checklist_path.exists() else self.upload_checklist_path
+                self._reset_final_polish_state()
                 self.open_upload_package_button.configure(state="normal" if self.upload_package_dir else "disabled")
                 self.preview_upload_set_button.configure(state="normal" if self.upload_checklist_path else "disabled")
+                self.open_final_upload_button.configure(state="normal" if self.upload_package_dir else "disabled")
                 summary = self.thumbnail_summary_var.get().strip()
                 extra = f"{UI_TEXT['thumbnail_added']}\n{copied_path}" if copied_path is not None and copied_path.exists() else str(result.get("message") or "")
                 self.thumbnail_summary_var.set("\n".join([part for part in [summary, extra] if part]))
@@ -6195,8 +6552,10 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 checklist_path = upload_dir / "metadata" / "upload_checklist.md"
                 self.upload_package_dir = upload_dir if upload_dir.exists() else self.upload_package_dir
                 self.upload_checklist_path = checklist_path if checklist_path.exists() else self.upload_checklist_path
+                self._reset_final_polish_state()
                 self.open_upload_package_button.configure(state="normal" if self.upload_package_dir else "disabled")
                 self.preview_upload_set_button.configure(state="normal" if self.upload_checklist_path else "disabled")
+                self.open_final_upload_button.configure(state="normal" if self.upload_package_dir else "disabled")
                 copied = str(result.get("best_thumbnail_path") or result.get("md_path") or "")
                 summary = self.title_match_summary_var.get().strip()
                 self.title_match_summary_var.set("\n".join([part for part in [summary, UI_TEXT["title_match_added"], copied] if part]))
