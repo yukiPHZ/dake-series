@@ -201,3 +201,12 @@
 - `thumbnail_candidates.json` に方向性、理由、タイトル相性を保存
 - 選択サムネを `selected/upload_ready/thumbnails/` へコピー可能
 - Photoshop置き換えやAI画像生成は行わず、サムネ候補整理に限定
+
+## Phase 4.2
+
+- AUTO TITLE MATCH を追加
+- サムネ候補、タイトル候補、Shorts方向、補助脳レビューから Best Pair / Alternative Pairs を生成
+- `selected/title_match/title_match.md` と `title_match.json` を出力
+- Best Pair のサムネを `selected/upload_ready/thumbnails/best_thumbnail.png` へコピー可能
+- Upload Package Export に Title Match metadata のコピーを追加
+- 自動投稿、自動公開は行わず、最終判断はユーザーが行う

@@ -97,6 +97,11 @@ from core.thumbnail_flow import (
     generate_thumbnail_candidates,
     read_thumbnail_candidates,
 )
+from core.title_match import (
+    add_title_match_to_upload_package,
+    generate_title_match,
+    read_title_match,
+)
 from core.transcription import is_faster_whisper_available, transcribe_media
 from core.upload_package import generate_upload_package
 from ui.theme import COLORS, FONT_FAMILY, setup_theme
@@ -136,6 +141,7 @@ UI_TEXT = {
     "focus_desc_memory": "Save this production flow into assistant memory.",
     "focus_desc_upload": "Prepare the upload_ready set for YouTube Studio handoff.",
     "focus_desc_thumbnail": "Generate quiet thumbnail candidates for the upload set.",
+    "focus_desc_title_match": "Match thumbnail candidates with calm title directions.",
     "focus_desc_completed": "整っています。",
     "focus_progress_done": "done",
     "focus_progress_next": "next",
@@ -215,6 +221,10 @@ UI_TEXT = {
     "live_phase_thumbnail_generate": "Generating thumbnail candidates...",
     "live_phase_thumbnail_export": "Exporting 1280x720 PNGs...",
     "live_thumbnail_failed": "Thumbnail Flow failed. See log.",
+    "live_phase_title_match_matching": "Matching thumbnails and titles...",
+    "live_phase_title_match_titles": "Reading title ideas...",
+    "live_phase_title_match_build": "Building entrance set...",
+    "live_title_match_failed": "Title Match failed. See log.",
     "live_phase_completed": "Completed.",
     "button_generating": "Generating...",
     "button_rendering": "Rendering...",
@@ -385,6 +395,20 @@ UI_TEXT = {
     "direction": "Direction",
     "quiet_midnight_work": "quiet midnight work",
     "no_thumbnails": "No thumbnails found",
+    "title_match": "TITLE MATCH",
+    "generate_title_match": "Generate Title Match",
+    "open_title_match": "Open Title Match",
+    "add_match_to_upload": "Add Match To Upload Package",
+    "title_match_ready_hint": "Match thumbnail candidates, titles, Shorts direction, and review into an entrance set.",
+    "title_match_running": "Status: RUNNING",
+    "title_match_completed": "Completed",
+    "title_match_failed": "FAILED",
+    "title_match_unavailable": "Title Match is not ready yet.",
+    "open_title_match_failed": "Could not open Title Match.",
+    "title_match_upload_failed": "Could not add Title Match to upload package.",
+    "title_match_added": "Title Match added to upload_ready.",
+    "best_pair": "Best Pair",
+    "thumbnail": "Thumbnail",
     "sequence_builder": "SEQUENCE BUILDER",
     "sequence": "SEQUENCE",
     "add_sequence_video": "Add Sequence Video",
@@ -545,6 +569,9 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.thumbnail_dir: Path | None = None
         self.thumbnail_preview_path: Path | None = None
         self.thumbnail_candidates: list[dict[str, object]] = []
+        self.title_match_dir: Path | None = None
+        self.title_match_file_path: Path | None = None
+        self.title_match_json_path: Path | None = None
         self.horizontal_edit_path: Path | None = None
         self.preview_source_video_path: Path | None = None
         self.sequence_items: list[dict[str, object]] = []
@@ -569,6 +596,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.shorts_pack_running = False
         self.upload_package_running = False
         self.thumbnail_running = False
+        self.title_match_running = False
         self.sequence_running = False
         self.project_bridge_running = False
         self.memory_running = False
@@ -590,6 +618,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.shorts_pack_summary_var = ctk.StringVar(value=UI_TEXT["shorts_pack_ready_hint"])
         self.upload_package_summary_var = ctk.StringVar(value=UI_TEXT["upload_package_ready_hint"])
         self.thumbnail_summary_var = ctk.StringVar(value=UI_TEXT["thumbnail_ready_hint"])
+        self.title_match_summary_var = ctk.StringVar(value=UI_TEXT["title_match_ready_hint"])
         self.sequence_summary_var = ctk.StringVar(value=UI_TEXT["horizontal_edit_ready_hint"])
         self.project_bridge_summary_var = ctk.StringVar(value=UI_TEXT["project_bridge_ready_hint"])
         self.memory_summary_var = ctk.StringVar(value=UI_TEXT["memory_ready_hint"])
@@ -1579,8 +1608,59 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         )
         self.add_thumbnail_upload_button.grid(row=4, column=1, sticky="ew", padx=(4, 12), pady=(4, 10))
 
+        title_match_box = ctk.CTkFrame(body, fg_color=COLORS["panel_alt"], border_width=1, border_color=COLORS["line"], corner_radius=8)
+        title_match_box.grid(row=7, column=0, sticky="ew", pady=(12, 0))
+        title_match_box.grid_columnconfigure(0, weight=1)
+        title_match_box.grid_columnconfigure(1, weight=1)
+        ctk.CTkLabel(
+            title_match_box,
+            text=UI_TEXT["title_match"],
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
+            text_color=COLORS["accent_soft"],
+        ).grid(row=0, column=0, columnspan=2, sticky="w", padx=12, pady=(10, 4))
+        ctk.CTkLabel(
+            title_match_box,
+            textvariable=self.title_match_summary_var,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            text_color=COLORS["text"],
+            wraplength=330,
+            justify="left",
+        ).grid(row=1, column=0, columnspan=2, sticky="ew", padx=12, pady=(0, 8))
+        self.generate_title_match_button = ctk.CTkButton(
+            title_match_box,
+            text=UI_TEXT["generate_title_match"],
+            command=self._start_generate_title_match,
+            height=30,
+            fg_color=COLORS["button"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+        )
+        self.generate_title_match_button.grid(row=2, column=0, sticky="ew", padx=(12, 4), pady=4)
+        self.open_title_match_button = ctk.CTkButton(
+            title_match_box,
+            text=UI_TEXT["open_title_match"],
+            command=self._open_title_match,
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+            state="disabled",
+        )
+        self.open_title_match_button.grid(row=2, column=1, sticky="ew", padx=(4, 12), pady=4)
+        self.add_title_match_upload_button = ctk.CTkButton(
+            title_match_box,
+            text=UI_TEXT["add_match_to_upload"],
+            command=self._start_add_title_match_to_upload,
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+            state="disabled",
+        )
+        self.add_title_match_upload_button.grid(row=3, column=0, columnspan=2, sticky="ew", padx=12, pady=(4, 10))
+
         sequence_box = ctk.CTkFrame(body, fg_color=COLORS["panel_alt"], border_width=1, border_color=COLORS["line"], corner_radius=8)
-        sequence_box.grid(row=7, column=0, sticky="ew", pady=(12, 0))
+        sequence_box.grid(row=8, column=0, sticky="ew", pady=(12, 0))
         sequence_box.grid_columnconfigure(0, weight=1)
         sequence_box.grid_columnconfigure(1, weight=1)
         ctk.CTkLabel(
@@ -1671,7 +1751,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.open_horizontal_edit_button.grid(row=5, column=1, sticky="ew", padx=(4, 12), pady=(4, 10))
 
         bridge_box = ctk.CTkFrame(body, fg_color=COLORS["panel_alt"], border_width=1, border_color=COLORS["line"], corner_radius=8)
-        bridge_box.grid(row=8, column=0, sticky="ew", pady=(12, 0))
+        bridge_box.grid(row=9, column=0, sticky="ew", pady=(12, 0))
         bridge_box.grid_columnconfigure(0, weight=1)
         bridge_box.grid_columnconfigure(1, weight=1)
         ctk.CTkLabel(
@@ -1763,7 +1843,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.generate_bridge_metadata_button.grid(row=5, column=0, columnspan=2, sticky="ew", padx=12, pady=(4, 10))
 
         memory_box = ctk.CTkFrame(body, fg_color=COLORS["panel_alt"], border_width=1, border_color=COLORS["line"], corner_radius=8)
-        memory_box.grid(row=9, column=0, sticky="ew", pady=(12, 0))
+        memory_box.grid(row=10, column=0, sticky="ew", pady=(12, 0))
         memory_box.grid_columnconfigure(0, weight=1)
         memory_box.grid_columnconfigure(1, weight=1)
         ctk.CTkLabel(
@@ -1812,7 +1892,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.generate_memory_summary_button.grid(row=3, column=0, columnspan=2, sticky="ew", padx=12, pady=(4, 10))
 
         recommend_box = ctk.CTkFrame(body, fg_color=COLORS["panel_alt"], border_width=1, border_color=COLORS["line"], corner_radius=8)
-        recommend_box.grid(row=10, column=0, sticky="ew", pady=(12, 0))
+        recommend_box.grid(row=11, column=0, sticky="ew", pady=(12, 0))
         recommend_box.grid_columnconfigure(0, weight=1)
         recommend_box.grid_columnconfigure(1, weight=1)
         ctk.CTkLabel(
@@ -1871,7 +1951,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             text_color=COLORS["text"],
             state="disabled",
         )
-        self.open_button.grid(row=11, column=0, sticky="ew", pady=(12, 0))
+        self.open_button.grid(row=12, column=0, sticky="ew", pady=(12, 0))
         return panel
 
     def _build_system_panel(self, parent: ctk.CTkFrame) -> ctk.CTkFrame:
@@ -1979,6 +2059,20 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             return False
         return (package_dir / relative_path).exists()
 
+    def _upload_package_current(self, package_dir: Path | None) -> bool:
+        if package_dir is None:
+            return False
+        checklist = package_dir / "selected" / "upload_ready" / "metadata" / "upload_checklist.md"
+        if not checklist.exists():
+            return False
+        title_match = package_dir / "selected" / "title_match" / "title_match.json"
+        if title_match.exists():
+            try:
+                return checklist.stat().st_mtime >= title_match.stat().st_mtime
+            except OSError:
+                return False
+        return True
+
     def _reset_upload_package_state(self) -> None:
         self.upload_package_dir = None
         self.upload_checklist_path = None
@@ -2005,6 +2099,17 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             self.preview_thumbnail_button.configure(state="disabled")
         if hasattr(self, "add_thumbnail_upload_button"):
             self.add_thumbnail_upload_button.configure(state="disabled")
+
+    def _reset_title_match_state(self) -> None:
+        self.title_match_dir = None
+        self.title_match_file_path = None
+        self.title_match_json_path = None
+        if hasattr(self, "title_match_summary_var"):
+            self.title_match_summary_var.set(UI_TEXT["title_match_ready_hint"])
+        if hasattr(self, "open_title_match_button"):
+            self.open_title_match_button.configure(state="disabled")
+        if hasattr(self, "add_title_match_upload_button"):
+            self.add_title_match_upload_button.configure(state="disabled")
 
     def _dashboard_memory_saved(self, package_dir: Path | None) -> bool:
         if package_dir is None:
@@ -2048,6 +2153,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.shorts_pack_running,
                 self.upload_package_running,
                 self.thumbnail_running,
+                self.title_match_running,
                 self.sequence_running,
                 self.project_bridge_running,
                 self.memory_running,
@@ -2378,16 +2484,6 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 sequence_ready,
             )
 
-        if not self._dashboard_file_ready(package_dir, "selected/upload_ready/metadata/upload_checklist.md", None):
-            return self._focus_step_state(
-                6,
-                "focus_step_memory",
-                "focus_desc_upload",
-                "generate_upload_package",
-                "generate_upload_package",
-                sequence_ready,
-            )
-
         if not self._dashboard_file_ready(package_dir, "selected/thumbnails/thumbnail_candidates.json", None):
             return self._focus_step_state(
                 6,
@@ -2395,6 +2491,26 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 "focus_desc_thumbnail",
                 "generate_thumbnail_candidates",
                 "generate_thumbnail_candidates",
+                sequence_ready,
+            )
+
+        if not self._dashboard_file_ready(package_dir, "selected/title_match/title_match.json", self.title_match_json_path):
+            return self._focus_step_state(
+                6,
+                "focus_step_memory",
+                "focus_desc_title_match",
+                "generate_title_match",
+                "generate_title_match",
+                sequence_ready,
+            )
+
+        if not self._upload_package_current(package_dir):
+            return self._focus_step_state(
+                6,
+                "focus_step_memory",
+                "focus_desc_upload",
+                "generate_upload_package",
+                "generate_upload_package",
                 sequence_ready,
             )
 
@@ -2465,6 +2581,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             "save_to_memory": self._start_save_memory,
             "generate_upload_package": self._start_generate_upload_package,
             "generate_thumbnail_candidates": self._start_generate_thumbnail_candidates,
+            "generate_title_match": self._start_generate_title_match,
             "open_upload_package": self._open_upload_package,
             "open_package_folder": self._open_package_folder,
         }
@@ -2527,6 +2644,8 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.open_thumbnail_folder_button.configure(state="disabled")
         self.preview_thumbnail_button.configure(state="disabled")
         self.add_thumbnail_upload_button.configure(state="disabled")
+        self.open_title_match_button.configure(state="disabled")
+        self.add_title_match_upload_button.configure(state="disabled")
         self.open_recommendation_button.configure(state="disabled")
         self.selected_output_dir = None
         self.short_preview_path = None
@@ -2540,6 +2659,9 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.thumbnail_dir = None
         self.thumbnail_preview_path = None
         self.thumbnail_candidates = []
+        self.title_match_dir = None
+        self.title_match_file_path = None
+        self.title_match_json_path = None
         self.horizontal_edit_path = None
         self.recommendation_path = None
         self.preview_source_video_path = None
@@ -2561,6 +2683,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.thumbnail_summary_var.set(UI_TEXT["thumbnail_ready_hint"])
         self.thumbnail_choice_var.set(UI_TEXT["no_thumbnails"])
         self.thumbnail_choice_menu.configure(values=[UI_TEXT["no_thumbnails"]])
+        self.title_match_summary_var.set(UI_TEXT["title_match_ready_hint"])
         self.sequence_summary_var.set(UI_TEXT["horizontal_edit_ready_hint"])
         self.sequence_choice_var.set(UI_TEXT["sequence_empty"])
         self.sequence_choice_menu.configure(values=[UI_TEXT["sequence_empty"]])
@@ -2652,6 +2775,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.open_upload_package_button.configure(state="normal" if self.upload_package_dir else "disabled")
         self.preview_upload_set_button.configure(state="normal" if self.upload_checklist_path else "disabled")
         self._load_thumbnails_for_package(package_dir)
+        self._load_title_match_for_package(package_dir)
         self.review_summary_var.set(
             "\n".join(
                 [
@@ -2916,6 +3040,37 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.open_thumbnail_folder_button.configure(state=state if self.thumbnail_dir else "disabled")
         self.preview_thumbnail_button.configure(state=state if self.thumbnail_preview_path else "disabled")
         self.add_thumbnail_upload_button.configure(state=state if self.thumbnail_preview_path else "disabled")
+
+    def _load_title_match_for_package(self, package_dir: Path | None = None) -> None:
+        package = package_dir or self._dashboard_package_dir()
+        if package is None:
+            self._reset_title_match_state()
+            return
+        title_match_dir = package / "selected" / "title_match"
+        md_path = title_match_dir / "title_match.md"
+        json_path = title_match_dir / "title_match.json"
+        payload = read_title_match(package)
+        self.title_match_dir = title_match_dir if md_path.exists() or json_path.exists() else None
+        self.title_match_file_path = md_path if md_path.exists() else None
+        self.title_match_json_path = json_path if json_path.exists() else None
+        self.title_match_summary_var.set(
+            self._format_title_match_summary(
+                {
+                    "status": "COMPLETED" if payload else UI_TEXT["ready"],
+                    "title_match_dir": str(title_match_dir if title_match_dir.exists() else ""),
+                    "md_path": str(md_path if md_path.exists() else ""),
+                    "json_path": str(json_path if json_path.exists() else ""),
+                    "best_pair": payload.get("best_pair") if isinstance(payload, dict) else {},
+                    "alternatives": payload.get("alternatives") if isinstance(payload, dict) else [],
+                    "used_ollama": bool(payload.get("used_ollama")) if isinstance(payload, dict) else False,
+                }
+            )
+            if payload
+            else UI_TEXT["title_match_ready_hint"]
+        )
+        state = "normal" if self.title_match_file_path or self.title_match_json_path else "disabled"
+        self.open_title_match_button.configure(state=state)
+        self.add_title_match_upload_button.configure(state=state)
 
     def _thumbnail_choice_path(self) -> Path | None:
         package_dir = self._resolve_package_for_review()
@@ -3724,6 +3879,109 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.events.put({"type": "thumbnail_upload_result", "result": result})
             except Exception as exc:
                 self.events.put({"type": "thumbnail_upload_error", "message": str(exc)})
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _start_generate_title_match(self) -> None:
+        if self.title_match_running:
+            return
+        package_dir = self._resolve_package_for_review()
+        if package_dir is None:
+            messagebox.showinfo(APP_NAME, UI_TEXT["selected_requires_package"])
+            return
+
+        self.title_match_running = True
+        self._button_config("generate_title_match_button", "disabled", "button_generating")
+        self.open_title_match_button.configure(state="disabled")
+        self.add_title_match_upload_button.configure(state="disabled")
+        self._reset_upload_package_state()
+        self.status_var.set(UI_TEXT["running"])
+        self.progress_var.set(0.12)
+        self._set_live_status(
+            UI_TEXT["live_state_running"],
+            UI_TEXT["live_phase_title_match_matching"],
+            detail=UI_TEXT["live_phase_title_match_titles"],
+            progress=0.12,
+            eta_seconds=25,
+            operation="title_match",
+        )
+        self._log(LOG_TEXT["title_match_start"])
+        self.title_match_summary_var.set(
+            "\n".join(
+                [
+                    UI_TEXT["title_match"],
+                    UI_TEXT["title_match_running"],
+                    f"{UI_TEXT['package']}: {package_dir}",
+                ]
+            )
+        )
+
+        def worker() -> None:
+            try:
+                self._post_live_status(
+                    UI_TEXT["live_state_running"],
+                    "live_phase_title_match_titles",
+                    progress=0.38,
+                )
+                system = run_system_check()
+                self.events.put(
+                    {
+                        "type": "cli",
+                        "statuses": system["cli"],
+                        "nvenc": system["nvenc"],
+                        "gpu": system["gpu"],
+                        "install_guide": system["install_guide"],
+                        "install_commands": system["install_commands"],
+                    }
+                )
+                statuses = system["cli"]
+                self._post_live_status(
+                    UI_TEXT["live_state_running"],
+                    "live_phase_title_match_build",
+                    progress=0.74,
+                )
+                result = generate_title_match(
+                    package_dir=package_dir,
+                    ollama_ready=statuses.get("ollama", {}).get("state") == "READY",
+                    log=lambda message: self.events.put({"type": "log", "message": message}),
+                )
+                self.events.put({"type": "title_match_result", "result": result})
+            except Exception as exc:
+                self.events.put({"type": "title_match_error", "message": str(exc)})
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _start_add_title_match_to_upload(self) -> None:
+        if self.title_match_running:
+            return
+        package_dir = self._resolve_package_for_review()
+        if package_dir is None:
+            messagebox.showinfo(APP_NAME, UI_TEXT["selected_requires_package"])
+            return
+        if not (package_dir / "selected" / "title_match" / "title_match.json").exists():
+            messagebox.showinfo(APP_NAME, UI_TEXT["title_match_unavailable"])
+            return
+
+        self.title_match_running = True
+        self._button_config("add_title_match_upload_button", "disabled", "button_exporting")
+        self._set_live_status(
+            UI_TEXT["live_state_running"],
+            UI_TEXT["live_phase_upload_metadata"],
+            detail=UI_TEXT["add_match_to_upload"],
+            progress=0.45,
+            eta_seconds=10,
+            operation="title_match_upload",
+        )
+
+        def worker() -> None:
+            try:
+                result = add_title_match_to_upload_package(
+                    package_dir=package_dir,
+                    log=lambda message: self.events.put({"type": "log", "message": message}),
+                )
+                self.events.put({"type": "title_match_upload_result", "result": result})
+            except Exception as exc:
+                self.events.put({"type": "title_match_upload_error", "message": str(exc)})
 
         threading.Thread(target=worker, daemon=True).start()
 
@@ -4684,6 +4942,21 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         except Exception as exc:
             messagebox.showerror(APP_NAME, f"{UI_TEXT['preview_thumbnail_failed']}\n{exc}")
 
+    def _open_title_match(self) -> None:
+        title_match_path = self.title_match_file_path
+        if title_match_path is None:
+            package_dir = self._resolve_package_for_review()
+            if package_dir is not None:
+                candidate = package_dir / "selected" / "title_match" / "title_match.md"
+                title_match_path = candidate if candidate.exists() else None
+        if title_match_path is None or not title_match_path.exists():
+            messagebox.showinfo(APP_NAME, UI_TEXT["title_match_unavailable"])
+            return
+        try:
+            os.startfile(str(title_match_path))  # type: ignore[attr-defined]
+        except Exception as exc:
+            messagebox.showerror(APP_NAME, f"{UI_TEXT['open_title_match_failed']}\n{exc}")
+
     def _open_horizontal_edit(self) -> None:
         horizontal_path = self.horizontal_edit_path
         if horizontal_path is None:
@@ -5059,6 +5332,26 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             lines.append(f"{UI_TEXT['ollama']}: {UI_TEXT['used']}")
         return "\n".join(lines)
 
+    def _format_title_match_summary(self, result: dict[str, object]) -> str:
+        best = result.get("best_pair")
+        best_pair = best if isinstance(best, dict) else {}
+        alternatives = result.get("alternatives")
+        alternative_count = len(alternatives) if isinstance(alternatives, list) else 0
+        thumbnail_name = str(best_pair.get("thumbnail") or "--")
+        title = str(best_pair.get("title") or "--")
+        lines = [
+            UI_TEXT["title_match"],
+            f"{UI_TEXT['best_pair']}:",
+            f"{UI_TEXT['thumbnail']}: {thumbnail_name}",
+            title,
+            f"{UI_TEXT['package_status']}: {result.get('status', UI_TEXT['title_match_failed'])}",
+            f"{UI_TEXT['preview_output']}: {result.get('md_path') or result.get('title_match_dir') or '--'}",
+            f"{UI_TEXT['selected_title']}: {alternative_count + (1 if best_pair else 0)}",
+        ]
+        if result.get("used_ollama"):
+            lines.append(f"{UI_TEXT['ollama']}: {UI_TEXT['used']}")
+        return "\n".join(lines)
+
     def _format_project_bridge_summary(self, data: dict[str, object], extra: str = "") -> str:
         suggested_use = [str(item) for item in data.get("suggested_use", []) if str(item)]
         bgm_files = [item for item in data.get("bgm_files", []) if isinstance(item, dict)]
@@ -5272,6 +5565,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.open_recommendation_button.configure(state="disabled")
                 self._reset_upload_package_state()
                 self._reset_thumbnail_state()
+                self._reset_title_match_state()
                 self.open_button.configure(state="normal")
                 self.progress_var.set(1.0)
                 status = str(result.get("status") or "")
@@ -5358,6 +5652,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.recommendation_summary_var.set(UI_TEXT["recommend_ready_hint"])
                 self._reset_upload_package_state()
                 self._reset_thumbnail_state()
+                self._reset_title_match_state()
                 self.output_var.set(str(selected_dir))
                 self.progress_var.set(1.0)
                 self.status_var.set(UI_TEXT["complete"])
@@ -5424,6 +5719,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.shorts_pack_summary_var.set(UI_TEXT["shorts_pack_ready_hint"])
                 self._reset_upload_package_state()
                 self._reset_thumbnail_state()
+                self._reset_title_match_state()
                 self.progress_var.set(1.0)
                 if result.get("status") == "COMPLETED":
                     self.status_var.set(UI_TEXT["complete"])
@@ -5461,6 +5757,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.preview_smart_sequence_button.configure(state="normal" if self.smart_horizontal_sequence_path else "disabled")
                 self._reset_upload_package_state()
                 self._reset_thumbnail_state()
+                self._reset_title_match_state()
                 self.progress_var.set(1.0)
                 if result.get("status") == "COMPLETED":
                     self.status_var.set(UI_TEXT["complete"])
@@ -5498,6 +5795,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.preview_shorts_pack_button.configure(state="disabled")
                 self.shorts_pack_summary_var.set(UI_TEXT["shorts_pack_ready_hint"])
                 self._reset_upload_package_state()
+                self._reset_title_match_state()
                 self.progress_var.set(1.0)
                 if result.get("status") == "COMPLETED":
                     self.status_var.set(UI_TEXT["complete"])
@@ -5529,6 +5827,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.open_shorts_pack_button.configure(state="normal" if self.shorts_pack_dir else "disabled")
                 self.preview_shorts_pack_button.configure(state="normal" if self.shorts_pack_dir else "disabled")
                 self._reset_upload_package_state()
+                self._reset_title_match_state()
                 self.progress_var.set(1.0)
                 if result.get("status") == "COMPLETED":
                     self.status_var.set(UI_TEXT["complete"])
@@ -5571,6 +5870,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.open_horizontal_edit_button.configure(state="normal" if self.horizontal_edit_path else "disabled")
                 self._reset_upload_package_state()
                 self._reset_thumbnail_state()
+                self._reset_title_match_state()
                 self.progress_var.set(1.0)
                 if result.get("status") == "COMPLETED":
                     self.status_var.set(UI_TEXT["complete"])
@@ -5626,6 +5926,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.open_button.configure(state="normal")
                 self.project_bridge_summary_var.set(self._format_project_bridge_result_summary(result))
                 self._reset_upload_package_state()
+                self._reset_title_match_state()
                 self.progress_var.set(1.0)
                 self.status_var.set(UI_TEXT["complete"])
                 self.eta_var.set(UI_TEXT["project_bridge_metadata_completed"])
@@ -5657,6 +5958,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.eta_var.set(UI_TEXT["memory_saved"])
                 self.finish_var.set(UI_TEXT["complete"])
                 self._reset_upload_package_state()
+                self._reset_title_match_state()
                 self._set_live_completed(summary_path)
                 self._log(LOG_TEXT["memory_saved"])
                 if not result.get("used_ollama"):
@@ -5678,6 +5980,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.eta_var.set(UI_TEXT["memory_updated"])
                 self.finish_var.set(UI_TEXT["complete"])
                 self._reset_upload_package_state()
+                self._reset_title_match_state()
                 if not result.get("used_ollama"):
                     self._log(LOG_TEXT["memory_template_fallback"])
                 self._log(LOG_TEXT["memory_ready"])
@@ -5705,6 +6008,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.open_package_button.configure(state="normal")
                 self.open_button.configure(state="normal")
                 self._reset_upload_package_state()
+                self._reset_title_match_state()
                 self.progress_var.set(1.0)
                 self.status_var.set(UI_TEXT["complete"])
                 self.eta_var.set(UI_TEXT["complete"])
@@ -5771,6 +6075,8 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.package_output_dir = package_dir
                 self.current_project = ProjectPaths.from_root(package_dir)
                 self._load_thumbnails_for_package(package_dir)
+                self._reset_title_match_state()
+                self._reset_upload_package_state()
                 self.thumbnail_summary_var.set(self._format_thumbnail_summary(result))
                 self.output_var.set(str(thumbnail_dir))
                 self.open_button.configure(state="normal")
@@ -5838,6 +6144,82 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             self.status_var.set(UI_TEXT["error"])
             self._set_live_failed(event.get("message", ""), UI_TEXT["thumbnail_upload_failed"])
             self._log(LOG_TEXT["thumbnail_flow_failed"])
+        elif event_type == "title_match_result":
+            result = event.get("result", {})
+            if isinstance(result, dict):
+                package_dir = Path(str(result.get("package_dir") or packages_dir()))
+                title_match_dir = Path(str(result.get("title_match_dir") or package_dir / "selected" / "title_match"))
+                md_path = Path(str(result.get("md_path") or title_match_dir / "title_match.md"))
+                json_path = Path(str(result.get("json_path") or title_match_dir / "title_match.json"))
+                self.package_output_dir = package_dir
+                self.current_project = ProjectPaths.from_root(package_dir)
+                self.title_match_dir = title_match_dir if title_match_dir.exists() else None
+                self.title_match_file_path = md_path if md_path.exists() else None
+                self.title_match_json_path = json_path if json_path.exists() else None
+                self.title_match_summary_var.set(self._format_title_match_summary(result))
+                self.open_title_match_button.configure(state="normal" if self.title_match_file_path else "disabled")
+                self.add_title_match_upload_button.configure(state="normal" if self.title_match_json_path else "disabled")
+                self.output_var.set(str(md_path))
+                self.open_package_button.configure(state="normal")
+                self.open_button.configure(state="normal")
+                self.progress_var.set(1.0)
+                self._reset_upload_package_state()
+                if result.get("status") == "COMPLETED":
+                    self.status_var.set(UI_TEXT["complete"])
+                    self.eta_var.set(UI_TEXT["title_match_completed"])
+                    self.finish_var.set(UI_TEXT["complete"])
+                    self._set_live_completed(md_path, detail="Title Match created.")
+                    self._log(LOG_TEXT["title_match_ready"])
+                else:
+                    self.status_var.set(UI_TEXT["error"])
+                    self.eta_var.set(UI_TEXT["title_match_failed"])
+                    self._set_live_failed(result.get("message") or UI_TEXT["title_match_failed"], UI_TEXT["live_title_match_failed"])
+                    self._log(LOG_TEXT["title_match_failed"])
+            self.title_match_running = False
+            self._button_config("generate_title_match_button", "normal", "generate_title_match")
+        elif event_type == "title_match_error":
+            self.title_match_running = False
+            self._button_config("generate_title_match_button", "normal", "generate_title_match")
+            self.status_var.set(UI_TEXT["error"])
+            self.title_match_summary_var.set(str(event.get("message", "")))
+            self._set_live_failed(event.get("message", ""), UI_TEXT["live_title_match_failed"])
+            self._log(LOG_TEXT["title_match_failed"])
+        elif event_type == "title_match_upload_result":
+            result = event.get("result", {})
+            if isinstance(result, dict):
+                package_dir = Path(str(result.get("package_dir") or packages_dir()))
+                self.package_output_dir = package_dir
+                self.current_project = ProjectPaths.from_root(package_dir)
+                self._load_title_match_for_package(package_dir)
+                upload_dir = package_dir / "selected" / "upload_ready"
+                checklist_path = upload_dir / "metadata" / "upload_checklist.md"
+                self.upload_package_dir = upload_dir if upload_dir.exists() else self.upload_package_dir
+                self.upload_checklist_path = checklist_path if checklist_path.exists() else self.upload_checklist_path
+                self.open_upload_package_button.configure(state="normal" if self.upload_package_dir else "disabled")
+                self.preview_upload_set_button.configure(state="normal" if self.upload_checklist_path else "disabled")
+                copied = str(result.get("best_thumbnail_path") or result.get("md_path") or "")
+                summary = self.title_match_summary_var.get().strip()
+                self.title_match_summary_var.set("\n".join([part for part in [summary, UI_TEXT["title_match_added"], copied] if part]))
+                self.output_var.set(copied or str(upload_dir))
+                self.progress_var.set(1.0)
+                if result.get("status") == "COMPLETED":
+                    self.status_var.set(UI_TEXT["complete"])
+                    self.eta_var.set(UI_TEXT["complete"])
+                    self.finish_var.set(UI_TEXT["complete"])
+                    self._set_live_completed(copied or upload_dir, detail=UI_TEXT["title_match_added"])
+                    self._log(LOG_TEXT["title_match_added"])
+                else:
+                    self.status_var.set(UI_TEXT["error"])
+                    self._set_live_failed(result.get("message") or UI_TEXT["title_match_upload_failed"])
+                    self._log(LOG_TEXT["title_match_failed"])
+            self.title_match_running = False
+            self._button_config("add_title_match_upload_button", "normal", "add_match_to_upload")
+        elif event_type == "title_match_upload_error":
+            self.title_match_running = False
+            self._button_config("add_title_match_upload_button", "normal", "add_match_to_upload")
+            self.status_var.set(UI_TEXT["error"])
+            self._set_live_failed(event.get("message", ""), UI_TEXT["title_match_upload_failed"])
+            self._log(LOG_TEXT["title_match_failed"])
         elif event_type == "youtube":
             self.youtube_status_var.set(str(event.get("message", "")))
         elif event_type == "progress":

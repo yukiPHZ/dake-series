@@ -35,6 +35,15 @@ def _read_text(path: Path, limit: int | None = None) -> str:
     return text[:limit] if limit is not None else text
 
 
+def _read_json(path: Path) -> Any:
+    if not path.exists() or not path.is_file():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8", errors="replace"))
+    except Exception:
+        return None
+
+
 def _write_text(path: Path, text: str) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text.rstrip() + "\n", encoding="utf-8")
@@ -177,6 +186,14 @@ def _copy_thumbnails(package_dir: Path, upload_dir: Path) -> list[Path]:
             result = _copy_file(source, destination)
             if result is not None:
                 copied.append(result)
+    title_match = _read_json(package_dir / "selected" / "title_match" / "title_match.json")
+    best_pair = title_match.get("best_pair") if isinstance(title_match, dict) else {}
+    best_thumbnail = str(best_pair.get("thumbnail") or "") if isinstance(best_pair, dict) else ""
+    best_source = package_dir / "selected" / "thumbnails" / best_thumbnail
+    if best_thumbnail and best_source.exists():
+        result = _copy_file(best_source, thumbnail_dir / "best_thumbnail.png")
+        if result is not None:
+            copied.append(result)
     return copied
 
 
@@ -371,7 +388,9 @@ def generate_upload_package(
     review_copy = _copy_file(package_dir / "assistant_review.md", metadata_dir / "assistant_review.md")
     recommendation_copy = _copy_file(package_dir / "assistant_recommendation.md", metadata_dir / "assistant_recommendation.md")
     memory_copy = _copy_file(memory_summary_path(), metadata_dir / "memory_summary.md")
-    for item in [review_copy, recommendation_copy, memory_copy]:
+    title_match_md_copy = _copy_file(package_dir / "selected" / "title_match" / "title_match.md", metadata_dir / "title_match.md")
+    title_match_json_copy = _copy_file(package_dir / "selected" / "title_match" / "title_match.json", metadata_dir / "title_match.json")
+    for item in [review_copy, recommendation_copy, memory_copy, title_match_md_copy, title_match_json_copy]:
         if item is not None:
             copied_metadata.append(item)
 
@@ -382,6 +401,10 @@ def generate_upload_package(
         missing.append("assistant_recommendation.md")
     if memory_copy is None:
         missing.append("data/memory/memory_summary.md")
+    if title_match_md_copy is None:
+        missing.append("selected/title_match/title_match.md")
+    if title_match_json_copy is None:
+        missing.append("selected/title_match/title_match.json")
     if not copied_thumbnails:
         missing.append("thumbnails")
 

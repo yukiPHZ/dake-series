@@ -500,6 +500,21 @@ Smart Horizontal Edit の fallback sequence を強化しました。3秒程度�
 - Photoshop置き換え、レイヤー編集、テキスト編集、AI画像生成は行いません
 - FOCUS MODE は Upload Package生成後、サムネ未生成なら `Generate Thumbnail Candidates`、生成済みなら `Open Upload Package` を案内します
 
+## Phase 4.2 AUTO TITLE MATCH
+
+`TITLE MATCH` を追加しました。サムネ候補、タイトル候補、Shorts方向、補助脳レビューを組み合わせ、投稿前に使いやすい入口セットを `selected/title_match/` に出力します。
+
+- `Generate Title Match` で `title_match.md`、`title_match.json`、`title_match_log.txt` を生成
+- `selected/thumbnails/thumbnail_candidates.json` と `thumb_*.png` を読み、候補ごとの direction / reason / title_match を利用
+- `selected/selected_title.txt`、`metadata/title_ideas.txt`、`assistant_recommendation.md` からタイトル候補を取得
+- Best Pair と Alternative Pairs を作り、サムネとタイトルの相性理由を短く整理
+- Shorts Direction は INTRO / WORK / AFTERGLOW として保存
+- Ollama READY時は review / recommendation / memory を参考に相性を整え、失敗時はルールベースのテンプレートで継続
+- `Add Match To Upload Package` で `selected/upload_ready/metadata/title_match.md` と `title_match.json` へコピー
+- best pair のサムネが存在する場合は `selected/upload_ready/thumbnails/best_thumbnail.png` としてコピー
+- `Generate Upload Package` 実行時も、既存の Title Match を upload_ready に含めます
+- YouTube投稿、自動公開、外部API送信は行いません。最終判断はユーザーが行います
+
 ## Phase 2候補
 
 - YouTube LIVE URLからyt-dlpで本取得
