@@ -63,6 +63,8 @@ Phase 14以降、OllamaはOIKAWA側の熾火補助として扱います。BRAINZ
 
 Phase 15以降、巡回 / 再訪表示もOIKAWA側で扱います。BRAINZは原本と通知を保存し、何度も戻っている記憶の表示やORBITへの反映はOIKAWAに寄せます。
 
+Phase 16以降、「静かに浮く」表示もOIKAWA側で扱います。BRAINZは原本と通知を保存し、側に在る記憶の生成・表示・ORBIT反映はOIKAWAに寄せます。
+
 ## QPSC Phase 8: 静かな母艦UI
 
 Phase 8では、BRAINZを「見るアプリ」ではなく、記憶庫・取り込み母艦として静かに扱うトップ画面へ整理しました。
