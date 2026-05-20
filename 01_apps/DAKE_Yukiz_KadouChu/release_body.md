@@ -183,3 +183,12 @@
 - 候補がない場合はsource durationから3〜5区間を自動生成
 - `smart_horizontal_sequence.json` にdurationを保存
 - LIVE STATUSに区間数と合計尺を表示
+
+## Phase 4.0
+
+- Upload Package Export を追加
+- `selected/upload_ready/` に動画、Shorts、metadata、review、recommendation、memory を存在する範囲でコピー
+- `final_title.txt` / `final_description.txt` / `final_tags.txt` / `upload_checklist.md` を生成
+- thumbnails は存在する場合だけコピーし、ない場合はchecklistに記録
+- 動画は再エンコードせずコピーのみ
+- YouTube自動投稿、自動公開、YouTube APIアップロードは行わない

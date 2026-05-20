@@ -470,6 +470,21 @@ Smart Horizontal Edit の fallback sequence を強化しました。3秒程度�
 - `smart_horizontal_sequence.json` には `duration` と `duration_timecode` を保存
 - LIVE STATUS に区間数と合計尺を表示
 
+## Phase 4.0 Upload Package Export
+
+`UPLOAD PACKAGE` を追加しました。既に生成済みの横動画、Smart Horizontal Edit、Shorts、Shorts Pack、metadata、review、recommendation、memory を、YouTube Studioへ持っていける投稿前セットとして `selected/upload_ready/` にまとめます。
+
+- 出力先は `selected/upload_ready/`
+- `video/` に `horizontal_video.mp4`、`smart_horizontal_edit.mp4`、`horizontal_edit.mp4` を存在する範囲でコピー
+- `shorts/` に `short_vertical_1080x1920.mp4` と `selected/shorts_pack/*.mp4` をコピー
+- `metadata/` に `final_title.txt`、`final_description.txt`、`final_tags.txt`、`upload_checklist.md` を生成
+- `assistant_review.md`、`assistant_recommendation.md`、`memory_summary.md` は存在する場合だけ `metadata/` へコピー
+- `thumbnails/` は `selected/thumbnails/` または package直下の `thumbnails/` がある場合だけコピー
+- 動画はコピーのみで、再エンコードしません
+- YouTube APIアップロード、自動投稿、自動公開は行いません
+- FOCUS MODE は Memory 保存後に `Generate Upload Package` を次候補として案内し、完了後は `Open Upload Package` へ進みます
+- 最終確認と公開判断はユーザーが行います
+
 ## Phase 2候補
 
 - YouTube LIVE URLからyt-dlpで本取得

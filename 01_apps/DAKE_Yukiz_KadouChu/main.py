@@ -93,6 +93,7 @@ from core.shorts_analyzer import create_shorts_candidates, write_shorts_candidat
 from core.shorts_pack import generate_shorts_pack
 from core.smart_horizontal_edit import generate_smart_horizontal_edit, plan_smart_horizontal_sequence
 from core.transcription import is_faster_whisper_available, transcribe_media
+from core.upload_package import generate_upload_package
 from ui.theme import COLORS, FONT_FAMILY, setup_theme
 
 if ctk is not None:
@@ -128,6 +129,7 @@ UI_TEXT = {
     "focus_desc_draft": "Choose the candidate short and title, then export selected draft files.",
     "focus_desc_export": "Export horizontal video, smart edit, then Shorts if needed.",
     "focus_desc_memory": "Save this production flow into assistant memory.",
+    "focus_desc_upload": "Prepare the upload_ready set for YouTube Studio handoff.",
     "focus_desc_completed": "整っています。",
     "focus_progress_done": "done",
     "focus_progress_next": "next",
@@ -197,6 +199,11 @@ UI_TEXT = {
     "live_phase_recommend_memory": "Reading memory...",
     "live_phase_recommend_write": "Writing recommendation...",
     "live_phase_bridge_metadata": "Generating upload metadata...",
+    "live_phase_upload_collect": "Collecting upload assets...",
+    "live_phase_upload_copy_shorts": "Copying shorts...",
+    "live_phase_upload_metadata": "Preparing metadata...",
+    "live_phase_upload_checklist": "Building upload checklist...",
+    "live_upload_failed": "Upload package export failed. See log.",
     "live_phase_completed": "Completed.",
     "button_generating": "Generating...",
     "button_rendering": "Rendering...",
@@ -333,6 +340,22 @@ UI_TEXT = {
     "shorts_pack_unavailable": "Shorts Pack is not ready yet.",
     "open_shorts_pack_failed": "Could not open Shorts Pack.",
     "preview_pack_failed": "Could not preview Shorts Pack.",
+    "upload_package": "UPLOAD PACKAGE",
+    "generate_upload_package": "Generate Upload Package",
+    "open_upload_package": "Open Upload Package",
+    "preview_upload_set": "Preview Upload Set",
+    "upload_package_ready_hint": "Gather existing videos, Shorts, metadata, review, and memory into upload_ready.",
+    "upload_package_running": "Status: RUNNING",
+    "upload_package_completed": "Completed",
+    "upload_package_failed": "FAILED",
+    "upload_package_unavailable": "Upload package is not ready yet.",
+    "open_upload_package_failed": "Could not open upload package.",
+    "preview_upload_set_failed": "Could not preview upload set.",
+    "contents": "Contents",
+    "horizontal_video_content": "horizontal video",
+    "shorts_pack_content": "shorts pack",
+    "review_content": "review",
+    "upload_checklist": "upload checklist",
     "sequence_builder": "SEQUENCE BUILDER",
     "sequence": "SEQUENCE",
     "add_sequence_video": "Add Sequence Video",
@@ -488,6 +511,8 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.smart_horizontal_path: Path | None = None
         self.smart_horizontal_sequence_path: Path | None = None
         self.shorts_pack_dir: Path | None = None
+        self.upload_package_dir: Path | None = None
+        self.upload_checklist_path: Path | None = None
         self.horizontal_edit_path: Path | None = None
         self.preview_source_video_path: Path | None = None
         self.sequence_items: list[dict[str, object]] = []
@@ -510,6 +535,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.horizontal_video_running = False
         self.smart_horizontal_running = False
         self.shorts_pack_running = False
+        self.upload_package_running = False
         self.sequence_running = False
         self.project_bridge_running = False
         self.memory_running = False
@@ -529,6 +555,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.horizontal_video_summary_var = ctk.StringVar(value=UI_TEXT["horizontal_video_ready_hint"])
         self.smart_horizontal_summary_var = ctk.StringVar(value=UI_TEXT["smart_horizontal_ready_hint"])
         self.shorts_pack_summary_var = ctk.StringVar(value=UI_TEXT["shorts_pack_ready_hint"])
+        self.upload_package_summary_var = ctk.StringVar(value=UI_TEXT["upload_package_ready_hint"])
         self.sequence_summary_var = ctk.StringVar(value=UI_TEXT["horizontal_edit_ready_hint"])
         self.project_bridge_summary_var = ctk.StringVar(value=UI_TEXT["project_bridge_ready_hint"])
         self.memory_summary_var = ctk.StringVar(value=UI_TEXT["memory_ready_hint"])
@@ -1393,8 +1420,59 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         )
         self.preview_shorts_pack_button.grid(row=0, column=1, sticky="ew", padx=(3, 0))
 
+        upload_box = ctk.CTkFrame(body, fg_color=COLORS["panel_alt"], border_width=1, border_color=COLORS["line"], corner_radius=8)
+        upload_box.grid(row=5, column=0, sticky="ew", pady=(12, 0))
+        upload_box.grid_columnconfigure(0, weight=1)
+        upload_box.grid_columnconfigure(1, weight=1)
+        ctk.CTkLabel(
+            upload_box,
+            text=UI_TEXT["upload_package"],
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold"),
+            text_color=COLORS["accent_soft"],
+        ).grid(row=0, column=0, columnspan=2, sticky="w", padx=12, pady=(10, 4))
+        ctk.CTkLabel(
+            upload_box,
+            textvariable=self.upload_package_summary_var,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            text_color=COLORS["text"],
+            wraplength=330,
+            justify="left",
+        ).grid(row=1, column=0, columnspan=2, sticky="ew", padx=12, pady=(0, 8))
+        self.generate_upload_package_button = ctk.CTkButton(
+            upload_box,
+            text=UI_TEXT["generate_upload_package"],
+            command=self._start_generate_upload_package,
+            height=30,
+            fg_color=COLORS["button"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+        )
+        self.generate_upload_package_button.grid(row=2, column=0, sticky="ew", padx=(12, 4), pady=4)
+        self.open_upload_package_button = ctk.CTkButton(
+            upload_box,
+            text=UI_TEXT["open_upload_package"],
+            command=self._open_upload_package,
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+            state="disabled",
+        )
+        self.open_upload_package_button.grid(row=2, column=1, sticky="ew", padx=(4, 12), pady=4)
+        self.preview_upload_set_button = ctk.CTkButton(
+            upload_box,
+            text=UI_TEXT["preview_upload_set"],
+            command=self._preview_upload_set,
+            height=30,
+            fg_color=COLORS["button_secondary"],
+            hover_color=COLORS["button_hover"],
+            text_color=COLORS["text"],
+            state="disabled",
+        )
+        self.preview_upload_set_button.grid(row=3, column=0, columnspan=2, sticky="ew", padx=12, pady=(4, 10))
+
         sequence_box = ctk.CTkFrame(body, fg_color=COLORS["panel_alt"], border_width=1, border_color=COLORS["line"], corner_radius=8)
-        sequence_box.grid(row=5, column=0, sticky="ew", pady=(12, 0))
+        sequence_box.grid(row=6, column=0, sticky="ew", pady=(12, 0))
         sequence_box.grid_columnconfigure(0, weight=1)
         sequence_box.grid_columnconfigure(1, weight=1)
         ctk.CTkLabel(
@@ -1485,7 +1563,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.open_horizontal_edit_button.grid(row=5, column=1, sticky="ew", padx=(4, 12), pady=(4, 10))
 
         bridge_box = ctk.CTkFrame(body, fg_color=COLORS["panel_alt"], border_width=1, border_color=COLORS["line"], corner_radius=8)
-        bridge_box.grid(row=6, column=0, sticky="ew", pady=(12, 0))
+        bridge_box.grid(row=7, column=0, sticky="ew", pady=(12, 0))
         bridge_box.grid_columnconfigure(0, weight=1)
         bridge_box.grid_columnconfigure(1, weight=1)
         ctk.CTkLabel(
@@ -1577,7 +1655,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.generate_bridge_metadata_button.grid(row=5, column=0, columnspan=2, sticky="ew", padx=12, pady=(4, 10))
 
         memory_box = ctk.CTkFrame(body, fg_color=COLORS["panel_alt"], border_width=1, border_color=COLORS["line"], corner_radius=8)
-        memory_box.grid(row=7, column=0, sticky="ew", pady=(12, 0))
+        memory_box.grid(row=8, column=0, sticky="ew", pady=(12, 0))
         memory_box.grid_columnconfigure(0, weight=1)
         memory_box.grid_columnconfigure(1, weight=1)
         ctk.CTkLabel(
@@ -1626,7 +1704,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.generate_memory_summary_button.grid(row=3, column=0, columnspan=2, sticky="ew", padx=12, pady=(4, 10))
 
         recommend_box = ctk.CTkFrame(body, fg_color=COLORS["panel_alt"], border_width=1, border_color=COLORS["line"], corner_radius=8)
-        recommend_box.grid(row=8, column=0, sticky="ew", pady=(12, 0))
+        recommend_box.grid(row=9, column=0, sticky="ew", pady=(12, 0))
         recommend_box.grid_columnconfigure(0, weight=1)
         recommend_box.grid_columnconfigure(1, weight=1)
         ctk.CTkLabel(
@@ -1685,7 +1763,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             text_color=COLORS["text"],
             state="disabled",
         )
-        self.open_button.grid(row=9, column=0, sticky="ew", pady=(12, 0))
+        self.open_button.grid(row=10, column=0, sticky="ew", pady=(12, 0))
         return panel
 
     def _build_system_panel(self, parent: ctk.CTkFrame) -> ctk.CTkFrame:
@@ -1793,6 +1871,16 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             return False
         return (package_dir / relative_path).exists()
 
+    def _reset_upload_package_state(self) -> None:
+        self.upload_package_dir = None
+        self.upload_checklist_path = None
+        if hasattr(self, "upload_package_summary_var"):
+            self.upload_package_summary_var.set(UI_TEXT["upload_package_ready_hint"])
+        if hasattr(self, "open_upload_package_button"):
+            self.open_upload_package_button.configure(state="disabled")
+        if hasattr(self, "preview_upload_set_button"):
+            self.preview_upload_set_button.configure(state="disabled")
+
     def _dashboard_memory_saved(self, package_dir: Path | None) -> bool:
         if package_dir is None:
             return False
@@ -1833,6 +1921,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.horizontal_video_running,
                 self.smart_horizontal_running,
                 self.shorts_pack_running,
+                self.upload_package_running,
                 self.sequence_running,
                 self.project_bridge_running,
                 self.memory_running,
@@ -2163,13 +2252,23 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 sequence_ready,
             )
 
+        if not self._dashboard_file_ready(package_dir, "selected/upload_ready/metadata/upload_checklist.md", None):
+            return self._focus_step_state(
+                6,
+                "focus_step_memory",
+                "focus_desc_upload",
+                "generate_upload_package",
+                "generate_upload_package",
+                sequence_ready,
+            )
+
         return {
             "index": 6,
             "completed": True,
             "step_label": UI_TEXT["focus_step_completed"],
             "description": UI_TEXT["focus_desc_completed"],
-            "action_key": "open_package_folder",
-            "action_label": UI_TEXT["open_package_folder"],
+            "action_key": "open_upload_package",
+            "action_label": UI_TEXT["open_upload_package"],
             "sequence_ready": sequence_ready,
         }
 
@@ -2228,6 +2327,8 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             "generate_shorts_pack": self._start_generate_shorts_pack,
             "generate_horizontal_edit": self._start_generate_horizontal_edit,
             "save_to_memory": self._start_save_memory,
+            "generate_upload_package": self._start_generate_upload_package,
+            "open_upload_package": self._open_upload_package,
             "open_package_folder": self._open_package_folder,
         }
         handler = actions.get(self.focus_action_key)
@@ -2284,6 +2385,8 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.open_vertical_short_button.configure(state="disabled")
         self.open_shorts_pack_button.configure(state="disabled")
         self.preview_shorts_pack_button.configure(state="disabled")
+        self.open_upload_package_button.configure(state="disabled")
+        self.preview_upload_set_button.configure(state="disabled")
         self.open_recommendation_button.configure(state="disabled")
         self.selected_output_dir = None
         self.short_preview_path = None
@@ -2292,6 +2395,8 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.smart_horizontal_path = None
         self.smart_horizontal_sequence_path = None
         self.shorts_pack_dir = None
+        self.upload_package_dir = None
+        self.upload_checklist_path = None
         self.horizontal_edit_path = None
         self.recommendation_path = None
         self.preview_source_video_path = None
@@ -2309,6 +2414,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.short_preview_summary_var.set(UI_TEXT["short_preview_ready_hint"])
         self.vertical_short_summary_var.set(UI_TEXT["vertical_short_ready_hint"])
         self.shorts_pack_summary_var.set(UI_TEXT["shorts_pack_ready_hint"])
+        self.upload_package_summary_var.set(UI_TEXT["upload_package_ready_hint"])
         self.sequence_summary_var.set(UI_TEXT["horizontal_edit_ready_hint"])
         self.sequence_choice_var.set(UI_TEXT["sequence_empty"])
         self.sequence_choice_menu.configure(values=[UI_TEXT["sequence_empty"]])
@@ -2392,6 +2498,13 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         self.shorts_pack_summary_var.set(self._format_shorts_pack_existing(self.shorts_pack_dir) if self.shorts_pack_dir else UI_TEXT["shorts_pack_ready_hint"])
         self.open_shorts_pack_button.configure(state="normal" if self.shorts_pack_dir else "disabled")
         self.preview_shorts_pack_button.configure(state="normal" if self.shorts_pack_dir else "disabled")
+        upload_dir = package_dir / "selected" / "upload_ready"
+        upload_checklist = upload_dir / "metadata" / "upload_checklist.md"
+        self.upload_package_dir = upload_dir if upload_checklist.exists() else None
+        self.upload_checklist_path = upload_checklist if upload_checklist.exists() else None
+        self.upload_package_summary_var.set(self._format_upload_package_existing(self.upload_package_dir) if self.upload_package_dir else UI_TEXT["upload_package_ready_hint"])
+        self.open_upload_package_button.configure(state="normal" if self.upload_package_dir else "disabled")
+        self.preview_upload_set_button.configure(state="normal" if self.upload_checklist_path else "disabled")
         self.review_summary_var.set(
             "\n".join(
                 [
@@ -3214,6 +3327,80 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.events.put({"type": "recommendation_result", "result": result})
             except Exception as exc:
                 self.events.put({"type": "recommendation_error", "message": str(exc)})
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _start_generate_upload_package(self) -> None:
+        if self.upload_package_running:
+            return
+        package_dir = self._resolve_package_for_review()
+        if package_dir is None:
+            messagebox.showinfo(APP_NAME, UI_TEXT["selected_requires_package"])
+            return
+
+        self.upload_package_running = True
+        self._button_config("generate_upload_package_button", "disabled", "button_exporting")
+        self.open_upload_package_button.configure(state="disabled")
+        self.preview_upload_set_button.configure(state="disabled")
+        self.status_var.set(UI_TEXT["running"])
+        self.progress_var.set(0.12)
+        self._set_live_status(
+            UI_TEXT["live_state_running"],
+            UI_TEXT["live_phase_upload_collect"],
+            progress=0.12,
+            eta_seconds=20,
+            operation="upload_package",
+        )
+        self._log(LOG_TEXT["upload_package_start"])
+        self.upload_package_summary_var.set(
+            "\n".join(
+                [
+                    UI_TEXT["upload_package"],
+                    UI_TEXT["upload_package_running"],
+                    f"{UI_TEXT['package']}: {package_dir}",
+                ]
+            )
+        )
+
+        def worker() -> None:
+            try:
+                self._post_live_status(
+                    UI_TEXT["live_state_running"],
+                    "live_phase_upload_copy_shorts",
+                    progress=0.38,
+                    log_key="upload_package_assets",
+                )
+                system = run_system_check()
+                self.events.put(
+                    {
+                        "type": "cli",
+                        "statuses": system["cli"],
+                        "nvenc": system["nvenc"],
+                        "gpu": system["gpu"],
+                        "install_guide": system["install_guide"],
+                        "install_commands": system["install_commands"],
+                    }
+                )
+                statuses = system["cli"]
+                self._post_live_status(
+                    UI_TEXT["live_state_running"],
+                    "live_phase_upload_metadata",
+                    progress=0.66,
+                    log_key="upload_package_metadata",
+                )
+                self._post_live_status(
+                    UI_TEXT["live_state_running"],
+                    "live_phase_upload_checklist",
+                    progress=0.84,
+                )
+                result = generate_upload_package(
+                    package_dir=package_dir,
+                    ollama_ready=statuses.get("ollama", {}).get("state") == "READY",
+                    log=lambda message: self.events.put({"type": "log", "message": message}),
+                )
+                self.events.put({"type": "upload_package_result", "result": result})
+            except Exception as exc:
+                self.events.put({"type": "upload_package_error", "message": str(exc)})
 
         threading.Thread(target=worker, daemon=True).start()
 
@@ -4113,6 +4300,43 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                     return
         messagebox.showinfo(APP_NAME, UI_TEXT["shorts_pack_unavailable"])
 
+    def _resolve_upload_package_dir(self) -> tuple[Path | None, Path | None]:
+        upload_dir = self.upload_package_dir
+        checklist_path = self.upload_checklist_path
+        package_dir = self._resolve_package_for_review()
+        if package_dir is not None:
+            candidate_dir = package_dir / "selected" / "upload_ready"
+            candidate_checklist = candidate_dir / "metadata" / "upload_checklist.md"
+            if upload_dir is None and candidate_checklist.exists():
+                upload_dir = candidate_dir
+            if checklist_path is None and candidate_checklist.exists():
+                checklist_path = candidate_checklist
+        if upload_dir is not None and not upload_dir.exists():
+            upload_dir = None
+        if checklist_path is not None and not checklist_path.exists():
+            checklist_path = None
+        return upload_dir, checklist_path
+
+    def _open_upload_package(self) -> None:
+        upload_dir, _checklist_path = self._resolve_upload_package_dir()
+        if upload_dir is None:
+            messagebox.showinfo(APP_NAME, UI_TEXT["upload_package_unavailable"])
+            return
+        try:
+            os.startfile(str(upload_dir))  # type: ignore[attr-defined]
+        except Exception as exc:
+            messagebox.showerror(APP_NAME, f"{UI_TEXT['open_upload_package_failed']}\n{exc}")
+
+    def _preview_upload_set(self) -> None:
+        _upload_dir, checklist_path = self._resolve_upload_package_dir()
+        if checklist_path is None:
+            messagebox.showinfo(APP_NAME, UI_TEXT["upload_package_unavailable"])
+            return
+        try:
+            os.startfile(str(checklist_path))  # type: ignore[attr-defined]
+        except Exception as exc:
+            messagebox.showerror(APP_NAME, f"{UI_TEXT['preview_upload_set_failed']}\n{exc}")
+
     def _open_horizontal_edit(self) -> None:
         horizontal_path = self.horizontal_edit_path
         if horizontal_path is None:
@@ -4370,7 +4594,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
         for item in segments:
             if isinstance(item, dict):
                 try:
-                    total_duration += float(item.get("duration_seconds") or 0)
+                    total_duration += float(item.get("duration") or item.get("duration_seconds") or 0)
                 except Exception:
                     pass
         return self._format_smart_horizontal_summary(
@@ -4425,6 +4649,47 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 "bgm_applied": bool(payload.get("bgm_volume")) if isinstance(payload, dict) else False,
                 "used_ollama": bool(payload.get("used_ollama")) if isinstance(payload, dict) else False,
                 "nvenc_used": any(bool(clip.get("nvenc_used")) for clip in clips if isinstance(clip, dict)) if isinstance(clips, list) else False,
+            }
+        )
+
+    def _format_upload_package_summary(self, result: dict[str, object]) -> str:
+        upload_dir = str(result.get("upload_ready_dir") or "")
+        missing = result.get("missing")
+        missing_count = len(missing) if isinstance(missing, list) else 0
+        copied_metadata = result.get("copied_metadata")
+        metadata_items = [str(item) for item in copied_metadata] if isinstance(copied_metadata, list) else []
+        lines = [
+            UI_TEXT["upload_package"],
+            f"{UI_TEXT['package_status']}: {result.get('status', UI_TEXT['upload_package_failed'])}",
+            f"{UI_TEXT['contents']}:",
+            f"- {UI_TEXT['horizontal_video_content']}: {result.get('video_count', 0)}",
+            f"- {UI_TEXT['shorts_pack_content']}: {result.get('shorts_count', 0)}",
+            f"- {UI_TEXT['metadata']}: {result.get('metadata_count', 0)}",
+            f"- {UI_TEXT['review_content']}: {UI_TEXT['selected_available'] if any('assistant_review.md' in item for item in metadata_items) else UI_TEXT['selected_missing']}",
+            f"- {UI_TEXT['upload_checklist']}: {UI_TEXT['selected_available']}",
+            f"{UI_TEXT['ollama']}: {UI_TEXT['used'] if result.get('used_ollama') else UI_TEXT['template_fallback']}",
+            f"{UI_TEXT['preview_output']}: {upload_dir or '--'}",
+        ]
+        if missing_count:
+            lines.append(f"{UI_TEXT['selected_missing']}: {missing_count}")
+        return "\n".join(lines)
+
+    def _format_upload_package_existing(self, upload_dir: Path | None) -> str:
+        if upload_dir is None:
+            return UI_TEXT["upload_package_ready_hint"]
+        video_count = len(list((upload_dir / "video").glob("*.mp4"))) if (upload_dir / "video").exists() else 0
+        shorts_count = len(list((upload_dir / "shorts").glob("*.mp4"))) if (upload_dir / "shorts").exists() else 0
+        metadata_count = len([path for path in (upload_dir / "metadata").glob("*") if path.is_file()]) if (upload_dir / "metadata").exists() else 0
+        return self._format_upload_package_summary(
+            {
+                "status": "COMPLETED",
+                "upload_ready_dir": str(upload_dir),
+                "video_count": video_count,
+                "shorts_count": shorts_count,
+                "metadata_count": metadata_count,
+                "copied_metadata": [str(path) for path in (upload_dir / "metadata").glob("*") if path.is_file()] if (upload_dir / "metadata").exists() else [],
+                "missing": [],
+                "used_ollama": False,
             }
         )
 
@@ -4639,6 +4904,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.open_horizontal_edit_button.configure(state="disabled")
                 self.recommendation_summary_var.set(UI_TEXT["recommend_ready_hint"])
                 self.open_recommendation_button.configure(state="disabled")
+                self._reset_upload_package_state()
                 self.open_button.configure(state="normal")
                 self.progress_var.set(1.0)
                 status = str(result.get("status") or "")
@@ -4723,6 +4989,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.recommendation_path = None
                 self.open_recommendation_button.configure(state="disabled")
                 self.recommendation_summary_var.set(UI_TEXT["recommend_ready_hint"])
+                self._reset_upload_package_state()
                 self.output_var.set(str(selected_dir))
                 self.progress_var.set(1.0)
                 self.status_var.set(UI_TEXT["complete"])
@@ -4787,6 +5054,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.open_shorts_pack_button.configure(state="disabled")
                 self.preview_shorts_pack_button.configure(state="disabled")
                 self.shorts_pack_summary_var.set(UI_TEXT["shorts_pack_ready_hint"])
+                self._reset_upload_package_state()
                 self.progress_var.set(1.0)
                 if result.get("status") == "COMPLETED":
                     self.status_var.set(UI_TEXT["complete"])
@@ -4822,6 +5090,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.open_selected_button.configure(state="normal" if self.selected_output_dir else "disabled")
                 self.open_smart_horizontal_button.configure(state="normal" if self.smart_horizontal_path else "disabled")
                 self.preview_smart_sequence_button.configure(state="normal" if self.smart_horizontal_sequence_path else "disabled")
+                self._reset_upload_package_state()
                 self.progress_var.set(1.0)
                 if result.get("status") == "COMPLETED":
                     self.status_var.set(UI_TEXT["complete"])
@@ -4858,6 +5127,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.open_shorts_pack_button.configure(state="disabled")
                 self.preview_shorts_pack_button.configure(state="disabled")
                 self.shorts_pack_summary_var.set(UI_TEXT["shorts_pack_ready_hint"])
+                self._reset_upload_package_state()
                 self.progress_var.set(1.0)
                 if result.get("status") == "COMPLETED":
                     self.status_var.set(UI_TEXT["complete"])
@@ -4888,6 +5158,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.open_selected_button.configure(state="normal" if self.selected_output_dir else "disabled")
                 self.open_shorts_pack_button.configure(state="normal" if self.shorts_pack_dir else "disabled")
                 self.preview_shorts_pack_button.configure(state="normal" if self.shorts_pack_dir else "disabled")
+                self._reset_upload_package_state()
                 self.progress_var.set(1.0)
                 if result.get("status") == "COMPLETED":
                     self.status_var.set(UI_TEXT["complete"])
@@ -4928,6 +5199,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.sequence_summary_var.set(self._format_sequence_summary(result))
                 self.open_selected_button.configure(state="normal" if self.selected_output_dir else "disabled")
                 self.open_horizontal_edit_button.configure(state="normal" if self.horizontal_edit_path else "disabled")
+                self._reset_upload_package_state()
                 self.progress_var.set(1.0)
                 if result.get("status") == "COMPLETED":
                     self.status_var.set(UI_TEXT["complete"])
@@ -4960,6 +5232,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.recommendation_path = None
                 self.open_recommendation_button.configure(state="disabled")
                 self.recommendation_summary_var.set(UI_TEXT["recommend_ready_hint"])
+                self._reset_upload_package_state()
                 self.progress_var.set(1.0)
                 self.status_var.set(UI_TEXT["complete"] if result.get("status") == "COMPLETED" else UI_TEXT["error"])
                 if result.get("status") == "COMPLETED":
@@ -4981,6 +5254,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.open_selected_button.configure(state="normal" if self.selected_output_dir else "disabled")
                 self.open_button.configure(state="normal")
                 self.project_bridge_summary_var.set(self._format_project_bridge_result_summary(result))
+                self._reset_upload_package_state()
                 self.progress_var.set(1.0)
                 self.status_var.set(UI_TEXT["complete"])
                 self.eta_var.set(UI_TEXT["project_bridge_metadata_completed"])
@@ -5011,6 +5285,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.status_var.set(UI_TEXT["complete"])
                 self.eta_var.set(UI_TEXT["memory_saved"])
                 self.finish_var.set(UI_TEXT["complete"])
+                self._reset_upload_package_state()
                 self._set_live_completed(summary_path)
                 self._log(LOG_TEXT["memory_saved"])
                 if not result.get("used_ollama"):
@@ -5031,6 +5306,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.status_var.set(UI_TEXT["complete"])
                 self.eta_var.set(UI_TEXT["memory_updated"])
                 self.finish_var.set(UI_TEXT["complete"])
+                self._reset_upload_package_state()
                 if not result.get("used_ollama"):
                     self._log(LOG_TEXT["memory_template_fallback"])
                 self._log(LOG_TEXT["memory_ready"])
@@ -5057,6 +5333,7 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
                 self.open_recommendation_button.configure(state="normal" if self.recommendation_path else "disabled")
                 self.open_package_button.configure(state="normal")
                 self.open_button.configure(state="normal")
+                self._reset_upload_package_state()
                 self.progress_var.set(1.0)
                 self.status_var.set(UI_TEXT["complete"])
                 self.eta_var.set(UI_TEXT["complete"])
@@ -5077,6 +5354,44 @@ class KadouChuApp(ctk.CTk if ctk is not None else object):  # type: ignore[misc]
             self.status_var.set(UI_TEXT["error"])
             self.recommendation_summary_var.set(str(event.get("message", "")))
             self._set_live_failed(event.get("message", ""))
+        elif event_type == "upload_package_result":
+            result = event.get("result", {})
+            if isinstance(result, dict):
+                upload_dir = Path(str(result.get("upload_ready_dir") or ""))
+                checklist_path = Path(str(result.get("checklist_path") or ""))
+                package_dir = Path(str(result.get("package_dir") or packages_dir()))
+                self.package_output_dir = package_dir
+                self.current_project = ProjectPaths.from_root(package_dir)
+                self.upload_package_dir = upload_dir if upload_dir.exists() else None
+                self.upload_checklist_path = checklist_path if checklist_path.exists() else None
+                self.upload_package_summary_var.set(self._format_upload_package_summary(result))
+                self.output_var.set(str(upload_dir))
+                self.open_upload_package_button.configure(state="normal" if self.upload_package_dir else "disabled")
+                self.preview_upload_set_button.configure(state="normal" if self.upload_checklist_path else "disabled")
+                self.open_package_button.configure(state="normal")
+                self.open_button.configure(state="normal")
+                self.progress_var.set(1.0)
+                if result.get("status") == "COMPLETED":
+                    self.status_var.set(UI_TEXT["complete"])
+                    self.eta_var.set(UI_TEXT["upload_package_completed"])
+                    self.finish_var.set(UI_TEXT["complete"])
+                    self._set_live_completed(upload_dir, detail="upload_ready package created.")
+                    self._log(LOG_TEXT["upload_package_ready"])
+                else:
+                    self.status_var.set(UI_TEXT["error"])
+                    self._set_live_failed(
+                        result.get("message") or UI_TEXT["upload_package_failed"],
+                        UI_TEXT["live_upload_failed"],
+                    )
+            self.upload_package_running = False
+            self._button_config("generate_upload_package_button", "normal", "generate_upload_package")
+        elif event_type == "upload_package_error":
+            self.upload_package_running = False
+            self._button_config("generate_upload_package_button", "normal", "generate_upload_package")
+            self.status_var.set(UI_TEXT["error"])
+            self.upload_package_summary_var.set(str(event.get("message", "")))
+            self._set_live_failed(event.get("message", ""), UI_TEXT["live_upload_failed"])
+            self._log(LOG_TEXT["upload_package_failed"])
         elif event_type == "youtube":
             self.youtube_status_var.set(str(event.get("message", "")))
         elif event_type == "progress":
