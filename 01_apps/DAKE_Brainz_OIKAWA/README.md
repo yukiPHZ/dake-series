@@ -237,6 +237,16 @@ Phase 19では、最近の熱だけでなく、しばらく静かだった後に
 - Slack静かな通知にも長期間後の再訪、深夜巡回、巡回増加を少しだけ加点します
 - 原本プレビューを主役にし、AIは熱の補助に留めます
 
+## QPSC v0.3: OIKAWA / OpenClaw / Obsidian
+
+v0.3方向では、OIKAWAは検索アプリではなく、OpenClawの便りを受け取る正本ニュース端末として整理します。
+
+- OIKAWAは巡回、熾火、今日の戻り、側に在る、正本ニュースを扱います
+- BRAINZは保存母艦であり、読む前面ではありません
+- OpenClawは将来の巡回生物です。常時巡回、Git差分確認、README巡回、TODO未満検知を静かに担う候補です
+- ObsidianはMarkdown観測UIです。graph、backlink、preview、searchで正本群を見やすくするビュー層です
+- 原本はローカルファイルをそのまま開けることを優先し、OIKAWAプレビューは補助として扱います
+
 ## QPSC Phase 20: BORINEF note循環
 
 Phase 20では、BRAINZが回収した公開済noteもOIKAWAの巡回対象に自然に混ざります。

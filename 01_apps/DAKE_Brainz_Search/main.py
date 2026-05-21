@@ -22,7 +22,7 @@ UI_TEXT = {
     "window_title": WINDOW_TITLE,
     "copyright": COPYRIGHT,
     "subtitle": "記憶庫 / 取り込み母艦",
-    "role_summary": "保存 / 取り込み / 設定 / 状態",
+    "role_summary": "Slack / ChatGPT / Codexをローカル正本へ保存",
     "brainz_status_title": "BRAINZ状態",
     "status_brainz_standby": "待機しています",
     "status_brainz_awake": "起きています",
@@ -40,9 +40,28 @@ UI_TEXT = {
     "section_import_entry": "取り込み入口",
     "section_settings_entry": "接続 / 設定",
     "settings_entry_hint": "Slack / Queue / Codex報告の入口を下にまとめています。",
+    "button_prepare_qpsc_folders": "QPSCフォルダを整える",
+    "qpsc_folder_status_waiting": "QPSCフォルダ構成: 未確認",
+    "qpsc_folder_status_ready": "QPSCフォルダ構成: OK",
+    "mothership_news_title": "正本ニュース準備",
+    "mothership_news_text": "OpenClaw本格導入までは、BRAINZは保存と状態だけを静かに整えます。",
+    "section_slack_routes": "Slackチャンネル別保存",
+    "slack_routes_hint": "#inboxは巡回される熱、#aruは育てる熱として扱います。",
+    "button_save_slack_routes": "保存ルートを保存",
+    "button_reset_slack_routes": "標準ルート",
+    "status_slack_routes_saved": "SLACK ROUTES SAVED",
+    "status_slack_routes_invalid": "SLACK ROUTES INVALID",
+    "section_codex_watch": "Codexログ自動監視",
+    "label_codex_sessions_path": "Codex sessions path",
+    "checkbox_enable_codex_watch": "Enable Codex Watch",
+    "button_check_codex_watch": "存在確認",
+    "button_save_codex_watch": "Save Codex Watch",
+    "status_codex_watch_ready": "CODEX WATCH: READY",
+    "status_codex_watch_missing": "CODEX WATCH: 未確認",
+    "status_codex_watch_disabled": "CODEX WATCH: OFF",
     "section_oikawa_bridge": "OIKAWAへ",
     "oikawa_bridge_message": "検索・原本表示・熾火・ORBITはOIKAWAで扱います。",
-    "search_bridge_title": "検索入口（補助）",
+    "search_bridge_title": "旧検索入口（OIKAWAへ）",
     "search_bridge_helper": "読む場所はOIKAWAへ移しています。",
     "search_placeholder": "うろ覚えで検索",
     "embers_search_placeholder": "何を探したいかわからなくても大丈夫です。",
@@ -65,10 +84,10 @@ UI_TEXT = {
     "button_import_chatgpt_zip": "zip",
     "button_import_chatgpt_folder": "フォルダ",
     "button_import_chatgpt_json": "conversations.json",
-    "button_import_codex_result": "Codex結果取込",
+    "button_import_codex_result": "緊急保存 / Codex結果",
     "button_chatgpt": "ChatGPTまとめ",
     "button_codex": "Codex素材",
-    "memory_title": "記憶庫 / 取り込み入口",
+    "memory_title": "記憶庫 / 投入口",
     "label_watch_folder": "Watch Folder",
     "checkbox_auto_index": "Auto Index",
     "index_title": "Index Status",
@@ -279,8 +298,14 @@ UI_TEXT = {
     "oikawa_mode_exe": "dist exe",
     "oikawa_mode_python": "python main.py",
     "log_settings_entry": "SETTINGS ENTRY: Slack / Queue / Codex reports",
+    "log_qpsc_folders_ready": "QPSC FOLDERS READY: {count}",
+    "log_slack_routes_saved": "SLACK ROUTES SAVED: {count}",
+    "log_slack_routes_reset": "SLACK ROUTES RESET",
+    "log_codex_watch_saved": "CODEX WATCH SAVED: enabled={enabled} path={path}",
+    "log_codex_watch_checked": "CODEX WATCH CHECK: exists={exists} path={path}",
     "notify_title": "BRAINZ",
     "notify_oikawa_opened": "OIKAWAを開きます。",
+    "notify_qpsc_folders_ready": "QPSCフォルダ構成を確認しました。",
     "notify_oikawa_missing": "OIKAWAが見つかりません。buildまたは配置を確認してください。",
     "notify_memory_detected": "新しい記憶を検出しました。",
     "notify_auto_index_complete": "記憶を更新しました。",
@@ -469,6 +494,14 @@ def run_smoke_test() -> int:
     from core.notifications import NotificationQueue
     from core.ollama_client import check_ollama
     from core.ollama_embeddings import DEFAULT_EMBED_MODEL, check_embedding_status
+    from core.qpsc_mothership import (
+        codex_sessions_default_path,
+        codex_watch_status,
+        dump_slack_channel_routes,
+        ensure_qpsc_memory_structure,
+        find_slack_channel_route,
+        load_slack_channel_routes,
+    )
     from core.qpsc_notifications import read_notification_events
     from core.qpsc_status import AWAKE_STATUS_MESSAGE, write_brainz_awake_status
     from core.remote_queue import count_pending_queue_files, process_remote_queue_folder
@@ -500,11 +533,16 @@ def run_smoke_test() -> int:
                 slack_channel_id="C123SMOKE",
                 slack_poll_interval_seconds=5,
                 slack_last_ts="0",
+                slack_channel_routes_json=dump_slack_channel_routes(),
                 enable_aru_inbox=True,
                 aru_slack_token="xoxb-aru-token",
                 aru_channel_id="CARUSMOKE",
                 aru_poll_interval_seconds=5,
                 aru_last_ts="0",
+                codex_auto_watch_enabled=True,
+                codex_sessions_path=str(root / ".codex" / "sessions"),
+                codex_auto_save_folder="30_codex",
+                codex_last_scanned_at="2026-05-21T00:00:00",
                 slack_notify_enabled=True,
                 slack_webhook_url="https://hooks.slack.test/services/SMOKE",
                 slack_notify_max_per_day=3,
@@ -540,6 +578,30 @@ def run_smoke_test() -> int:
             or config_data.slack_notify_quiet_hours != "22:00-04:00"
         ):
             raise RuntimeError("qpsc slack notify config did not roundtrip")
+        routes = load_slack_channel_routes(config_data.slack_channel_routes_json)
+        inbox_route = find_slack_channel_route("#brainz-inbox", routes)
+        aru_route = find_slack_channel_route("#brainz-aru", routes)
+        if not inbox_route or inbox_route.get("save_folder") != "10_slack/brainz-inbox":
+            raise RuntimeError("qpsc slack routes did not roundtrip")
+        if not aru_route or aru_route.get("qpsc_source") != "aru":
+            raise RuntimeError("qpsc aru route did not roundtrip")
+        created_qpsc_folders = ensure_qpsc_memory_structure(root)
+        expected_qpsc_folders = [
+            root / "00_inbox",
+            root / "10_slack" / "brainz-inbox",
+            root / "10_slack" / "brainz-note",
+            root / "30_codex",
+            root / "40_borinef" / "note" / "published",
+            root / "90_system" / "config",
+        ]
+        if len(created_qpsc_folders) < 10 or not all(path.exists() for path in expected_qpsc_folders):
+            raise RuntimeError("qpsc memory folder structure was not created")
+        (root / ".codex" / "sessions").mkdir(parents=True, exist_ok=True)
+        watch_exists, watch_path = codex_watch_status(config_data.codex_sessions_path)
+        if not watch_exists or watch_path != str(root / ".codex" / "sessions"):
+            raise RuntimeError("codex sessions watch path did not roundtrip")
+        if not codex_sessions_default_path().name == "sessions":
+            raise RuntimeError("codex sessions default path failed")
         qpsc_status = write_brainz_awake_status(
             path=root / "qpsc_brainz_status.json",
             started_at="2026-05-19T00:00:00",
@@ -908,6 +970,7 @@ def run_smoke_test() -> int:
             channel_id="C123SMOKE",
             last_ts="",
             session=FakeSlackSession(),
+            save_folder=str(inbox_route["save_folder"]),
         )
         if slack_result.imported < 1 or slack_result.status != "imported":
             raise RuntimeError("slack inbox import failed")
@@ -916,6 +979,8 @@ def run_smoke_test() -> int:
         slack_markdown_text = Path(slack_result.saved_files[0]).read_text(encoding="utf-8")
         if "source: slack" not in slack_markdown_text:
             raise RuntimeError("slack markdown source marker missing")
+        if "10_slack" not in str(slack_result.saved_files[0]).replace("\\", "/"):
+            raise RuntimeError("slack routed folder was not used")
         if slack_query not in slack_markdown_text or "Preview title" not in slack_markdown_text:
             raise RuntimeError("slack canonical text was not preserved")
         slack_duplicate = poll_slack_inbox(
@@ -925,6 +990,7 @@ def run_smoke_test() -> int:
             channel_id="C123SMOKE",
             last_ts="",
             session=FakeSlackSession(),
+            save_folder=str(inbox_route["save_folder"]),
         )
         if slack_duplicate.skipped < 1:
             raise RuntimeError("slack duplicate was not skipped")
@@ -940,6 +1006,7 @@ def run_smoke_test() -> int:
             channel_id="CBORINEF",
             last_ts="",
             session=FakeSlackSession(messages=[{"ts": note_ts, "user": "UBORINEF", "text": note_text}]),
+            save_folder="10_slack/brainz-note",
         )
         note_paths = [
             Path(path)
@@ -961,10 +1028,11 @@ def run_smoke_test() -> int:
             channel_id="CBORINEF",
             last_ts="",
             session=FakeSlackSession(messages=[{"ts": note_ts, "user": "UBORINEF", "text": note_text}]),
+            save_folder="10_slack/brainz-note",
         )
         note_matches = [
             path
-            for path in (root / "BORINEF" / "note" / "published").rglob("*.md")
+            for path in (root / "40_borinef" / "note" / "published").rglob("*.md")
             if note_url in path.read_text(encoding="utf-8")
         ]
         if len(note_matches) != 1 or note_duplicate.skipped < 1:
@@ -988,6 +1056,7 @@ def run_smoke_test() -> int:
             channel_id="C123SMOKE",
             last_ts=slack_ts,
             session=FakeSlackSession(messages=backlog_messages),
+            save_folder=str(inbox_route["save_folder"]),
         )
         if backlog_result.imported != 1 or slack_ts_float(backlog_result.latest_ts) <= slack_ts_float(slack_ts):
             raise RuntimeError("slack backlog sync did not import only newer messages")
@@ -1004,11 +1073,12 @@ def run_smoke_test() -> int:
             folder_name="aru",
             inbox_label="Aru Inbox",
             process_tasks=False,
+            save_folder=str(aru_route["save_folder"]),
         )
         if aru_result.imported != 1 or aru_result.task_results:
             raise RuntimeError("aru inbox import failed")
-        if not aru_result.saved_files or "\\aru\\" not in str(aru_result.saved_files[0]).lower():
-            raise RuntimeError("aru markdown was not saved under aru folder")
+        if not aru_result.saved_files or "10_slack/brainz-aru" not in str(aru_result.saved_files[0]).replace("\\", "/").lower():
+            raise RuntimeError("aru markdown was not saved under routed aru folder")
         aru_backlog_result = poll_slack_inbox(
             database=database,
             memory_folder=root,
@@ -1025,6 +1095,7 @@ def run_smoke_test() -> int:
             folder_name="aru",
             inbox_label="Aru Inbox",
             process_tasks=False,
+            save_folder=str(aru_route["save_folder"]),
         )
         if aru_backlog_result.imported != 1:
             raise RuntimeError("aru backlog sync did not import newer message")
@@ -1065,6 +1136,7 @@ def run_smoke_test() -> int:
             channel_id="C123SMOKE",
             last_ts="",
             session=FakeSlackSession(messages=slack_task_messages),
+            save_folder=str(inbox_route["save_folder"]),
         )
         task_types = {task_result.task_type for task_result in slack_task_result.task_results}
         if task_types != {"search", "note", "handoff_chatgpt", "handoff_codex", "import"}:
@@ -1083,6 +1155,7 @@ def run_smoke_test() -> int:
             channel_id="C123SMOKE",
             last_ts="",
             session=FakeSlackSession(messages=slack_task_messages),
+            save_folder=str(inbox_route["save_folder"]),
         )
         if not slack_task_duplicate.task_results or not all(task.skipped_duplicate for task in slack_task_duplicate.task_results):
             raise RuntimeError("slack task duplicate prevention failed")
@@ -1345,6 +1418,15 @@ def run_gui(launch_check: bool = False) -> int:
     from core.notifications import NotificationItem, NotificationQueue
     from core.ollama_client import check_ollama
     from core.ollama_embeddings import check_embedding_status
+    from core.qpsc_mothership import (
+        codex_sessions_default_path,
+        codex_watch_status,
+        dump_slack_channel_routes,
+        ensure_qpsc_memory_structure,
+        find_slack_channel_route,
+        load_slack_channel_routes,
+        route_summary_lines,
+    )
     from core.qpsc_status import write_brainz_awake_status
     from core.remote_queue import RemoteQueueBatchResult, count_pending_queue_files, process_remote_queue_folder
     from core.search_engine import SearchEngine, SearchResponse
@@ -1381,6 +1463,10 @@ def run_gui(launch_check: bool = False) -> int:
                 self.config_data.watch_folder = self.config_data.memory_folder
             if not self.config_data.codex_reports_folder and self.config_data.memory_folder:
                 self.config_data.codex_reports_folder = str(Path(self.config_data.memory_folder) / "codex_reports")
+            if not self.config_data.codex_sessions_path:
+                self.config_data.codex_sessions_path = str(codex_sessions_default_path())
+            if not self.config_data.codex_auto_save_folder:
+                self.config_data.codex_auto_save_folder = "30_codex"
             self.database = BrainzDatabase()
             self.database.ensure_schema()
             self.search_engine = SearchEngine(self.database)
@@ -1410,6 +1496,7 @@ def run_gui(launch_check: bool = False) -> int:
             self.remote_queue_var = ctk.BooleanVar(value=self.config_data.enable_remote_queue)
             self.slack_inbox_var = ctk.BooleanVar(value=self.config_data.enable_slack_inbox)
             self.aru_inbox_var = ctk.BooleanVar(value=self.config_data.enable_aru_inbox)
+            self.codex_watch_var = ctk.BooleanVar(value=self.config_data.codex_auto_watch_enabled)
             self.flow_sort_ascending = True
             self.flow_request_id = 0
             self.flow_cache: dict[tuple[int, bool, bool], MemoryFlowResponse] = {}
@@ -1440,6 +1527,7 @@ def run_gui(launch_check: bool = False) -> int:
             self._refresh_system_status()
             self._update_remote_queue_status()
             self._update_codex_report_status()
+            self._update_codex_watch_status()
             self._update_slack_status()
             self._update_aru_status()
             self.after(100, self._poll_events)
@@ -1967,12 +2055,122 @@ def run_gui(launch_check: bool = False) -> int:
             )
             self.notifications_checkbox.grid(row=49, column=0, sticky="w", padx=16, pady=(0, 10))
 
+            self._section_title(left, UI_TEXT["section_slack_routes"], 50)
+            ctk.CTkLabel(
+                left,
+                text=UI_TEXT["slack_routes_hint"],
+                text_color=COLORS["muted"],
+                font=(self.reading_font_family, FONT_SIZES["small"]),
+                wraplength=238,
+                justify="left",
+                anchor="w",
+            ).grid(row=51, column=0, sticky="ew", padx=16, pady=(0, 6))
+            self.slack_routes_box = ctk.CTkTextbox(
+                left,
+                height=150,
+                fg_color=COLORS["input"],
+                border_color=COLORS["border"],
+                border_width=1,
+                text_color=COLORS["text"],
+                font=(self.mono_font_family, FONT_SIZES["micro"]),
+                wrap="none",
+            )
+            self.slack_routes_box.grid(row=52, column=0, sticky="ew", padx=16, pady=(0, 8))
+            set_textbox_text(self.slack_routes_box, self._slack_routes_json_text())
+            slack_routes_buttons = ctk.CTkFrame(left, fg_color="transparent")
+            slack_routes_buttons.grid(row=53, column=0, sticky="ew", padx=16, pady=(0, 6))
+            slack_routes_buttons.grid_columnconfigure((0, 1), weight=1)
+            ctk.CTkButton(
+                slack_routes_buttons,
+                text=UI_TEXT["button_save_slack_routes"],
+                height=28,
+                fg_color=COLORS["panel_soft"],
+                hover_color=COLORS["accent_soft"],
+                font=(self.status_font_family, FONT_SIZES["micro"]),
+                command=self._save_slack_routes_settings,
+            ).grid(row=0, column=0, sticky="ew", padx=(0, 6))
+            ctk.CTkButton(
+                slack_routes_buttons,
+                text=UI_TEXT["button_reset_slack_routes"],
+                height=28,
+                fg_color=COLORS["panel_soft"],
+                hover_color=COLORS["accent_soft"],
+                font=(self.status_font_family, FONT_SIZES["micro"]),
+                command=self._reset_slack_routes_settings,
+            ).grid(row=0, column=1, sticky="ew", padx=(6, 0))
+            self.slack_routes_status_var = ctk.StringVar(value=" / ".join(route_summary_lines(load_slack_channel_routes(self.config_data.slack_channel_routes_json))[:2]))
+            ctk.CTkLabel(
+                left,
+                textvariable=self.slack_routes_status_var,
+                text_color=COLORS["quiet"],
+                font=(self.status_font_family, FONT_SIZES["micro"]),
+                wraplength=238,
+                justify="left",
+                anchor="w",
+            ).grid(row=54, column=0, sticky="ew", padx=16, pady=(0, 10))
+
+            self._section_title(left, UI_TEXT["section_codex_watch"], 55)
+            self.codex_sessions_entry = ctk.CTkEntry(
+                left,
+                height=28,
+                placeholder_text=UI_TEXT["label_codex_sessions_path"],
+                fg_color=COLORS["input"],
+                border_color=COLORS["border"],
+                text_color=COLORS["text"],
+                font=(self.status_font_family, FONT_SIZES["micro"]),
+            )
+            self.codex_sessions_entry.grid(row=56, column=0, sticky="ew", padx=16, pady=(0, 5))
+            self.codex_sessions_entry.insert(0, self.config_data.codex_sessions_path)
+            codex_watch_row = ctk.CTkFrame(left, fg_color="transparent")
+            codex_watch_row.grid(row=57, column=0, sticky="ew", padx=16, pady=(0, 6))
+            codex_watch_row.grid_columnconfigure((0, 1), weight=1)
+            self.codex_watch_checkbox = ctk.CTkCheckBox(
+                codex_watch_row,
+                text=UI_TEXT["checkbox_enable_codex_watch"],
+                variable=self.codex_watch_var,
+                text_color=COLORS["muted"],
+                fg_color=COLORS["accent"],
+                hover_color=COLORS["accent_hover"],
+                border_color=COLORS["border"],
+                font=(self.status_font_family, FONT_SIZES["micro"]),
+                command=self._save_codex_watch_settings,
+            )
+            self.codex_watch_checkbox.grid(row=0, column=0, sticky="w", padx=(0, 6))
+            ctk.CTkButton(
+                codex_watch_row,
+                text=UI_TEXT["button_check_codex_watch"],
+                height=28,
+                fg_color=COLORS["panel_soft"],
+                hover_color=COLORS["accent_soft"],
+                font=(self.status_font_family, FONT_SIZES["micro"]),
+                command=self._check_codex_watch_path,
+            ).grid(row=0, column=1, sticky="ew", padx=(6, 0))
+            ctk.CTkButton(
+                left,
+                text=UI_TEXT["button_save_codex_watch"],
+                height=28,
+                fg_color=COLORS["panel_soft"],
+                hover_color=COLORS["accent_soft"],
+                font=(self.status_font_family, FONT_SIZES["micro"]),
+                command=self._save_codex_watch_settings,
+            ).grid(row=58, column=0, sticky="ew", padx=16, pady=(0, 6))
+            self.codex_watch_status_var = ctk.StringVar(value=UI_TEXT["status_codex_watch_disabled"])
+            ctk.CTkLabel(
+                left,
+                textvariable=self.codex_watch_status_var,
+                text_color=COLORS["quiet"],
+                font=(self.status_font_family, FONT_SIZES["micro"]),
+                wraplength=238,
+                justify="left",
+                anchor="w",
+            ).grid(row=59, column=0, sticky="ew", padx=16, pady=(0, 12))
+
             center = self._panel(self, 0)
             center.grid(row=1, column=1, sticky="nsew", padx=8, pady=(0, 12))
             center.grid_columnconfigure(0, weight=1)
             center.grid_rowconfigure(1, weight=0)
-            center.grid_rowconfigure(5, weight=1)
-            center.grid_rowconfigure(7, weight=1)
+            center.grid_rowconfigure(6, weight=0)
+            center.grid_rowconfigure(8, weight=1)
             self._section_title(center, UI_TEXT["brainz_status_title"], 0)
             mothership = ctk.CTkFrame(
                 center,
@@ -2010,7 +2208,15 @@ def run_gui(launch_check: bool = False) -> int:
                 text_color=COLORS["muted"],
                 font=(self.status_font_family, FONT_SIZES["small"]),
                 anchor="w",
-            ).grid(row=2, column=0, sticky="ew", padx=14, pady=(2, 12))
+            ).grid(row=2, column=0, sticky="ew", padx=14, pady=(2, 4))
+            self.qpsc_folder_status_var = ctk.StringVar(value=UI_TEXT["qpsc_folder_status_waiting"])
+            ctk.CTkLabel(
+                mothership,
+                textvariable=self.qpsc_folder_status_var,
+                text_color=COLORS["quiet"],
+                font=(self.status_font_family, FONT_SIZES["micro"]),
+                anchor="w",
+            ).grid(row=3, column=0, sticky="ew", padx=14, pady=(0, 12))
             ctk.CTkLabel(
                 mothership,
                 text=UI_TEXT["oikawa_bridge_message"],
@@ -2041,10 +2247,45 @@ def run_gui(launch_check: bool = False) -> int:
                 font=(self.status_font_family, FONT_SIZES["button"]),
                 command=self._mark_settings_entry,
             ).grid(row=0, column=1, sticky="ew", padx=(6, 0))
+            ctk.CTkButton(
+                mission_buttons,
+                text=UI_TEXT["button_prepare_qpsc_folders"],
+                height=32,
+                fg_color=COLORS["panel_soft"],
+                hover_color=COLORS["accent_soft"],
+                font=(self.status_font_family, FONT_SIZES["button"]),
+                command=lambda: self._ensure_qpsc_folders(notify=True),
+            ).grid(row=1, column=0, columnspan=2, sticky="ew", pady=(8, 0))
 
-            self._section_title(center, UI_TEXT["search_bridge_title"], 2)
+            news_card = ctk.CTkFrame(
+                center,
+                fg_color=COLORS["panel_alt"],
+                border_color=COLORS["border"],
+                border_width=1,
+                corner_radius=6,
+            )
+            news_card.grid(row=2, column=0, sticky="ew", padx=12, pady=(0, 12))
+            news_card.grid_columnconfigure(0, weight=1)
+            ctk.CTkLabel(
+                news_card,
+                text=UI_TEXT["mothership_news_title"],
+                text_color=COLORS["section"],
+                font=(self.font_family, FONT_SIZES["section"]),
+                anchor="w",
+            ).grid(row=0, column=0, sticky="ew", padx=14, pady=(10, 2))
+            ctk.CTkLabel(
+                news_card,
+                text=UI_TEXT["mothership_news_text"],
+                text_color=COLORS["muted"],
+                font=(self.reading_font_family, FONT_SIZES["small"]),
+                wraplength=520,
+                justify="left",
+                anchor="w",
+            ).grid(row=1, column=0, sticky="ew", padx=14, pady=(0, 10))
+
+            self._section_title(center, UI_TEXT["search_bridge_title"], 3)
             search_box = ctk.CTkFrame(center, fg_color="transparent")
-            search_box.grid(row=3, column=0, sticky="ew", padx=12, pady=(0, 10))
+            search_box.grid(row=4, column=0, sticky="ew", padx=12, pady=(0, 10))
             search_box.grid_columnconfigure(0, weight=1)
             self.search_entry = ctk.CTkEntry(
                 search_box,
@@ -2103,7 +2344,7 @@ def run_gui(launch_check: bool = False) -> int:
                 anchor="w",
             ).grid(row=1, column=1, columnspan=2, sticky="ew", pady=(5, 0))
 
-            self._section_title(center, UI_TEXT["source_view_title"], 4)
+            self._section_title(center, UI_TEXT["source_view_title"], 5)
             self.source_view_box = ctk.CTkTextbox(
                 center,
                 height=120,
@@ -2114,7 +2355,7 @@ def run_gui(launch_check: bool = False) -> int:
                 font=(self.reading_font_family, FONT_SIZES["preview"]),
                 wrap="word",
             )
-            self.source_view_box.grid(row=5, column=0, sticky="nsew", padx=12, pady=(0, 10))
+            self.source_view_box.grid(row=6, column=0, sticky="nsew", padx=12, pady=(0, 10))
             self._relax_textbox_spacing(self.source_view_box, spacing1=3, spacing3=6)
             set_textbox_text(self.source_view_box, UI_TEXT["empty_source_view"])
             self.results_title_var = ctk.StringVar(value=UI_TEXT["results_title"])
@@ -2123,7 +2364,7 @@ def run_gui(launch_check: bool = False) -> int:
                 textvariable=self.results_title_var,
                 text_color=COLORS["section"],
                 font=(self.font_family, FONT_SIZES["section"]),
-            ).grid(row=6, column=0, sticky="w", padx=14, pady=(8, 7))
+            ).grid(row=7, column=0, sticky="w", padx=14, pady=(8, 7))
             self.results_frame = ctk.CTkScrollableFrame(
                 center,
                 fg_color=COLORS["panel"],
@@ -2131,7 +2372,7 @@ def run_gui(launch_check: bool = False) -> int:
                 scrollbar_button_color=COLORS["panel_soft"],
                 scrollbar_button_hover_color=COLORS["accent_soft"],
             )
-            self.results_frame.grid(row=7, column=0, sticky="nsew", padx=12, pady=(0, 12))
+            self.results_frame.grid(row=8, column=0, sticky="nsew", padx=12, pady=(0, 12))
             self._render_empty_results()
 
             right = self._panel(self, 0)
@@ -2364,6 +2605,8 @@ def run_gui(launch_check: bool = False) -> int:
                 self._update_codex_report_status()
             self._update_slack_status()
             self._update_aru_status()
+            if clean and hasattr(self, "qpsc_folder_status_var"):
+                self._ensure_qpsc_folders(notify=False)
             if persist:
                 self.config_store.save(self.config_data)
                 if clean:
@@ -2373,6 +2616,22 @@ def run_gui(launch_check: bool = False) -> int:
             folder = filedialog.askdirectory(title=UI_TEXT["choose_memory_title"])
             if folder:
                 self._set_memory_folder(folder)
+
+        def _ensure_qpsc_folders(self, notify: bool = True) -> None:
+            if not self.config_data.memory_folder:
+                if hasattr(self, "qpsc_folder_status_var"):
+                    self.qpsc_folder_status_var.set(UI_TEXT["qpsc_folder_status_waiting"])
+                return
+            try:
+                folders = ensure_qpsc_memory_structure(Path(self.config_data.memory_folder))
+            except Exception as exc:
+                self._append_log(UI_TEXT["log_index_error"].format(error=str(exc)))
+                return
+            if hasattr(self, "qpsc_folder_status_var"):
+                self.qpsc_folder_status_var.set(UI_TEXT["qpsc_folder_status_ready"])
+            if notify:
+                self._append_log(UI_TEXT["log_qpsc_folders_ready"].format(count=len(folders)))
+                self._notify(UI_TEXT["notify_qpsc_folders_ready"])
 
         def _set_watch_folder(self, folder: str, persist: bool = True) -> None:
             clean = str(folder or "")
@@ -2465,6 +2724,34 @@ def run_gui(launch_check: bool = False) -> int:
         def _toggle_slack_inbox(self) -> None:
             self._save_slack_settings()
 
+        def _slack_routes_json_text(self) -> str:
+            return dump_slack_channel_routes(load_slack_channel_routes(self.config_data.slack_channel_routes_json))
+
+        def _save_slack_routes_settings(self) -> None:
+            try:
+                raw_text = self.slack_routes_box.get("1.0", "end").strip() if hasattr(self, "slack_routes_box") else ""
+                routes = load_slack_channel_routes(raw_text)
+                self.config_data.slack_channel_routes_json = dump_slack_channel_routes(routes)
+                self.config_store.save(self.config_data)
+                if hasattr(self, "slack_routes_box"):
+                    set_textbox_text(self.slack_routes_box, self.config_data.slack_channel_routes_json)
+                if hasattr(self, "slack_routes_status_var"):
+                    self.slack_routes_status_var.set(UI_TEXT["status_slack_routes_saved"])
+                self._append_log(UI_TEXT["log_slack_routes_saved"].format(count=len(routes)))
+            except Exception as exc:
+                if hasattr(self, "slack_routes_status_var"):
+                    self.slack_routes_status_var.set(UI_TEXT["status_slack_routes_invalid"])
+                self._append_log(UI_TEXT["log_slack_config_save_failed"].format(missing=str(exc)))
+
+        def _reset_slack_routes_settings(self) -> None:
+            self.config_data.slack_channel_routes_json = dump_slack_channel_routes()
+            self.config_store.save(self.config_data)
+            if hasattr(self, "slack_routes_box"):
+                set_textbox_text(self.slack_routes_box, self.config_data.slack_channel_routes_json)
+            if hasattr(self, "slack_routes_status_var"):
+                self.slack_routes_status_var.set(UI_TEXT["status_slack_routes_saved"])
+            self._append_log(UI_TEXT["log_slack_routes_reset"])
+
         def _save_aru_settings(self) -> None:
             token = self.aru_token_entry.get().strip() if hasattr(self, "aru_token_entry") else ""
             channel_id = self.aru_channel_entry.get().strip() if hasattr(self, "aru_channel_entry") else ""
@@ -2512,6 +2799,31 @@ def run_gui(launch_check: bool = False) -> int:
 
         def _toggle_aru_inbox(self) -> None:
             self._save_aru_settings()
+
+        def _save_codex_watch_settings(self) -> None:
+            path_text = self.codex_sessions_entry.get().strip() if hasattr(self, "codex_sessions_entry") else ""
+            if not path_text:
+                path_text = str(codex_sessions_default_path())
+            self.config_data.codex_auto_watch_enabled = bool(self.codex_watch_var.get())
+            self.config_data.codex_sessions_path = path_text
+            self.config_data.codex_auto_save_folder = self.config_data.codex_auto_save_folder or "30_codex"
+            self.config_store.save(self.config_data)
+            self._update_codex_watch_status()
+            self._append_log(
+                UI_TEXT["log_codex_watch_saved"].format(
+                    enabled=self.config_data.codex_auto_watch_enabled,
+                    path=self.config_data.codex_sessions_path,
+                )
+            )
+
+        def _check_codex_watch_path(self) -> None:
+            self._save_codex_watch_settings()
+            exists, path_text = codex_watch_status(self.config_data.codex_sessions_path)
+            if hasattr(self, "codex_watch_status_var"):
+                self.codex_watch_status_var.set(
+                    UI_TEXT["status_codex_watch_ready"] if exists else UI_TEXT["status_codex_watch_missing"]
+                )
+            self._append_log(UI_TEXT["log_codex_watch_checked"].format(exists=exists, path=path_text))
 
         def _toggle_auto_index(self) -> None:
             self.config_data.auto_index_enabled = bool(self.auto_index_var.get())
@@ -2650,6 +2962,17 @@ def run_gui(launch_check: bool = False) -> int:
                     self.codex_report_status_var.set(f"{UI_TEXT['status_codex_report_watching']} / {pending}")
             else:
                 self.codex_report_status_var.set(UI_TEXT["status_codex_report_idle"])
+
+        def _update_codex_watch_status(self) -> None:
+            if not hasattr(self, "codex_watch_status_var"):
+                return
+            if not self.codex_watch_var.get():
+                self.codex_watch_status_var.set(UI_TEXT["status_codex_watch_disabled"])
+                return
+            exists, _path_text = codex_watch_status(self.config_data.codex_sessions_path or codex_sessions_default_path())
+            self.codex_watch_status_var.set(
+                UI_TEXT["status_codex_watch_ready"] if exists else UI_TEXT["status_codex_watch_missing"]
+            )
 
         def _update_slack_status(self) -> None:
             if not hasattr(self, "slack_status_var"):
@@ -2994,6 +3317,11 @@ def run_gui(launch_check: bool = False) -> int:
 
         def _slack_inbox_worker(self, memory_folder: Path, token: str, channel_id: str, last_ts: str) -> None:
             try:
+                routes = load_slack_channel_routes(self.config_data.slack_channel_routes_json)
+                route = find_slack_channel_route(channel_id, routes)
+                save_folder = str(route.get("save_folder") or "") if route else ""
+                source_type = str(route.get("qpsc_source") or "slack") if route else "slack"
+                inbox_label = str(route.get("channel_name") or "Slack Inbox") if route else "Slack Inbox"
                 result = poll_slack_inbox(
                     database=self.database,
                     memory_folder=memory_folder,
@@ -3001,6 +3329,10 @@ def run_gui(launch_check: bool = False) -> int:
                     channel_id=channel_id,
                     last_ts=last_ts,
                     poll_timeout_seconds=8.0,
+                    source_type=source_type,
+                    folder_name="slack",
+                    inbox_label=inbox_label,
+                    save_folder=save_folder,
                 )
                 self.events.put(("slack_inbox_done", result))
             except Exception as exc:
@@ -3035,6 +3367,9 @@ def run_gui(launch_check: bool = False) -> int:
 
         def _aru_inbox_worker(self, memory_folder: Path, token: str, channel_id: str, last_ts: str) -> None:
             try:
+                routes = load_slack_channel_routes(self.config_data.slack_channel_routes_json)
+                route = find_slack_channel_route(channel_id, routes) or find_slack_channel_route("#brainz-aru", routes)
+                save_folder = str(route.get("save_folder") or "") if route else ""
                 result = poll_slack_inbox(
                     database=self.database,
                     memory_folder=memory_folder,
@@ -3046,6 +3381,7 @@ def run_gui(launch_check: bool = False) -> int:
                     folder_name="aru",
                     inbox_label="Aru Inbox",
                     process_tasks=False,
+                    save_folder=save_folder,
                 )
                 self.events.put(("aru_inbox_done", result))
             except Exception as exc:

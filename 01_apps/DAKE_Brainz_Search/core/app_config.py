@@ -32,11 +32,16 @@ class AppConfig:
     slack_channel_id: str = ""
     slack_poll_interval_seconds: int = 10
     slack_last_ts: str = ""
+    slack_channel_routes_json: str = ""
     enable_aru_inbox: bool = False
     aru_slack_token: str = ""
     aru_channel_id: str = ""
     aru_poll_interval_seconds: int = 10
     aru_last_ts: str = ""
+    codex_auto_watch_enabled: bool = False
+    codex_sessions_path: str = ""
+    codex_auto_save_folder: str = "30_codex"
+    codex_last_scanned_at: str = ""
     slack_notify_enabled: bool = False
     slack_webhook_url: str = ""
     slack_notify_max_per_day: int = 3
@@ -141,11 +146,16 @@ class ConfigStore:
             slack_channel_id=str(data.get("slack_channel_id", "") or ""),
             slack_poll_interval_seconds=parse_int(data.get("slack_poll_interval_seconds", 10), default=10, minimum=5, maximum=15),
             slack_last_ts=str(data.get("slack_last_ts", "") or ""),
+            slack_channel_routes_json=str(data.get("slack_channel_routes_json", "") or ""),
             enable_aru_inbox=bool(data.get("enable_aru_inbox", False)),
             aru_slack_token=str(data.get("aru_slack_token", "") or ""),
             aru_channel_id=str(data.get("aru_channel_id", "") or ""),
             aru_poll_interval_seconds=parse_int(data.get("aru_poll_interval_seconds", 10), default=10, minimum=5, maximum=15),
             aru_last_ts=str(data.get("aru_last_ts", "") or ""),
+            codex_auto_watch_enabled=bool(data.get("codex_auto_watch_enabled", False)),
+            codex_sessions_path=str(data.get("codex_sessions_path", "") or ""),
+            codex_auto_save_folder=str(data.get("codex_auto_save_folder", "30_codex") or "30_codex"),
+            codex_last_scanned_at=str(data.get("codex_last_scanned_at", "") or ""),
             slack_notify_enabled=bool(data.get("slack_notify_enabled", False)),
             slack_webhook_url=str(data.get("slack_webhook_url", "") or ""),
             slack_notify_max_per_day=parse_int(data.get("slack_notify_max_per_day", 3), default=3, minimum=1, maximum=5),

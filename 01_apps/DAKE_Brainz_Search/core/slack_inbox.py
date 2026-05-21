@@ -198,6 +198,7 @@ def poll_slack_inbox(
     folder_name: str = "slack",
     inbox_label: str = "Slack Inbox",
     process_tasks: bool = True,
+    save_folder: str = "",
 ) -> SlackInboxResult:
     token = token.strip()
     channel_id = channel_id.strip()
@@ -233,7 +234,7 @@ def poll_slack_inbox(
     if status != "ok":
         return _result(status, last_ts, channel_id, message)
 
-    slack_folder = memory_folder / safe_folder_name(folder_name)
+    slack_folder = memory_folder / safe_relative_folder(save_folder, folder_name)
     imported = 0
     skipped = 0
     failed = 0
@@ -515,7 +516,7 @@ def save_borinef_note_from_slack(
         )
 
     published_date = timestamp.strftime("%Y-%m-%d")
-    note_folder = memory_folder / "BORINEF" / "note" / "published" / timestamp.strftime("%Y")
+    note_folder = memory_folder / "40_borinef" / "note" / "published" / timestamp.strftime("%Y")
     note_folder.mkdir(parents=True, exist_ok=True)
     filename = f"{published_date}_{safe_note_filename_part(title)}.md"
     path = next_available_path(note_folder / filename)
@@ -592,15 +593,19 @@ def next_available_path(path: Path) -> Path:
 
 
 def find_existing_borinef_note_path(memory_folder: Path, note_url: str) -> Path | None:
-    root = memory_folder / "BORINEF" / "note" / "published"
-    if not root.exists():
-        return None
-    for path in root.rglob("*.md"):
-        try:
-            if note_url in path.read_text(encoding="utf-8"):
-                return path.resolve()
-        except OSError:
+    roots = (
+        memory_folder / "40_borinef" / "note" / "published",
+        memory_folder / "BORINEF" / "note" / "published",
+    )
+    for root in roots:
+        if not root.exists():
             continue
+        for path in root.rglob("*.md"):
+            try:
+                if note_url in path.read_text(encoding="utf-8"):
+                    return path.resolve()
+            except OSError:
+                continue
     return None
 
 
@@ -1105,6 +1110,17 @@ def existing_task_destination(queue_folder: Path, file_name: str) -> Path | None
 def safe_folder_name(value: str) -> str:
     clean = re.sub(r"[^0-9A-Za-z_.-]+", "_", (value or "").strip()).strip("._")
     return clean or "slack"
+
+
+def safe_relative_folder(value: str, fallback: str) -> Path:
+    parts: list[str] = []
+    for part in str(value or "").replace("\\", "/").split("/"):
+        clean = safe_folder_name(part)
+        if clean and clean not in {".", ".."}:
+            parts.append(clean)
+    if not parts:
+        return Path(safe_folder_name(fallback))
+    return Path(*parts)
 
 
 def safe_file_part(value: str) -> str:

@@ -163,17 +163,54 @@ Phase 18では、QPSC内部で静かに浮いた記憶をSlackへ小さく置く
 - 大量通知は避け、初期値では1日最大3件に抑えます
 - OpenClaw本格導入前の軽い外部導線です
 
+## QPSC Phase 20: BRAINZ母艦UIと保存地形
+
+Phase 20では、BRAINZを検索や原本表示の前面から外し、Slack / ChatGPT export / CodexログをローカルPCへ保存する母艦UIへ寄せます。
+
+- Slackは投入口です。`#brainz-inbox` は巡回される熱、`#brainz-aru` は育てる熱として扱います
+- BRAINZは新しい `brainz_memory/` 地形を作成できます
+- Slackチャンネル別保存設定を持ち、保存先、source、OIKAWA通知、heat対象を設定できます
+- Codexログ自動監視入口として `%USERPROFILE%\.codex\sessions\` の存在確認を置きます
+- 自由ペースト投稿は削除せず、緊急保存として残します
+
+新しい保存地形:
+
+```text
+brainz_memory/
+  00_inbox/
+  10_slack/
+    brainz-inbox/
+    brainz-note/
+    brainz-codex/
+    brainz-aru/
+    brainz-reaction/
+  20_chatgpt/
+  30_codex/
+  40_borinef/
+    note/
+      published/
+      reactions/
+      source_fragments/
+  90_system/
+    logs/
+    config/
+```
+
+既存の `slack/`、`aru/`、`codex_reports/`、`chatgpt/`、`BORINEF/` は移行候補です。削除せず、OIKAWAやOpenClawが巡回しやすい地形へ少しずつ寄せます。
+
+OpenClawはまだ本格導入しません。現時点では、BRAINZが保存母艦、OIKAWAが巡回 / 熾火 / 正本ニュース、Obsidianが観測UIという役割をREADME上で固定します。
+
 ## QPSC Phase 20: BORINEF note循環
 
 Phase 20では、SlackへnoteタイトルとURLを投げるだけで、公開済noteをBRAINZへ戻す循環を追加しました。
 
 - `https://note.com/` を含むSlack投稿を検出します
 - URL直前行、または先頭行をタイトルとして扱います
-- 保存先は `brainz_memory/BORINEF/note/published/YYYY/` です
+- 保存先は `brainz_memory/40_borinef/note/published/YYYY/` です
 - Markdownは `status: published`、`platform: note`、`url` を持つpublished正本として保存します
 - 同じnote URLが既に保存済みなら、再保存せず静かにskipします
 - 保存後は `borinef_note` 通知を `qpsc_notifications.json` に残し、OIKAWAの巡回・熾火・熱検索対象に自然に混ざります
-- reactions保存は今後 `brainz_memory/BORINEF/note/reactions/` に寄せる予定です
+- reactions保存は今後 `brainz_memory/40_borinef/note/reactions/` に寄せる予定です
 
 ## Phase 1でできること
 

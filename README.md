@@ -78,6 +78,19 @@ QPSC v0.1では、BRAINZが保存・取り込み・index・設定・状態を担
 
 承認導線はCodex公式モバイル承認 / 遠隔操作導線を優先します。OllamaとOpenClawはまだ本線へ入れず、将来の補助候補として扱います。
 
+## QPSC v0.3 方向整理 / Phase 20
+
+QPSC v0.3では、BRAINZを「見るアプリ」から外し、ローカルPCへ正本を受け止める母艦として固定します。
+
+- Slack = 超低摩擦の投入口
+- BRAINZ = 保存母艦。取り込み、設定、状態、OIKAWA起動導線を担います
+- OIKAWA = 巡回、熾火、正本ニュース、今日の戻りを扱う前面端末
+- OpenClaw = 将来の巡回生物。README巡回、Git差分確認、正本ニュース生成を静かに担う候補です
+- Codex = 呼び出す職人。実装、修正、Git、README更新を高密度に行います
+- Obsidian = ローカルMarkdown世界の観測UI。graph、backlink、preview、searchのビュー層です
+
+正本はMarkdown、README、release_body、BRAINZ、Gitに残します。Obsidianを消しても正本は残り、OIKAWAはOpenClawの便りを受け取る顔として育てます。
+
 ## QPSC v0.2 現在地
 
 QPSC v0.2では、取り込みから原本へ戻る導線に加えて、OIKAWA側で「熱」「巡回」「側に在る」を扱える現在地まで固定します。QPSCは通知アプリでもタスク管理アプリでもなく、忘れていいための記憶庫です。判断は代行せず、AIは熱の気配を小さく添えるだけにします。
