@@ -94,6 +94,24 @@ UI_TEXT = {
     "section_qpsc_state": "QPSC状態",
     "cosmos_news_title": "正本ニュース",
     "cosmos_news_hint": "静かに巡回しています。",
+    "canonical_news_waiting": "まだ静かです。",
+    "canonical_news_bullet": "- {text}",
+    "canonical_news_slack": "Slackから記憶が入りました",
+    "canonical_news_codex": "Codex報告が正本として入りました",
+    "canonical_news_chatgpt": "ChatGPT exportがBRAINZに入りました",
+    "canonical_news_note": "公開済noteが戻っています",
+    "canonical_news_quiet": "静かだった記憶がまた浮いています",
+    "canonical_news_side": "側に残っている記憶があります",
+    "canonical_news_revisit": "最近戻った正本があります",
+    "canonical_news_heat": "熾火が少し残っています",
+    "canonical_news_awake": "記憶庫は静かに起きています",
+    "orbit_brief_waiting": "今日の整理はまだ静かです。",
+    "orbit_brief_import": "今日入った記憶があります",
+    "orbit_brief_ember": "熾火が少し残っています",
+    "orbit_brief_return": "最近戻った正本があります",
+    "orbit_brief_quiet": "静かだった記憶がまた浮いています",
+    "orbit_brief_side": "側に在る記憶があります",
+    "orbit_brief_awake": "記憶庫は静かに起きています",
     "label_memory_folder": "記憶ルート",
     "memory_root_short": "記憶ルート: {name}",
     "memory_folder_missing": "記憶フォルダ未検出",
@@ -115,6 +133,7 @@ UI_TEXT = {
     "source_preview_failed": "原本を表示できませんでした。",
     "source_open_missing": "原本はまだ選ばれていません。",
     "source_open_failed": "原本を開けませんでした。",
+    "source_selected_template": "選択中:\n{title}",
     "source_preview_not_file": "原本を表示できませんでした。",
     "source_preview_path": "PATH: {path}",
     "source_preview_truncated": "\n\n---\n先頭のみ表示しています。",
@@ -1867,6 +1886,8 @@ class OikawaApp(tk.Tk):
         self.qpsc_notification_var = tk.StringVar(value=UI_TEXT["qpsc_waiting"])
         self.orbit_metrics_var = tk.StringVar(value=UI_TEXT["orbit_status_loading"])
         self.orbit_flow_var = tk.StringVar(value=UI_TEXT["orbit_status_loading"])
+        self.canonical_news_var = tk.StringVar(value=UI_TEXT["canonical_news_waiting"])
+        self.orbit_brief_var = tk.StringVar(value=UI_TEXT["orbit_brief_waiting"])
         self.qpsc_self_check_var = tk.StringVar(value=self._initial_qpsc_self_check_text())
 
         left_panel = tk.Frame(self, bg=COLORS["background"])
@@ -1971,6 +1992,7 @@ class OikawaApp(tk.Tk):
         ).pack(anchor="w")
         self.cards_frame = tk.Frame(self.results_frame, bg=COLORS["background"])
         self.cards_frame.pack(fill="both", expand=True, pady=(8, 0))
+        self.results_frame.pack_forget()
 
         actions = tk.Frame(left_panel, bg=COLORS["background"])
         actions.pack(fill="x", pady=(12, 0))
@@ -2034,7 +2056,7 @@ class OikawaApp(tk.Tk):
             padx=18,
             pady=16,
         )
-        cosmos_board.place(relx=0.29, rely=0.055, relwidth=0.42, relheight=0.61)
+        cosmos_board.place(relx=0.29, rely=0.055, relwidth=0.42, relheight=0.68)
         tk.Label(
             cosmos_board,
             text=UI_TEXT["cosmos_news_title"],
@@ -2050,48 +2072,32 @@ class OikawaApp(tk.Tk):
             font=FONT_JP_SMALL,
             wraplength=500,
             justify="left",
-        ).pack(anchor="w", pady=(5, 10))
+        ).pack(anchor="w", pady=(5, 14))
         tk.Label(
             cosmos_board,
-            textvariable=self.qpsc_notification_var,
+            textvariable=self.canonical_news_var,
             fg=COLORS["text"],
             bg=COLORS["panel"],
             font=FONT_JP,
             wraplength=500,
             justify="left",
-        ).pack(anchor="w", pady=(0, 12))
+        ).pack(anchor="w", pady=(0, 22))
         tk.Label(
             cosmos_board,
             text=UI_TEXT["section_orbit_today"],
             fg=COLORS["muted"],
             bg=COLORS["panel"],
             font=FONT_LABEL,
-        ).pack(anchor="w", pady=(2, 0))
-        tk.Label(
-            cosmos_board,
-            textvariable=self.orbit_metrics_var,
-            fg=COLORS["text"],
-            bg=COLORS["panel"],
-            font=FONT_JP_SMALL,
-            wraplength=500,
-            justify="left",
-        ).pack(anchor="w", pady=(4, 10))
-        tk.Label(
-            cosmos_board,
-            text=UI_TEXT["section_orbit_flow"],
-            fg=COLORS["muted"],
-            bg=COLORS["panel"],
-            font=FONT_LABEL,
         ).pack(anchor="w")
         tk.Label(
             cosmos_board,
-            textvariable=self.orbit_flow_var,
+            textvariable=self.orbit_brief_var,
             fg=COLORS["text"],
             bg=COLORS["panel"],
             font=FONT_JP_SMALL,
             wraplength=500,
             justify="left",
-        ).pack(anchor="w", pady=(4, 0))
+        ).pack(anchor="w", pady=(5, 0))
 
         self.source_preview_status_var = tk.StringVar(value=UI_TEXT["source_preview_empty"])
         source_preview = tk.Frame(
@@ -2102,7 +2108,8 @@ class OikawaApp(tk.Tk):
             padx=16,
             pady=14,
         )
-        source_preview.place(relx=0.29, rely=0.75, relwidth=0.42, relheight=0.13)
+        self.source_preview_frame = source_preview
+        source_preview.place(relx=0.29, rely=0.76, relwidth=0.42, relheight=0.12)
         tk.Label(
             source_preview,
             text=UI_TEXT["section_source_preview"],
@@ -2146,6 +2153,7 @@ class OikawaApp(tk.Tk):
         preview_scrollbar.configure(command=self.source_preview_box.yview)
         preview_body.pack_forget()
         self._set_source_preview_text(UI_TEXT["source_preview_empty"])
+        source_preview.place_forget()
 
         right_panel = tk.Frame(self, bg=COLORS["background"])
         right_panel.place(relx=0.74, rely=0.055, relwidth=0.23, relheight=0.84)
@@ -2323,6 +2331,8 @@ class OikawaApp(tk.Tk):
         ).pack(anchor="w")
         self.quiet_memory_frame = tk.Frame(quiet_memory, bg=COLORS["background"])
         self.quiet_memory_frame.pack(fill="x", pady=(5, 0))
+        notice.pack_forget()
+        orbit.pack_forget()
 
         footer = tk.Frame(self, bg=COLORS["background"])
         footer.place(relx=0.03, rely=0.93, relwidth=0.94, relheight=0.055)
@@ -2408,6 +2418,7 @@ class OikawaApp(tk.Tk):
         self._refresh_quiet_memory_candidates()
         notifications, sedimented_count = build_notification_view(self.qpsc_notifications_all, self.heat_candidates, limit=3)
         self._render_qpsc_import_notifications(notifications, sedimented_count)
+        self._refresh_canonical_news(brainz_awake=brainz_awake)
         self._start_orbit_refresh(brainz_awake=brainz_awake)
         if schedule:
             self.after(10000, self._refresh_qpsc_notifications)
@@ -2654,15 +2665,6 @@ class OikawaApp(tk.Tk):
         for child in self.heat_candidates_frame.winfo_children():
             child.destroy()
         if not candidates:
-            tk.Label(
-                self.heat_candidates_frame,
-                text=UI_TEXT["heat_candidate_empty"],
-                fg=COLORS["muted"],
-                bg=COLORS["background"],
-                font=FONT_JP_SMALL,
-                wraplength=300,
-                justify="left",
-            ).pack(anchor="w")
             return
         for candidate in candidates[:3]:
             row = tk.Frame(self.heat_candidates_frame, bg=COLORS["background"], cursor="hand2")
@@ -2704,15 +2706,6 @@ class OikawaApp(tk.Tk):
         for child in self.revisit_candidates_frame.winfo_children():
             child.destroy()
         if not candidates:
-            tk.Label(
-                self.revisit_candidates_frame,
-                text=UI_TEXT["revisit_empty"],
-                fg=COLORS["muted"],
-                bg=COLORS["background"],
-                font=FONT_JP_SMALL,
-                wraplength=230,
-                justify="left",
-            ).pack(anchor="w")
             return
         for candidate in candidates[:3]:
             row = tk.Frame(self.revisit_candidates_frame, bg=COLORS["background"], cursor="hand2")
@@ -2737,15 +2730,6 @@ class OikawaApp(tk.Tk):
         for child in self.side_memory_frame.winfo_children():
             child.destroy()
         if not candidates:
-            tk.Label(
-                self.side_memory_frame,
-                text=UI_TEXT["side_memory_empty"],
-                fg=COLORS["muted"],
-                bg=COLORS["background"],
-                font=FONT_JP_SMALL,
-                wraplength=230,
-                justify="left",
-            ).pack(anchor="w")
             return
         for candidate in candidates[:3]:
             row = tk.Frame(self.side_memory_frame, bg=COLORS["background"], cursor="hand2")
@@ -2771,15 +2755,6 @@ class OikawaApp(tk.Tk):
         for child in self.quiet_memory_frame.winfo_children():
             child.destroy()
         if not candidates:
-            tk.Label(
-                self.quiet_memory_frame,
-                text=UI_TEXT["quiet_memory_empty"],
-                fg=COLORS["muted"],
-                bg=COLORS["background"],
-                font=FONT_JP_SMALL,
-                wraplength=230,
-                justify="left",
-            ).pack(anchor="w")
             return
         for candidate in candidates[:3]:
             row = tk.Frame(self.quiet_memory_frame, bg=COLORS["background"], cursor="hand2")
@@ -2798,30 +2773,84 @@ class OikawaApp(tk.Tk):
             for child in row.winfo_children():
                 child.bind("<Button-1>", lambda _event, selected=candidate: self._open_quiet_memory_candidate(selected))
 
+    def _brief_orbit_lines(self, orbit: OrbitToday) -> list[str]:
+        lines: list[str] = []
+        if orbit.notification_count_today:
+            lines.append(UI_TEXT["orbit_brief_import"])
+        if orbit.ember_count:
+            lines.append(UI_TEXT["orbit_brief_ember"])
+        if orbit.recent_return_count or orbit.revisit_count_today:
+            lines.append(UI_TEXT["orbit_brief_return"])
+        if orbit.quiet_memory_count:
+            lines.append(UI_TEXT["orbit_brief_quiet"])
+        if orbit.side_memory_count:
+            lines.append(UI_TEXT["orbit_brief_side"])
+        if orbit.brainz_awake:
+            lines.append(UI_TEXT["orbit_brief_awake"])
+        return self._unique_short_lines(lines, limit=3) or [UI_TEXT["orbit_brief_waiting"]]
+
+    def _refresh_canonical_news(self, orbit: OrbitToday | None = None, brainz_awake: bool | None = None) -> None:
+        if not hasattr(self, "canonical_news_var"):
+            return
+        lines = self._canonical_news_lines(orbit=orbit, brainz_awake=brainz_awake)
+        self.canonical_news_var.set(
+            "\n".join(UI_TEXT["canonical_news_bullet"].format(text=line) for line in lines)
+        )
+
+    def _canonical_news_lines(self, orbit: OrbitToday | None = None, brainz_awake: bool | None = None) -> list[str]:
+        lines: list[str] = []
+        for notification in self.qpsc_notifications_all[:8]:
+            source = str(notification.source or "").lower()
+            title = str(notification.title or "").strip()
+            if "slack" in source:
+                lines.append(UI_TEXT["canonical_news_slack"])
+            elif "codex" in source:
+                lines.append(UI_TEXT["canonical_news_codex"])
+            elif "chatgpt" in source:
+                lines.append(UI_TEXT["canonical_news_chatgpt"])
+            elif "note" in source or "borinef" in source:
+                lines.append(UI_TEXT["canonical_news_note"])
+            elif title:
+                lines.append(title)
+        if self.quiet_memory_candidates:
+            lines.append(UI_TEXT["canonical_news_quiet"])
+        if self.side_memory_candidates:
+            lines.append(UI_TEXT["canonical_news_side"])
+        if self.revisit_candidates:
+            lines.append(UI_TEXT["canonical_news_revisit"])
+        if self.heat_candidates:
+            lines.append(UI_TEXT["canonical_news_heat"])
+        if orbit is not None:
+            lines.extend(self._brief_orbit_lines(orbit))
+        if brainz_awake:
+            lines.append(UI_TEXT["canonical_news_awake"])
+        return self._unique_short_lines(lines, limit=5) or [UI_TEXT["canonical_news_waiting"]]
+
+    def _unique_short_lines(self, lines: list[str], limit: int) -> list[str]:
+        seen: set[str] = set()
+        result: list[str] = []
+        for line in lines:
+            clean = str(line or "").strip()
+            if not clean or clean in seen:
+                continue
+            seen.add(clean)
+            result.append(clean)
+            if len(result) >= limit:
+                break
+        return result
+
     def _handle_orbit_done(self, payload: object) -> None:
         request_id, orbit = payload
         assert isinstance(request_id, int)
         assert isinstance(orbit, OrbitToday)
         if request_id != self.orbit_request_id:
             return
-        metrics = [
-            UI_TEXT["orbit_metric_today"].format(count=orbit.notification_count_today),
-            UI_TEXT["orbit_metric_unread"].format(count=orbit.unread_count),
-            UI_TEXT["orbit_metric_quieted"].format(count=orbit.quieted_count),
-            UI_TEXT["orbit_metric_ember"].format(count=orbit.ember_count),
-            UI_TEXT["orbit_metric_recent_returns"].format(count=orbit.recent_return_count),
-            UI_TEXT["orbit_metric_revisit_today"].format(count=orbit.revisit_count_today),
-            UI_TEXT["orbit_metric_side_memory"].format(count=orbit.side_memory_count),
-            UI_TEXT["orbit_metric_late_night_revisits"].format(count=orbit.late_night_revisit_count),
-            UI_TEXT["orbit_metric_heat_hint_revisits"].format(count=orbit.heat_hint_revisit_count),
-            UI_TEXT["orbit_metric_quiet_memory"].format(count=orbit.quiet_memory_count),
-            UI_TEXT["orbit_metric_late_night_ratio"].format(ratio=orbit.late_night_revisit_ratio),
-            UI_TEXT["orbit_metric_time_cross_revisits"].format(count=orbit.time_cross_revisit_count),
-            UI_TEXT["orbit_metric_awake"] if orbit.brainz_awake else UI_TEXT["orbit_metric_quiet"],
-        ]
-        self.orbit_metrics_var.set("\n".join(metrics))
-        flow_text = "\n".join(UI_TEXT["orbit_bullet"].format(text=line) for line in orbit.summary_lines[:5])
-        self.orbit_flow_var.set(flow_text)
+        brief_lines = self._brief_orbit_lines(orbit)
+        brief_text = "\n".join(UI_TEXT["canonical_news_bullet"].format(text=line) for line in brief_lines)
+        self.orbit_metrics_var.set(brief_text)
+        self.orbit_brief_var.set(brief_text)
+        self.orbit_flow_var.set(brief_text)
+        self._refresh_canonical_news(orbit=orbit, brainz_awake=orbit.brainz_awake)
         self._render_orbit_next_candidates(orbit.next_candidates)
 
     def _handle_orbit_error(self, payload: object) -> None:
@@ -3281,20 +3310,21 @@ class OikawaApp(tk.Tk):
         self.summary_var.set(str(payload))
         messagebox.showerror(UI_TEXT["dialog_title"], f"{UI_TEXT['status_error']}\n{payload}")
 
+    def _show_results_frame(self) -> None:
+        if hasattr(self, "results_frame") and not self.results_frame.winfo_ismapped():
+            self.results_frame.pack(fill="both", expand=True, pady=(18, 0))
+
+    def _hide_results_frame(self) -> None:
+        if hasattr(self, "results_frame"):
+            self.results_frame.pack_forget()
+
     def _render_empty_cards(self) -> None:
         self._clear_cards()
-        card = self._card_frame()
-        card.pack(fill="x", pady=(0, 10))
-        tk.Label(
-            card,
-            text=UI_TEXT["card_empty"],
-            fg=COLORS["muted"],
-            bg=COLORS["panel"],
-            font=FONT_JP_SMALL,
-        ).pack(anchor="w")
+        self._hide_results_frame()
 
     def _render_loading_card(self, message: str) -> None:
         self._clear_cards()
+        self._show_results_frame()
         card = self._card_frame()
         card.pack(fill="x", pady=(0, 10))
         tk.Label(
@@ -3310,6 +3340,7 @@ class OikawaApp(tk.Tk):
         if not hits:
             self._render_loading_card(UI_TEXT["status_no_search_results"])
             return
+        self._show_results_frame()
         for hit in hits[:8]:
             card = self._card_frame()
             card.pack(fill="x", pady=(0, 10))
@@ -3350,6 +3381,7 @@ class OikawaApp(tk.Tk):
 
     def _render_cards(self, result: AnalysisResult) -> None:
         self._clear_cards()
+        self._show_results_frame()
         if not result.fragments:
             card = self._card_frame()
             card.pack(fill="x", pady=(0, 10))
@@ -3489,7 +3521,8 @@ class OikawaApp(tk.Tk):
         else:
             content = f"{header}\n\n{content}"
         self.source_preview_loaded = True
-        self.source_preview_status_var.set(UI_TEXT["source_preview_loaded"])
+        display_title = title or payload.path.name
+        self.source_preview_status_var.set(UI_TEXT["source_selected_template"].format(title=display_title))
         self._set_source_preview_text(content)
         self._refresh_revisit_candidates()
         self._refresh_side_memory_candidates()
@@ -3512,6 +3545,11 @@ class OikawaApp(tk.Tk):
         self.selected_source_path = path
         if hasattr(self, "open_source_button"):
             self.open_source_button.configure(state="normal" if path else "disabled")
+        if hasattr(self, "source_preview_frame"):
+            if path:
+                self.source_preview_frame.place(relx=0.29, rely=0.76, relwidth=0.42, relheight=0.12)
+            else:
+                self.source_preview_frame.place_forget()
 
     def _set_source_preview_text(self, text: str) -> None:
         if not hasattr(self, "source_preview_box"):
