@@ -355,3 +355,9 @@ BRAINZ記憶フォルダを巡回
 提案MarkdownをBRAINZへ保存
 Windows向けexe
 ```
+
+## QPSC Phase 22: BRAINZ通常運用UIとの分担
+
+BRAINZ側では検索 / 原本表示 / Related / Memory Flow / Handoffを前面から縮小します。
+
+OIKAWAは、BRAINZが `PEAKHEADZ_ROOT` へ保存したMarkdown正本へ戻る場所です。読む、戻る、熾火、巡回、側に在る、熱補助はOIKAWAが担当します。

@@ -156,3 +156,29 @@ OIKAWAは、必要な記憶が静かに側へ戻ってくる場所です。QPSC�
 ---
 
 © 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta
+
+## QPSC通常運用 / Phase 22
+
+通常運用では、QPSCを次の流れで扱います。
+
+```text
+Slackへ投げる
+↓
+BRAINZが受け止める
+↓
+PEAKHEADZ_ROOTへMarkdown正本保存
+↓
+OIKAWAで再会する
+↓
+Obsidianで観測する
+```
+
+- Slack = 投入口
+- BRAINZ = 保存母艦 / 設定 / 監視
+- PEAKHEADZ_ROOT = 正本保管庫
+- OIKAWA = 熾火 / 巡回 / 側に在る / 熱補助
+- Obsidian = Markdown観測UI
+- Codex = 実装職人
+- OpenClaw = 将来の巡回生物
+
+`PEAKHEADZ_ROOT/slack/` はlegacy保存先です。削除やrenameはせず、新規Slack保存は `PEAKHEADZ_ROOT/10_slack/*` へ寄せます。

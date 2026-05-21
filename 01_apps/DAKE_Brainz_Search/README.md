@@ -679,3 +679,51 @@ Aru Inbox は、既存の Slack Inbox とは別の「在る」専用取り込み
 最初に何をすればいいか、どう運用すると便利かは [使い方.md](使い方.md) を参照してください。
 
 Remote Queue の具体例も [使い方.md](使い方.md) に追記しています。
+
+## QPSC Phase 22: 通常運用UI
+
+BRAINZは、検索や原本表示の前面ではなく、設定 / 保存 / 監視の母艦UIへ寄せます。
+
+- 前面から検索欄、原本確認、Related Tags、Related Memory、Memory Flow、Handoff Summaryを外します
+- OIKAWAを開く導線は1か所に集約します
+- Slack設定はJSON直表示ではなく、5チャンネルカードで扱います
+- ChatGPT export取り込み、Codexログ監視、BRAINZ Logは通常運用の入口として残します
+
+Slackチャンネル別保存:
+
+```text
+#brainz-inbox     -> PEAKHEADZ_ROOT/10_slack/brainz-inbox/
+#brainz-aru       -> PEAKHEADZ_ROOT/10_slack/brainz-aru/
+#brainz-note      -> PEAKHEADZ_ROOT/10_slack/brainz-note/
+#brainz-codex     -> PEAKHEADZ_ROOT/10_slack/brainz-codex/
+#brainz-reaction  -> PEAKHEADZ_ROOT/10_slack/brainz-reaction/
+```
+
+Slack投稿はchannel_idまたはchannel_nameから保存ルートを引きます。旧 `PEAKHEADZ_ROOT/slack/` はlegacy扱いで、削除も自動移動もしません。
+
+Slack Markdown正本はfrontmatterを持つ形に整えます。
+
+```markdown
+---
+source: slack
+title: "投稿の先頭から作った短いタイトル"
+channel: brainz-inbox
+channel_id: CXXXX
+timestamp: 2026-05-21 21:46:22
+slack_ts: "..."
+status: captured
+tags:
+  - inbox
+---
+
+# 投稿の先頭から作った短いタイトル
+
+投稿本文
+
+---
+
+Slack permalink:
+https://...
+```
+
+`#brainz-note` のnote URLはBORINEF note循環を優先し、published正本として `PEAKHEADZ_ROOT/40_borinef/note/published/YYYY/` にも流れます。duplicate防止は維持します。

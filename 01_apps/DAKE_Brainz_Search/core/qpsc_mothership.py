@@ -30,6 +30,8 @@ QPSC_MEMORY_FOLDER_PATHS = (
 DEFAULT_SLACK_CHANNEL_ROUTES: tuple[dict[str, Any], ...] = (
     {
         "channel_name": "#brainz-inbox",
+        "channel_id": "",
+        "enabled": True,
         "purpose": "unsettled_heat",
         "save_folder": "10_slack/brainz-inbox",
         "default_tags": ["inbox"],
@@ -39,6 +41,8 @@ DEFAULT_SLACK_CHANNEL_ROUTES: tuple[dict[str, Any], ...] = (
     },
     {
         "channel_name": "#brainz-note",
+        "channel_id": "",
+        "enabled": True,
         "purpose": "published_note",
         "save_folder": "10_slack/brainz-note",
         "default_tags": ["BORINEF", "note"],
@@ -48,6 +52,8 @@ DEFAULT_SLACK_CHANNEL_ROUTES: tuple[dict[str, Any], ...] = (
     },
     {
         "channel_name": "#brainz-codex",
+        "channel_id": "",
+        "enabled": True,
         "purpose": "codex_reports",
         "save_folder": "10_slack/brainz-codex",
         "default_tags": ["codex"],
@@ -57,6 +63,8 @@ DEFAULT_SLACK_CHANNEL_ROUTES: tuple[dict[str, Any], ...] = (
     },
     {
         "channel_name": "#brainz-aru",
+        "channel_id": "",
+        "enabled": True,
         "purpose": "aru_fragments",
         "save_folder": "10_slack/brainz-aru",
         "default_tags": ["aru"],
@@ -66,6 +74,8 @@ DEFAULT_SLACK_CHANNEL_ROUTES: tuple[dict[str, Any], ...] = (
     },
     {
         "channel_name": "#brainz-reaction",
+        "channel_id": "",
+        "enabled": False,
         "purpose": "reactions",
         "save_folder": "10_slack/brainz-reaction",
         "default_tags": ["reaction"],
@@ -144,11 +154,29 @@ def default_slack_channel_routes() -> list[dict[str, Any]]:
 
 
 def normalize_slack_channel_routes(value: Any) -> list[dict[str, Any]]:
-    source_routes = value if isinstance(value, list) else default_slack_channel_routes()
-    normalized: list[dict[str, Any]] = []
+    source_routes = value if isinstance(value, list) else []
+    route_map: dict[str, dict[str, Any]] = {}
+    route_order: list[str] = []
+    for default_route in default_slack_channel_routes():
+        key = normalize_channel_key(str(default_route.get("channel_name") or ""))
+        route_map[key] = dict(default_route)
+        route_order.append(key)
     for item in source_routes:
         if not isinstance(item, dict):
             continue
+        channel_name = str(item.get("channel_name") or "").strip()
+        if not channel_name:
+            continue
+        key = normalize_channel_key(channel_name)
+        merged = dict(route_map.get(key, {}))
+        merged.update(item)
+        route_map[key] = merged
+        if key not in route_order:
+            route_order.append(key)
+
+    normalized: list[dict[str, Any]] = []
+    for key in route_order:
+        item = route_map.get(key, {})
         channel_name = str(item.get("channel_name") or "").strip()
         save_folder = str(item.get("save_folder") or "").strip()
         if not channel_name or not save_folder:
@@ -157,12 +185,16 @@ def normalize_slack_channel_routes(value: Any) -> list[dict[str, Any]]:
         normalized.append(
             {
                 "channel_name": channel_name,
+                "channel_id": str(item.get("channel_id") or "").strip(),
+                "enabled": bool(item.get("enabled", True)),
                 "purpose": str(item.get("purpose") or "").strip(),
                 "save_folder": normalize_relative_folder(save_folder),
                 "default_tags": [str(tag) for tag in tags] if isinstance(tags, list) else [],
                 "qpsc_source": str(item.get("qpsc_source") or "slack").strip() or "slack",
                 "enable_oikawa_notify": bool(item.get("enable_oikawa_notify", True)),
                 "enable_heat": bool(item.get("enable_heat", True)),
+                "last_imported_at": str(item.get("last_imported_at") or "").strip(),
+                "last_ts": str(item.get("last_ts") or "").strip(),
             }
         )
     return normalized or default_slack_channel_routes()
@@ -185,9 +217,13 @@ def dump_slack_channel_routes(routes: list[dict[str, Any]] | None = None) -> str
 
 def find_slack_channel_route(channel: str, routes: list[dict[str, Any]]) -> dict[str, Any] | None:
     clean_channel = normalize_channel_key(channel)
+    clean_raw = str(channel or "").strip().lower()
     for route in routes:
         route_channel = normalize_channel_key(str(route.get("channel_name") or ""))
+        route_channel_id = str(route.get("channel_id") or "").strip().lower()
         if clean_channel and clean_channel == route_channel:
+            return route
+        if clean_raw and route_channel_id and clean_raw == route_channel_id:
             return route
     return None
 
@@ -195,7 +231,8 @@ def find_slack_channel_route(channel: str, routes: list[dict[str, Any]]) -> dict
 def route_summary_lines(routes: list[dict[str, Any]]) -> list[str]:
     lines: list[str] = []
     for route in normalize_slack_channel_routes(routes):
-        lines.append(f"{route['channel_name']} -> {route['save_folder']}")
+        status = "on" if route.get("enabled", True) and route.get("channel_id") else "unset"
+        lines.append(f"{route['channel_name']} [{status}] -> {route['save_folder']}")
     return lines
 
 

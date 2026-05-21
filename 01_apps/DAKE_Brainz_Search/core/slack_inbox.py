@@ -379,7 +379,7 @@ def poll_slack_inbox(
         latest_ts=latest_ts,
         saved_files=saved_files,
         channel_id=channel_id,
-        channel_label=channel_id,
+        channel_label=inbox_label,
         message=f"{source_type} inbox imported" if imported else f"{source_type} connected",
         log_path=log_path,
         items=items,
@@ -667,22 +667,32 @@ def build_slack_markdown(
     inbox_label: str = "Slack Inbox",
 ) -> str:
     urls = extract_urls(message.text)
+    channel_name = clean_channel_name(inbox_label)
+    body = message.text.strip() or title
     lines = [
-        f"# {inbox_label}",
-        "",
+        "---",
         f"source: {source_type}",
-        f"channel: {channel_id}",
-        f"user: {message.user}",
+        f"title: {json.dumps(title, ensure_ascii=False)}",
+        f"channel: {channel_name}",
+        f"channel_id: {channel_id}",
         f"timestamp: {timestamp.strftime('%Y-%m-%d %H:%M:%S')}",
-        f"slack_ts: {message.ts}",
-        f"title: {title}",
-        "",
-        "---",
-        "",
-        message.text.rstrip(),
-        "",
-        "---",
+        f"slack_ts: {json.dumps(message.ts, ensure_ascii=False)}",
+        "status: captured",
+        "tags:",
     ]
+    for tag in slack_tags_for_label(inbox_label, source_type):
+        lines.append(f"  - {tag}")
+    lines.extend(
+        [
+            "---",
+            "",
+            f"# {title}",
+            "",
+            body,
+            "",
+            "---",
+        ]
+    )
     if urls:
         lines.extend(["", "URL:"])
         lines.extend(urls)
@@ -706,6 +716,28 @@ def build_slack_markdown(
             if body:
                 lines.append(f"  {body}")
     return "\n".join(lines).rstrip() + "\n"
+
+
+def clean_channel_name(value: str) -> str:
+    clean = str(value or "").strip()
+    if clean.lower() in {"slack inbox", "aru inbox"}:
+        return clean
+    return clean.lstrip("#") or "slack"
+
+
+def slack_tags_for_label(inbox_label: str, source_type: str) -> list[str]:
+    normalized = clean_channel_name(inbox_label).lower()
+    if normalized == "brainz-inbox":
+        return ["inbox"]
+    if normalized == "brainz-aru" or source_type == SOURCE_TYPE_ARU:
+        return ["aru"]
+    if normalized == "brainz-note":
+        return ["BORINEF", "note"]
+    if normalized == "brainz-codex":
+        return ["codex"]
+    if normalized == "brainz-reaction":
+        return ["reaction"]
+    return ["slack"]
 
 
 def index_slack_markdown(
