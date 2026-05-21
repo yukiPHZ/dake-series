@@ -182,3 +182,10 @@ Obsidianで観測する
 - OpenClaw = 将来の巡回生物
 
 `PEAKHEADZ_ROOT/slack/` はlegacy保存先です。削除やrenameはせず、新規Slack保存は `PEAKHEADZ_ROOT/10_slack/*` へ寄せます。
+
+## QPSC Phase 23 UI最終整流
+
+- BRAINZは1カラムの母艦UIとして、保存・設定・監視に集中する。
+- OIKAWAは全文プレビューではなく、熾火・ORBIT・巡回・側に在るを並べる巡回端末として扱う。
+- PEAKHEADZ_ROOTが正本保管庫で、ObsidianはMarkdown観測UIとして開く。
+- 旧 `PEAKHEADZ_ROOT/slack/` はlegacyであり、新規保存先は `10_slack/*` に寄せる。

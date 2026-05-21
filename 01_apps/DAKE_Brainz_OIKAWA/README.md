@@ -361,3 +361,10 @@ Windows向けexe
 BRAINZ側では検索 / 原本表示 / Related / Memory Flow / Handoffを前面から縮小します。
 
 OIKAWAは、BRAINZが `PEAKHEADZ_ROOT` へ保存したMarkdown正本へ戻る場所です。読む、戻る、熾火、巡回、側に在る、熱補助はOIKAWAが担当します。
+
+## Phase 23: 宇宙巡回UI
+
+- OIKAWAは全文プレビューアプリではなく、巡回端末として整理した。
+- 原本は小さな選択中カードに留め、`原本を開く` からローカルMarkdownを直接開く。
+- 熾火、ORBIT、巡回、側に在る、静かだった記憶を中心に表示する。
+- 宇宙感は軽量な背景粒子と余白で表現し、重い演出は入れない。

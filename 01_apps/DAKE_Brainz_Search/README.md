@@ -727,3 +727,10 @@ https://...
 ```
 
 `#brainz-note` のnote URLはBORINEF note循環を優先し、published正本として `PEAKHEADZ_ROOT/40_borinef/note/published/YYYY/` にも流れます。duplicate防止は維持します。
+
+## Phase 23: 1カラム母艦UI
+
+- BRAINZは1カラムの通常運用UIへ整理した。
+- 前面はPEAKHEADZ_ROOT状態、Slack 5チャンネル設定、ChatGPT export、Codex sessions、BRAINZ Logに絞る。
+- 検索・原本表示・Related・Memory Flow・Handoffは前面から外し、読む/戻る役割はOIKAWAへ寄せる。
+- legacyの `PEAKHEADZ_ROOT/slack/` は削除せず、新規保存先にはしない。

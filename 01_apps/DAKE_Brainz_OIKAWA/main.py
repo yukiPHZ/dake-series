@@ -55,7 +55,7 @@ UI_TEXT = {
     "app_title": "OIKAWA",
     "copyright": COPYRIGHT,
     "app_subcopy": "補助脳BRAINZ",
-    "app_subtitle": "検索 / 原本 / 熾火 / 通知",
+    "app_subtitle": "巡回 / 熾火 / 正本ニュース",
     "button_search": "記憶検索",
     "button_searching": "検索中",
     "button_heat_search": "熱検索",
@@ -66,6 +66,7 @@ UI_TEXT = {
     "button_open_output": "保存先を開く",
     "button_choose_folder": "記憶フォルダを選ぶ",
     "button_preview_source": "原本を読む",
+    "button_open_source_file": "原本を開く",
     "button_qpsc_state_check": "状態確認",
     "button_qpsc_state_checking": "確認中",
     "status_idle": "眠っています",
@@ -82,7 +83,7 @@ UI_TEXT = {
     "section_traces": "浮上した痕跡",
     "section_related": "関連断片",
     "section_suggestion": "OIKAWA提案",
-    "section_source_preview": "原本プレビュー",
+    "section_source_preview": "選択中の正本",
     "section_heat_candidates": "熾火",
     "section_orbit_today": "今日の整理",
     "section_orbit_flow": "今日の流れ",
@@ -91,6 +92,8 @@ UI_TEXT = {
     "section_side_memory": "側に在る",
     "section_quiet_memory": "静かだった記憶",
     "section_qpsc_state": "QPSC状態",
+    "cosmos_news_title": "正本ニュース",
+    "cosmos_news_hint": "巡回している記憶が静かに並びます。",
     "label_memory_folder": "記憶ルート",
     "memory_folder_missing": "記憶フォルダ未検出",
     "dialog_choose_memory": "記憶フォルダを選択",
@@ -109,6 +112,8 @@ UI_TEXT = {
     "source_preview_loaded": "原本を表示しました。",
     "source_preview_missing": "ファイルが見つかりません。",
     "source_preview_failed": "原本を表示できませんでした。",
+    "source_open_missing": "原本はまだ選ばれていません。",
+    "source_open_failed": "原本を開けませんでした。",
     "source_preview_not_file": "原本を表示できませんでした。",
     "source_preview_path": "PATH: {path}",
     "source_preview_truncated": "\n\n---\n先頭のみ表示しています。",
@@ -1791,6 +1796,7 @@ class OikawaApp(tk.Tk):
         self.config_data = self.config_store.load()
         self.memory_folder = self._resolve_initial_memory_folder(memory_folder_override)
         self.output_path: Path | None = None
+        self.selected_source_path: Path | None = None
         self.events: queue.Queue[tuple[str, object]] = queue.Queue()
         self.scan_thread: threading.Thread | None = None
         self.search_thread: threading.Thread | None = None
@@ -2017,6 +2023,74 @@ class OikawaApp(tk.Tk):
             wraplength=240,
             justify="left",
         ).pack(anchor="w", pady=(6, 0))
+        qpsc_state.pack_forget()
+
+        cosmos_board = tk.Frame(
+            self,
+            bg=COLORS["panel"],
+            highlightbackground=COLORS["line_soft"],
+            highlightthickness=1,
+            padx=18,
+            pady=16,
+        )
+        cosmos_board.place(relx=0.29, rely=0.055, relwidth=0.42, relheight=0.61)
+        tk.Label(
+            cosmos_board,
+            text=UI_TEXT["cosmos_news_title"],
+            fg=COLORS["heat"],
+            bg=COLORS["panel"],
+            font=FONT_LABEL,
+        ).pack(anchor="w")
+        tk.Label(
+            cosmos_board,
+            text=UI_TEXT["cosmos_news_hint"],
+            fg=COLORS["muted"],
+            bg=COLORS["panel"],
+            font=FONT_JP_SMALL,
+            wraplength=500,
+            justify="left",
+        ).pack(anchor="w", pady=(5, 10))
+        tk.Label(
+            cosmos_board,
+            textvariable=self.qpsc_notification_var,
+            fg=COLORS["text"],
+            bg=COLORS["panel"],
+            font=FONT_JP,
+            wraplength=500,
+            justify="left",
+        ).pack(anchor="w", pady=(0, 12))
+        tk.Label(
+            cosmos_board,
+            text=UI_TEXT["section_orbit_today"],
+            fg=COLORS["muted"],
+            bg=COLORS["panel"],
+            font=FONT_LABEL,
+        ).pack(anchor="w", pady=(2, 0))
+        tk.Label(
+            cosmos_board,
+            textvariable=self.orbit_metrics_var,
+            fg=COLORS["text"],
+            bg=COLORS["panel"],
+            font=FONT_JP_SMALL,
+            wraplength=500,
+            justify="left",
+        ).pack(anchor="w", pady=(4, 10))
+        tk.Label(
+            cosmos_board,
+            text=UI_TEXT["section_orbit_flow"],
+            fg=COLORS["muted"],
+            bg=COLORS["panel"],
+            font=FONT_LABEL,
+        ).pack(anchor="w")
+        tk.Label(
+            cosmos_board,
+            textvariable=self.orbit_flow_var,
+            fg=COLORS["text"],
+            bg=COLORS["panel"],
+            font=FONT_JP_SMALL,
+            wraplength=500,
+            justify="left",
+        ).pack(anchor="w", pady=(4, 0))
 
         self.source_preview_status_var = tk.StringVar(value=UI_TEXT["source_preview_empty"])
         source_preview = tk.Frame(
@@ -2027,7 +2101,7 @@ class OikawaApp(tk.Tk):
             padx=16,
             pady=14,
         )
-        source_preview.place(relx=0.27, rely=0.055, relwidth=0.44, relheight=0.84)
+        source_preview.place(relx=0.29, rely=0.70, relwidth=0.42, relheight=0.19)
         tk.Label(
             source_preview,
             text=UI_TEXT["section_source_preview"],
@@ -2043,7 +2117,15 @@ class OikawaApp(tk.Tk):
             font=FONT_JP_SMALL,
             wraplength=500,
             justify="left",
-        ).pack(anchor="w", pady=(6, 10))
+        ).pack(anchor="w", pady=(6, 6))
+        self.open_source_button = tk.Button(
+            source_preview,
+            text=UI_TEXT["button_open_source_file"],
+            command=self._open_selected_source,
+            state="disabled",
+            **self._small_button_style(COLORS["panel_light"]),
+        )
+        self.open_source_button.pack(anchor="w", pady=(0, 8))
         preview_body = tk.Frame(source_preview, bg=COLORS["panel"])
         preview_body.pack(fill="both", expand=True)
         preview_scrollbar = tk.Scrollbar(preview_body)
@@ -2880,6 +2962,7 @@ class OikawaApp(tk.Tk):
         if candidate.related_path:
             self._show_source_path(candidate.related_path, candidate.title)
             return
+        self._set_selected_source_path(None)
         self.source_preview_status_var.set(UI_TEXT["orbit_next_no_related"])
         self._set_source_preview_text(f"{candidate.title}\n{UI_TEXT['orbit_next_no_related']}")
 
@@ -2887,6 +2970,7 @@ class OikawaApp(tk.Tk):
         if candidate.related_path:
             self._show_source_path(candidate.related_path, candidate.title)
             return
+        self._set_selected_source_path(None)
         self.source_preview_status_var.set(UI_TEXT["revisit_no_related"])
         self._set_source_preview_text(f"{candidate.title}\n{UI_TEXT['revisit_no_related']}")
 
@@ -2894,6 +2978,7 @@ class OikawaApp(tk.Tk):
         if candidate.related_path:
             self._show_source_path(candidate.related_path, candidate.title)
             return
+        self._set_selected_source_path(None)
         self.source_preview_status_var.set(UI_TEXT["side_memory_no_related"])
         self._set_source_preview_text(f"{candidate.title}\n{UI_TEXT['side_memory_no_related']}")
 
@@ -2901,6 +2986,7 @@ class OikawaApp(tk.Tk):
         if candidate.related_path:
             self._show_source_path(candidate.related_path, candidate.title)
             return
+        self._set_selected_source_path(None)
         self.source_preview_status_var.set(UI_TEXT["quiet_memory_no_related"])
         self._set_source_preview_text(f"{candidate.title}\n{UI_TEXT['quiet_memory_no_related']}")
 
@@ -2923,7 +3009,7 @@ class OikawaApp(tk.Tk):
 
     def _render_memory_state(self) -> None:
         if self.memory_folder:
-            self.memory_var.set(f"{UI_TEXT['label_memory_folder']}: {self.memory_folder}")
+            self.memory_var.set(f"{UI_TEXT['label_memory_folder']}:\n{self.memory_folder}")
             self.missing_frame.place_forget()
             return
 
@@ -2934,7 +3020,7 @@ class OikawaApp(tk.Tk):
         width = max(1, self.canvas.winfo_width() or 1120)
         height = max(1, self.canvas.winfo_height() or 720)
         random.seed(20260518)
-        count = 32
+        count = 46
         self.particles = [
             Particle(
                 x=random.uniform(0, width),
@@ -2975,7 +3061,7 @@ class OikawaApp(tk.Tk):
         for index, current in enumerate(self.particles):
             for other in self.particles[index + 1 :]:
                 distance = math.hypot(current.x - other.x, current.y - other.y)
-                if distance < 138:
+                if distance < 150:
                     color = COLORS["line"] if self.scanning and distance < 96 else COLORS["line_soft"]
                     self.canvas.create_line(current.x, current.y, other.x, other.y, fill=color, width=1, tags="field")
 
@@ -3353,6 +3439,7 @@ class OikawaApp(tk.Tk):
 
     def _show_source_path(self, source_path: str | Path, title: str = "") -> None:
         path = self._resolve_source_path(source_path)
+        self._set_selected_source_path(path)
         self.source_preview_request_id += 1
         request_id = self.source_preview_request_id
         self.source_preview_loaded = False
@@ -3376,7 +3463,7 @@ class OikawaApp(tk.Tk):
             if not path.is_file() or path.suffix.lower() not in {".md", ".txt"}:
                 self.events.put(("source_preview_error", (request_id, path, UI_TEXT["source_preview_not_file"])))
                 return
-            text, truncated = read_source_preview_text(path)
+            text, truncated = read_source_preview_text(path, limit=1800)
             try:
                 record_recent_return(path, title)
                 record_revisit_log(path, title)
@@ -3415,8 +3502,14 @@ class OikawaApp(tk.Tk):
         if request_id != self.source_preview_request_id:
             return
         self.source_preview_loaded = False
+        self._set_selected_source_path(None)
         self.source_preview_status_var.set(message)
         self._set_source_preview_text(f"{message}\n{UI_TEXT['source_preview_path'].format(path=path)}")
+
+    def _set_selected_source_path(self, path: Path | None) -> None:
+        self.selected_source_path = path
+        if hasattr(self, "open_source_button"):
+            self.open_source_button.configure(state="normal" if path else "disabled")
 
     def _set_source_preview_text(self, text: str) -> None:
         if not hasattr(self, "source_preview_box"):
@@ -3440,12 +3533,24 @@ class OikawaApp(tk.Tk):
         self.status_var.set(UI_TEXT["status_idle"])
         self._render_memory_state()
 
+    def _open_selected_source(self) -> None:
+        if not self.selected_source_path:
+            self.source_preview_status_var.set(UI_TEXT["source_open_missing"])
+            return
+        if not self.selected_source_path.exists():
+            self.source_preview_status_var.set(UI_TEXT["source_preview_missing"])
+            return
+        try:
+            open_path(self.selected_source_path)
+        except Exception:
+            self.source_preview_status_var.set(UI_TEXT["source_open_failed"])
+
     def _open_output(self) -> None:
+        if self.memory_folder:
+            open_path(self.memory_folder)
+            return
         if self.output_path:
             open_path(self.output_path.parent)
-            return
-        if self.memory_folder:
-            open_path(self.memory_folder / "OIKAWA" / "suggestions")
 
     def _finish_launch_check(self) -> None:
         print(UI_TEXT["launch_check_ok"])

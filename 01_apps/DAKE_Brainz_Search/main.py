@@ -42,6 +42,10 @@ UI_TEXT = {
     "settings_entry_hint": "Slack / Queue / Codex報告の入口を下にまとめています。",
     "button_prepare_qpsc_folders": "標準フォルダを整える",
     "button_create_peakheadz_root": "PEAKHEADZ_ROOTを作成",
+    "button_open_memory_root": "フォルダを開く",
+    "section_peakheadz_root": "PEAKHEADZ_ROOT状態",
+    "section_chatgpt_export": "ChatGPT export",
+    "section_codex_sessions": "Codex logs / sessions",
     "qpsc_folder_status_waiting": "QPSCフォルダ構成: 未確認",
     "memory_root_recommended": "推奨ルート: {path}",
     "memory_root_legacy_found": "旧BRAINZ記憶フォルダを確認しました。必要に応じてPEAKHEADZ_ROOTへ移行できます。",
@@ -65,6 +69,11 @@ UI_TEXT = {
     "slack_route_status_unset": "未設定",
     "slack_route_status_off": "停止中",
     "slack_route_last_import": "最終: {time}",
+    "slack_purpose_brainz_inbox": "用途: なんでも / 違和感 / TODO未満",
+    "slack_purpose_brainz_aru": "用途: 在る / 握らない強さ / BORINEF核",
+    "slack_purpose_brainz_note": "用途: 公開済note / note URL",
+    "slack_purpose_brainz_codex": "用途: Codexログ / 正本",
+    "slack_purpose_brainz_reaction": "用途: 感想 / 反応 / 熱",
     "log_slack_route_saved": "SLACK ROUTE SAVED: {channel} -> {folder}",
     "log_slack_captured_route": "SLACK CAPTURED: {channel} -> {folder}",
     "log_legacy_slack_folder_found": "LEGACY SLACK FOLDER FOUND: {path}",
@@ -2637,18 +2646,252 @@ def run_gui(launch_check: bool = False) -> int:
                     child.grid_remove()
 
         def _apply_operation_ui(self, left, center, right, mission_buttons) -> None:
-            self._hide_grid_rows(left, 21, 54)
-            self._hide_grid_rows(center, 3, 8)
+            for panel in (left, center, right):
+                panel.grid_remove()
             for child in mission_buttons.winfo_children():
                 try:
                     if child.cget("text") == UI_TEXT["button_open_oikawa"]:
                         child.grid_remove()
                 except Exception:
                     continue
-            right.grid_remove()
-            self.grid_columnconfigure(1, weight=1, minsize=720)
+            self.grid_columnconfigure(0, weight=1, minsize=820)
+            self.grid_columnconfigure(1, weight=0, minsize=0)
             self.grid_columnconfigure(2, weight=0, minsize=0)
-            self._build_slack_operation_section(center, 3)
+            self._build_phase23_mothership_ui()
+
+        def _build_phase23_mothership_ui(self) -> None:
+            main = ctk.CTkScrollableFrame(
+                self,
+                fg_color=COLORS["bg"],
+                corner_radius=0,
+                scrollbar_button_color=COLORS["panel_soft"],
+                scrollbar_button_hover_color=COLORS["accent_soft"],
+            )
+            main.grid(row=1, column=0, columnspan=3, sticky="nsew", padx=20, pady=(0, 10))
+            main.grid_columnconfigure(0, weight=1)
+
+            self._section_title(main, UI_TEXT["section_peakheadz_root"], 0)
+            root_card = ctk.CTkFrame(
+                main,
+                fg_color=COLORS["panel_alt"],
+                border_color=COLORS["border"],
+                border_width=1,
+                corner_radius=6,
+            )
+            root_card.grid(row=1, column=0, sticky="ew", padx=12, pady=(0, 12))
+            root_card.grid_columnconfigure((0, 1, 2, 3), weight=1)
+            for row, variable in enumerate(
+                (
+                    self.awake_status_var,
+                    self.memory_path_summary_var,
+                    self.last_import_summary_var,
+                    self.qpsc_folder_status_var,
+                )
+            ):
+                ctk.CTkLabel(
+                    root_card,
+                    textvariable=variable,
+                    text_color=COLORS["section"] if row == 0 else COLORS["muted"],
+                    font=(self.status_font_family, FONT_SIZES["body"] if row == 0 else FONT_SIZES["small"]),
+                    wraplength=720,
+                    justify="left",
+                    anchor="w",
+                ).grid(row=row, column=0, columnspan=4, sticky="ew", padx=14, pady=(12 if row == 0 else 2, 2))
+
+            root_buttons = ctk.CTkFrame(root_card, fg_color="transparent")
+            root_buttons.grid(row=4, column=0, columnspan=4, sticky="ew", padx=14, pady=(8, 12))
+            root_buttons.grid_columnconfigure((0, 1, 2, 3), weight=1)
+            ctk.CTkButton(
+                root_buttons,
+                text=UI_TEXT["button_choose"],
+                height=34,
+                fg_color=COLORS["panel_soft"],
+                hover_color=COLORS["accent_soft"],
+                font=(self.status_font_family, FONT_SIZES["button"]),
+                command=self._choose_memory_folder,
+            ).grid(row=0, column=0, sticky="ew", padx=(0, 6))
+            ctk.CTkButton(
+                root_buttons,
+                text=UI_TEXT["button_create_peakheadz_root"],
+                height=34,
+                fg_color=COLORS["panel_soft"],
+                hover_color=COLORS["accent_soft"],
+                font=(self.status_font_family, FONT_SIZES["button"]),
+                command=self._create_peakheadz_root,
+            ).grid(row=0, column=1, sticky="ew", padx=6)
+            ctk.CTkButton(
+                root_buttons,
+                text=UI_TEXT["button_prepare_qpsc_folders"],
+                height=34,
+                fg_color=COLORS["panel_soft"],
+                hover_color=COLORS["accent_soft"],
+                font=(self.status_font_family, FONT_SIZES["button"]),
+                command=lambda: self._ensure_qpsc_folders(notify=True),
+            ).grid(row=0, column=2, sticky="ew", padx=6)
+            ctk.CTkButton(
+                root_buttons,
+                text=UI_TEXT["button_open_memory_root"],
+                height=34,
+                fg_color=COLORS["panel_soft"],
+                hover_color=COLORS["accent_soft"],
+                font=(self.status_font_family, FONT_SIZES["button"]),
+                command=self._open_memory_root,
+            ).grid(row=0, column=3, sticky="ew", padx=(6, 0))
+
+            self._build_slack_operation_section(main, 2)
+            self._build_phase23_chatgpt_section(main, 4)
+            self._build_phase23_codex_section(main, 6)
+
+        def _build_phase23_chatgpt_section(self, parent, row: int) -> None:
+            self._section_title(parent, UI_TEXT["section_chatgpt_export"], row)
+            card = ctk.CTkFrame(
+                parent,
+                fg_color=COLORS["panel_alt"],
+                border_color=COLORS["border"],
+                border_width=1,
+                corner_radius=6,
+            )
+            card.grid(row=row + 1, column=0, sticky="ew", padx=12, pady=(0, 12))
+            card.grid_columnconfigure((0, 1, 2), weight=1)
+            ctk.CTkLabel(
+                card,
+                text=UI_TEXT["chatgpt_import_title"],
+                text_color=COLORS["section"],
+                font=(self.font_family, FONT_SIZES["section"]),
+                anchor="w",
+            ).grid(row=0, column=0, columnspan=3, sticky="ew", padx=14, pady=(12, 2))
+            ctk.CTkLabel(
+                card,
+                text=UI_TEXT["chatgpt_import_helper"],
+                text_color=COLORS["muted"],
+                font=(self.reading_font_family, FONT_SIZES["small"]),
+                anchor="w",
+            ).grid(row=1, column=0, columnspan=3, sticky="ew", padx=14, pady=(0, 2))
+            ctk.CTkLabel(
+                card,
+                text=UI_TEXT["chatgpt_import_note"],
+                text_color=COLORS["muted"],
+                font=(self.reading_font_family, FONT_SIZES["small"]),
+                wraplength=720,
+                justify="left",
+                anchor="w",
+            ).grid(row=2, column=0, columnspan=3, sticky="ew", padx=14, pady=(0, 8))
+            ctk.CTkButton(
+                card,
+                text=UI_TEXT["button_import_chatgpt_zip"],
+                height=34,
+                fg_color=COLORS["panel_soft"],
+                hover_color=COLORS["accent_soft"],
+                font=(self.status_font_family, FONT_SIZES["button"]),
+                command=self._choose_chatgpt_export_zip,
+            ).grid(row=3, column=0, sticky="ew", padx=(14, 6), pady=(0, 10))
+            ctk.CTkButton(
+                card,
+                text=UI_TEXT["button_import_chatgpt_folder"],
+                height=34,
+                fg_color=COLORS["panel_soft"],
+                hover_color=COLORS["accent_soft"],
+                font=(self.status_font_family, FONT_SIZES["button"]),
+                command=self._choose_chatgpt_export_folder,
+            ).grid(row=3, column=1, sticky="ew", padx=6, pady=(0, 10))
+            ctk.CTkButton(
+                card,
+                text=UI_TEXT["button_import_chatgpt_json"],
+                height=34,
+                fg_color=COLORS["panel_soft"],
+                hover_color=COLORS["accent_soft"],
+                font=(self.status_font_family, FONT_SIZES["button"]),
+                command=self._choose_chatgpt_conversations_json,
+            ).grid(row=3, column=2, sticky="ew", padx=(6, 14), pady=(0, 10))
+            ctk.CTkLabel(
+                card,
+                textvariable=self.chatgpt_import_status_var,
+                text_color=COLORS["muted"],
+                font=(self.reading_font_family, FONT_SIZES["small"]),
+                wraplength=720,
+                justify="left",
+                anchor="w",
+            ).grid(row=4, column=0, columnspan=3, sticky="ew", padx=14, pady=(0, 12))
+
+        def _build_phase23_codex_section(self, parent, row: int) -> None:
+            self._section_title(parent, UI_TEXT["section_codex_sessions"], row)
+            card = ctk.CTkFrame(
+                parent,
+                fg_color=COLORS["panel_alt"],
+                border_color=COLORS["border"],
+                border_width=1,
+                corner_radius=6,
+            )
+            card.grid(row=row + 1, column=0, sticky="ew", padx=12, pady=(0, 16))
+            card.grid_columnconfigure(0, weight=1)
+            card.grid_columnconfigure(1, weight=0)
+            self.codex_sessions_entry = ctk.CTkEntry(
+                card,
+                height=32,
+                placeholder_text=UI_TEXT["label_codex_sessions_path"],
+                fg_color=COLORS["input"],
+                border_color=COLORS["border"],
+                text_color=COLORS["text"],
+                font=(self.status_font_family, FONT_SIZES["small"]),
+            )
+            self.codex_sessions_entry.grid(row=0, column=0, sticky="ew", padx=14, pady=(14, 8))
+            self.codex_sessions_entry.insert(0, self.config_data.codex_sessions_path or str(codex_sessions_default_path()))
+            self.codex_watch_checkbox = ctk.CTkCheckBox(
+                card,
+                text=UI_TEXT["checkbox_enable_codex_watch"],
+                variable=self.codex_watch_var,
+                text_color=COLORS["muted"],
+                fg_color=COLORS["accent"],
+                hover_color=COLORS["accent_hover"],
+                border_color=COLORS["border"],
+                font=(self.status_font_family, FONT_SIZES["small"]),
+                command=self._save_codex_watch_settings,
+            )
+            self.codex_watch_checkbox.grid(row=0, column=1, sticky="e", padx=14, pady=(14, 8))
+            controls = ctk.CTkFrame(card, fg_color="transparent")
+            controls.grid(row=1, column=0, columnspan=2, sticky="ew", padx=14, pady=(0, 8))
+            controls.grid_columnconfigure((0, 1), weight=1)
+            ctk.CTkButton(
+                controls,
+                text=UI_TEXT["button_check_codex_watch"],
+                height=30,
+                fg_color=COLORS["panel_soft"],
+                hover_color=COLORS["accent_soft"],
+                font=(self.status_font_family, FONT_SIZES["button"]),
+                command=self._check_codex_watch_path,
+            ).grid(row=0, column=0, sticky="ew", padx=(0, 6))
+            ctk.CTkButton(
+                controls,
+                text=UI_TEXT["button_save_codex_watch"],
+                height=30,
+                fg_color=COLORS["panel_soft"],
+                hover_color=COLORS["accent_soft"],
+                font=(self.status_font_family, FONT_SIZES["button"]),
+                command=self._save_codex_watch_settings,
+            ).grid(row=0, column=1, sticky="ew", padx=(6, 0))
+            ctk.CTkLabel(
+                card,
+                textvariable=self.codex_watch_status_var,
+                text_color=COLORS["quiet"],
+                font=(self.status_font_family, FONT_SIZES["small"]),
+                wraplength=720,
+                justify="left",
+                anchor="w",
+            ).grid(row=2, column=0, columnspan=2, sticky="ew", padx=14, pady=(0, 12))
+
+        def _open_memory_root(self) -> None:
+            if not self.config_data.memory_folder:
+                self._notify(UI_TEXT["memory_root_recommended"].format(path=recommended_peakheadz_root()))
+                return
+            try:
+                open_path(Path(self.config_data.memory_folder))
+            except Exception as exc:
+                self._append_log(UI_TEXT["log_index_error"].format(error=str(exc)))
+
+        def _slack_route_purpose_text(self, route: dict[str, object]) -> str:
+            key = normalize_channel_key(str(route.get("channel_name") or ""))
+            text_key = f"slack_purpose_{key.replace('-', '_')}"
+            return UI_TEXT.get(text_key, UI_TEXT["slack_intake_hint"])
 
         def _build_slack_operation_section(self, parent, row: int) -> None:
             self._section_title(parent, UI_TEXT["section_slack_intake"], row)
@@ -2782,11 +3025,18 @@ def run_gui(launch_check: bool = False) -> int:
                 ).grid(row=0, column=1, sticky="e")
                 ctk.CTkLabel(
                     card,
+                    text=self._slack_route_purpose_text(route),
+                    text_color=COLORS["muted"],
+                    font=(self.status_font_family, FONT_SIZES["micro"]),
+                    anchor="w",
+                ).grid(row=1, column=0, sticky="ew", padx=10, pady=(0, 3))
+                ctk.CTkLabel(
+                    card,
                     text=UI_TEXT["slack_route_save_folder"].format(folder=str(route.get("save_folder") or "")),
                     text_color=COLORS["quiet"],
                     font=(self.status_font_family, FONT_SIZES["micro"]),
                     anchor="w",
-                ).grid(row=1, column=0, sticky="ew", padx=10, pady=(0, 5))
+                ).grid(row=2, column=0, sticky="ew", padx=10, pady=(0, 5))
                 entry = ctk.CTkEntry(
                     card,
                     height=28,
@@ -2796,11 +3046,11 @@ def run_gui(launch_check: bool = False) -> int:
                     text_color=COLORS["text"],
                     font=(self.status_font_family, FONT_SIZES["micro"]),
                 )
-                entry.grid(row=2, column=0, sticky="ew", padx=10, pady=(0, 6))
+                entry.grid(row=3, column=0, sticky="ew", padx=10, pady=(0, 6))
                 entry.insert(0, str(route.get("channel_id") or ""))
                 self.slack_route_entries[key] = entry
                 footer = ctk.CTkFrame(card, fg_color="transparent")
-                footer.grid(row=3, column=0, sticky="ew", padx=10, pady=(0, 10))
+                footer.grid(row=4, column=0, sticky="ew", padx=10, pady=(0, 10))
                 footer.grid_columnconfigure(0, weight=1)
                 status_var = ctk.StringVar(value="")
                 self.slack_route_status_vars[key] = status_var
