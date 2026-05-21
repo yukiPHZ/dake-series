@@ -256,6 +256,13 @@ FFmpegを入れると wav/mp3変換やループ整形が使えます。未導入
 
 生成物の利用可否は、使用したモデル・素材・配布条件を確認してください。外部サービスへ勝手にアップロードせず、生成音源を自動公開する機能も持ちません。
 
+## Status
+
+This app is currently frozen.
+
+Saved as an experimental / exploratory DAKE project.
+Not part of the current mainline workflow.
+
 ## DAKE_META
 
 ```json
@@ -271,7 +278,7 @@ FFmpegを入れると wav/mp3変換やループ整形が使えます。未導入
   "exe_name": "DakeMusic_Otooku.exe",
   "release_url": "",
   "screenshot_path": "assets/screenshot.webp",
-  "status": "draft",
+  "status": "frozen",
   "show_in_launcher": false,
   "show_on_site": false
 }

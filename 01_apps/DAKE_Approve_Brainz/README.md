@@ -87,6 +87,13 @@ build.bat
 dist\DakeApproveBrainz.exe
 ```
 
+## Status
+
+This app is currently frozen.
+
+Saved as an experimental / exploratory DAKE project.
+Not part of the current mainline workflow.
+
 ## DAKE_META
 
 ```json

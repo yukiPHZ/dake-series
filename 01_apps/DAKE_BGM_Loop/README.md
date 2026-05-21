@@ -124,6 +124,13 @@ python main.py
 - YouTube等で公開する前に、使用モデルのライセンス確認が必要です。
 - 商用利用できるかどうか、または権利上の安全性をこのアプリ単体では断定しません。
 
+## Status
+
+This app is currently frozen.
+
+Saved as an experimental / exploratory DAKE project.
+Not part of the current mainline workflow.
+
 ## DAKE_META
 
 ```json
@@ -139,9 +146,9 @@ python main.py
   "exe_name": "DakeBGM_Loop.exe",
   "release_url": "",
   "screenshot_path": "assets/screenshot.webp",
-  "status": "active",
-  "show_in_launcher": true,
-  "show_on_site": true
+  "status": "frozen",
+  "show_in_launcher": false,
+  "show_on_site": false
 }
 ```
 
