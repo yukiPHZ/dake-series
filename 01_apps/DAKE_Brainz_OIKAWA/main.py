@@ -1729,14 +1729,14 @@ def read_source_preview_text(path: Path, limit: int = MAX_PREVIEW_CHARS) -> tupl
 
 COLORS = {
     "background": "#080A0F",
-    "panel": "#11151C",
-    "panel_light": "#151A22",
+    "panel": "#0B0F16",
+    "panel_light": "#111722",
     "text": "#E6EAF0",
     "muted": "#9AA4B2",
-    "glow": "#263247",
+    "glow": "#1D2B43",
     "heat": "#7AA7FF",
-    "line": "#252B36",
-    "line_soft": "#1A202B",
+    "line": "#1A2230",
+    "line_soft": "#101724",
 }
 
 FONT_JP = ("Yu Gothic UI", 12)
@@ -1891,7 +1891,7 @@ class OikawaApp(tk.Tk):
         self.qpsc_self_check_var = tk.StringVar(value=self._initial_qpsc_self_check_text())
 
         left_panel = tk.Frame(self, bg=COLORS["background"])
-        left_panel.place(relx=0.03, rely=0.055, relwidth=0.21, relheight=0.84)
+        left_panel.place(relx=0.03, rely=0.07, relwidth=0.19, relheight=0.80)
         tk.Label(
             left_panel,
             text=UI_TEXT["app_title"],
@@ -1919,11 +1919,11 @@ class OikawaApp(tk.Tk):
             fg=COLORS["muted"],
             bg=COLORS["background"],
             font=FONT_MONO,
-            wraplength=240,
+            wraplength=220,
             justify="left",
         ).pack(anchor="w", pady=(8, 0))
         search_row = tk.Frame(left_panel, bg=COLORS["background"])
-        search_row.pack(fill="x", pady=(14, 0))
+        search_row.pack(fill="x", pady=(12, 0))
         self.search_entry = tk.Entry(
             search_row,
             bg=COLORS["panel"],
@@ -1933,22 +1933,22 @@ class OikawaApp(tk.Tk):
             bd=0,
             font=FONT_JP_SMALL,
         )
-        self.search_entry.pack(fill="x", ipady=7)
+        self.search_entry.pack(fill="x", ipady=4)
         self.search_entry.bind("<Return>", lambda _event: self._start_memory_search())
         search_buttons = tk.Frame(left_panel, bg=COLORS["background"])
-        search_buttons.pack(fill="x", pady=(8, 0))
+        search_buttons.pack(fill="x", pady=(7, 0))
         self.search_button = tk.Button(
             search_buttons,
             text=UI_TEXT["button_search"],
             command=self._start_memory_search,
-            **self._button_style(COLORS["panel_light"]),
+            **self._small_button_style(COLORS["panel_light"]),
         )
         self.search_button.pack(side="left")
         self.heat_search_button = tk.Button(
             search_buttons,
             text=UI_TEXT["button_heat_search"],
             command=self._start_heat_search,
-            **self._button_style(COLORS["heat"]),
+            **self._small_button_style(COLORS["heat"]),
         )
         self.heat_search_button.pack(side="left", padx=(8, 0))
 
@@ -1988,7 +1988,7 @@ class OikawaApp(tk.Tk):
         self.results_frame.pack_forget()
 
         actions = tk.Frame(left_panel, bg=COLORS["background"])
-        actions.pack(fill="x", pady=(12, 0))
+        actions.pack(fill="x", pady=(10, 0))
         self.open_output_button = tk.Button(
             actions,
             text=UI_TEXT["button_open_output"],
@@ -2049,7 +2049,7 @@ class OikawaApp(tk.Tk):
             padx=18,
             pady=16,
         )
-        cosmos_board.place(relx=0.29, rely=0.055, relwidth=0.42, relheight=0.68)
+        cosmos_board.place(relx=0.30, rely=0.075, relwidth=0.37, relheight=0.56)
         tk.Label(
             cosmos_board,
             text=UI_TEXT["cosmos_news_title"],
@@ -2065,7 +2065,7 @@ class OikawaApp(tk.Tk):
             font=FONT_JP,
             wraplength=500,
             justify="left",
-        ).pack(anchor="w", pady=(0, 22))
+        ).pack(anchor="w", pady=(0, 42))
         tk.Label(
             cosmos_board,
             text=UI_TEXT["section_orbit_today"],
@@ -2093,7 +2093,7 @@ class OikawaApp(tk.Tk):
             pady=14,
         )
         self.source_preview_frame = source_preview
-        source_preview.place(relx=0.29, rely=0.76, relwidth=0.42, relheight=0.12)
+        source_preview.place(relx=0.30, rely=0.72, relwidth=0.37, relheight=0.12)
         tk.Label(
             source_preview,
             text=UI_TEXT["section_source_preview"],
@@ -2140,7 +2140,7 @@ class OikawaApp(tk.Tk):
         source_preview.place_forget()
 
         right_panel = tk.Frame(self, bg=COLORS["background"])
-        right_panel.place(relx=0.74, rely=0.055, relwidth=0.23, relheight=0.84)
+        right_panel.place(relx=0.74, rely=0.075, relwidth=0.21, relheight=0.80)
 
         notice = tk.Frame(
             right_panel,
@@ -2173,31 +2173,31 @@ class OikawaApp(tk.Tk):
 
         heat = tk.Frame(
             right_panel,
-            bg=COLORS["background"],
-            highlightbackground=COLORS["line"],
+            bg=COLORS["panel"],
+            highlightbackground=COLORS["line_soft"],
             highlightthickness=1,
-            padx=12,
-            pady=8,
+            padx=14,
+            pady=12,
         )
-        heat.pack(fill="x", pady=(0, 10), before=notice)
+        heat.pack(fill="x", pady=(0, 16), before=notice)
         tk.Label(
             heat,
             text=UI_TEXT["section_heat_candidates"],
             fg=COLORS["heat"],
-            bg=COLORS["background"],
+            bg=COLORS["panel"],
             font=FONT_LABEL,
         ).pack(anchor="w")
         self.heat_panel = heat
-        self.heat_candidates_frame = tk.Frame(heat, bg=COLORS["background"])
-        self.heat_candidates_frame.pack(fill="both", expand=True, pady=(5, 0))
+        self.heat_candidates_frame = tk.Frame(heat, bg=COLORS["panel"])
+        self.heat_candidates_frame.pack(fill="both", expand=True, pady=(8, 0))
         self.heat_hint_var = tk.StringVar(value=UI_TEXT["heat_hint_idle"])
         self.heat_hint_label = tk.Label(
             heat,
             textvariable=self.heat_hint_var,
             fg=COLORS["muted"],
-            bg=COLORS["background"],
+            bg=COLORS["panel"],
             font=FONT_LABEL,
-            wraplength=250,
+            wraplength=230,
             justify="left",
         )
         self.heat_hint_label.pack(anchor="w", pady=(6, 0))
@@ -2264,62 +2264,62 @@ class OikawaApp(tk.Tk):
 
         revisit = tk.Frame(
             right_panel,
-            bg=COLORS["background"],
+            bg=COLORS["panel"],
             highlightbackground=COLORS["line_soft"],
             highlightthickness=1,
-            padx=12,
-            pady=8,
+            padx=14,
+            pady=11,
         )
-        revisit.pack(fill="x", pady=(0, 10), before=notice)
+        revisit.pack(fill="x", pady=(0, 16), before=notice)
         self.revisit_panel = revisit
         tk.Label(
             revisit,
             text=UI_TEXT["section_revisit"],
             fg=COLORS["muted"],
-            bg=COLORS["background"],
+            bg=COLORS["panel"],
             font=FONT_LABEL,
         ).pack(anchor="w")
-        self.revisit_candidates_frame = tk.Frame(revisit, bg=COLORS["background"])
+        self.revisit_candidates_frame = tk.Frame(revisit, bg=COLORS["panel"])
         self.revisit_candidates_frame.pack(fill="x", pady=(5, 0))
 
         side_memory = tk.Frame(
             right_panel,
-            bg=COLORS["background"],
+            bg=COLORS["panel"],
             highlightbackground=COLORS["line_soft"],
             highlightthickness=1,
-            padx=12,
-            pady=8,
+            padx=14,
+            pady=11,
         )
-        side_memory.pack(fill="x", pady=(0, 10), before=notice)
+        side_memory.pack(fill="x", pady=(0, 16), before=notice)
         self.side_memory_panel = side_memory
         tk.Label(
             side_memory,
             text=UI_TEXT["section_side_memory"],
             fg=COLORS["muted"],
-            bg=COLORS["background"],
+            bg=COLORS["panel"],
             font=FONT_LABEL,
         ).pack(anchor="w")
-        self.side_memory_frame = tk.Frame(side_memory, bg=COLORS["background"])
+        self.side_memory_frame = tk.Frame(side_memory, bg=COLORS["panel"])
         self.side_memory_frame.pack(fill="x", pady=(5, 0))
 
         quiet_memory = tk.Frame(
             right_panel,
-            bg=COLORS["background"],
+            bg=COLORS["panel"],
             highlightbackground=COLORS["line_soft"],
             highlightthickness=1,
-            padx=12,
-            pady=8,
+            padx=14,
+            pady=11,
         )
-        quiet_memory.pack(fill="x", pady=(0, 10), before=notice)
+        quiet_memory.pack(fill="x", pady=(0, 16), before=notice)
         self.quiet_memory_panel = quiet_memory
         tk.Label(
             quiet_memory,
             text=UI_TEXT["section_quiet_memory"],
             fg=COLORS["muted"],
-            bg=COLORS["background"],
+            bg=COLORS["panel"],
             font=FONT_LABEL,
         ).pack(anchor="w")
-        self.quiet_memory_frame = tk.Frame(quiet_memory, bg=COLORS["background"])
+        self.quiet_memory_frame = tk.Frame(quiet_memory, bg=COLORS["panel"])
         self.quiet_memory_frame.pack(fill="x", pady=(5, 0))
         notice.pack_forget()
         orbit.pack_forget()
@@ -2644,7 +2644,7 @@ class OikawaApp(tk.Tk):
             return
         if visible:
             if not panel.winfo_ismapped():
-                panel.pack(fill="x", pady=(0, 10))
+                panel.pack(fill="x", pady=(0, 16))
             return
         panel.pack_forget()
 
@@ -2666,38 +2666,48 @@ class OikawaApp(tk.Tk):
         if not candidates:
             return
         for candidate in candidates[:3]:
-            row = tk.Frame(self.heat_candidates_frame, bg=COLORS["background"], cursor="hand2")
-            row.pack(fill="x", pady=(0, 4))
+            row = tk.Frame(
+                self.heat_candidates_frame,
+                bg=COLORS["panel_light"],
+                highlightbackground=COLORS["line_soft"],
+                highlightthickness=1,
+                padx=8,
+                pady=7,
+                cursor="hand2",
+            )
+            row.pack(fill="x", pady=(0, 9))
             row.bind("<Button-1>", lambda _event, selected=candidate: self._open_heat_candidate(selected))
             title_label = tk.Label(
                 row,
                 text=candidate.title,
                 fg=COLORS["text"],
-                bg=COLORS["background"],
+                bg=COLORS["panel_light"],
                 font=FONT_JP_SMALL,
-                wraplength=250,
+                wraplength=210,
                 justify="left",
                 cursor="hand2",
             )
-            title_label.pack(side="left", fill="x", expand=True)
+            title_label.pack(anchor="w", fill="x")
             title_label.bind("<Button-1>", lambda _event, selected=candidate: self._open_heat_candidate(selected))
-            tk.Button(
-                row,
-                text=UI_TEXT["button_read_heat"],
-                command=lambda selected=candidate: self._start_heat_hint(selected),
-                **self._small_button_style(COLORS["panel_light"]),
-            ).pack(side="right", padx=(8, 0))
+            meta = tk.Frame(row, bg=COLORS["panel_light"])
+            meta.pack(fill="x", pady=(5, 0))
             reason_text = UI_TEXT.get(f"heat_reason_{candidate.reason}", UI_TEXT["section_heat_candidates"])
             reason_label = tk.Label(
-                row,
+                meta,
                 text=reason_text,
                 fg=COLORS["muted"],
-                bg=COLORS["background"],
+                bg=COLORS["panel_light"],
                 font=FONT_LABEL,
                 cursor="hand2",
             )
-            reason_label.pack(side="right", padx=(8, 0))
+            reason_label.pack(side="left")
             reason_label.bind("<Button-1>", lambda _event, selected=candidate: self._open_heat_candidate(selected))
+            tk.Button(
+                meta,
+                text=UI_TEXT["button_read_heat"],
+                command=lambda selected=candidate: self._start_heat_hint(selected),
+                **self._small_button_style(COLORS["glow"]),
+            ).pack(side="right")
 
     def _render_revisit_candidates(self, candidates: list[RevisitCandidate]) -> None:
         if not hasattr(self, "revisit_candidates_frame"):
@@ -2708,16 +2718,16 @@ class OikawaApp(tk.Tk):
         if not candidates:
             return
         for candidate in candidates[:3]:
-            row = tk.Frame(self.revisit_candidates_frame, bg=COLORS["background"], cursor="hand2")
-            row.pack(fill="x", pady=(0, 4))
+            row = tk.Frame(self.revisit_candidates_frame, bg=COLORS["panel"], cursor="hand2")
+            row.pack(fill="x", pady=(0, 8))
             row.bind("<Button-1>", lambda _event, selected=candidate: self._open_revisit_candidate(selected))
             tk.Label(
                 row,
                 text=UI_TEXT["revisit_template"].format(message=candidate.message, title=candidate.title),
                 fg=COLORS["text"],
-                bg=COLORS["background"],
+                bg=COLORS["panel"],
                 font=FONT_JP_SMALL,
-                wraplength=230,
+                wraplength=210,
                 justify="left",
                 cursor="hand2",
             ).pack(anchor="w")
@@ -2733,16 +2743,16 @@ class OikawaApp(tk.Tk):
         if not candidates:
             return
         for candidate in candidates[:3]:
-            row = tk.Frame(self.side_memory_frame, bg=COLORS["background"], cursor="hand2")
-            row.pack(fill="x", pady=(0, 4))
+            row = tk.Frame(self.side_memory_frame, bg=COLORS["panel"], cursor="hand2")
+            row.pack(fill="x", pady=(0, 8))
             row.bind("<Button-1>", lambda _event, selected=candidate: self._open_side_memory_candidate(selected))
             tk.Label(
                 row,
                 text=UI_TEXT["side_memory_template"].format(message=candidate.message, title=candidate.title),
                 fg=COLORS["text"],
-                bg=COLORS["background"],
+                bg=COLORS["panel"],
                 font=FONT_JP_SMALL,
-                wraplength=230,
+                wraplength=210,
                 justify="left",
                 cursor="hand2",
             ).pack(anchor="w")
@@ -2759,16 +2769,16 @@ class OikawaApp(tk.Tk):
         if not candidates:
             return
         for candidate in candidates[:3]:
-            row = tk.Frame(self.quiet_memory_frame, bg=COLORS["background"], cursor="hand2")
-            row.pack(fill="x", pady=(0, 4))
+            row = tk.Frame(self.quiet_memory_frame, bg=COLORS["panel"], cursor="hand2")
+            row.pack(fill="x", pady=(0, 8))
             row.bind("<Button-1>", lambda _event, selected=candidate: self._open_quiet_memory_candidate(selected))
             tk.Label(
                 row,
                 text=UI_TEXT["quiet_memory_template"].format(message=candidate.message, title=candidate.title),
                 fg=COLORS["text"],
-                bg=COLORS["background"],
+                bg=COLORS["panel"],
                 font=FONT_JP_SMALL,
-                wraplength=230,
+                wraplength=210,
                 justify="left",
                 cursor="hand2",
             ).pack(anchor="w")
@@ -2899,7 +2909,7 @@ class OikawaApp(tk.Tk):
 
     def _small_button_style(self, background: str) -> dict[str, object]:
         style = self._button_style(background)
-        style.update({"padx": 8, "pady": 4})
+        style.update({"padx": 7, "pady": 3})
         return style
 
     def _mark_qpsc_notification_read(self, notification: QpscNotification) -> None:
@@ -3034,8 +3044,8 @@ class OikawaApp(tk.Tk):
             "font": FONT_JP_SMALL,
             "relief": "flat",
             "bd": 0,
-            "padx": 18,
-            "pady": 9,
+            "padx": 12,
+            "pady": 6,
             "highlightthickness": 1,
             "highlightbackground": COLORS["line"],
             "cursor": "hand2",
@@ -3054,7 +3064,7 @@ class OikawaApp(tk.Tk):
         width = max(1, self.canvas.winfo_width() or 1120)
         height = max(1, self.canvas.winfo_height() or 720)
         random.seed(20260518)
-        count = 46
+        count = 58
         self.particles = [
             Particle(
                 x=random.uniform(0, width),
@@ -3095,7 +3105,7 @@ class OikawaApp(tk.Tk):
         for index, current in enumerate(self.particles):
             for other in self.particles[index + 1 :]:
                 distance = math.hypot(current.x - other.x, current.y - other.y)
-                if distance < 150:
+                if distance < 165:
                     color = COLORS["line"] if self.scanning and distance < 96 else COLORS["line_soft"]
                     self.canvas.create_line(current.x, current.y, other.x, other.y, fill=color, width=1, tags="field")
 
