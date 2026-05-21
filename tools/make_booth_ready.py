@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -23,6 +24,23 @@ NOTICE_TEXT = """【注意事項】
 PEAKHEADZ
 https://peakheadz.com
 """
+THUMBNAIL_SIZE = (1200, 630)
+WINDOWS_FONT_DIR = Path(os.environ.get("WINDIR", r"C:\Windows")) / "Fonts"
+FONT_CANDIDATES = {
+    "bold": [
+        "YuGothB.ttc",
+        "YuGothM.ttc",
+        "meiryob.ttc",
+        "meiryo.ttc",
+        "msgothic.ttc",
+    ],
+    "regular": [
+        "YuGothM.ttc",
+        "YuGothR.ttc",
+        "meiryo.ttc",
+        "msgothic.ttc",
+    ],
+}
 
 
 @dataclass
@@ -35,6 +53,8 @@ class AppResult:
     zip_name: str = ""
     product_title: str = ""
     price: int = 300
+    thumbnail_error: str = ""
+    product_updated: bool = False
 
 
 def read_text(path: Path) -> str:
@@ -89,6 +109,15 @@ def product_title(meta: dict) -> str:
     return meta.get("site_title") or meta.get("display_name") or meta.get("folder_name", "DAKE App")
 
 
+def thumbnail_title(meta: dict) -> str:
+    return (
+        meta.get("display_name")
+        or meta.get("site_title")
+        or meta.get("launcher_title")
+        or meta.get("folder_name", "DAKE App")
+    )
+
+
 def short_description(meta: dict) -> str:
     return (
         meta.get("launcher_description")
@@ -96,6 +125,23 @@ def short_description(meta: dict) -> str:
         or meta.get("update_summary")
         or product_title(meta)
     )
+
+
+def thumbnail_description(meta: dict) -> str:
+    raw = (
+        meta.get("site_description")
+        or meta.get("launcher_description")
+        or meta.get("update_summary")
+        or ""
+    )
+    text = re.sub(r"\s+", " ", raw).strip()
+    if len(text) > 76:
+        sentence = re.split(r"(?<=。)", text, maxsplit=1)[0].strip()
+        if 0 < len(sentence) <= 76:
+            text = sentence
+        else:
+            text = text[:75].rstrip("、。 ") + "…"
+    return text
 
 
 def price_for(folder: str, title: str, features: list[str]) -> int:
@@ -171,6 +217,9 @@ def make_product_txt(title: str, price: int, description: str, features: list[st
 {tag_lines}
 
 # BOOTH商品画像
+assets/booth_thumbnail.jpg
+
+# 補助画像
 assets/screenshot.jpg
 
 # 作品ファイル
@@ -189,6 +238,130 @@ def convert_webp_to_jpg(src: Path, dst: Path) -> None:
         else:
             image = image.convert("RGB")
         image.save(dst, "JPEG", quality=95, optimize=True)
+
+
+def load_font(size: int, *, bold: bool = False) -> ImageFont.ImageFont:
+    names = FONT_CANDIDATES["bold" if bold else "regular"]
+    for name in names:
+        path = WINDOWS_FONT_DIR / name
+        if path.exists():
+            try:
+                return ImageFont.truetype(str(path), size=size)
+            except OSError:
+                continue
+    return ImageFont.load_default()
+
+
+def text_width(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageFont) -> int:
+    bbox = draw.textbbox((0, 0), text, font=font)
+    return bbox[2] - bbox[0]
+
+
+def fit_font(draw: ImageDraw.ImageDraw, text: str, max_width: int, start_size: int, min_size: int, *, bold: bool) -> ImageFont.ImageFont:
+    for size in range(start_size, min_size - 1, -2):
+        font = load_font(size, bold=bold)
+        if text_width(draw, text, font) <= max_width:
+            return font
+    return load_font(min_size, bold=bold)
+
+
+def trim_to_width(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageFont, max_width: int) -> str:
+    if text_width(draw, text, font) <= max_width:
+        return text
+    ellipsis = "…"
+    trimmed = text
+    while trimmed and text_width(draw, trimmed + ellipsis, font) > max_width:
+        trimmed = trimmed[:-1]
+    return trimmed + ellipsis if trimmed else ellipsis
+
+
+def wrap_text(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageFont, max_width: int, max_lines: int) -> list[str]:
+    if not text:
+        return []
+    lines: list[str] = []
+    current = ""
+    for char in text:
+        candidate = current + char
+        if current and text_width(draw, candidate, font) > max_width:
+            lines.append(current)
+            current = char
+            if len(lines) == max_lines:
+                break
+        else:
+            current = candidate
+    if len(lines) < max_lines and current:
+        lines.append(current)
+    if len(lines) > max_lines:
+        lines = lines[:max_lines]
+    if len(lines) == max_lines:
+        consumed = "".join(lines)
+        if len(consumed) < len(text):
+            lines[-1] = trim_to_width(draw, lines[-1] + "…", font, max_width)
+    return lines
+
+
+def make_background(size: tuple[int, int]) -> Image.Image:
+    width, height = size
+    image = Image.new("RGB", size, "#f7f8fa")
+    draw = ImageDraw.Draw(image)
+    for y in range(height):
+        ratio = y / max(height - 1, 1)
+        value = int(255 - ratio * 9)
+        draw.line([(0, y), (width, y)], fill=(value, value, min(value + 1, 255)))
+    return image
+
+
+def create_booth_thumbnail(src: Path, dst: Path, title: str, description: str) -> None:
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    canvas = make_background(THUMBNAIL_SIZE)
+    draw = ImageDraw.Draw(canvas)
+    width, height = THUMBNAIL_SIZE
+    margin_x = 78
+    max_text_width = width - margin_x * 2
+
+    title_font = fit_font(draw, title, max_text_width, 48, 34, bold=True)
+    desc_font = load_font(24)
+    title = trim_to_width(draw, title, title_font, max_text_width)
+    desc_lines = wrap_text(draw, description, desc_font, max_text_width, 2)
+
+    draw.text((margin_x, 52), title, fill="#1f2933", font=title_font)
+    desc_y = 118
+    for line in desc_lines:
+        draw.text((margin_x, desc_y), line, fill="#4b5563", font=desc_font)
+        desc_y += 34
+    draw.rounded_rectangle((margin_x, 177, margin_x + 78, 181), radius=2, fill="#8fa1b4")
+
+    with Image.open(src) as screenshot:
+        screenshot = screenshot.convert("RGB")
+        max_w = 980
+        max_h = 390
+        scale = min(max_w / screenshot.width, max_h / screenshot.height, 1.0)
+        shot_size = (max(1, int(screenshot.width * scale)), max(1, int(screenshot.height * scale)))
+        screenshot = screenshot.resize(shot_size, Image.Resampling.LANCZOS)
+
+    shot_x = (width - screenshot.width) // 2
+    shot_y = max(218, height - 58 - screenshot.height)
+    panel_pad = 18
+    panel = (
+        shot_x - panel_pad,
+        shot_y - panel_pad,
+        shot_x + screenshot.width + panel_pad,
+        shot_y + screenshot.height + panel_pad,
+    )
+
+    shadow = Image.new("RGBA", THUMBNAIL_SIZE, (0, 0, 0, 0))
+    shadow_draw = ImageDraw.Draw(shadow)
+    shadow_draw.rounded_rectangle(
+        (panel[0] + 6, panel[1] + 10, panel[2] + 6, panel[3] + 10),
+        radius=24,
+        fill=(31, 41, 51, 28),
+    )
+    shadow = shadow.filter(ImageFilter.GaussianBlur(10))
+    canvas = Image.alpha_composite(canvas.convert("RGBA"), shadow).convert("RGB")
+    draw = ImageDraw.Draw(canvas)
+    draw.rounded_rectangle(panel, radius=24, fill="#ffffff", outline="#dce2e8", width=1)
+    canvas.paste(screenshot, (shot_x, shot_y))
+    canvas.save(dst, "JPEG", quality=94, optimize=True)
 
 
 def create_zip(zip_path: Path, exe_path: Path, readme_path: Path, notice_path: Path) -> None:
@@ -255,8 +428,10 @@ def process_app(app_dir: Path) -> AppResult:
 
     screenshot_webp = app_dir / meta.get("screenshot_path", "assets/screenshot.webp")
     screenshot_jpg = app_dir / "assets" / "screenshot.jpg"
+    thumbnail_jpg = app_dir / "assets" / "booth_thumbnail.jpg"
     booth_dir = app_dir / "booth_ready"
     booth_jpg = booth_dir / "screenshot.jpg"
+    booth_thumbnail_jpg = booth_dir / "booth_thumbnail.jpg"
     booth_dir.mkdir(parents=True, exist_ok=True)
 
     if screenshot_webp.exists():
@@ -270,6 +445,24 @@ def process_app(app_dir: Path) -> AppResult:
     else:
         result.missing.append("assets/screenshot.webp")
         result.warnings.append("screenshot.jpg not generated")
+
+    if screenshot_jpg.exists():
+        try:
+            create_booth_thumbnail(
+                screenshot_jpg,
+                thumbnail_jpg,
+                thumbnail_title(meta),
+                thumbnail_description(meta),
+            )
+            shutil.copy2(thumbnail_jpg, booth_thumbnail_jpg)
+            result.generated.extend(["assets/booth_thumbnail.jpg", "booth_ready/booth_thumbnail.jpg"])
+        except Exception as exc:  # noqa: BLE001
+            result.thumbnail_error = str(exc)
+            result.missing.append(f"booth_thumbnail.jpg generation failed: {exc}")
+            result.ok = False
+    else:
+        result.thumbnail_error = "assets/screenshot.jpg missing"
+        result.missing.append("assets/screenshot.jpg")
 
     readme_txt = booth_dir / "README.txt"
     notice_txt = booth_dir / "注意事項.txt"
@@ -294,6 +487,7 @@ def process_app(app_dir: Path) -> AppResult:
         zip_name=zip_name,
     )
     write_text(product_txt, product)
+    result.product_updated = True
     result.generated.extend(["booth_ready/README.txt", "booth_ready/注意事項.txt", "booth_ready/booth_product.txt"])
 
     if exe_path is not None:
@@ -318,8 +512,10 @@ def main() -> int:
 
     print(f"対象アプリ数: {len(results)}")
     print(f"screenshot.jpg生成成功: {sum('assets/screenshot.jpg' in r.generated for r in results)}")
+    print(f"booth_thumbnail.jpg生成成功: {sum('assets/booth_thumbnail.jpg' in r.generated for r in results)}")
     print(f"booth_ready生成成功: {sum((APPS_DIR / r.folder / 'booth_ready').exists() for r in results)}")
     print(f"zip生成成功: {sum(any(item.endswith('.zip') for item in r.generated) for r in results)}")
+    print(f"booth_product.txt更新: {sum(r.product_updated for r in results)}")
     print("")
     print("不足/警告:")
     for result in results:

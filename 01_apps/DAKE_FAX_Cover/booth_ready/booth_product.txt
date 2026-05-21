@@ -25,6 +25,9 @@ Windows
 シンプル
 
 # BOOTH商品画像
+assets/booth_thumbnail.jpg
+
+# 補助画像
 assets/screenshot.jpg
 
 # 作品ファイル
