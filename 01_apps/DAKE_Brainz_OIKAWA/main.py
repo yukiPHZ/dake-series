@@ -61,15 +61,15 @@ UI_TEXT = {
     "button_heat_search": "熱検索",
     "button_heat_searching": "熱検索中",
     "button_read_heat": "熱を読む",
-    "button_scan": "巡回する",
+    "button_scan": "巡回",
     "button_scanning": "巡回中",
-    "button_open_output": "保存先を開く",
+    "button_open_output": "保存先",
     "button_choose_folder": "記憶フォルダを選ぶ",
     "button_preview_source": "原本を読む",
     "button_open_source_file": "原本を開く",
     "button_qpsc_state_check": "状態確認",
     "button_qpsc_state_checking": "確認中",
-    "status_idle": "眠っています",
+    "status_idle": "待機中",
     "status_searching": "記憶を検索中",
     "status_search_complete": "検索完了",
     "status_no_search_results": "検索結果はありません",
@@ -93,8 +93,8 @@ UI_TEXT = {
     "section_quiet_memory": "静かだった記憶",
     "section_qpsc_state": "QPSC状態",
     "cosmos_news_title": "正本ニュース",
-    "cosmos_news_hint": "静かに巡回しています。",
-    "canonical_news_waiting": "まだ静かです。",
+    "cosmos_news_hint": "",
+    "canonical_news_waiting": "待機中",
     "canonical_news_bullet": "- {text}",
     "canonical_news_slack": "Slackから記憶が入りました",
     "canonical_news_codex": "Codex報告が正本として入りました",
@@ -105,7 +105,7 @@ UI_TEXT = {
     "canonical_news_revisit": "最近戻った正本があります",
     "canonical_news_heat": "熾火が少し残っています",
     "canonical_news_awake": "記憶庫は静かに起きています",
-    "orbit_brief_waiting": "今日の整理はまだ静かです。",
+    "orbit_brief_waiting": "待機中",
     "orbit_brief_import": "今日入った記憶があります",
     "orbit_brief_ember": "熾火が少し残っています",
     "orbit_brief_return": "最近戻った正本があります",
@@ -113,11 +113,11 @@ UI_TEXT = {
     "orbit_brief_side": "側に在る記憶があります",
     "orbit_brief_awake": "記憶庫は静かに起きています",
     "label_memory_folder": "記憶ルート",
-    "memory_root_short": "記憶ルート: {name}",
+    "memory_root_short": "{name}",
     "memory_folder_missing": "記憶フォルダ未検出",
     "dialog_choose_memory": "記憶フォルダを選択",
     "dialog_title": "OIKAWA",
-    "summary_idle": "呼ばれるまで、記憶層の外側で待機します",
+    "summary_idle": "",
     "summary_scan": "files {files} / skipped {skipped} / traces {traces}",
     "summary_search": "results {results} / skipped {skipped}",
     "summary_heat_search": "heat {results} / skipped {skipped}",
@@ -125,13 +125,13 @@ UI_TEXT = {
     "card_file": "該当ファイル",
     "card_excerpt": "抜粋",
     "card_score": "score {score}",
-    "card_empty": "まだ浮上したカードはありません",
-    "source_preview_empty": "原本はまだ選ばれていません。",
+    "card_empty": "待機中",
+    "source_preview_empty": "未選択",
     "source_preview_loading": "正本を確認しています。",
     "source_preview_loaded": "原本を開けます。",
     "source_preview_missing": "ファイルが見つかりません。",
     "source_preview_failed": "原本を表示できませんでした。",
-    "source_open_missing": "原本はまだ選ばれていません。",
+    "source_open_missing": "未選択",
     "source_open_failed": "原本を開けませんでした。",
     "source_selected_template": "選択中:\n{title}",
     "source_preview_not_file": "原本を表示できませんでした。",
@@ -142,9 +142,9 @@ UI_TEXT = {
     "heat_candidate_title": "まだ熱が残っている記憶",
     "heat_candidate_message": "{source}から取り込まれた記憶があります。",
     "heat_candidate_no_related": "原本への道筋はまだありません。",
-    "heat_hint_idle": "熱補助はまだ静かです。",
+    "heat_hint_idle": "待機中",
     "heat_hint_reading": "熱の気配を読んでいます。",
-    "heat_hint_sleeping": "熱補助はまだ眠っています。",
+    "heat_hint_sleeping": "熱補助は休止中",
     "heat_hint_unavailable": "Ollamaに接続できませんでした。",
     "heat_hint_invalid": "熱補助を整えられませんでした。",
     "heat_hint_template": "熱の気配: {hint}\n理由: {reason}\nconfidence: {confidence}",
@@ -195,20 +195,20 @@ UI_TEXT = {
     "orbit_next_query": "検索語に近い記憶です",
     "orbit_next_no_related": "原本への道筋はまだありません。",
     "orbit_next_template": "{message}: {title}",
-    "revisit_empty": "まだ巡回の記録はありません。",
+    "revisit_empty": "待機中",
     "revisit_reason_often": "何度か戻っています",
     "revisit_reason_recent": "最近また開かれました",
     "revisit_reason_side": "側に残っている記憶です",
     "revisit_no_related": "原本への道筋はまだありません。",
     "revisit_template": "{message}: {title}",
-    "side_memory_empty": "まだ静かです。",
+    "side_memory_empty": "待機中",
     "side_memory_reason_recent": "最近また戻っています",
     "side_memory_reason_side": "側に残っている記憶です",
     "side_memory_reason_night": "深夜に巡回されています",
     "side_memory_reason_heat": "熱の気配があります",
     "side_memory_no_related": "原本への道筋はまだありません。",
     "side_memory_template": "{message}: {title}",
-    "quiet_memory_empty": "まだ静かです。",
+    "quiet_memory_empty": "待機中",
     "quiet_memory_reason_long_gap": "しばらく静かでした",
     "quiet_memory_reason_recent": "最近また戻っています",
     "quiet_memory_reason_night": "深夜に巡回されています",
@@ -252,7 +252,7 @@ UI_TEXT = {
     "qpsc_check_related_ok": "原本パス: OK",
     "qpsc_check_related_empty": "原本パス: まだ記録がありません",
     "qpsc_check_related_missing": "原本パス: ファイルが見つかりません",
-    "footer_source": "記憶はBRAINZに在り、OIKAWAが静かに呼び戻します。",
+    "footer_source": "",
     "launch_check_ok": "LAUNCH CHECK OK",
     "gui_smoke_ok": "GUI SMOKE OK",
     "smoke_ok": "SMOKE OK",
@@ -1902,9 +1902,9 @@ class OikawaApp(tk.Tk):
         tk.Label(
             left_panel,
             text=UI_TEXT["app_subcopy"],
-            fg=COLORS["heat"],
+            fg=COLORS["muted"],
             bg=COLORS["background"],
-            font=FONT_JP,
+            font=FONT_LABEL,
         ).pack(anchor="w", pady=(5, 0))
         tk.Label(
             left_panel,
@@ -1913,13 +1913,6 @@ class OikawaApp(tk.Tk):
             bg=COLORS["background"],
             font=FONT_JP_SMALL,
         ).pack(anchor="w", pady=(4, 14))
-        tk.Label(
-            left_panel,
-            textvariable=self.status_var,
-            fg=COLORS["heat"],
-            bg=COLORS["background"],
-            font=FONT_JP_SMALL,
-        ).pack(anchor="w")
         tk.Label(
             left_panel,
             textvariable=self.memory_var,
@@ -2066,15 +2059,6 @@ class OikawaApp(tk.Tk):
         ).pack(anchor="w")
         tk.Label(
             cosmos_board,
-            text=UI_TEXT["cosmos_news_hint"],
-            fg=COLORS["muted"],
-            bg=COLORS["panel"],
-            font=FONT_JP_SMALL,
-            wraplength=500,
-            justify="left",
-        ).pack(anchor="w", pady=(5, 14))
-        tk.Label(
-            cosmos_board,
             textvariable=self.canonical_news_var,
             fg=COLORS["text"],
             bg=COLORS["panel"],
@@ -2203,10 +2187,11 @@ class OikawaApp(tk.Tk):
             bg=COLORS["background"],
             font=FONT_LABEL,
         ).pack(anchor="w")
+        self.heat_panel = heat
         self.heat_candidates_frame = tk.Frame(heat, bg=COLORS["background"])
         self.heat_candidates_frame.pack(fill="both", expand=True, pady=(5, 0))
         self.heat_hint_var = tk.StringVar(value=UI_TEXT["heat_hint_idle"])
-        tk.Label(
+        self.heat_hint_label = tk.Label(
             heat,
             textvariable=self.heat_hint_var,
             fg=COLORS["muted"],
@@ -2214,7 +2199,9 @@ class OikawaApp(tk.Tk):
             font=FONT_LABEL,
             wraplength=250,
             justify="left",
-        ).pack(anchor="w", pady=(6, 0))
+        )
+        self.heat_hint_label.pack(anchor="w", pady=(6, 0))
+        self.heat_hint_label.pack_forget()
 
         orbit = tk.Frame(
             right_panel,
@@ -2284,6 +2271,7 @@ class OikawaApp(tk.Tk):
             pady=8,
         )
         revisit.pack(fill="x", pady=(0, 10), before=notice)
+        self.revisit_panel = revisit
         tk.Label(
             revisit,
             text=UI_TEXT["section_revisit"],
@@ -2303,6 +2291,7 @@ class OikawaApp(tk.Tk):
             pady=8,
         )
         side_memory.pack(fill="x", pady=(0, 10), before=notice)
+        self.side_memory_panel = side_memory
         tk.Label(
             side_memory,
             text=UI_TEXT["section_side_memory"],
@@ -2322,6 +2311,7 @@ class OikawaApp(tk.Tk):
             pady=8,
         )
         quiet_memory.pack(fill="x", pady=(0, 10), before=notice)
+        self.quiet_memory_panel = quiet_memory
         tk.Label(
             quiet_memory,
             text=UI_TEXT["section_quiet_memory"],
@@ -2333,6 +2323,9 @@ class OikawaApp(tk.Tk):
         self.quiet_memory_frame.pack(fill="x", pady=(5, 0))
         notice.pack_forget()
         orbit.pack_forget()
+        revisit.pack_forget()
+        side_memory.pack_forget()
+        quiet_memory.pack_forget()
 
         footer = tk.Frame(self, bg=COLORS["background"])
         footer.place(relx=0.03, rely=0.93, relwidth=0.94, relheight=0.055)
@@ -2343,20 +2336,6 @@ class OikawaApp(tk.Tk):
             bg=COLORS["background"],
             font=FONT_LABEL,
         ).pack(side="left", anchor="w")
-        tk.Label(
-            footer,
-            text=UI_TEXT["footer_source"],
-            fg=COLORS["muted"],
-            bg=COLORS["background"],
-            font=FONT_JP_SMALL,
-        ).pack(side="left", padx=(18, 0))
-        tk.Label(
-            footer,
-            textvariable=self.summary_var,
-            fg=COLORS["muted"],
-            bg=COLORS["background"],
-            font=FONT_MONO,
-        ).pack(side="right", anchor="e")
 
     def _initial_qpsc_self_check_text(self) -> str:
         return "\n".join(
@@ -2659,6 +2638,26 @@ class OikawaApp(tk.Tk):
                 justify="left",
             ).pack(anchor="w", pady=(2, 0))
 
+    def _set_optional_panel_visible(self, panel_name: str, visible: bool) -> None:
+        panel = getattr(self, panel_name, None)
+        if panel is None:
+            return
+        if visible:
+            if not panel.winfo_ismapped():
+                panel.pack(fill="x", pady=(0, 10))
+            return
+        panel.pack_forget()
+
+    def _set_heat_hint_visible(self, visible: bool) -> None:
+        label = getattr(self, "heat_hint_label", None)
+        if label is None:
+            return
+        if visible:
+            if not label.winfo_ismapped():
+                label.pack(anchor="w", pady=(6, 0))
+            return
+        label.pack_forget()
+
     def _render_heat_candidates(self, candidates: list[HeatCandidate]) -> None:
         if not hasattr(self, "heat_candidates_frame"):
             return
@@ -2705,6 +2704,7 @@ class OikawaApp(tk.Tk):
             return
         for child in self.revisit_candidates_frame.winfo_children():
             child.destroy()
+        self._set_optional_panel_visible("revisit_panel", bool(candidates))
         if not candidates:
             return
         for candidate in candidates[:3]:
@@ -2729,6 +2729,7 @@ class OikawaApp(tk.Tk):
             return
         for child in self.side_memory_frame.winfo_children():
             child.destroy()
+        self._set_optional_panel_visible("side_memory_panel", bool(candidates))
         if not candidates:
             return
         for candidate in candidates[:3]:
@@ -2754,6 +2755,7 @@ class OikawaApp(tk.Tk):
             return
         for child in self.quiet_memory_frame.winfo_children():
             child.destroy()
+        self._set_optional_panel_visible("quiet_memory_panel", bool(candidates))
         if not candidates:
             return
         for candidate in candidates[:3]:
@@ -2922,6 +2924,7 @@ class OikawaApp(tk.Tk):
         self.heat_hint_request_id += 1
         request_id = self.heat_hint_request_id
         self.heat_hint_var.set(UI_TEXT["heat_hint_reading"])
+        self._set_heat_hint_visible(True)
         self.heat_hint_thread = threading.Thread(
             target=self._heat_hint_worker,
             args=(request_id, candidate),
