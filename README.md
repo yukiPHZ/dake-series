@@ -189,3 +189,10 @@ Obsidianで観測する
 - OIKAWAは全文プレビューではなく、熾火・ORBIT・巡回・側に在るを並べる巡回端末として扱う。
 - PEAKHEADZ_ROOTが正本保管庫で、ObsidianはMarkdown観測UIとして開く。
 - 旧 `PEAKHEADZ_ROOT/slack/` はlegacyであり、新規保存先は `10_slack/*` に寄せる。
+
+## QPSC Phase 24 通常運用UX
+
+- Slackへ投げるだけで、BRAINZが `PEAKHEADZ_ROOT` へMarkdown正本として保存する流れを前面に出した。
+- BRAINZはSlack接続と5チャンネル保存設定を、通常運用者が読めるカードUIへ寄せる。
+- OIKAWAは正本ニュース端末として、全文表示よりも熾火・巡回・側に在る・原本を開く導線を優先する。
+- 旧 `slack/` はlegacyとして残し、新規保存は `10_slack/*` に寄せる。

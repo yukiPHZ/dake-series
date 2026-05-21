@@ -60,6 +60,15 @@ UI_TEXT = {
     "status_slack_routes_invalid": "SLACK ROUTES INVALID",
     "section_slack_intake": "Slack投入口",
     "slack_intake_hint": "Slack投稿を待っています。保存先はチャンネルごとに分けます。",
+    "slack_intake_intro": "Slackに投稿すると、BRAINZがPEAKHEADZ_ROOTへMarkdown保存します。スマホでもPCでも、Slackへ投げるだけで記憶になります。",
+    "section_slack_connection": "Slack接続",
+    "slack_connection_summary": "Bot Token: {token}\n監視: {watch}\n取得件数: {count}\n最終取り込み: {last}",
+    "slack_token_set": "設定済み",
+    "slack_token_unset": "未設定",
+    "slack_watch_on": "ON",
+    "slack_watch_off": "OFF",
+    "button_check_slack_connection": "接続確認",
+    "button_open_slack_folder": "保存先を開く",
     "checkbox_enable_slack_intake": "Slack監視",
     "label_slack_channel_id": "channel_id",
     "label_slack_route_enabled": "有効",
@@ -69,13 +78,14 @@ UI_TEXT = {
     "slack_route_status_unset": "未設定",
     "slack_route_status_off": "停止中",
     "slack_route_last_import": "最終: {time}",
+    "slack_route_state_line": "状態: {status} / 最終取り込み: {time}",
     "slack_purpose_brainz_inbox": "用途: なんでも / 違和感 / TODO未満",
     "slack_purpose_brainz_aru": "用途: 在る / 握らない強さ / BORINEF核",
     "slack_purpose_brainz_note": "用途: 公開済note / note URL",
     "slack_purpose_brainz_codex": "用途: Codexログ / 正本",
     "slack_purpose_brainz_reaction": "用途: 感想 / 反応 / 熱",
     "log_slack_route_saved": "SLACK ROUTE SAVED: {channel} -> {folder}",
-    "log_slack_captured_route": "SLACK CAPTURED: {channel} -> {folder}",
+    "log_slack_captured_route": "SLACK CAPTURED: {channel} → {folder}",
     "log_legacy_slack_folder_found": "LEGACY SLACK FOLDER FOUND: {path}",
     "section_codex_watch": "Codexログ自動監視",
     "label_codex_sessions_path": "Codex sessions path",
@@ -329,6 +339,7 @@ UI_TEXT = {
     "log_peakheadz_root_recommended": "PEAKHEADZ_ROOT RECOMMENDED: {path}",
     "log_legacy_memory_root_found": "LEGACY BRAINZ MEMORY FOUND: {path}",
     "log_slack_routes_saved": "SLACK ROUTES SAVED: {count}",
+    "log_slack_connection_checked": "SLACK CHECK: {status} routes={routes} missing={missing}",
     "log_slack_routes_reset": "SLACK ROUTES RESET",
     "log_codex_watch_saved": "CODEX WATCH SAVED: enabled={enabled} path={path}",
     "log_codex_watch_checked": "CODEX WATCH CHECK: exists={exists} path={path}",
@@ -1493,7 +1504,7 @@ def run_gui(launch_check: bool = False) -> int:
     from core.qpsc_status import write_brainz_awake_status
     from core.remote_queue import RemoteQueueBatchResult, count_pending_queue_files, process_remote_queue_folder
     from core.search_engine import SearchEngine, SearchResponse
-    from core.slack_inbox import SlackInboxResult, SlackTaskResult, poll_slack_inbox
+    from core.slack_inbox import DEFAULT_HISTORY_LIMIT, SlackInboxResult, SlackTaskResult, poll_slack_inbox
     from core.watch_folder import WatchScanResult, detect_changed_files, write_watch_log
     from ui.components import choose_font_family, set_textbox_text
     from ui.theme import (
@@ -2893,6 +2904,27 @@ def run_gui(launch_check: bool = False) -> int:
             text_key = f"slack_purpose_{key.replace('-', '_')}"
             return UI_TEXT.get(text_key, UI_TEXT["slack_intake_hint"])
 
+        def _slack_last_import_text(self) -> str:
+            routes = load_slack_channel_routes(self.config_data.slack_channel_routes_json)
+            values = [str(route.get("last_imported_at") or "") for route in routes if route.get("last_imported_at")]
+            return max(values) if values else "-"
+
+        def _slack_connection_summary_text(self, token_text: str | None = None) -> str:
+            token = self.config_data.slack_bot_token if token_text is None else token_text
+            token_state = UI_TEXT["slack_token_set"] if token else UI_TEXT["slack_token_unset"]
+            watch_state = UI_TEXT["slack_watch_on"] if self.slack_inbox_var.get() else UI_TEXT["slack_watch_off"]
+            return UI_TEXT["slack_connection_summary"].format(
+                token=token_state,
+                watch=watch_state,
+                count=DEFAULT_HISTORY_LIMIT,
+                last=self._slack_last_import_text(),
+            )
+
+        def _refresh_slack_connection_summary(self) -> None:
+            if hasattr(self, "slack_connection_summary_var"):
+                token_text = self.slack_token_entry.get().strip() if hasattr(self, "slack_token_entry") else None
+                self.slack_connection_summary_var.set(self._slack_connection_summary_text(token_text))
+
         def _build_slack_operation_section(self, parent, row: int) -> None:
             self._section_title(parent, UI_TEXT["section_slack_intake"], row)
             frame = ctk.CTkFrame(
@@ -2903,19 +2935,46 @@ def run_gui(launch_check: bool = False) -> int:
                 corner_radius=6,
             )
             frame.grid(row=row + 1, column=0, sticky="ew", padx=12, pady=(0, 12))
-            frame.grid_columnconfigure((0, 1), weight=1)
+            frame.grid_columnconfigure(0, weight=1)
             ctk.CTkLabel(
                 frame,
-                text=UI_TEXT["slack_intake_hint"],
+                text=UI_TEXT["slack_intake_intro"],
                 text_color=COLORS["muted"],
                 font=(self.reading_font_family, FONT_SIZES["small"]),
-                wraplength=560,
+                wraplength=760,
                 justify="left",
                 anchor="w",
-            ).grid(row=0, column=0, columnspan=2, sticky="ew", padx=14, pady=(12, 8))
-            self.slack_token_entry = ctk.CTkEntry(
+            ).grid(row=0, column=0, sticky="ew", padx=14, pady=(12, 8))
+
+            connection = ctk.CTkFrame(
                 frame,
-                height=30,
+                fg_color=COLORS["panel"],
+                border_color=COLORS["border"],
+                border_width=1,
+                corner_radius=6,
+            )
+            connection.grid(row=1, column=0, sticky="ew", padx=14, pady=(0, 12))
+            connection.grid_columnconfigure((0, 1), weight=1)
+            ctk.CTkLabel(
+                connection,
+                text=UI_TEXT["section_slack_connection"],
+                text_color=COLORS["section"],
+                font=(self.font_family, FONT_SIZES["section"]),
+                anchor="w",
+            ).grid(row=0, column=0, columnspan=2, sticky="ew", padx=12, pady=(10, 2))
+            self.slack_connection_summary_var = ctk.StringVar(value=self._slack_connection_summary_text())
+            ctk.CTkLabel(
+                connection,
+                textvariable=self.slack_connection_summary_var,
+                text_color=COLORS["muted"],
+                font=(self.status_font_family, FONT_SIZES["small"]),
+                wraplength=720,
+                justify="left",
+                anchor="w",
+            ).grid(row=1, column=0, columnspan=2, sticky="ew", padx=12, pady=(0, 8))
+            self.slack_token_entry = ctk.CTkEntry(
+                connection,
+                height=32,
                 placeholder_text=UI_TEXT["label_slack_token"],
                 show="*",
                 fg_color=COLORS["input"],
@@ -2923,22 +2982,22 @@ def run_gui(launch_check: bool = False) -> int:
                 text_color=COLORS["text"],
                 font=(self.status_font_family, FONT_SIZES["small"]),
             )
-            self.slack_token_entry.grid(row=1, column=0, sticky="ew", padx=(14, 7), pady=(0, 8))
+            self.slack_token_entry.grid(row=2, column=0, sticky="ew", padx=(12, 6), pady=(0, 8))
             self.slack_token_entry.insert(0, self.config_data.slack_bot_token)
             self.slack_interval_entry = ctk.CTkEntry(
-                frame,
-                height=30,
+                connection,
+                height=32,
                 placeholder_text=UI_TEXT["label_slack_interval"],
                 fg_color=COLORS["input"],
                 border_color=COLORS["border"],
                 text_color=COLORS["text"],
                 font=(self.status_font_family, FONT_SIZES["small"]),
             )
-            self.slack_interval_entry.grid(row=1, column=1, sticky="ew", padx=(7, 14), pady=(0, 8))
+            self.slack_interval_entry.grid(row=2, column=1, sticky="ew", padx=(6, 12), pady=(0, 8))
             self.slack_interval_entry.insert(0, str(self.config_data.slack_poll_interval_seconds))
-            control = ctk.CTkFrame(frame, fg_color="transparent")
-            control.grid(row=2, column=0, columnspan=2, sticky="ew", padx=14, pady=(0, 10))
-            control.grid_columnconfigure((0, 1, 2), weight=1)
+            control = ctk.CTkFrame(connection, fg_color="transparent")
+            control.grid(row=3, column=0, columnspan=2, sticky="ew", padx=12, pady=(0, 10))
+            control.grid_columnconfigure((0, 1, 2, 3), weight=1)
             self.slack_inbox_checkbox = ctk.CTkCheckBox(
                 control,
                 text=UI_TEXT["checkbox_enable_slack_intake"],
@@ -2959,7 +3018,16 @@ def run_gui(launch_check: bool = False) -> int:
                 hover_color=COLORS["accent_soft"],
                 font=(self.status_font_family, FONT_SIZES["button"]),
                 command=self._save_slack_settings,
-            ).grid(row=0, column=1, sticky="ew", padx=8)
+            ).grid(row=0, column=1, sticky="ew", padx=6)
+            ctk.CTkButton(
+                control,
+                text=UI_TEXT["button_check_slack_connection"],
+                height=30,
+                fg_color=COLORS["panel_soft"],
+                hover_color=COLORS["accent_soft"],
+                font=(self.status_font_family, FONT_SIZES["button"]),
+                command=self._check_slack_connection_settings,
+            ).grid(row=0, column=2, sticky="ew", padx=6)
             ctk.CTkButton(
                 control,
                 text=UI_TEXT["button_reset_slack_routes"],
@@ -2968,10 +3036,10 @@ def run_gui(launch_check: bool = False) -> int:
                 hover_color=COLORS["accent_soft"],
                 font=(self.status_font_family, FONT_SIZES["button"]),
                 command=self._reset_slack_routes_settings,
-            ).grid(row=0, column=2, sticky="ew")
+            ).grid(row=0, column=3, sticky="ew", padx=(6, 0))
 
-            status = ctk.CTkFrame(frame, fg_color="transparent")
-            status.grid(row=3, column=0, columnspan=2, sticky="ew", padx=14, pady=(0, 8))
+            status = ctk.CTkFrame(connection, fg_color="transparent")
+            status.grid(row=4, column=0, columnspan=2, sticky="ew", padx=12, pady=(0, 10))
             status.grid_columnconfigure((0, 1, 2), weight=1)
             for index, variable in enumerate((self.slack_status_var, self.slack_channel_var, self.slack_last_import_var)):
                 ctk.CTkLabel(
@@ -2983,8 +3051,8 @@ def run_gui(launch_check: bool = False) -> int:
                 ).grid(row=0, column=index, sticky="ew", padx=(0, 8))
 
             cards = ctk.CTkFrame(frame, fg_color="transparent")
-            cards.grid(row=4, column=0, columnspan=2, sticky="ew", padx=14, pady=(0, 12))
-            cards.grid_columnconfigure((0, 1), weight=1)
+            cards.grid(row=2, column=0, sticky="ew", padx=14, pady=(0, 12))
+            cards.grid_columnconfigure(0, weight=1)
             self.slack_route_entries: dict[str, object] = {}
             self.slack_route_enabled_vars: dict[str, ctk.BooleanVar] = {}
             self.slack_route_status_vars: dict[str, ctk.StringVar] = {}
@@ -2998,10 +3066,10 @@ def run_gui(launch_check: bool = False) -> int:
                     border_width=1,
                     corner_radius=6,
                 )
-                card.grid(row=index // 2, column=index % 2, sticky="ew", padx=(0, 8) if index % 2 == 0 else (8, 0), pady=(0, 10))
+                card.grid(row=index, column=0, sticky="ew", padx=0, pady=(0, 10))
                 card.grid_columnconfigure(0, weight=1)
                 header = ctk.CTkFrame(card, fg_color="transparent")
-                header.grid(row=0, column=0, sticky="ew", padx=10, pady=(9, 4))
+                header.grid(row=0, column=0, sticky="ew", padx=12, pady=(10, 4))
                 header.grid_columnconfigure(0, weight=1)
                 ctk.CTkLabel(
                     header,
@@ -3029,28 +3097,28 @@ def run_gui(launch_check: bool = False) -> int:
                     text_color=COLORS["muted"],
                     font=(self.status_font_family, FONT_SIZES["micro"]),
                     anchor="w",
-                ).grid(row=1, column=0, sticky="ew", padx=10, pady=(0, 3))
+                ).grid(row=1, column=0, sticky="ew", padx=12, pady=(0, 3))
                 ctk.CTkLabel(
                     card,
                     text=UI_TEXT["slack_route_save_folder"].format(folder=str(route.get("save_folder") or "")),
                     text_color=COLORS["quiet"],
                     font=(self.status_font_family, FONT_SIZES["micro"]),
                     anchor="w",
-                ).grid(row=2, column=0, sticky="ew", padx=10, pady=(0, 5))
+                ).grid(row=2, column=0, sticky="ew", padx=12, pady=(0, 6))
                 entry = ctk.CTkEntry(
                     card,
-                    height=28,
+                    height=30,
                     placeholder_text=UI_TEXT["label_slack_channel_id"],
                     fg_color=COLORS["input"],
                     border_color=COLORS["border"],
                     text_color=COLORS["text"],
-                    font=(self.status_font_family, FONT_SIZES["micro"]),
+                    font=(self.status_font_family, FONT_SIZES["small"]),
                 )
-                entry.grid(row=3, column=0, sticky="ew", padx=10, pady=(0, 6))
+                entry.grid(row=3, column=0, sticky="ew", padx=12, pady=(0, 8))
                 entry.insert(0, str(route.get("channel_id") or ""))
                 self.slack_route_entries[key] = entry
                 footer = ctk.CTkFrame(card, fg_color="transparent")
-                footer.grid(row=4, column=0, sticky="ew", padx=10, pady=(0, 10))
+                footer.grid(row=4, column=0, sticky="ew", padx=12, pady=(0, 12))
                 footer.grid_columnconfigure(0, weight=1)
                 status_var = ctk.StringVar(value="")
                 self.slack_route_status_vars[key] = status_var
@@ -3064,14 +3132,25 @@ def run_gui(launch_check: bool = False) -> int:
                 ctk.CTkButton(
                     footer,
                     text=UI_TEXT["button_save_channel"],
-                    height=26,
-                    width=62,
+                    height=28,
+                    width=72,
                     fg_color=COLORS["panel_soft"],
                     hover_color=COLORS["accent_soft"],
                     font=(self.status_font_family, FONT_SIZES["micro"]),
                     command=self._save_slack_settings,
-                ).grid(row=0, column=1, sticky="e")
+                ).grid(row=0, column=1, sticky="e", padx=(8, 0))
+                ctk.CTkButton(
+                    footer,
+                    text=UI_TEXT["button_open_slack_folder"],
+                    height=28,
+                    width=104,
+                    fg_color=COLORS["panel_soft"],
+                    hover_color=COLORS["accent_soft"],
+                    font=(self.status_font_family, FONT_SIZES["micro"]),
+                    command=lambda selected=dict(route): self._open_slack_route_folder(selected),
+                ).grid(row=0, column=2, sticky="e", padx=(8, 0))
             self._update_slack_route_cards()
+            self._refresh_slack_connection_summary()
 
         def _panel(self, parent, corner_radius: int):
             return ctk.CTkFrame(
@@ -3265,6 +3344,7 @@ def run_gui(launch_check: bool = False) -> int:
                     )
                 self._update_slack_status()
                 self._update_slack_route_cards()
+                self._refresh_slack_connection_summary()
                 if missing:
                     self.slack_status_var.set(UI_TEXT["status_slack_config_save_failed"])
                     self._append_log(UI_TEXT["log_slack_config_save_failed"].format(missing=", ".join(missing)))
@@ -3309,6 +3389,48 @@ def run_gui(launch_check: bool = False) -> int:
                     return route
             return next((route for route in normalized if route.get("enabled", True) and route.get("channel_id")), None)
 
+        def _check_slack_connection_settings(self) -> None:
+            token = self.slack_token_entry.get().strip() if hasattr(self, "slack_token_entry") else ""
+            interval_text = self.slack_interval_entry.get().strip() if hasattr(self, "slack_interval_entry") else "10"
+            _interval, interval_valid = parse_slack_poll_interval(interval_text)
+            routes = self._collect_slack_channel_routes_from_cards()
+            primary_route = self._primary_slack_route(routes)
+            channel_id = str(primary_route.get("channel_id") or "") if primary_route else ""
+            if self.slack_inbox_var.get():
+                missing = slack_config_missing_fields(
+                    memory_folder=self.config_data.memory_folder,
+                    token=token,
+                    channel_id=channel_id,
+                    interval_valid=interval_valid,
+                )
+            else:
+                missing = [] if interval_valid else ["poll_interval"]
+            status = UI_TEXT["status_slack_config_missing"] if missing else UI_TEXT["status_slack_ready"]
+            self.slack_status_var.set(status)
+            self._append_log(
+                UI_TEXT["log_slack_connection_checked"].format(
+                    status=status,
+                    routes=len([route for route in routes if route.get("enabled", True) and route.get("channel_id")]),
+                    missing=", ".join(missing) if missing else "-",
+                )
+            )
+            self._refresh_slack_connection_summary()
+            self._update_slack_route_cards()
+
+        def _open_slack_route_folder(self, route: dict[str, object]) -> None:
+            if not self.config_data.memory_folder:
+                self._notify(UI_TEXT["memory_root_recommended"].format(path=recommended_peakheadz_root()))
+                return
+            relative = str(route.get("save_folder") or "").strip()
+            if not relative:
+                return
+            target = Path(self.config_data.memory_folder) / relative
+            try:
+                target.mkdir(parents=True, exist_ok=True)
+                open_path(target)
+            except Exception as exc:
+                self._append_log(UI_TEXT["log_index_error"].format(error=str(exc)))
+
         def _enabled_slack_routes(self) -> list[dict[str, object]]:
             routes = load_slack_channel_routes(self.config_data.slack_channel_routes_json)
             enabled_routes = [route for route in routes if route.get("enabled", True) and route.get("channel_id")]
@@ -3339,7 +3461,7 @@ def run_gui(launch_check: bool = False) -> int:
                 else:
                     status = UI_TEXT["slack_route_status_unset"]
                 last_imported = str(route.get("last_imported_at") or "-")
-                status_var.set(f"{status} / {UI_TEXT['slack_route_last_import'].format(time=last_imported)}")
+                status_var.set(UI_TEXT["slack_route_state_line"].format(status=status, time=last_imported))
 
         def _remember_slack_route_import(self, result: SlackInboxResult) -> None:
             routes = load_slack_channel_routes(self.config_data.slack_channel_routes_json)
@@ -3363,6 +3485,7 @@ def run_gui(launch_check: bool = False) -> int:
                 self.config_data.slack_channel_routes_json = dump_slack_channel_routes(routes)
                 self.config_store.save(self.config_data)
                 self._update_slack_route_cards()
+                self._refresh_slack_connection_summary()
 
         def _log_legacy_slack_folder_if_present(self) -> None:
             if getattr(self, "_legacy_slack_folder_logged", False):
@@ -3653,6 +3776,7 @@ def run_gui(launch_check: bool = False) -> int:
             elif self.slack_status_var.get() in {UI_TEXT["status_slack_disabled"], UI_TEXT["status_slack_config_missing"]}:
                 self.slack_status_var.set(UI_TEXT["status_slack_ready"])
             self._update_slack_route_cards()
+            self._refresh_slack_connection_summary()
 
         def _update_aru_status(self) -> None:
             if not hasattr(self, "aru_status_var"):

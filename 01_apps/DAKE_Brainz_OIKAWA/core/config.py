@@ -103,23 +103,16 @@ def find_brainz_config_memory() -> Path | None:
 
 def resolve_memory_folder(config: AppConfig) -> Path | None:
     configured = existing_folder(config.memory_folder)
-    brainz_configured = find_brainz_config_memory()
-
-    for candidate in (configured, brainz_configured):
-        if candidate and candidate.name.lower() == DEFAULT_MEMORY_FOLDER.name.lower():
-            return candidate
+    if configured:
+        return configured
 
     default_folder = existing_folder(DEFAULT_MEMORY_FOLDER)
     if default_folder:
         return default_folder
 
-    for candidate in (configured, brainz_configured):
-        if candidate and candidate.name.lower() != LEGACY_MEMORY_FOLDER.name.lower():
-            return candidate
-
-    for candidate in (configured, brainz_configured):
-        if candidate:
-            return candidate
+    brainz_configured = find_brainz_config_memory()
+    if brainz_configured:
+        return brainz_configured
 
     legacy_folder = existing_folder(LEGACY_MEMORY_FOLDER)
     if legacy_folder:

@@ -93,8 +93,9 @@ UI_TEXT = {
     "section_quiet_memory": "静かだった記憶",
     "section_qpsc_state": "QPSC状態",
     "cosmos_news_title": "正本ニュース",
-    "cosmos_news_hint": "巡回している記憶が静かに並びます。",
+    "cosmos_news_hint": "静かに巡回しています。",
     "label_memory_folder": "記憶ルート",
+    "memory_root_short": "記憶ルート: {name}",
     "memory_folder_missing": "記憶フォルダ未検出",
     "dialog_choose_memory": "記憶フォルダを選択",
     "dialog_title": "OIKAWA",
@@ -107,9 +108,9 @@ UI_TEXT = {
     "card_excerpt": "抜粋",
     "card_score": "score {score}",
     "card_empty": "まだ浮上したカードはありません",
-    "source_preview_empty": "通知または検索結果から原本を選んでください。",
-    "source_preview_loading": "原本を読み込んでいます。",
-    "source_preview_loaded": "原本を表示しました。",
+    "source_preview_empty": "原本はまだ選ばれていません。",
+    "source_preview_loading": "正本を確認しています。",
+    "source_preview_loaded": "原本を開けます。",
     "source_preview_missing": "ファイルが見つかりません。",
     "source_preview_failed": "原本を表示できませんでした。",
     "source_open_missing": "原本はまだ選ばれていません。",
@@ -2101,7 +2102,7 @@ class OikawaApp(tk.Tk):
             padx=16,
             pady=14,
         )
-        source_preview.place(relx=0.29, rely=0.70, relwidth=0.42, relheight=0.19)
+        source_preview.place(relx=0.29, rely=0.75, relwidth=0.42, relheight=0.13)
         tk.Label(
             source_preview,
             text=UI_TEXT["section_source_preview"],
@@ -2143,6 +2144,7 @@ class OikawaApp(tk.Tk):
         )
         self.source_preview_box.pack(side="left", fill="both", expand=True)
         preview_scrollbar.configure(command=self.source_preview_box.yview)
+        preview_body.pack_forget()
         self._set_source_preview_text(UI_TEXT["source_preview_empty"])
 
         right_panel = tk.Frame(self, bg=COLORS["background"])
@@ -3009,7 +3011,7 @@ class OikawaApp(tk.Tk):
 
     def _render_memory_state(self) -> None:
         if self.memory_folder:
-            self.memory_var.set(f"{UI_TEXT['label_memory_folder']}:\n{self.memory_folder}")
+            self.memory_var.set(UI_TEXT["memory_root_short"].format(name=self.memory_folder.name))
             self.missing_frame.place_forget()
             return
 
@@ -3463,7 +3465,7 @@ class OikawaApp(tk.Tk):
             if not path.is_file() or path.suffix.lower() not in {".md", ".txt"}:
                 self.events.put(("source_preview_error", (request_id, path, UI_TEXT["source_preview_not_file"])))
                 return
-            text, truncated = read_source_preview_text(path, limit=1800)
+            text, truncated = "", False
             try:
                 record_recent_return(path, title)
                 record_revisit_log(path, title)

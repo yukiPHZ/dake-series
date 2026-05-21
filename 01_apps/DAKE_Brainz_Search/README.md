@@ -734,3 +734,10 @@ https://...
 - 前面はPEAKHEADZ_ROOT状態、Slack 5チャンネル設定、ChatGPT export、Codex sessions、BRAINZ Logに絞る。
 - 検索・原本表示・Related・Memory Flow・Handoffは前面から外し、読む/戻る役割はOIKAWAへ寄せる。
 - legacyの `PEAKHEADZ_ROOT/slack/` は削除せず、新規保存先にはしない。
+
+## Phase 24: Slack設定UX
+
+- Slack接続カードでBot Token、監視ON/OFF、取得件数、最終取り込みを確認できる。
+- 5チャンネルカードは用途、保存先、channel_id、有効/無効、状態、保存先を開く導線を持つ。
+- 新規Slack保存は `PEAKHEADZ_ROOT/10_slack/*` に寄せ、legacyの `PEAKHEADZ_ROOT/slack/` は新規保存先にしない。
+- Slack Markdownはfrontmatter、H1、本文、permalinkを残す正本形式で扱う。
