@@ -78,6 +78,18 @@ QPSC v0.1では、BRAINZが保存・取り込み・index・設定・状態を担
 
 承認導線はCodex公式モバイル承認 / 遠隔操作導線を優先します。OllamaとOpenClawはまだ本線へ入れず、将来の補助候補として扱います。
 
+## QPSC正本ルート: PEAKHEADZ_ROOT
+
+QPSCの正本ルートは、今後 `C:\Users\yukiz\Documents\PEAKHEADZ_ROOT` へ寄せます。
+
+- 既存の `brainz_memory` はlegacy扱いです
+- 既存configが `brainz_memory` や別フォルダを指している場合は勝手に変更しません
+- 初回作成時は `PEAKHEADZ_ROOT` にPhase 20の標準フォルダ構成を作れます
+- 移行は安全優先です。rename / delete は行わず、必要な場合もcopy候補として扱います
+- Obsidianでは `PEAKHEADZ_ROOT` を保管庫として開きます
+
+Obsidianは本体ではなくMarkdown観測UIです。Obsidianを消しても、正本Markdown、README、release_body、Git上の記録は残ります。
+
 ## QPSC v0.3 方向整理 / Phase 20
 
 QPSC v0.3では、BRAINZを「見るアプリ」から外し、ローカルPCへ正本を受け止める母艦として固定します。

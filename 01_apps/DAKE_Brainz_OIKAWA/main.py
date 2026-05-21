@@ -16,7 +16,7 @@ from pathlib import Path
 from tkinter import filedialog, messagebox
 import tkinter as tk
 
-from core.config import ConfigStore, app_dir, existing_folder, open_path, resolve_memory_folder, series_root, write_json_file
+from core.config import ConfigStore, DEFAULT_MEMORY_FOLDER, LEGACY_MEMORY_FOLDER, app_dir, existing_folder, open_path, resolve_memory_folder, series_root, write_json_file
 from core.heat_engine import AnalysisResult, analyze_documents
 from core.markdown_writer import write_suggestion
 from core.ollama_heat import (
@@ -91,7 +91,7 @@ UI_TEXT = {
     "section_side_memory": "側に在る",
     "section_quiet_memory": "静かだった記憶",
     "section_qpsc_state": "QPSC状態",
-    "label_memory_folder": "記憶フォルダ",
+    "label_memory_folder": "記憶ルート",
     "memory_folder_missing": "記憶フォルダ未検出",
     "dialog_choose_memory": "記憶フォルダを選択",
     "dialog_title": "OIKAWA",
@@ -3668,6 +3668,8 @@ def run_smoke_test() -> int:
             ollama_heat.OLLAMA_TAGS_URL = original_tags_url
         if unavailable.ok or unavailable.status != "ollama_unavailable":
             raise RuntimeError("heat hint unavailable fallback failed")
+        if DEFAULT_MEMORY_FOLDER.name != "PEAKHEADZ_ROOT" or LEGACY_MEMORY_FOLDER.name != "brainz_memory":
+            raise RuntimeError("memory root default/fallback smoke failed")
 
     print(UI_TEXT["smoke_ok"])
     print(heat_hints_path())

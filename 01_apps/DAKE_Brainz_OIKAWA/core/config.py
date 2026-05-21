@@ -11,7 +11,8 @@ from typing import Any
 
 APP_FOLDER_NAME = "DAKE_Brainz_OIKAWA"
 CONFIG_FILE_NAME = "oikawa_config.json"
-DEFAULT_MEMORY_FOLDER = Path.home() / "Documents" / "brainz_memory"
+DEFAULT_MEMORY_FOLDER = Path.home() / "Documents" / "PEAKHEADZ_ROOT"
+LEGACY_MEMORY_FOLDER = Path.home() / "Documents" / "brainz_memory"
 
 
 @dataclass
@@ -112,6 +113,10 @@ def resolve_memory_folder(config: AppConfig) -> Path | None:
     default_folder = existing_folder(DEFAULT_MEMORY_FOLDER)
     if default_folder:
         return default_folder
+
+    legacy_folder = existing_folder(LEGACY_MEMORY_FOLDER)
+    if legacy_folder:
+        return legacy_folder
 
     return None
 

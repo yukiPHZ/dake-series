@@ -6,6 +6,41 @@
 
 BRAINZはChatGPTやCodexの代替AIではありません。ローカルに置いた記憶を読み込み、取り込み、indexし、過去の思考や作業結果へ再接続するための保存層・橋渡し係です。
 
+## QPSC正本ルート: PEAKHEADZ_ROOT
+
+BRAINZは、今後のQPSC正本ルートとして `C:\Users\yukiz\Documents\PEAKHEADZ_ROOT` を扱います。
+
+- 未設定時の推奨保存先は `PEAKHEADZ_ROOT` です
+- 既存configに `memory_folder` がある場合は、その保存先を勝手に変更しません
+- 旧 `brainz_memory` はlegacy fallbackとして扱い、削除もrenameもしません
+- BRAINZの `PEAKHEADZ_ROOTを作成` 導線で標準フォルダ構成を作れます
+- 自動移行は行わず、移行する場合もcopy候補として扱います
+
+標準フォルダ構成:
+
+```text
+PEAKHEADZ_ROOT/
+  00_inbox/
+  10_slack/
+    brainz-inbox/
+    brainz-note/
+    brainz-codex/
+    brainz-aru/
+    brainz-reaction/
+  20_chatgpt/
+  30_codex/
+  40_borinef/
+    note/
+      published/
+      reactions/
+      source_fragments/
+  90_system/
+    logs/
+    config/
+```
+
+Obsidianでは `PEAKHEADZ_ROOT` を保管庫として開きます。Obsidianは本体ではなくMarkdown観測UIです。Obsidianを消しても、正本Markdownはローカルに残ります。
+
 ## 思想
 
 補助脳が提案し続ける。  
@@ -105,7 +140,7 @@ Phase 11では、BRAINZの取り込み入口にChatGPT export専用カードを�
 - `zip`、展開済みフォルダ、`conversations.json` を選んで取り込めます
 - 新形式の `conversations-000.json` / `conversations-001.json` 形式も、ファイル名順に結合して取り込めます
 - `chat.html` は現時点では取り込み対象にせず、JSON正本を優先します
-- 各メッセージは、chunk分割やembeddingより先に `brainz_memory/chatgpt/` へMarkdown原本として保存します
+- 各メッセージは、chunk分割やembeddingより先に `PEAKHEADZ_ROOT/20_chatgpt/` へMarkdown原本として保存します
 - 巨大会話は小さめのchunkに分割し、Ollama embeddingのcontext超過を避けます
 - 取り込み処理は既存の `core/chatgpt_importer.py` を使い、重複した取り込みロジックは持ちません
 - 取り込み中と結果はBRAINZ画面内に短く表示します
@@ -168,7 +203,7 @@ Phase 18では、QPSC内部で静かに浮いた記憶をSlackへ小さく置く
 Phase 20では、BRAINZを検索や原本表示の前面から外し、Slack / ChatGPT export / CodexログをローカルPCへ保存する母艦UIへ寄せます。
 
 - Slackは投入口です。`#brainz-inbox` は巡回される熱、`#brainz-aru` は育てる熱として扱います
-- BRAINZは新しい `brainz_memory/` 地形を作成できます
+- BRAINZは新しい `PEAKHEADZ_ROOT/` 地形を作成できます
 - Slackチャンネル別保存設定を持ち、保存先、source、OIKAWA通知、heat対象を設定できます
 - Codexログ自動監視入口として `%USERPROFILE%\.codex\sessions\` の存在確認を置きます
 - 自由ペースト投稿は削除せず、緊急保存として残します
@@ -176,7 +211,7 @@ Phase 20では、BRAINZを検索や原本表示の前面から外し、Slack / C
 新しい保存地形:
 
 ```text
-brainz_memory/
+PEAKHEADZ_ROOT/
   00_inbox/
   10_slack/
     brainz-inbox/
@@ -206,11 +241,11 @@ Phase 20では、SlackへnoteタイトルとURLを投げるだけで、公開済
 
 - `https://note.com/` を含むSlack投稿を検出します
 - URL直前行、または先頭行をタイトルとして扱います
-- 保存先は `brainz_memory/40_borinef/note/published/YYYY/` です
+- 保存先は `PEAKHEADZ_ROOT/40_borinef/note/published/YYYY/` です
 - Markdownは `status: published`、`platform: note`、`url` を持つpublished正本として保存します
 - 同じnote URLが既に保存済みなら、再保存せず静かにskipします
 - 保存後は `borinef_note` 通知を `qpsc_notifications.json` に残し、OIKAWAの巡回・熾火・熱検索対象に自然に混ざります
-- reactions保存は今後 `brainz_memory/40_borinef/note/reactions/` に寄せる予定です
+- reactions保存は今後 `PEAKHEADZ_ROOT/40_borinef/note/reactions/` に寄せる予定です
 
 ## Phase 1でできること
 
@@ -333,7 +368,7 @@ PyInstallerで `dist/DakeBrainz_Search.exe` を作成します。exeアイコン
 - ChatGPT公式Export zipに対応
 - 展開済みフォルダに対応
 - `conversations.json` をローカルで解析
-- 会話メッセージを `brainz_memory/chatgpt/` にMarkdown原本として先に保存
+- 会話メッセージを `PEAKHEADZ_ROOT/20_chatgpt/` にMarkdown原本として先に保存
 - 会話タイトル・発言者・本文をindex化
 - 取り込んだ会話は `source_type=chatgpt_export` として検索可能
 - 同じexportを再取り込みしても重複を避ける

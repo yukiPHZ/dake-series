@@ -27,7 +27,7 @@ UI_TEXT = {
     "status_brainz_standby": "待機しています",
     "status_brainz_awake": "起きています",
     "status_brainz_awake_detail": "記憶庫は起きています",
-    "status_memory_path": "記憶フォルダ: {path}",
+    "status_memory_path": "記憶ルート: {path}",
     "status_last_import_none": "最終取り込み: まだありません",
     "status_last_import": "最終取り込み: {source}",
     "last_import_chatgpt_export": "ChatGPT export",
@@ -40,8 +40,11 @@ UI_TEXT = {
     "section_import_entry": "取り込み入口",
     "section_settings_entry": "接続 / 設定",
     "settings_entry_hint": "Slack / Queue / Codex報告の入口を下にまとめています。",
-    "button_prepare_qpsc_folders": "QPSCフォルダを整える",
+    "button_prepare_qpsc_folders": "標準フォルダを整える",
+    "button_create_peakheadz_root": "PEAKHEADZ_ROOTを作成",
     "qpsc_folder_status_waiting": "QPSCフォルダ構成: 未確認",
+    "memory_root_recommended": "推奨ルート: {path}",
+    "memory_root_legacy_found": "旧BRAINZ記憶フォルダを確認しました。必要に応じてPEAKHEADZ_ROOTへ移行できます。",
     "qpsc_folder_status_ready": "QPSCフォルダ構成: OK",
     "mothership_news_title": "正本ニュース準備",
     "mothership_news_text": "OpenClaw本格導入までは、BRAINZは保存と状態だけを静かに整えます。",
@@ -299,6 +302,9 @@ UI_TEXT = {
     "oikawa_mode_python": "python main.py",
     "log_settings_entry": "SETTINGS ENTRY: Slack / Queue / Codex reports",
     "log_qpsc_folders_ready": "QPSC FOLDERS READY: {count}",
+    "log_peakheadz_root_created": "PEAKHEADZ_ROOT READY: {path} / folders={count}",
+    "log_peakheadz_root_recommended": "PEAKHEADZ_ROOT RECOMMENDED: {path}",
+    "log_legacy_memory_root_found": "LEGACY BRAINZ MEMORY FOUND: {path}",
     "log_slack_routes_saved": "SLACK ROUTES SAVED: {count}",
     "log_slack_routes_reset": "SLACK ROUTES RESET",
     "log_codex_watch_saved": "CODEX WATCH SAVED: enabled={enabled} path={path}",
@@ -306,6 +312,7 @@ UI_TEXT = {
     "notify_title": "BRAINZ",
     "notify_oikawa_opened": "OIKAWAを開きます。",
     "notify_qpsc_folders_ready": "QPSCフォルダ構成を確認しました。",
+    "notify_peakheadz_root_created": "PEAKHEADZ_ROOTを確認しました。",
     "notify_oikawa_missing": "OIKAWAが見つかりません。buildまたは配置を確認してください。",
     "notify_memory_detected": "新しい記憶を検出しました。",
     "notify_auto_index_complete": "記憶を更新しました。",
@@ -498,9 +505,12 @@ def run_smoke_test() -> int:
         codex_sessions_default_path,
         codex_watch_status,
         dump_slack_channel_routes,
+        ensure_peakheadz_root_structure,
         ensure_qpsc_memory_structure,
         find_slack_channel_route,
+        legacy_brainz_memory_root,
         load_slack_channel_routes,
+        resolve_qpsc_memory_root,
     )
     from core.qpsc_notifications import read_notification_events
     from core.qpsc_status import AWAKE_STATUS_MESSAGE, write_brainz_awake_status
@@ -585,6 +595,23 @@ def run_smoke_test() -> int:
             raise RuntimeError("qpsc slack routes did not roundtrip")
         if not aru_route or aru_route.get("qpsc_source") != "aru":
             raise RuntimeError("qpsc aru route did not roundtrip")
+        smoke_documents = root / "Documents"
+        smoke_peakheadz, smoke_peakheadz_folders = ensure_peakheadz_root_structure(smoke_documents)
+        smoke_legacy = legacy_brainz_memory_root(smoke_documents)
+        smoke_legacy.mkdir(parents=True, exist_ok=True)
+        resolved_configured, resolved_configured_mode = resolve_qpsc_memory_root(str(root), smoke_documents)
+        resolved_peakheadz, resolved_peakheadz_mode = resolve_qpsc_memory_root("", smoke_documents)
+        smoke_peakheadz.rename(smoke_peakheadz.with_name("PEAKHEADZ_ROOT_hold"))
+        resolved_legacy, resolved_legacy_mode = resolve_qpsc_memory_root("", smoke_documents)
+        smoke_peakheadz.with_name("PEAKHEADZ_ROOT_hold").rename(smoke_peakheadz)
+        if resolved_configured != root.resolve() or resolved_configured_mode != "configured":
+            raise RuntimeError("configured memory root was not respected")
+        if resolved_peakheadz != smoke_peakheadz.resolve() or resolved_peakheadz_mode != "peakheadz_root":
+            raise RuntimeError("PEAKHEADZ_ROOT default candidate failed")
+        if resolved_legacy != smoke_legacy.resolve() or resolved_legacy_mode != "legacy_brainz_memory":
+            raise RuntimeError("legacy brainz_memory fallback failed")
+        if len(smoke_peakheadz_folders) < 10:
+            raise RuntimeError("PEAKHEADZ_ROOT structure was not created")
         created_qpsc_folders = ensure_qpsc_memory_structure(root)
         expected_qpsc_folders = [
             root / "00_inbox",
@@ -1422,9 +1449,14 @@ def run_gui(launch_check: bool = False) -> int:
         codex_sessions_default_path,
         codex_watch_status,
         dump_slack_channel_routes,
+        ensure_peakheadz_root_structure,
         ensure_qpsc_memory_structure,
         find_slack_channel_route,
+        legacy_brainz_memory_exists,
+        legacy_brainz_memory_root,
         load_slack_channel_routes,
+        recommended_peakheadz_root,
+        resolve_qpsc_memory_root,
         route_summary_lines,
     )
     from core.qpsc_status import write_brainz_awake_status
@@ -1459,6 +1491,14 @@ def run_gui(launch_check: bool = False) -> int:
             self.mono_font_family = choose_font_family(self, MONO_FONT_CANDIDATES)
             self.config_store = ConfigStore()
             self.config_data = self.config_store.load()
+            if not self.config_data.memory_folder:
+                candidate, candidate_mode = resolve_qpsc_memory_root("")
+                if candidate is not None:
+                    self.config_data.memory_folder = str(candidate)
+                    if candidate_mode == "legacy_brainz_memory":
+                        self._pending_legacy_memory_root = str(candidate)
+                else:
+                    self._pending_recommended_memory_root = str(recommended_peakheadz_root())
             if not self.config_data.watch_folder and self.config_data.memory_folder:
                 self.config_data.watch_folder = self.config_data.memory_folder
             if not self.config_data.codex_reports_folder and self.config_data.memory_folder:
@@ -1518,6 +1558,10 @@ def run_gui(launch_check: bool = False) -> int:
             self._build_ui()
             self._set_memory_folder(self.config_data.memory_folder, persist=False)
             self._append_log(UI_TEXT["log_ready"])
+            if hasattr(self, "_pending_recommended_memory_root"):
+                self._append_log(UI_TEXT["log_peakheadz_root_recommended"].format(path=self._pending_recommended_memory_root))
+            if hasattr(self, "_pending_legacy_memory_root"):
+                self._append_log(UI_TEXT["log_legacy_memory_root_found"].format(path=self._pending_legacy_memory_root))
             self._write_qpsc_awake_status()
             self._update_watch_status()
             if self.config_data.watch_folder:
@@ -1632,15 +1676,27 @@ def run_gui(launch_check: bool = False) -> int:
                 wraplength=238,
                 justify="left",
             ).grid(row=1, column=0, sticky="ew", padx=16, pady=(0, 10))
+            memory_buttons = ctk.CTkFrame(left, fg_color="transparent")
+            memory_buttons.grid(row=2, column=0, sticky="ew", padx=16, pady=(0, 9))
+            memory_buttons.grid_columnconfigure((0, 1), weight=1)
             ctk.CTkButton(
-                left,
+                memory_buttons,
                 text=UI_TEXT["button_choose"],
                 height=36,
                 fg_color=COLORS["panel_soft"],
                 hover_color=COLORS["accent_soft"],
                 font=(self.font_family, FONT_SIZES["button"]),
                 command=self._choose_memory_folder,
-            ).grid(row=2, column=0, sticky="ew", padx=16, pady=(0, 9))
+            ).grid(row=0, column=0, sticky="ew", padx=(0, 6))
+            ctk.CTkButton(
+                memory_buttons,
+                text=UI_TEXT["button_create_peakheadz_root"],
+                height=36,
+                fg_color=COLORS["panel_soft"],
+                hover_color=COLORS["accent_soft"],
+                font=(self.font_family, FONT_SIZES["button"]),
+                command=self._create_peakheadz_root,
+            ).grid(row=0, column=1, sticky="ew", padx=(6, 0))
             chatgpt_card = ctk.CTkFrame(
                 left,
                 fg_color=COLORS["panel_alt"],
@@ -2255,7 +2311,16 @@ def run_gui(launch_check: bool = False) -> int:
                 hover_color=COLORS["accent_soft"],
                 font=(self.status_font_family, FONT_SIZES["button"]),
                 command=lambda: self._ensure_qpsc_folders(notify=True),
-            ).grid(row=1, column=0, columnspan=2, sticky="ew", pady=(8, 0))
+            ).grid(row=1, column=0, sticky="ew", pady=(8, 0), padx=(0, 6))
+            ctk.CTkButton(
+                mission_buttons,
+                text=UI_TEXT["button_create_peakheadz_root"],
+                height=32,
+                fg_color=COLORS["panel_soft"],
+                hover_color=COLORS["accent_soft"],
+                font=(self.status_font_family, FONT_SIZES["button"]),
+                command=self._create_peakheadz_root,
+            ).grid(row=1, column=1, sticky="ew", pady=(8, 0), padx=(6, 0))
 
             news_card = ctk.CTkFrame(
                 center,
@@ -2594,9 +2659,10 @@ def run_gui(launch_check: bool = False) -> int:
         def _set_memory_folder(self, folder: str, persist: bool = True) -> None:
             clean = str(folder or "")
             self.config_data.memory_folder = clean
-            self.memory_var.set(clean if clean else UI_TEXT["empty_memory"])
+            recommended = str(recommended_peakheadz_root())
+            self.memory_var.set(clean if clean else UI_TEXT["memory_root_recommended"].format(path=recommended))
             if hasattr(self, "memory_path_summary_var"):
-                path_text = clean if clean else UI_TEXT["empty_memory"]
+                path_text = clean if clean else UI_TEXT["memory_root_recommended"].format(path=recommended)
                 self.memory_path_summary_var.set(UI_TEXT["status_memory_path"].format(path=path_text))
             if clean and not self.config_data.watch_folder:
                 self._set_watch_folder(clean, persist=False)
@@ -2616,6 +2682,18 @@ def run_gui(launch_check: bool = False) -> int:
             folder = filedialog.askdirectory(title=UI_TEXT["choose_memory_title"])
             if folder:
                 self._set_memory_folder(folder)
+
+        def _create_peakheadz_root(self) -> None:
+            try:
+                root, folders = ensure_peakheadz_root_structure()
+            except Exception as exc:
+                self._append_log(UI_TEXT["log_index_error"].format(error=str(exc)))
+                return
+            self._set_memory_folder(str(root), persist=True)
+            self._append_log(UI_TEXT["log_peakheadz_root_created"].format(path=root, count=len(folders)))
+            if legacy_brainz_memory_exists():
+                self._append_log(UI_TEXT["log_legacy_memory_root_found"].format(path=legacy_brainz_memory_root()))
+            self._notify(UI_TEXT["notify_peakheadz_root_created"])
 
         def _ensure_qpsc_folders(self, notify: bool = True) -> None:
             if not self.config_data.memory_folder:

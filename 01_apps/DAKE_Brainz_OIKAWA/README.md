@@ -237,6 +237,17 @@ Phase 19では、最近の熱だけでなく、しばらく静かだった後に
 - Slack静かな通知にも長期間後の再訪、深夜巡回、巡回増加を少しだけ加点します
 - 原本プレビューを主役にし、AIは熱の補助に留めます
 
+## QPSC正本ルート: PEAKHEADZ_ROOT
+
+OIKAWAは、`PEAKHEADZ_ROOT` と旧 `brainz_memory` のどちらも参照できます。
+
+- 推奨ルートは `C:\Users\yukiz\Documents\PEAKHEADZ_ROOT` です
+- BRAINZ configに既存の記憶フォルダがある場合は、そのパスを優先します
+- 旧 `brainz_memory` はlegacy fallbackとして扱い、落とさず読みます
+- 原本はローカルMarkdown正本へ戻ることを優先します
+
+Obsidianでは `PEAKHEADZ_ROOT` を保管庫として開きます。Obsidianは観測UIであり、OIKAWAは巡回 / 熾火 / 側に在るを表示する前面端末です。
+
 ## QPSC v0.3: OIKAWA / OpenClaw / Obsidian
 
 v0.3方向では、OIKAWAは検索アプリではなく、OpenClawの便りを受け取る正本ニュース端末として整理します。
@@ -267,7 +278,7 @@ Phase 20では、BRAINZが回収した公開済noteもOIKAWAの巡回対象に�
 
 ```text
 1. 既存BRAINZアプリの data/config/brainz_config.json
-2. C:\Users\yukiz\Documents\brainz_memory
+2. C:\Users\yukiz\Documents\PEAKHEADZ_ROOT
 3. OIKAWAの oikawa_config.json
 ```
 
@@ -278,7 +289,7 @@ Phase 20では、BRAINZが回収した公開済noteもOIKAWAの巡回対象に�
 OIKAWAの出力は次の場所へ保存されます。
 
 ```text
-brainz_memory\OIKAWA\suggestions\
+PEAKHEADZ_ROOT\OIKAWA\suggestions\
 ```
 
 ファイル名は次の形式です。

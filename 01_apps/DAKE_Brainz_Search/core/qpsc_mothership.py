@@ -6,6 +6,10 @@ from pathlib import Path
 from typing import Any
 
 
+PEAKHEADZ_ROOT_NAME = "PEAKHEADZ_ROOT"
+LEGACY_BRAINZ_MEMORY_NAME = "brainz_memory"
+
+
 QPSC_MEMORY_FOLDER_PATHS = (
     "00_inbox",
     "10_slack/brainz-inbox",
@@ -70,6 +74,59 @@ DEFAULT_SLACK_CHANNEL_ROUTES: tuple[dict[str, Any], ...] = (
         "enable_heat": False,
     },
 )
+
+
+def documents_root() -> Path:
+    return Path.home() / "Documents"
+
+
+def recommended_peakheadz_root(documents_dir: Path | None = None) -> Path:
+    return (documents_dir or documents_root()) / PEAKHEADZ_ROOT_NAME
+
+
+def legacy_brainz_memory_root(documents_dir: Path | None = None) -> Path:
+    return (documents_dir or documents_root()) / LEGACY_BRAINZ_MEMORY_NAME
+
+
+def existing_directory(path: str | Path) -> Path | None:
+    if not path:
+        return None
+    target = Path(os.path.expandvars(str(path))).expanduser()
+    try:
+        resolved = target.resolve()
+    except OSError:
+        resolved = target
+    if resolved.exists() and resolved.is_dir():
+        return resolved
+    return None
+
+
+def resolve_qpsc_memory_root(config_memory_folder: str = "", documents_dir: Path | None = None) -> tuple[Path | None, str]:
+    configured = existing_directory(config_memory_folder)
+    if configured is not None:
+        return configured, "configured"
+    if str(config_memory_folder or "").strip():
+        return None, "configured_missing"
+
+    peakheadz = existing_directory(recommended_peakheadz_root(documents_dir))
+    if peakheadz is not None:
+        return peakheadz, "peakheadz_root"
+
+    legacy = existing_directory(legacy_brainz_memory_root(documents_dir))
+    if legacy is not None:
+        return legacy, "legacy_brainz_memory"
+
+    return None, "unset"
+
+
+def legacy_brainz_memory_exists(documents_dir: Path | None = None) -> bool:
+    return existing_directory(legacy_brainz_memory_root(documents_dir)) is not None
+
+
+def ensure_peakheadz_root_structure(documents_dir: Path | None = None) -> tuple[Path, list[Path]]:
+    root = recommended_peakheadz_root(documents_dir)
+    root.mkdir(parents=True, exist_ok=True)
+    return root.resolve(), ensure_qpsc_memory_structure(root)
 
 
 def ensure_qpsc_memory_structure(memory_folder: Path) -> list[Path]:
