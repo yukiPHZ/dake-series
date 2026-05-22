@@ -24,7 +24,7 @@ NOTICE_TEXT = """【注意事項】
 PEAKHEADZ
 https://peakheadz.com
 """
-THUMBNAIL_SIZE = (1200, 630)
+THUMBNAIL_SIZE = (1200, 1200)
 WINDOWS_FONT_DIR = Path(os.environ.get("WINDIR", r"C:\Windows")) / "Fonts"
 FONT_CANDIDATES = {
     "bold": [
@@ -335,32 +335,37 @@ def create_booth_thumbnail(src: Path, dst: Path, title: str, description: str) -
     canvas = make_background(THUMBNAIL_SIZE)
     draw = ImageDraw.Draw(canvas)
     width, height = THUMBNAIL_SIZE
-    margin_x = 78
+    margin_x = 120
     max_text_width = width - margin_x * 2
 
-    title_font = fit_font(draw, title, max_text_width, 48, 34, bold=True)
-    desc_font = load_font(24)
+    title_font = fit_font(draw, title, max_text_width, 66, 42, bold=True)
+    desc_font = load_font(30)
     title = trim_to_width(draw, title, title_font, max_text_width)
     desc_lines = wrap_text(draw, description, desc_font, max_text_width, 2)
 
-    draw.text((margin_x, 52), title, fill="#1f2933", font=title_font)
-    desc_y = 118
+    title_bbox = draw.textbbox((0, 0), title, font=title_font)
+    title_x = (width - (title_bbox[2] - title_bbox[0])) // 2
+    draw.text((title_x, 112), title, fill="#1f2933", font=title_font)
+
+    desc_y = 205
     for line in desc_lines:
-        draw.text((margin_x, desc_y), line, fill="#4b5563", font=desc_font)
-        desc_y += 34
-    draw.rounded_rectangle((margin_x, 177, margin_x + 78, 181), radius=2, fill="#8fa1b4")
+        line_bbox = draw.textbbox((0, 0), line, font=desc_font)
+        line_x = (width - (line_bbox[2] - line_bbox[0])) // 2
+        draw.text((line_x, desc_y), line, fill="#4b5563", font=desc_font)
+        desc_y += 42
+    draw.rounded_rectangle((width // 2 - 54, 305, width // 2 + 54, 311), radius=3, fill="#8fa1b4")
 
     with Image.open(src) as screenshot:
         screenshot = screenshot.convert("RGB")
-        max_w = 980
-        max_h = 390
+        max_w = 900
+        max_h = 650
         scale = min(max_w / screenshot.width, max_h / screenshot.height, 1.0)
         shot_size = (max(1, int(screenshot.width * scale)), max(1, int(screenshot.height * scale)))
         screenshot = screenshot.resize(shot_size, Image.Resampling.LANCZOS)
 
     shot_x = (width - screenshot.width) // 2
-    shot_y = max(218, height - 58 - screenshot.height)
-    panel_pad = 18
+    shot_y = 390 + (650 - screenshot.height) // 2
+    panel_pad = 24
     panel = (
         shot_x - panel_pad,
         shot_y - panel_pad,
