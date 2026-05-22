@@ -15,6 +15,7 @@ from core.app_config import logs_dir, now_iso
 from core.db import BrainzDatabase, DocumentRecord
 from core.embers import build_ember_metadata
 from core.ollama_embeddings import EmbeddingSession, generate_embeddings_for_document
+from core.qpsc_enrichment import enrich_qpsc_markdown_text
 from core.qpsc_notifications import UI_TEXT as QPSC_NOTIFICATION_TEXT
 from core.qpsc_notifications import append_import_notification
 from core.qpsc_notifications import append_saved_count_notification
@@ -199,6 +200,8 @@ def poll_slack_inbox(
     inbox_label: str = "Slack Inbox",
     process_tasks: bool = True,
     save_folder: str = "",
+    enable_oikawa_notify: bool = True,
+    enable_heat: bool = True,
 ) -> SlackInboxResult:
     token = token.strip()
     channel_id = channel_id.strip()
@@ -271,6 +274,8 @@ def poll_slack_inbox(
                 message_with_permalink,
                 source_type=source_type,
                 inbox_label=inbox_label,
+                enable_oikawa_notify=enable_oikawa_notify,
+                enable_heat=enable_heat,
             )
             document_id, changed = index_slack_markdown(
                 database=database,
@@ -521,6 +526,13 @@ def save_borinef_note_from_slack(
     filename = f"{published_date}_{safe_note_filename_part(title)}.md"
     path = next_available_path(note_folder / filename)
     markdown = build_borinef_note_markdown(title=title, url=note_url, published_at=published_date)
+    markdown = enrich_qpsc_markdown_text(
+        markdown,
+        channel_name="#brainz-note",
+        source_type=SOURCE_TYPE_BORINEF_NOTE,
+        enable_oikawa_notify=True,
+        enable_heat=True,
+    ).text
     path.write_text(markdown, encoding="utf-8")
     return BorinefNoteImport(
         saved_path=path.resolve(),
@@ -640,6 +652,8 @@ def save_slack_markdown(
     message: SlackInboxMessage,
     source_type: str = SOURCE_TYPE_SLACK,
     inbox_label: str = "Slack Inbox",
+    enable_oikawa_notify: bool = True,
+    enable_heat: bool = True,
 ) -> tuple[Path, str, str]:
     slack_folder.mkdir(parents=True, exist_ok=True)
     timestamp = slack_timestamp(message.ts)
@@ -653,6 +667,14 @@ def save_slack_markdown(
         source_type=source_type,
         inbox_label=inbox_label,
     )
+    markdown = enrich_qpsc_markdown_text(
+        markdown,
+        channel_name=inbox_label,
+        channel_id=channel_id,
+        source_type=source_type,
+        enable_oikawa_notify=enable_oikawa_notify,
+        enable_heat=enable_heat,
+    ).text
     path = slack_folder / filename
     path.write_text(markdown, encoding="utf-8")
     return path.resolve(), markdown, title

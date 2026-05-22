@@ -395,3 +395,11 @@ OIKAWAは、BRAINZが `PEAKHEADZ_ROOT` へ保存したMarkdown正本へ戻る場
 - OIKAWAは情報を詰めるのではなく、記憶が宇宙背景に浮く端末として扱います。
 - 正本ニュースと今日の整理は余白で分け、外から入ったものと今日の状態を混ぜすぎません。
 - 背景の点と線、余白、軽い断片表示を優先します。
+
+## QPSC読み取り補助メタ
+
+OIKAWAは、BRAINZがMarkdown正本へ追記した読み取り補助メタを弱く参照します。
+
+- `qpsc_heat`、`tags`、`borinef.candidate`、`borinef.systems`、`oikawa.notify` を熾火 / 巡回 / 側に在る / 正本ニュースへ少しだけ反映します。
+- 表示は分類表ではなく、`BORINEF候補`、`熱が少し残っています`、`線系 / 熱系` などの短い入口に留めます。
+- 原本はローカルMarkdown正本のまま残し、OIKAWAは戻るきっかけだけを置きます。

@@ -104,6 +104,7 @@ UI_TEXT = {
     "canonical_news_side": "側に残っている記憶があります",
     "canonical_news_revisit": "最近戻った正本があります",
     "canonical_news_heat": "熾火が少し残っています",
+    "canonical_news_borinef": "BORINEF候補が浮いています",
     "canonical_news_awake": "記憶庫は静かに起きています",
     "orbit_brief_waiting": "待機中",
     "orbit_brief_import": "今日入った記憶があります",
@@ -153,6 +154,10 @@ UI_TEXT = {
     "heat_reason_recent_import": "最近の取り込み",
     "heat_reason_related_path": "原本あり",
     "heat_reason_query_match": "検索語に近い",
+    "heat_reason_qpsc_meta": "QPSCメタ",
+    "qpsc_meta_borinef": "BORINEF候補",
+    "qpsc_meta_heat": "熱が少し残っています",
+    "qpsc_meta_systems": "{systems}",
     "orbit_status_loading": "今日の流れを整理しています。",
     "orbit_status_unavailable": "今日の整理を表示できませんでした。",
     "orbit_metric_today": "今日取り込まれた記憶: {count}件",
@@ -206,6 +211,7 @@ UI_TEXT = {
     "side_memory_reason_side": "側に残っている記憶です",
     "side_memory_reason_night": "深夜に巡回されています",
     "side_memory_reason_heat": "熱の気配があります",
+    "side_memory_reason_borinef": "BORINEF候補",
     "side_memory_no_related": "原本への道筋はまだありません。",
     "side_memory_template": "{message}: {title}",
     "quiet_memory_empty": "待機中",
@@ -366,6 +372,16 @@ class QuietMemoryCandidate:
 
 
 @dataclass(frozen=True)
+class QpscDocumentMeta:
+    qpsc_heat: str = ""
+    qpsc_type: str = ""
+    tags: tuple[str, ...] = ()
+    borinef_candidate: bool = False
+    borinef_systems: tuple[str, ...] = ()
+    oikawa_notify: bool = True
+
+
+@dataclass(frozen=True)
 class RevisitTimeStats:
     title: str
     related_path: str
@@ -484,6 +500,7 @@ def build_search_hits(documents: list[MemoryDocument], query: str, memory_root: 
 def build_heat_candidates(
     notifications: list[QpscNotification],
     query: str = "",
+    memory_root: Path | None = None,
     limit: int = 3,
 ) -> list[HeatCandidate]:
     terms = [term for term in query.lower().split() if term]
@@ -495,17 +512,21 @@ def build_heat_candidates(
             continue
         if key:
             seen.add(key)
-        score = _notification_heat_score(notification, index, terms)
+        meta = _qpsc_document_meta_for_related(notification.related_path, memory_root)
+        score = _notification_heat_score(notification, index, terms, meta)
         if score <= 0:
             continue
+        meta_summary = _qpsc_meta_summary(meta)
         candidates.append(
             HeatCandidate(
                 id=notification.id or f"auto-{index}",
                 title=_notification_display_title(notification) or UI_TEXT["heat_candidate_title"],
-                message=_notification_display_message(notification) or UI_TEXT["heat_candidate_message"].format(
+                message=meta_summary
+                or _notification_display_message(notification)
+                or UI_TEXT["heat_candidate_message"].format(
                     source=notification.source.strip() or UI_TEXT["section_qpsc_notifications"],
                 ),
-                reason=_notification_heat_reason(notification, terms),
+                reason="qpsc_meta" if meta_summary else _notification_heat_reason(notification, terms),
                 related_path=notification.related_path.strip(),
                 score=score,
                 source=notification.source.strip(),
@@ -558,10 +579,12 @@ def build_heat_search_hits(
         if path.exists() and path.is_file() and path.suffix.lower() in {".md", ".txt"}:
             preview_text, _truncated = read_source_preview_text(path, limit=24_000)
             file_score = _text_search_score(preview_text, terms)
-        if not notification_text_match and file_score <= 0:
+        meta = _qpsc_document_meta_for_related(related_path, memory_root)
+        meta_match = _qpsc_meta_matches_terms(meta, terms)
+        if not notification_text_match and file_score <= 0 and not meta_match:
             continue
-        score = file_score + _notification_heat_score(notification, index, terms)
-        excerpt_source = preview_text or _notification_display_message(notification) or _notification_display_title(notification)
+        score = file_score + _notification_heat_score(notification, index, terms, meta) + (120 if meta_match else 0)
+        excerpt_source = preview_text or _qpsc_meta_summary(meta) or _notification_display_message(notification) or _notification_display_title(notification)
         hits.append(
             SearchHit(
                 title=_notification_display_title(notification) or path.stem,
@@ -652,6 +675,13 @@ def build_revisit_candidates(
             score += 3
         if _revisit_matches(latest_item.related_path, hint_keys, memory_root):
             score += 2
+        meta = _qpsc_document_meta_for_related(latest_item.related_path, memory_root)
+        if not meta.oikawa_notify:
+            continue
+        if meta.qpsc_heat == "medium":
+            score += 1
+        if meta.borinef_candidate:
+            score += 1
 
         if count >= 3:
             reason = "often"
@@ -765,6 +795,15 @@ def build_quiet_memory_candidates(
         if _revisit_matches(stats.related_path, hint_keys, memory_root):
             score += 2
         if _revisit_matches(stats.related_path, heat_keys, memory_root):
+            score += 1
+        meta = _qpsc_document_meta_for_related(stats.related_path, memory_root)
+        if not meta.oikawa_notify:
+            continue
+        if meta.qpsc_heat == "medium":
+            score += 1
+        if meta.borinef_candidate:
+            score += 1
+        if meta.borinef_systems:
             score += 1
 
         if stats.long_gap_revisited:
@@ -1066,8 +1105,21 @@ def _side_memory_item(items: dict[str, dict[str, object]], related_path: str, me
             "heat_candidate": False,
             "heat_hint": False,
             "unread": False,
+            "qpsc_heat_medium": False,
+            "borinef_candidate": False,
+            "borinef_systems": (),
+            "oikawa_notify": True,
         },
     )
+    meta = _qpsc_document_meta_for_related(related_path, memory_root)
+    if not meta.oikawa_notify:
+        item["oikawa_notify"] = False
+    if meta.qpsc_heat == "medium":
+        item["qpsc_heat_medium"] = True
+    if meta.borinef_candidate:
+        item["borinef_candidate"] = True
+    if meta.borinef_systems:
+        item["borinef_systems"] = meta.borinef_systems
     if not item.get("related_path"):
         item["related_path"] = related_path
     return item
@@ -1092,6 +1144,8 @@ def _side_memory_candidate_from_item(item: dict[str, object]) -> SideMemoryCandi
     related_path = str(item.get("related_path", "") or "").strip()
     if not related_path:
         return None
+    if item.get("oikawa_notify") is False:
+        return None
     opened_count = int(item.get("opened_count", 0) or 0)
     score = 1
     if bool(item.get("recent_revisit")):
@@ -1106,9 +1160,15 @@ def _side_memory_candidate_from_item(item: dict[str, object]) -> SideMemoryCandi
         score += 2
     if bool(item.get("unread")):
         score += 2
+    if bool(item.get("qpsc_heat_medium")):
+        score += 1
+    if bool(item.get("borinef_candidate")):
+        score += 1
 
-    if bool(item.get("heat_hint")) or bool(item.get("heat_candidate")):
+    if bool(item.get("heat_hint")) or bool(item.get("heat_candidate")) or bool(item.get("qpsc_heat_medium")):
         reason = "heat"
+    elif bool(item.get("borinef_candidate")):
+        reason = "borinef"
     elif bool(item.get("late_night")):
         reason = "night"
     elif bool(item.get("recent_revisit")) or opened_count:
@@ -1613,7 +1673,12 @@ def _text_search_score(text: str, terms: list[str]) -> int:
     return sum(lowered.count(term) for term in terms)
 
 
-def _notification_heat_score(notification: QpscNotification, index: int, terms: list[str]) -> int:
+def _notification_heat_score(
+    notification: QpscNotification,
+    index: int,
+    terms: list[str],
+    meta: QpscDocumentMeta | None = None,
+) -> int:
     score = max(0, 120 - index)
     if notification.status == "unread":
         score += 600
@@ -1621,6 +1686,7 @@ def _notification_heat_score(notification: QpscNotification, index: int, terms: 
         score += 80
     if _is_codex_notification(notification) and notification.related_path.strip():
         score += 160
+    score += _qpsc_meta_heat_score(meta, terms)
     text = _notification_search_text(notification)
     for term in terms:
         if term in text:
@@ -1655,6 +1721,8 @@ def _notification_boosts(
             score += 55
         score += max(0, 35 - index)
         score += 10
+        meta = _qpsc_document_meta_for_related(related_path, memory_root)
+        score += _qpsc_meta_heat_score(meta, terms) // 2
         text = _notification_search_text(notification)
         for term in terms:
             if term in text:
@@ -1681,6 +1749,170 @@ def _resolve_related_source_path(related_path: str | Path, memory_root: Path | N
     if path.is_absolute() or not memory_root:
         return path
     return memory_root / path
+
+
+def _qpsc_document_meta_for_related(related_path: str | Path, memory_root: Path | None) -> QpscDocumentMeta:
+    text = str(related_path or "").strip()
+    if not text:
+        return QpscDocumentMeta()
+    return _qpsc_document_meta_for_path(_resolve_related_source_path(text, memory_root))
+
+
+def _qpsc_document_meta_for_path(path: Path) -> QpscDocumentMeta:
+    try:
+        if not path.exists() or not path.is_file() or path.suffix.lower() not in {".md", ".markdown", ".txt"}:
+            return QpscDocumentMeta()
+        text, _truncated = read_source_preview_text(path, limit=64_000)
+    except (OSError, UnicodeDecodeError):
+        return QpscDocumentMeta()
+    return _parse_qpsc_document_meta(text)
+
+
+def _parse_qpsc_document_meta(text: str) -> QpscDocumentMeta:
+    lines = _frontmatter_lines(text)
+    if not lines:
+        return QpscDocumentMeta()
+    qpsc_heat = ""
+    qpsc_type = ""
+    tags: list[str] = []
+    systems: list[str] = []
+    borinef_candidate = False
+    oikawa_notify = True
+    parent = ""
+    nested = ""
+    for raw in lines:
+        stripped = raw.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        indent = len(raw) - len(raw.lstrip(" "))
+        if indent == 0:
+            nested = ""
+            if stripped.startswith("qpsc_heat:"):
+                qpsc_heat = _clean_yaml_scalar(stripped.split(":", 1)[1]).lower()
+                parent = ""
+            elif stripped.startswith("qpsc_type:"):
+                qpsc_type = _clean_yaml_scalar(stripped.split(":", 1)[1])
+                parent = ""
+            elif stripped.startswith("tags:"):
+                parent = "tags"
+                tags.extend(_parse_inline_yaml_list(stripped.split(":", 1)[1]))
+            elif stripped.startswith("borinef:"):
+                parent = "borinef"
+            elif stripped.startswith("oikawa:"):
+                parent = "oikawa"
+            else:
+                parent = ""
+            continue
+        if parent == "tags" and stripped.startswith("- "):
+            tags.append(_clean_yaml_scalar(stripped[2:]))
+        elif parent == "borinef":
+            if indent <= 2 and stripped.startswith("candidate:"):
+                borinef_candidate = _yaml_bool(stripped.split(":", 1)[1])
+                nested = ""
+            elif indent <= 2 and stripped.startswith("systems:"):
+                nested = "systems"
+                systems.extend(_parse_inline_yaml_list(stripped.split(":", 1)[1]))
+            elif nested == "systems" and stripped.startswith("- "):
+                systems.append(_clean_yaml_scalar(stripped[2:]))
+        elif parent == "oikawa" and indent <= 2 and stripped.startswith("notify:"):
+            oikawa_notify = _yaml_bool(stripped.split(":", 1)[1], default=True)
+    tags_tuple = _unique_tuple(tags)
+    systems_tuple = _unique_tuple(systems)
+    if "borinef" in {tag.lower() for tag in tags_tuple}:
+        borinef_candidate = True
+    return QpscDocumentMeta(
+        qpsc_heat=qpsc_heat,
+        qpsc_type=qpsc_type,
+        tags=tags_tuple,
+        borinef_candidate=borinef_candidate,
+        borinef_systems=systems_tuple,
+        oikawa_notify=oikawa_notify,
+    )
+
+
+def _frontmatter_lines(text: str) -> list[str]:
+    lines = (text or "").splitlines()
+    if not lines or lines[0].strip() != "---":
+        return []
+    for index in range(1, len(lines)):
+        if lines[index].strip() == "---":
+            return lines[1:index]
+    return []
+
+
+def _clean_yaml_scalar(value: str) -> str:
+    return str(value or "").strip().strip('"').strip("'")
+
+
+def _parse_inline_yaml_list(value: str) -> list[str]:
+    clean = str(value or "").strip()
+    if not (clean.startswith("[") and clean.endswith("]")):
+        return []
+    inner = clean[1:-1].strip()
+    if not inner:
+        return []
+    return [_clean_yaml_scalar(item) for item in inner.split(",") if _clean_yaml_scalar(item)]
+
+
+def _yaml_bool(value: str, default: bool = False) -> bool:
+    clean = str(value or "").strip().lower()
+    if clean in {"true", "yes", "on", "1"}:
+        return True
+    if clean in {"false", "no", "off", "0"}:
+        return False
+    return default
+
+
+def _unique_tuple(values: list[str]) -> tuple[str, ...]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for value in values:
+        clean = str(value or "").strip()
+        if not clean or clean in seen:
+            continue
+        seen.add(clean)
+        result.append(clean)
+    return tuple(result)
+
+
+def _qpsc_meta_heat_score(meta: QpscDocumentMeta | None, terms: list[str] | None = None) -> int:
+    if meta is None or not meta.oikawa_notify:
+        return 0
+    score = 0
+    if meta.qpsc_heat == "medium":
+        score += 90
+    elif meta.qpsc_heat == "low":
+        score += 15
+    if meta.borinef_candidate:
+        score += 70
+    if meta.borinef_systems:
+        score += 25
+    if any(tag.lower() in {"borinef", "在る"} for tag in meta.tags):
+        score += 25
+    if terms:
+        meta_text = " ".join([meta.qpsc_type, meta.qpsc_heat, *meta.tags, *meta.borinef_systems]).lower()
+        score += sum(70 for term in terms if term and term in meta_text)
+    return score
+
+
+def _qpsc_meta_matches_terms(meta: QpscDocumentMeta, terms: list[str]) -> bool:
+    if not terms or not meta.oikawa_notify:
+        return False
+    meta_text = " ".join([meta.qpsc_type, meta.qpsc_heat, *meta.tags, *meta.borinef_systems]).lower()
+    return any(term in meta_text for term in terms)
+
+
+def _qpsc_meta_summary(meta: QpscDocumentMeta | None) -> str:
+    if meta is None or not meta.oikawa_notify:
+        return ""
+    parts: list[str] = []
+    if meta.borinef_candidate:
+        parts.append(UI_TEXT["qpsc_meta_borinef"])
+    if meta.qpsc_heat == "medium":
+        parts.append(UI_TEXT["qpsc_meta_heat"])
+    if meta.borinef_systems:
+        parts.append(UI_TEXT["qpsc_meta_systems"].format(systems=" / ".join(meta.borinef_systems[:2])))
+    return " / ".join(parts[:3])
 
 
 def _relative_path(path: Path, memory_root: Path) -> str:
@@ -2403,7 +2635,7 @@ class OikawaApp(tk.Tk):
             self.after(10000, self._refresh_qpsc_notifications)
 
     def _refresh_heat_candidates(self, query: str = "") -> None:
-        self.heat_candidates = build_heat_candidates(self.qpsc_notifications_all, query=query, limit=3)
+        self.heat_candidates = build_heat_candidates(self.qpsc_notifications_all, query=query, memory_root=self.memory_folder, limit=3)
         self._render_heat_candidates(self.heat_candidates)
 
     def _refresh_revisit_candidates(self) -> None:
@@ -2814,15 +3046,23 @@ class OikawaApp(tk.Tk):
         for notification in self.qpsc_notifications_all[:8]:
             source = str(notification.source or "").lower()
             title = str(notification.title or "").strip()
+            handled = False
             if "slack" in source:
                 lines.append(UI_TEXT["canonical_news_slack"])
+                handled = True
             elif "codex" in source:
                 lines.append(UI_TEXT["canonical_news_codex"])
+                handled = True
             elif "chatgpt" in source:
                 lines.append(UI_TEXT["canonical_news_chatgpt"])
+                handled = True
             elif "note" in source or "borinef" in source:
                 lines.append(UI_TEXT["canonical_news_note"])
-            elif title:
+                handled = True
+            meta = _qpsc_document_meta_for_related(notification.related_path, self.memory_folder)
+            if meta.borinef_candidate and meta.oikawa_notify:
+                lines.append(UI_TEXT["canonical_news_borinef"])
+            elif title and not handled:
                 lines.append(title)
         if self.quiet_memory_candidates:
             lines.append(UI_TEXT["canonical_news_quiet"])
@@ -3642,7 +3882,7 @@ def run_smoke_test() -> int:
     with tempfile.TemporaryDirectory(prefix="oikawa_heat_") as tmp:
         root = Path(tmp)
         source_path = root / "source.md"
-        source_path.write_text("heat source " * 400, encoding="utf-8")
+        source_path.write_text("---\nqpsc_heat: medium\ntags:\n  - BORINEF\nborinef:\n  candidate: true\n  systems:\n    - 線系\noikawa:\n  notify: true\n---\n\n" + "heat source " * 400, encoding="utf-8")
         notification = QpscNotification(
             id="smoke-heat",
             created_at=datetime.now().astimezone().isoformat(timespec="seconds"),
@@ -3653,8 +3893,8 @@ def run_smoke_test() -> int:
             kind="import",
             related_path=str(source_path),
         )
-        candidates = build_heat_candidates([notification], limit=3)
-        if not candidates or candidates[0].source != "slack":
+        candidates = build_heat_candidates([notification], memory_root=root, limit=3)
+        if not candidates or candidates[0].source != "slack" or "BORINEF" not in candidates[0].message:
             raise RuntimeError("heat candidate smoke failed")
 
         excerpt, _truncated = read_source_preview_text(source_path, limit=OLLAMA_HEAT_SOURCE_LIMIT)

@@ -741,3 +741,13 @@ https://...
 - 5チャンネルカードは用途、保存先、channel_id、有効/無効、状態、保存先を開く導線を持つ。
 - 新規Slack保存は `PEAKHEADZ_ROOT/10_slack/*` に寄せ、legacyの `PEAKHEADZ_ROOT/slack/` は新規保存先にしない。
 - Slack Markdownはfrontmatter、H1、本文、permalinkを残す正本形式で扱う。
+
+## QPSC読み取り補助
+
+BRAINZはSlackやnoteから保存したMarkdown正本に、弱い読み取り補助メタを追記します。
+
+- 原文本文は上書きせず、frontmatterの不足分だけを補います。
+- `qpsc_type`、`qpsc_heat`、`tags`、`qpsc_series`、`oikawa`、`borinef` を軽く付与します。
+- 5チャンネルの初期分類は、`#brainz-inbox` / `#brainz-aru` / `#brainz-note` / `#brainz-codex` / `#brainz-reaction` に合わせます。
+- BORINEF / 在る / 実務 / Codex / note URLのキーワードは、決定ではなく戻るための補助として扱います。
+- 自動熱判定は `low` または `medium` までで、`high` は自動付与しません。

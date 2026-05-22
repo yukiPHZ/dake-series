@@ -50,6 +50,7 @@ UI_TEXT = {
     "memory_root_recommended": "推奨ルート: {path}",
     "memory_root_legacy_found": "旧BRAINZ記憶フォルダを確認しました。必要に応じてPEAKHEADZ_ROOTへ移行できます。",
     "qpsc_folder_status_ready": "QPSCフォルダ構成: OK",
+    "qpsc_reading_status": "読み取り補助: ON / タグ・熱: ON / 最後: {target}",
     "mothership_news_title": "正本ニュース準備",
     "mothership_news_text": "OpenClaw本格導入までは、BRAINZは保存と状態だけを静かに整えます。",
     "section_slack_routes": "Slackチャンネル別保存",
@@ -1039,6 +1040,8 @@ def run_smoke_test() -> int:
             last_ts="",
             session=FakeSlackSession(),
             save_folder=str(inbox_route["save_folder"]),
+            inbox_label=str(inbox_route["channel_name"]),
+            source_type=str(inbox_route["qpsc_source"]),
         )
         if slack_result.imported < 1 or slack_result.status != "imported":
             raise RuntimeError("slack inbox import failed")
@@ -1047,6 +1050,8 @@ def run_smoke_test() -> int:
         slack_markdown_text = Path(slack_result.saved_files[0]).read_text(encoding="utf-8")
         if "source: slack" not in slack_markdown_text:
             raise RuntimeError("slack markdown source marker missing")
+        if "qpsc_type: inbox" not in slack_markdown_text or "qpsc_heat: low" not in slack_markdown_text or "  - inbox" not in slack_markdown_text:
+            raise RuntimeError("slack qpsc enrichment missing")
         if "10_slack" not in str(slack_result.saved_files[0]).replace("\\", "/"):
             raise RuntimeError("slack routed folder was not used")
         if slack_query not in slack_markdown_text or "Preview title" not in slack_markdown_text:
@@ -1059,6 +1064,8 @@ def run_smoke_test() -> int:
             last_ts="",
             session=FakeSlackSession(),
             save_folder=str(inbox_route["save_folder"]),
+            inbox_label=str(inbox_route["channel_name"]),
+            source_type=str(inbox_route["qpsc_source"]),
         )
         if slack_duplicate.skipped < 1:
             raise RuntimeError("slack duplicate was not skipped")
@@ -1075,6 +1082,7 @@ def run_smoke_test() -> int:
             last_ts="",
             session=FakeSlackSession(messages=[{"ts": note_ts, "user": "UBORINEF", "text": note_text}]),
             save_folder="10_slack/brainz-note",
+            inbox_label="#brainz-note",
         )
         note_paths = [
             Path(path)
@@ -1087,6 +1095,8 @@ def run_smoke_test() -> int:
         note_markdown = note_path.read_text(encoding="utf-8")
         if "status: published" not in note_markdown or note_url not in note_markdown or note_title not in note_markdown:
             raise RuntimeError("borinef note markdown was not canonical")
+        if "qpsc_type: note_published" not in note_markdown or "candidate: true" not in note_markdown:
+            raise RuntimeError("borinef note qpsc enrichment missing")
         if not note_path.name.startswith(f"{slack_timestamp(note_ts).strftime('%Y-%m-%d')}_"):
             raise RuntimeError("borinef note filename date prefix missing")
         note_duplicate = poll_slack_inbox(
@@ -1097,6 +1107,7 @@ def run_smoke_test() -> int:
             last_ts="",
             session=FakeSlackSession(messages=[{"ts": note_ts, "user": "UBORINEF", "text": note_text}]),
             save_folder="10_slack/brainz-note",
+            inbox_label="#brainz-note",
         )
         note_matches = [
             path
@@ -2315,7 +2326,15 @@ def run_gui(launch_check: bool = False) -> int:
                 text_color=COLORS["quiet"],
                 font=(self.status_font_family, FONT_SIZES["micro"]),
                 anchor="w",
-            ).grid(row=3, column=0, sticky="ew", padx=14, pady=(0, 12))
+            ).grid(row=3, column=0, sticky="ew", padx=14, pady=(0, 2))
+            self.qpsc_enrichment_status_var = ctk.StringVar(value=UI_TEXT["qpsc_reading_status"].format(target="-"))
+            ctk.CTkLabel(
+                mothership,
+                textvariable=self.qpsc_enrichment_status_var,
+                text_color=COLORS["quiet"],
+                font=(self.status_font_family, FONT_SIZES["micro"]),
+                anchor="w",
+            ).grid(row=4, column=0, sticky="ew", padx=14, pady=(0, 12))
             ctk.CTkLabel(
                 mothership,
                 text=UI_TEXT["oikawa_bridge_message"],
@@ -2697,6 +2716,7 @@ def run_gui(launch_check: bool = False) -> int:
                     self.memory_path_summary_var,
                     self.last_import_summary_var,
                     self.qpsc_folder_status_var,
+                    self.qpsc_enrichment_status_var,
                 )
             ):
                 ctk.CTkLabel(
@@ -2710,7 +2730,7 @@ def run_gui(launch_check: bool = False) -> int:
                 ).grid(row=row, column=0, columnspan=4, sticky="ew", padx=14, pady=(12 if row == 0 else 2, 2))
 
             root_buttons = ctk.CTkFrame(root_card, fg_color="transparent")
-            root_buttons.grid(row=4, column=0, columnspan=4, sticky="ew", padx=14, pady=(8, 12))
+            root_buttons.grid(row=5, column=0, columnspan=4, sticky="ew", padx=14, pady=(8, 12))
             root_buttons.grid_columnconfigure((0, 1, 2, 3), weight=1)
             ctk.CTkButton(
                 root_buttons,
@@ -3659,6 +3679,11 @@ def run_gui(launch_check: bool = False) -> int:
             self._append_log(UI_TEXT["log_oikawa_open"].format(mode=mode, path=target))
             self._notify(UI_TEXT["notify_oikawa_opened"])
 
+        def _set_qpsc_enrichment_status(self, target: str = "-") -> None:
+            if hasattr(self, "qpsc_enrichment_status_var"):
+                clean = Path(str(target or "-")).name or "-"
+                self.qpsc_enrichment_status_var.set(UI_TEXT["qpsc_reading_status"].format(target=clean))
+
         def _set_last_import_summary(self, source_key: str) -> None:
             if hasattr(self, "last_import_summary_var"):
                 source = UI_TEXT[source_key]
@@ -4130,6 +4155,8 @@ def run_gui(launch_check: bool = False) -> int:
                         folder_name="slack",
                         inbox_label=inbox_label,
                         save_folder=save_folder,
+                        enable_oikawa_notify=bool(route.get("enable_oikawa_notify", True)),
+                        enable_heat=bool(route.get("enable_heat", True)),
                     )
                     self.events.put(("slack_inbox_done", result))
             except Exception as exc:
@@ -4179,6 +4206,8 @@ def run_gui(launch_check: bool = False) -> int:
                     inbox_label="Aru Inbox",
                     process_tasks=False,
                     save_folder=save_folder,
+                    enable_oikawa_notify=bool(route.get("enable_oikawa_notify", True)) if route else True,
+                    enable_heat=bool(route.get("enable_heat", True)) if route else True,
                 )
                 self.events.put(("aru_inbox_done", result))
             except Exception as exc:
@@ -4718,6 +4747,7 @@ def run_gui(launch_check: bool = False) -> int:
                 if result.log_path:
                     self._append_log(UI_TEXT["log_slack_file"].format(path=result.log_path))
                 self._refresh_stats()
+                self._set_qpsc_enrichment_status(result.saved_files[-1] if result.saved_files else "-")
                 self._set_last_import_summary("last_import_slack")
                 self._notify(UI_TEXT["notify_slack_import_complete"])
                 if self.semantic_available:
