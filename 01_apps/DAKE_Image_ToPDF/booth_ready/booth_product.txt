@@ -33,3 +33,6 @@ assets/screenshot.jpg
 
 # 作品ファイル
 booth_ready/DakeImageToPDF.zip
+
+# URL
+https://peakheadz.booth.pm/items/8397610

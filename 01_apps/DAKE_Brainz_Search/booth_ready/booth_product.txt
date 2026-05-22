@@ -30,3 +30,5 @@ assets/screenshot.jpg
 
 # 作品ファイル
 booth_ready/DakeBrainz_Search.zip
+
+# URL

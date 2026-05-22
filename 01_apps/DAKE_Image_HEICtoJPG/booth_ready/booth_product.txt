@@ -32,3 +32,5 @@ assets/screenshot.jpg
 
 # 作品ファイル
 booth_ready/DakeHEIC_JPG.zip
+
+# URL

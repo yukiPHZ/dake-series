@@ -32,3 +32,5 @@ assets/screenshot.jpg
 
 # 作品ファイル
 booth_ready/Dake_AllStaff_Mail.zip
+
+# URL

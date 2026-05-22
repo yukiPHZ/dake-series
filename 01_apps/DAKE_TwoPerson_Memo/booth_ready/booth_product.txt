@@ -33,3 +33,5 @@ assets/screenshot.jpg
 
 # 作品ファイル
 booth_ready/DakeTwoPerson_Memo.zip
+
+# URL

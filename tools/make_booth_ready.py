@@ -55,6 +55,7 @@ class AppResult:
     price: int = 300
     thumbnail_error: str = ""
     product_updated: bool = False
+    booth_url: str = ""
 
 
 def read_text(path: Path) -> str:
@@ -195,7 +196,22 @@ Vibe-Coded by Yukihiko Kikuta
 """
 
 
-def make_product_txt(title: str, price: int, description: str, features: list[str], tags: list[str], zip_name: str) -> str:
+def extract_booth_url(product_text: str) -> str:
+    match = re.search(r"(?ms)^# URL\s*\n(.*?)(?=\n# |\Z)", product_text)
+    if not match:
+        return ""
+    return match.group(1).strip()
+
+
+def make_product_txt(
+    title: str,
+    price: int,
+    description: str,
+    features: list[str],
+    tags: list[str],
+    zip_name: str,
+    booth_url: str = "",
+) -> str:
     feature_lines = "\n".join(f"・{feature}" for feature in features[:5])
     tag_lines = "\n".join(tags)
     intro = f"""{description}
@@ -224,7 +240,10 @@ assets/screenshot.jpg
 
 # 作品ファイル
 booth_ready/{zip_name}
-"""
+
+# URL
+{booth_url}
+""".rstrip("\n") + "\n"
 
 
 def convert_webp_to_jpg(src: Path, dst: Path) -> None:
@@ -469,6 +488,8 @@ def process_app(app_dir: Path) -> AppResult:
     product_txt = booth_dir / "booth_product.txt"
     write_text(readme_txt, make_readme_txt(title, description, features))
     write_text(notice_txt, NOTICE_TEXT)
+    if product_txt.exists():
+        result.booth_url = extract_booth_url(read_text(product_txt))
 
     exe_path = find_exe(app_dir, meta)
     if exe_path is None:
@@ -485,6 +506,7 @@ def process_app(app_dir: Path) -> AppResult:
         features=features,
         tags=tags_for(app_dir.name, title, features),
         zip_name=zip_name,
+        booth_url=result.booth_url,
     )
     write_text(product_txt, product)
     result.product_updated = True
@@ -516,6 +538,7 @@ def main() -> int:
     print(f"booth_ready生成成功: {sum((APPS_DIR / r.folder / 'booth_ready').exists() for r in results)}")
     print(f"zip生成成功: {sum(any(item.endswith('.zip') for item in r.generated) for r in results)}")
     print(f"booth_product.txt更新: {sum(r.product_updated for r in results)}")
+    print(f"BOOTH URL保持: {sum(1 for r in results if r.booth_url)}")
     print("")
     print("不足/警告:")
     for result in results:

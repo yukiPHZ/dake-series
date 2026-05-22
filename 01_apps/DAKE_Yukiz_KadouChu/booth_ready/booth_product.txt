@@ -29,3 +29,5 @@ assets/screenshot.jpg
 
 # 作品ファイル
 booth_ready/DakeYukiz_KadouChu.zip
+
+# URL
