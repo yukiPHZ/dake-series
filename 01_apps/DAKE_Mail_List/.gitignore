@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+build/
+dist/
+*.spec
+*_config.json
+data/*.csv
+data/logs/*.log

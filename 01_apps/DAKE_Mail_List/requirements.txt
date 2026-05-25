@@ -1,0 +1,2 @@
+extract-msg>=0.55.0
+tkinterdnd2>=0.4.2
