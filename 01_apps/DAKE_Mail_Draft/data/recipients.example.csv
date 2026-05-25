@@ -1,0 +1,6 @@
+会社名,名前,メールアドレス
+サンプル株式会社,山田 太郎,taro.yamada@example.com
+テスト合同会社,佐藤 花子,hanako.sato@example.com
+重複サンプル,山田 太郎,taro.yamada@example.com
+空メール株式会社,空 欄,
+不正メール株式会社,形式 不正,invalid-address

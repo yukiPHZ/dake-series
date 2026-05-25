@@ -1,0 +1,14 @@
+build/
+dist/
+*.spec
+__pycache__/
+*.pyc
+data/recipients.csv
+data/settings.json
+logs/*.csv
+logs/*.log
+output/*
+attachments/*
+!attachments/.gitkeep
+!logs/.gitkeep
+!output/.gitkeep

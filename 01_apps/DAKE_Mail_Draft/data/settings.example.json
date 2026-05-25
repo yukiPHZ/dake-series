@@ -1,0 +1,11 @@
+{
+  "csv_path": "data/recipients.csv",
+  "company_column": "会社名",
+  "name_column": "名前",
+  "email_column": "メールアドレス",
+  "subject_template": "{会社名} {名前}様へのご連絡",
+  "body_template": "{会社名}\n{名前} 様\n\nお世話になっております。\n\n以下の内容をご確認ください。\n\nよろしくお願いいたします。",
+  "attachments": [],
+  "limit": "50",
+  "keep_displayed": false
+}
