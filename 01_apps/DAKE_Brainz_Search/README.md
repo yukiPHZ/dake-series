@@ -2,9 +2,9 @@
 
 記憶庫 / 取り込み母艦。
 
-補助脳BRAINZ は、ローカルの会話・仕様・メモ・README・Codex結果を忘れず保存し、OIKAWAへ渡すための記憶庫・取り込み母艦です。
+補助脳BRAINZ は、ローカルの会話・仕様・メモ・README・Codex結果を、熱が戻れるように残しておく記憶庫・取り込み母艦です。
 
-BRAINZはChatGPTやCodexの代替AIではありません。ローカルに置いた記憶を読み込み、取り込み、indexし、過去の思考や作業結果へ再接続するための保存層・橋渡し係です。
+BRAINZはChatGPTやCodexの代替AIではありません。記録そのものが目的でもありません。Slack断片、Codexログ、ChatGPT export、note、README、Git、実務メモ、BORINEF断片を、未来の自分が再接続できる点として保存する層です。
 
 ## QPSC正本ルート: PEAKHEADZ_ROOT
 
@@ -751,3 +751,16 @@ BRAINZはSlackやnoteから保存したMarkdown正本に、弱い読み取り補
 - 5チャンネルの初期分類は、`#brainz-inbox` / `#brainz-aru` / `#brainz-note` / `#brainz-codex` / `#brainz-reaction` に合わせます。
 - BORINEF / 在る / 実務 / Codex / note URLのキーワードは、決定ではなく戻るための補助として扱います。
 - 自動熱判定は `low` または `medium` までで、`high` は自動付与しません。
+
+## QPSC v0.4: BRAINZは熱が戻れるように残す場所
+
+BRAINZは「記録」ではなく、熱が戻れるように残しておく場所です。
+
+Slack / Codex / ChatGPT export / note / README / Git / 音楽メモ / 実務メモ / BORINEF断片は、すべて未来の再接続点になります。
+
+- BRAINZは保存母艦です
+- BRAINZは正本を残します
+- BRAINZはOIKAWAへ戻れる導線を持ちます
+- BRAINZは読む前面ではなく、戻れるように残す層です
+
+覚えておくためではなく、戻れるように残しておくためにあります。
