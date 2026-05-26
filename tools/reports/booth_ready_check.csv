@@ -1,7 +1,8 @@
 app,ok,readme,dake_meta,release_body,screenshot,thumbnail,booth_product,booth_ready,zip,build_bat,main_py,dist_exe,icon_build,icon_main,actions
 DAKE_Approve_Brainz,False,True,True,True,False,False,True,True,True,True,True,True,True,True,need screenshot: create assets/screenshot.webp; generate assets/booth_thumbnail.jpg with tools/make_booth_ready.py
-DAKE_Backup,False,True,True,True,False,False,True,True,True,True,True,True,True,True,need screenshot: create assets/screenshot.webp; generate assets/booth_thumbnail.jpg with tools/make_booth_ready.py
+DAKE_Backup,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
 DAKE_BGM_Loop,False,True,True,True,False,False,True,True,True,True,True,True,True,True,need screenshot: create assets/screenshot.webp; generate assets/booth_thumbnail.jpg with tools/make_booth_ready.py
+DAKE_BOOTH_Assist,False,True,True,False,False,False,False,False,False,True,True,False,True,True,generate release_body.md from README RELEASE_BODY; need screenshot: create assets/screenshot.webp; generate assets/booth_thumbnail.jpg with tools/make_booth_ready.py; generate booth_product.txt with tools/make_booth_ready.py; generate booth_ready/ with tools/make_booth_ready.py; need build: create dist/*.exe before zip; need build: create dist/*.exe
 DAKE_Brainz_OIKAWA,False,True,True,True,False,False,True,True,True,True,True,True,True,True,need screenshot: create assets/screenshot.webp; generate assets/booth_thumbnail.jpg with tools/make_booth_ready.py
 DAKE_Brainz_Search,False,True,True,True,False,False,True,True,True,True,True,True,True,True,need screenshot: create assets/screenshot.webp; generate assets/booth_thumbnail.jpg with tools/make_booth_ready.py
 DAKE_Column_Memo,True,True,True,True,True,True,True,True,True,True,True,True,True,True,

@@ -1,17 +1,17 @@
 # DAKE BOOTH Ready Check
 
-Generated: 2026-05-27 07:59:45
+Generated: 2026-05-27 08:07:02
 
 ## Summary
 
-- checked: 50
-- ok: 42
+- checked: 51
+- ok: 43
 - missing: 8
 - screenshot.webp missing: 8
 - booth_thumbnail.jpg missing: 8
-- booth_product.txt missing: 0
-- booth_ready/ missing: 0
-- zip missing: 0
+- booth_product.txt missing: 1
+- booth_ready/ missing: 1
+- zip missing: 1
 - icon build missing: 0
 - icon main missing: 0
 
@@ -24,8 +24,8 @@ Generated: 2026-05-27 07:59:45
 | app | README | DAKE_META | release_body | screenshot | thumbnail | booth_product | booth_ready | zip | dist_exe | icon_build | icon_main | next_action |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | DAKE_Approve_Brainz | OK | OK | OK | NG | NG | OK | OK | OK | OK | OK | OK | need screenshot: create assets/screenshot.webp<br>generate assets/booth_thumbnail.jpg with tools/make_booth_ready.py |
-| DAKE_Backup | OK | OK | OK | NG | NG | OK | OK | OK | OK | OK | OK | need screenshot: create assets/screenshot.webp<br>generate assets/booth_thumbnail.jpg with tools/make_booth_ready.py |
 | DAKE_BGM_Loop | OK | OK | OK | NG | NG | OK | OK | OK | OK | OK | OK | need screenshot: create assets/screenshot.webp<br>generate assets/booth_thumbnail.jpg with tools/make_booth_ready.py |
+| DAKE_BOOTH_Assist | OK | OK | NG | NG | NG | NG | NG | NG | NG | OK | OK | generate release_body.md from README RELEASE_BODY<br>need screenshot: create assets/screenshot.webp<br>generate assets/booth_thumbnail.jpg with tools/make_booth_ready.py<br>generate booth_product.txt with tools/make_booth_ready.py<br>generate booth_ready/ with tools/make_booth_ready.py<br>need build: create dist/*.exe before zip<br>need build: create dist/*.exe |
 | DAKE_Brainz_OIKAWA | OK | OK | OK | NG | NG | OK | OK | OK | OK | OK | OK | need screenshot: create assets/screenshot.webp<br>generate assets/booth_thumbnail.jpg with tools/make_booth_ready.py |
 | DAKE_Brainz_Search | OK | OK | OK | NG | NG | OK | OK | OK | OK | OK | OK | need screenshot: create assets/screenshot.webp<br>generate assets/booth_thumbnail.jpg with tools/make_booth_ready.py |
 | DAKE_Music_Otooku | OK | OK | OK | NG | NG | OK | OK | OK | OK | OK | OK | need screenshot: create assets/screenshot.webp<br>generate assets/booth_thumbnail.jpg with tools/make_booth_ready.py |
@@ -36,6 +36,7 @@ Generated: 2026-05-27 07:59:45
 
 | app | status |
 | --- | --- |
+| DAKE_Backup | OK |
 | DAKE_Column_Memo | OK |
 | DAKE_Document_Cover | OK |
 | DAKE_FAX_Cover | OK |
