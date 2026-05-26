@@ -50,6 +50,7 @@ DAKEシリーズ全体で参照する共通仕様ファイル置き場です。
 | `DAKE_UI_GUIDE.md` | 見た目、操作感、初期表示、余白、ボタン、フッターの基準です。 |
 | `DAKE_RELEASE_FLOW.md` | buildからGitHub Release、BOOTH、dakeapp.com、Cloudflare反映確認までの公開手順です。 |
 | `DAKE_SCREENSHOT_RULE.md` | `assets/screenshot.webp` と `assets/booth_thumbnail.jpg` の作成・品質ルールです。 |
+| `DAKE_BOOTH_REGISTER_SPEC.md` | BOOTH登録最適化、DakeBOOTHアシスト、自動化境界、booth_ready完成定義です。 |
 | `DAKE_REVIEW_CHECKLIST.md` | 横断レビュー時に見るチェックリストです。 |
 | `DAKE_BUILD_RULE.md` | PyInstaller、`build.bat`、exe名、hidden-importのルールです。 |
 | `DAKE_APP_TEMPLATE.md` | 新規アプリ作成時の基本フォルダ構成と最小テンプレです。 |
@@ -72,6 +73,14 @@ DAKEシリーズ全体で参照する共通仕様ファイル置き場です。
 - スクリーンショット正本: `01_apps/<app>/assets/screenshot.webp`
 - BOOTH商品画像: `01_apps/<app>/assets/booth_thumbnail.jpg`
 - Release説明文の生成元: 各アプリREADMEの `RELEASE_BODY`
+
+## BOOTH登録
+
+- BOOTH登録はDAKE正式出荷ラインの一部です。
+- `booth_product.txt`、`booth_ready/`、`assets/booth_thumbnail.jpg` は必須素材として扱います。
+- DakeBOOTHアシストは登録補助用です。
+- Playwrightは入力補助に使用できますが、最終公開と販売開始は人間が確認して行います。
+- 詳細は `DAKE_BOOTH_REGISTER_SPEC.md` を参照します。
 
 ## CLI標準化
 

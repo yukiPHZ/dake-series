@@ -35,6 +35,7 @@ APP_KEY = "DAKE_BGM_Loop"
 APP_DIR = Path(__file__).resolve().parent
 SETTINGS_PATH = APP_DIR / "settings.json"
 METADATA_DIR_NAME = "metadata"
+ICON_PATH = (APP_DIR / ".." / ".." / "02_assets" / "dake_icon.ico").resolve()
 
 UI_TEXT = {
     "app_name": "Dake BGM Loop",
@@ -401,9 +402,18 @@ def resolve_font_family(root: tk.Tk) -> str:
     return "TkDefaultFont"
 
 
+def apply_common_icon(root: tk.Tk) -> None:
+    try:
+        if ICON_PATH.exists():
+            root.iconbitmap(str(ICON_PATH))
+    except Exception:
+        pass
+
+
 class DakeBgmLoopApp(tk.Tk):
     def __init__(self, smoke_seconds: float | None = None) -> None:
         super().__init__()
+        apply_common_icon(self)
         self.settings = load_settings()
         self.paths = resolve_runtime_paths(self.settings)
         ensure_runtime_dirs(self.paths)

@@ -64,6 +64,9 @@ GitHub Release作成のみで出荷完了と報告しません。
 - dakeapp.com掲載に必要な `display_name`、`site_title`、`site_description`、`update_summary`、`release_url`、`screenshot_path` を確認する。
 - dakeapp.com反映後、Cloudflare上の本番URLで200、スクショ、Releaseリンクを確認する。
 
+BOOTH登録最適化の正本は `DAKE_BOOTH_REGISTER_SPEC.md` です。
+DakeBOOTHアシストは登録入力補助に使えますが、公開ボタンは押さず、最終公開は人間が確認します。
+
 DAKEアプリ完成後の公開手順です。
 
 ## 前提

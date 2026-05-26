@@ -1,0 +1,51 @@
+app,ok,readme,dake_meta,release_body,screenshot,thumbnail,booth_product,booth_ready,zip,build_bat,main_py,dist_exe,icon_build,icon_main,actions
+DAKE_Approve_Brainz,False,True,True,True,False,False,True,True,True,True,True,True,True,True,need screenshot: create assets/screenshot.webp; generate assets/booth_thumbnail.jpg with tools/make_booth_ready.py
+DAKE_Backup,False,True,True,True,False,False,True,True,True,True,True,True,True,True,need screenshot: create assets/screenshot.webp; generate assets/booth_thumbnail.jpg with tools/make_booth_ready.py
+DAKE_BGM_Loop,False,True,True,True,False,False,True,True,True,True,True,True,True,True,need screenshot: create assets/screenshot.webp; generate assets/booth_thumbnail.jpg with tools/make_booth_ready.py
+DAKE_Brainz_OIKAWA,False,True,True,True,False,False,True,True,True,True,True,True,True,True,need screenshot: create assets/screenshot.webp; generate assets/booth_thumbnail.jpg with tools/make_booth_ready.py
+DAKE_Brainz_Search,False,True,True,True,False,False,True,True,True,True,True,True,True,True,need screenshot: create assets/screenshot.webp; generate assets/booth_thumbnail.jpg with tools/make_booth_ready.py
+DAKE_Column_Memo,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_Document_Cover,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_FAX_Cover,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_Folder_List,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_Git_Memo,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_HolidayJinja_Post,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_Image_HEICtoJPG,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_Image_iPhoneToPC,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_Image_PasteA4,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_Image_Receiver,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_Image_Resize,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_Image_ToPDF,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_Launcher,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_Mail_AllStaff,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_Mail_Draft,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_Mail_Kikuta,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_Mail_List,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_Maji_Memo,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_Music_Otooku,False,True,True,True,False,False,True,True,True,True,True,True,True,True,need screenshot: create assets/screenshot.webp; generate assets/booth_thumbnail.jpg with tools/make_booth_ready.py
+DAKE_PDF_CheckStamp,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_PDF_Compress,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_PDF_Crop,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_PDF_LookHere,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_PDF_Marker,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_PDF_Merge,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_PDF_Merge_Mini,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_PDF_Rename,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_PDF_Reorder,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_PDF_SplitOne,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_PDF_SplitSelect,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_PDF_ToImages,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_PDF_Viewer,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_Price_Apportionment,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_Price_FixedTax,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_Screen_WebP,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_Screenshot_Print,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_Sticky_Memo,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_TwoPerson_Memo,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_Wake_Brainz,False,True,True,True,False,False,True,True,True,True,True,True,True,True,need screenshot: create assets/screenshot.webp; generate assets/booth_thumbnail.jpg with tools/make_booth_ready.py
+DAKE_Work_Calendar,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_Year_Age,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_Year_Notice,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_Yesterday_Task_Memo,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_Yukiz_KadouChu,False,True,True,True,False,False,True,True,True,True,True,True,True,True,need screenshot: create assets/screenshot.webp; generate assets/booth_thumbnail.jpg with tools/make_booth_ready.py
+DAKE_YukizBlog_Post,True,True,True,True,True,True,True,True,True,True,True,True,True,True,

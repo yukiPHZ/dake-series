@@ -17,6 +17,7 @@ from core.settings import ensure_data_files, load_settings, save_settings, setti
 
 
 APP_NAME = "DAKE_Backup"
+ICON_PATH = (Path(__file__).resolve().parent / ".." / ".." / "02_assets" / "dake_icon.ico").resolve()
 
 UI_TEXT = {
     "app_title": "DAKE Backup",
@@ -87,10 +88,19 @@ def last_saved_text(saved_at: str) -> str:
     return UI_TEXT["last_saved_format"].format(time=saved_at)
 
 
+def apply_common_icon(root: tk.Tk) -> None:
+    try:
+        if ICON_PATH.exists():
+            root.iconbitmap(str(ICON_PATH))
+    except Exception:
+        pass
+
+
 class BackupApp:
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
         self.root.title(UI_TEXT["app_title"])
+        apply_common_icon(self.root)
         self.root.geometry("920x700")
         self.root.minsize(820, 620)
         self.root.configure(bg=COLORS["bg"])
