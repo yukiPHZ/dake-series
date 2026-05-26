@@ -1479,7 +1479,6 @@ def run_gui(launch_check: bool = False) -> int:
 
     from core.app_config import (
         ConfigStore,
-        dake_icon_path,
         ensure_app_dirs,
         now_iso,
         open_path,
@@ -1531,6 +1530,17 @@ def run_gui(launch_check: bool = False) -> int:
     ctk.set_appearance_mode("dark")
     ctk.set_default_color_theme("blue")
 
+    def resolve_dake_icon_path() -> Path | None:
+        if getattr(sys, "frozen", False):
+            start_path = Path(sys.executable).resolve()
+        else:
+            start_path = Path(__file__).resolve()
+        for parent in start_path.parents:
+            candidate = parent / "02_assets" / "dake_icon.ico"
+            if candidate.exists():
+                return candidate
+        return None
+
     class BrainzApp(ctk.CTk):
         def __init__(self) -> None:
             super().__init__()
@@ -1538,6 +1548,8 @@ def run_gui(launch_check: bool = False) -> int:
             self.geometry("1360x820")
             self.minsize(1120, 680)
             self.configure(fg_color=COLORS["bg"])
+            if launch_check:
+                self.withdraw()
             self.font_family = choose_font_family(self, FONT_CANDIDATES)
             self.reading_font_family = choose_font_family(self, READING_FONT_CANDIDATES)
             self.status_font_family = choose_font_family(self, STATUS_FONT_CANDIDATES)
@@ -1611,6 +1623,8 @@ def run_gui(launch_check: bool = False) -> int:
             self._build_ui()
             self._set_memory_folder(self.config_data.memory_folder, persist=False)
             self._append_log(UI_TEXT["log_ready"])
+            if launch_check:
+                return
             if hasattr(self, "_pending_recommended_memory_root"):
                 self._append_log(UI_TEXT["log_peakheadz_root_recommended"].format(path=self._pending_recommended_memory_root))
             if hasattr(self, "_pending_legacy_memory_root"):
@@ -1629,21 +1643,17 @@ def run_gui(launch_check: bool = False) -> int:
             self._update_aru_status()
             self._log_legacy_slack_folder_if_present()
             self.after(100, self._poll_events)
-            if not launch_check:
-                self.after(1500, self._poll_watch_folder)
-                self.after(2200, self._poll_remote_queue)
-                self.after(2800, self._poll_codex_reports)
-                self.after(3400, self._poll_slack_inbox)
-                self.after(3800, self._poll_aru_inbox)
-            if launch_check:
-                self.after(1200, self._launch_check_finish)
-            else:
-                self.after(30000, self._heartbeat_qpsc_status)
+            self.after(1500, self._poll_watch_folder)
+            self.after(2200, self._poll_remote_queue)
+            self.after(2800, self._poll_codex_reports)
+            self.after(3400, self._poll_slack_inbox)
+            self.after(3800, self._poll_aru_inbox)
+            self.after(30000, self._heartbeat_qpsc_status)
 
         def _apply_icon(self) -> None:
             try:
-                icon = dake_icon_path()
-                if icon.exists():
+                icon = resolve_dake_icon_path()
+                if icon is not None:
                     self.iconbitmap(str(icon))
             except Exception:
                 pass
@@ -5158,9 +5168,27 @@ def run_gui(launch_check: bool = False) -> int:
             print(UI_TEXT["launch_check_ok"])
             self.destroy()
 
-    app = BrainzApp()
-    app.mainloop()
-    return 0
+    app: BrainzApp | None = None
+    try:
+        app = BrainzApp()
+        if launch_check:
+            app.update_idletasks()
+            app.update()
+            print(UI_TEXT["launch_check_ok"])
+            app.destroy()
+            return 0
+        app.mainloop()
+        return 0
+    except Exception as exc:
+        if app is not None:
+            try:
+                app.destroy()
+            except Exception:
+                pass
+        if launch_check:
+            print(f"LAUNCH CHECK FAILED: {exc}", file=sys.stderr)
+            return 1
+        raise
 
 
 def main() -> int:
