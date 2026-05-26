@@ -27,7 +27,14 @@ BOOTH ready
 BOOTH
 ↓
 dakeapp.com
+↓
+Cloudflare反映確認
+↓
+正式出荷完了
 ```
+
+GitHub Release公開のみでは正式出荷完了とはしません。
+DAKEでは、ユーザーが一覧で見つけ、スクショで理解し、BOOTHまたはdakeapp.comから迷わず取得できる状態までを正式出荷とします。
 
 詳細は `DAKE_RELEASE_FLOW.md`、画像ルールは `DAKE_SCREENSHOT_RULE.md`、棚卸しは `DAKE_REVIEW_CHECKLIST.md` を参照します。
 
@@ -41,8 +48,8 @@ DAKEシリーズ全体で参照する共通仕様ファイル置き場です。
 | --- | --- |
 | `DAKE_COMMON_SPEC.md` | DAKEシリーズの最上位共通仕様。迷ったら最初に読む正本です。 |
 | `DAKE_UI_GUIDE.md` | 見た目、操作感、初期表示、余白、ボタン、フッターの基準です。 |
-| `DAKE_RELEASE_FLOW.md` | buildからGitHub Release、dakeapp.com反映までの公開手順です。 |
-| `DAKE_SCREENSHOT_RULE.md` | `assets/screenshot.webp` の作成・品質ルールです。 |
+| `DAKE_RELEASE_FLOW.md` | buildからGitHub Release、BOOTH、dakeapp.com、Cloudflare反映確認までの公開手順です。 |
+| `DAKE_SCREENSHOT_RULE.md` | `assets/screenshot.webp` と `assets/booth_thumbnail.jpg` の作成・品質ルールです。 |
 | `DAKE_REVIEW_CHECKLIST.md` | 横断レビュー時に見るチェックリストです。 |
 | `DAKE_BUILD_RULE.md` | PyInstaller、`build.bat`、exe名、hidden-importのルールです。 |
 | `DAKE_APP_TEMPLATE.md` | 新規アプリ作成時の基本フォルダ構成と最小テンプレです。 |
@@ -63,6 +70,7 @@ DAKEシリーズ全体で参照する共通仕様ファイル置き場です。
 - シリーズ共通仕様の正本: `00_core/*.md`
 - アプリごとの正本: `01_apps/<app>/README.md`
 - スクリーンショット正本: `01_apps/<app>/assets/screenshot.webp`
+- BOOTH商品画像: `01_apps/<app>/assets/booth_thumbnail.jpg`
 - Release説明文の生成元: 各アプリREADMEの `RELEASE_BODY`
 
 ## CLI標準化

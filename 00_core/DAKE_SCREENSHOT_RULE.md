@@ -40,6 +40,8 @@
 - 商品一覧
 - 視認性
 - 商品理解
+- BOOTH商品画像
+- BOOTH ready
 
 ルール:
 
@@ -49,6 +51,9 @@
 - 小サイズでも文字やUIが潰れないようにする。
 - BOOTH向けに最適化する。
 - `assets/screenshot.webp` と `assets/screenshot.jpg` は削除しない。
+
+`assets/screenshot.webp` と `assets/booth_thumbnail.jpg` は、どちらもDAKE正式出荷物です。
+`screenshot.webp` は実際に動く感、`booth_thumbnail.jpg` は一覧で止まる感を担当します。
 
 アプリ画面スクリーンショットの作成ルールです。
 

@@ -26,20 +26,30 @@ BOOTH ready
 BOOTH
 ↓
 dakeapp.com
+↓
+Cloudflare反映確認
+↓
+正式出荷完了
 ```
 
 GitHub Release公開のみでは正式出荷完了とはしません。
 以下が揃って初めて正式出荷とします。
 
-- README
-- release_body
-- screenshot.webp
-- booth_thumbnail.jpg
-- booth_product.txt
-- Release
-- BOOTH ready
-- BOOTH
-- dakeapp.com
+- `README.md` が最新
+- `release_body.md` が最新
+- `assets/screenshot.webp` が存在する
+- `assets/booth_thumbnail.jpg` が存在する
+- `booth_product.txt` が存在する
+- `booth_ready/` が生成されている
+- `dist/*.exe` が生成されている
+- GitHub Release が作成され、exeが添付されている
+- README の `DAKE_META.release_url` が更新済み
+- BOOTH掲載準備が完了している
+- dakeapp.com に反映されている
+- Cloudflare反映確認済み
+
+上記が揃って初めて「正式出荷完了」とします。
+GitHub Release作成のみで出荷完了と報告しません。
 
 ## Codex出荷テンプレ必須項目
 
@@ -52,6 +62,7 @@ GitHub Release公開のみでは正式出荷完了とはしません。
 - `dist/*.exe` をGitHub Releaseへ添付する。
 - READMEの `DAKE_META.release_url` をRelease作成後に更新する。
 - dakeapp.com掲載に必要な `display_name`、`site_title`、`site_description`、`update_summary`、`release_url`、`screenshot_path` を確認する。
+- dakeapp.com反映後、Cloudflare上の本番URLで200、スクショ、Releaseリンクを確認する。
 
 DAKEアプリ完成後の公開手順です。
 
@@ -149,6 +160,13 @@ Release作成後:
 - `show_on_site: true` のアプリだけ掲載する。
 - スクリーンショットは `assets/screenshot.webp` を使う。
 
+## 11. Cloudflare反映確認
+
+- `git push` 後、dakeapp.com本番URLの反映を確認する。
+- `/apps/`、`/update/`、`/sitemap.xml`、対象アプリ詳細ページが200で返ることを確認する。
+- 対象アプリ詳細ページにRelease URL、説明文、スクリーンショットが反映されていることを確認する。
+- Cloudflare反映確認まで終わってから、正式出荷完了として報告する。
+
 ## 公開前の最終チェック
 
 - Release本文が短い。
@@ -156,3 +174,7 @@ Release作成後:
 - スクリーンショットが最新。
 - READMEの `exe_name` と添付exeが一致。
 - `release_url` はRelease作成後に更新されている。
+- BOOTH ready素材が生成済み。
+- dakeapp.comに表示されている。
+- Cloudflare反映確認済み。
+- GitHub Releaseのみで出荷完了と扱っていない。

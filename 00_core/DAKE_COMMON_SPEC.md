@@ -27,7 +27,18 @@ BOOTH ready
 BOOTH
 ↓
 dakeapp.com
+↓
+Cloudflare反映確認
+↓
+正式出荷完了
 ```
+
+## Releaseと正式出荷の定義
+
+- Release = GitHub上の配布物公開。
+- 出荷 = ユーザーが触れる状態。
+- GitHub Release公開のみでは、DAKEの正式出荷完了とは扱わない。
+- ユーザーが一覧で見つけ、スクショで理解し、BOOTHまたはdakeapp.comから迷わず取得できる状態までを正式出荷とする。
 
 正式出荷に必要なもの:
 
@@ -35,12 +46,14 @@ dakeapp.com
 - `release_body.md`
 - `assets/screenshot.webp`
 - `assets/booth_thumbnail.jpg`
-- `booth_ready/booth_product.txt`
+- `booth_product.txt`（通常は `booth_ready/booth_product.txt`）
+- `booth_ready/`
 - `dist/*.exe`
 - GitHub Release
 - BOOTH ready
-- BOOTH公開状態
+- BOOTH掲載または掲載準備
 - dakeapp.com掲載状態
+- Cloudflare反映確認
 
 Releaseだけ、exeだけ、READMEだけの状態は正式出荷完了とは扱いません。
 

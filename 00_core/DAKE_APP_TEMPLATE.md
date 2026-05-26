@@ -15,6 +15,7 @@
       screenshot.webp
       screenshot.jpg
       booth_thumbnail.jpg
+    booth_product.txt        # 正式出荷ライン上の項目名。通常の実体は booth_ready/booth_product.txt
     booth_ready/
       README.txt
       注意事項.txt
@@ -32,6 +33,7 @@
 5. GitHub Releaseへexeを添付する。
 6. READMEの `release_url` を更新する。
 7. BOOTH ready、BOOTH、dakeapp.com掲載状態を確認する。
+8. Cloudflare反映確認まで終えて、正式出荷完了とする。
 
 新規DAKEアプリ作成時の基本テンプレです。
 
@@ -48,6 +50,9 @@
     .gitignore
     assets/
       screenshot.webp       # Release/サイト用スクリーンショット
+      booth_thumbnail.jpg   # BOOTH一覧用の正方形サムネイル
+    booth_ready/
+      booth_product.txt
 ```
 
 ## main.py基本要素
@@ -74,6 +79,9 @@ UI_TEXT = {
     "footer_copyright": COPYRIGHT,
 }
 ```
+
+`screenshot_path` は `assets/screenshot.webp` を基本とし、実ファイルが存在していることを必須にします。
+正式出荷前には `assets/booth_thumbnail.jpg` と `booth_ready/booth_product.txt` も生成済みにします。
 
 ## build.bat基本要素
 
@@ -141,6 +149,7 @@ dist/
 
 - `assets/` はアプリフォルダ直下に置く。
 - `assets/screenshot.webp` は起動直後のアプリウインドウを保存する。
+- `assets/booth_thumbnail.jpg` はBOOTH一覧用に1200x1200で生成する。
 - 画像を引き延ばさない。
 
 ## 新規作成時の流れ
@@ -153,4 +162,5 @@ dist/
 6. 起動確認する。
 7. `release_body.md` を生成する。
 8. `assets/screenshot.webp` を作る。
-9. Reviewチェックリストを見る。
+9. `tools/make_booth_ready.py` でBOOTH素材を生成する。
+10. Reviewチェックリストを見る。

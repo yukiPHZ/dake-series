@@ -11,13 +11,18 @@
 - [ ] buildが成功している。
 - [ ] `dist/*.exe` が生成されている。
 - [ ] GitHub Releaseが作成され、exeが添付されている。
+- [ ] Releaseにexeが添付済み。
 - [ ] READMEの `DAKE_META.release_url` が更新されている。
 - [ ] BOOTH ready素材が揃っている。
+- [ ] BOOTH掲載準備が完了している。
 - [ ] BOOTH公開後のURL欄が保持されている。
 - [ ] dakeapp.com掲載に必要な項目がREADMEから読める。
+- [ ] dakeapp.comに表示されている。
+- [ ] Cloudflare反映確認済み。
+- [ ] GitHub Releaseのみで出荷完了と扱っていない。
 
 GitHub Release公開のみでは正式出荷完了とはしません。
-BOOTH ready、BOOTH、dakeapp.comまで含めて確認します。
+BOOTH ready、BOOTH、dakeapp.com、Cloudflare反映確認まで含めて確認します。
 
 ## BOOTH素材
 
