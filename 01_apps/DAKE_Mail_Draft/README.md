@@ -209,7 +209,7 @@ BOOTH掲載時に使わない表現:
   "update_summary": "CSV差し込み、添付、署名保持、生成レポートに対応。送信機能はありません。",
   "folder_name": "DAKE_Mail_Draft",
   "exe_name": "DakeMail_Draft.exe",
-  "release_url": "",
+  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_Draft_v1.0.0",
   "screenshot_path": "assets/screenshot.webp",
   "status": "available",
   "show_in_launcher": true,

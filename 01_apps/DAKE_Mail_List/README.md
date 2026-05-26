@@ -71,7 +71,7 @@ GitHubからダウンロードしたWindows向けexeは、初回起動時にWind
   "update_summary": "Outlook .msg メールから3列CSVを作成します。",
   "folder_name": "DAKE_Mail_List",
   "exe_name": "DakeMail_List.exe",
-  "release_url": "",
+  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_List_v1.0.0",
   "screenshot_path": "assets/screenshot.webp",
   "status": "available",
   "show_in_launcher": true,
