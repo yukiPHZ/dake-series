@@ -1,0 +1,53 @@
+# 商品名
+Dakeメール下書き
+
+# 価格案
+300円
+
+# 商品紹介文
+CSV名簿から、Outlookの個別下書きを作ります。
+
+・Outlook下書き作成のみ
+・自動送信なし
+・件名、本文、添付ファイルに対応
+・送信前にOutlookで確認
+・Windows向け
+
+送信を急がず、
+下書きだけを静かに整える道具です。
+
+# タグ
+メール
+Outlook
+Windows
+実務
+ツール
+仕事効率化
+軽量
+シンプル
+
+# BOOTH商品画像
+assets/booth_thumbnail.jpg
+
+# 補助画像
+assets/screenshot.jpg
+
+# 作品ファイル
+booth_ready/DakeMail_Draft.zip
+
+# GitHub Release
+https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_Draft_v1.0.0
+
+# DAKEシリーズ表記
+DAKEシリーズ / Dakeメール下書き
+
+# 注意事項
+Windows向けアプリです。
+Outlook下書き作成補助ツールです。
+メールの自動送信機能はありません。
+ご利用は自己責任でお願いいたします。
+大切なファイルは事前にバックアップを推奨します。
+本ソフトウェアの無断転載・再配布を禁止します。
+
+# URL
+

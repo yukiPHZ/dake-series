@@ -219,6 +219,7 @@ def make_product_txt(
     features: list[str],
     tags: list[str],
     zip_name: str,
+    release_url: str = "",
     booth_url: str = "",
 ) -> str:
     feature_lines = "\n".join(f"・{feature}" for feature in features[:5])
@@ -249,6 +250,15 @@ assets/screenshot.jpg
 
 # 作品ファイル
 booth_ready/{zip_name}
+
+# GitHub Release
+{release_url}
+
+# 注意事項
+Windows向けアプリです。
+ご利用は自己責任でお願いいたします。
+大切なファイルは事前にバックアップを推奨します。
+本ソフトウェアの無断転載・再配布を禁止します。
 
 # URL
 {booth_url}
@@ -520,6 +530,7 @@ def process_app(app_dir: Path) -> AppResult:
         features=features,
         tags=tags_for(app_dir.name, title, features),
         zip_name=zip_name,
+        release_url=str(meta.get("release_url") or ""),
         booth_url=result.booth_url,
     )
     write_text(product_txt, product)
