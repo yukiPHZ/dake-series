@@ -1,3 +1,12 @@
+"""Generate BOOTH-ready assets for the DAKE formal shipping line.
+
+DAKE formal shipping includes README metadata, release_body.md,
+assets/screenshot.webp, assets/booth_thumbnail.jpg, booth_ready assets,
+GitHub Release, BOOTH, and dakeapp.com. This tool owns the BOOTH-ready
+asset generation part of that line and must preserve manually entered
+BOOTH URLs in booth_product.txt.
+"""
+
 from __future__ import annotations
 
 import json

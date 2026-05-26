@@ -1,5 +1,49 @@
 # DAKE_COMMON_SPEC
 
+## DAKE正式出荷ライン
+
+DAKEシリーズの正式出荷は、GitHub Release公開だけでは完了としません。
+README正本運用、BOOTH販売素材、dakeapp.com掲載までを含めて、初めて正式出荷とします。
+
+```text
+README.md
+↓
+release_body.md
+↓
+assets/screenshot.webp
+↓
+assets/booth_thumbnail.jpg
+↓
+booth_product.txt
+↓
+build
+↓
+dist/*.exe
+↓
+GitHub Release
+↓
+BOOTH ready
+↓
+BOOTH
+↓
+dakeapp.com
+```
+
+正式出荷に必要なもの:
+
+- `README.md`
+- `release_body.md`
+- `assets/screenshot.webp`
+- `assets/booth_thumbnail.jpg`
+- `booth_ready/booth_product.txt`
+- `dist/*.exe`
+- GitHub Release
+- BOOTH ready
+- BOOTH公開状態
+- dakeapp.com掲載状態
+
+Releaseだけ、exeだけ、READMEだけの状態は正式出荷完了とは扱いません。
+
 DAKEシリーズの最上位共通仕様です。個別仕様や実装判断で迷った場合は、このファイルを優先します。
 
 ## DAKEシリーズの考え方

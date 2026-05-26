@@ -1,5 +1,38 @@
 # DAKE_APP_TEMPLATE
 
+## 正式出荷素材テンプレ
+
+新規アプリは、GitHub ReleaseだけでなくBOOTH readyとdakeapp.com掲載までを前提にします。
+
+```text
+01_apps/
+  DAKE_Category_Function/
+    README.md
+    release_body.md
+    build.bat
+    main.py
+    assets/
+      screenshot.webp
+      screenshot.jpg
+      booth_thumbnail.jpg
+    booth_ready/
+      README.txt
+      注意事項.txt
+      booth_product.txt
+      screenshot.jpg
+      booth_thumbnail.jpg
+```
+
+新規作成時の出荷確認:
+
+1. `release_body.md` をREADMEの `RELEASE_BODY` から生成する。
+2. `assets/screenshot.webp` を起動中の実画面から作る。
+3. `tools/make_booth_ready.py` で `assets/booth_thumbnail.jpg` と `booth_ready/` を作る。
+4. buildして `dist/*.exe` を生成する。
+5. GitHub Releaseへexeを添付する。
+6. READMEの `release_url` を更新する。
+7. BOOTH ready、BOOTH、dakeapp.com掲載状態を確認する。
+
 新規DAKEアプリ作成時の基本テンプレです。
 
 ## フォルダ構成

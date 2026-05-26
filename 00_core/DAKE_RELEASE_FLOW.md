@@ -1,5 +1,58 @@
 # DAKE_RELEASE_FLOW
 
+## DAKE正式出荷ライン
+
+DAKEの正式出荷ラインは以下で固定します。
+
+```text
+README.md
+↓
+release_body.md
+↓
+assets/screenshot.webp
+↓
+assets/booth_thumbnail.jpg
+↓
+booth_product.txt
+↓
+build
+↓
+dist/*.exe
+↓
+GitHub Release
+↓
+BOOTH ready
+↓
+BOOTH
+↓
+dakeapp.com
+```
+
+GitHub Release公開のみでは正式出荷完了とはしません。
+以下が揃って初めて正式出荷とします。
+
+- README
+- release_body
+- screenshot.webp
+- booth_thumbnail.jpg
+- booth_product.txt
+- Release
+- BOOTH ready
+- BOOTH
+- dakeapp.com
+
+## Codex出荷テンプレ必須項目
+
+今後のCodex出荷指示では、以下を必ず確認対象に含めます。
+
+- `assets/screenshot.webp` を生成・確認する。
+- `assets/booth_thumbnail.jpg` を生成・確認する。
+- `booth_ready/booth_product.txt` を生成・確認する。
+- `booth_ready/` を生成・確認する。
+- `dist/*.exe` をGitHub Releaseへ添付する。
+- READMEの `DAKE_META.release_url` をRelease作成後に更新する。
+- dakeapp.com掲載に必要な `display_name`、`site_title`、`site_description`、`update_summary`、`release_url`、`screenshot_path` を確認する。
+
 DAKEアプリ完成後の公開手順です。
 
 ## 前提

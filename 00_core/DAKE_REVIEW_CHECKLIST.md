@@ -1,5 +1,35 @@
 # DAKE_REVIEW_CHECKLIST
 
+## DAKE正式出荷ライン
+
+- [ ] `README.md` が正本として整っている。
+- [ ] `release_body.md` がREADMEの `RELEASE_BODY` と一致している。
+- [ ] `assets/screenshot.webp` がある。
+- [ ] `assets/booth_thumbnail.jpg` がある。
+- [ ] `booth_ready/booth_product.txt` がある。
+- [ ] `booth_ready/` がある。
+- [ ] buildが成功している。
+- [ ] `dist/*.exe` が生成されている。
+- [ ] GitHub Releaseが作成され、exeが添付されている。
+- [ ] READMEの `DAKE_META.release_url` が更新されている。
+- [ ] BOOTH ready素材が揃っている。
+- [ ] BOOTH公開後のURL欄が保持されている。
+- [ ] dakeapp.com掲載に必要な項目がREADMEから読める。
+
+GitHub Release公開のみでは正式出荷完了とはしません。
+BOOTH ready、BOOTH、dakeapp.comまで含めて確認します。
+
+## BOOTH素材
+
+- [ ] `assets/booth_thumbnail.jpg` がある。
+- [ ] `booth_ready/booth_thumbnail.jpg` がある。
+- [ ] `booth_ready/screenshot.jpg` がある。
+- [ ] `booth_ready/README.txt` がある。
+- [ ] `booth_ready/注意事項.txt` がある。
+- [ ] `booth_ready/booth_product.txt` がある。
+- [ ] `booth_ready/booth_product.txt` に `# URL` 欄がある。
+- [ ] BOOTH用zipはGit管理対象に含めていない。
+
 DAKEアプリ横断レビュー用チェックリストです。
 
 ## 基本

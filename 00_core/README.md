@@ -1,5 +1,36 @@
 # DAKE 00_core
 
+## DAKE正式出荷ライン
+
+DAKEの正式出荷は、GitHub Release公開だけでは完了としません。
+README正本、スクリーンショット、BOOTH販売素材、dakeapp.com掲載までを1本の出荷ラインとして扱います。
+
+```text
+README.md
+↓
+release_body.md
+↓
+assets/screenshot.webp
+↓
+assets/booth_thumbnail.jpg
+↓
+booth_product.txt
+↓
+build
+↓
+dist/*.exe
+↓
+GitHub Release
+↓
+BOOTH ready
+↓
+BOOTH
+↓
+dakeapp.com
+```
+
+詳細は `DAKE_RELEASE_FLOW.md`、画像ルールは `DAKE_SCREENSHOT_RULE.md`、棚卸しは `DAKE_REVIEW_CHECKLIST.md` を参照します。
+
 DAKEシリーズ全体で参照する共通仕様ファイル置き場です。
 
 今後の正本はこのフォルダ内のMarkdownファイルです。既存の `design_rules.txt`、`dev_rules.txt`、`philosophy.txt` は削除せず残しますが、参照・更新はMarkdown側を優先します。

@@ -1,5 +1,55 @@
 # DAKE_SCREENSHOT_RULE
 
+## 正式出荷画像の役割
+
+### assets/screenshot.webp
+
+役割:
+
+```text
+実際に動く感
+```
+
+用途:
+
+- dakeapp.com
+- README
+- GitHub Release
+- Launcher
+
+ルール:
+
+- 実際の起動画面を撮る。
+- アプリウインドウのみを撮る。
+- 実務中の自然状態を優先する。
+- 横幅1200px超のみ縮小する。
+- 引き延ばしは禁止する。
+- DAKE正式出荷物として必ず保持する。
+
+### assets/booth_thumbnail.jpg
+
+役割:
+
+```text
+一覧で止まる感
+```
+
+用途:
+
+- BOOTH一覧
+- 商品一覧
+- 視認性
+- 商品理解
+
+ルール:
+
+- 1200x1200で生成する。
+- 正方形にする。
+- BOOTH一覧で読めることを優先する。
+- 小サイズでも文字やUIが潰れないようにする。
+- BOOTH向けに最適化する。
+- `assets/screenshot.webp` と `assets/screenshot.jpg` は削除しない。
+
 アプリ画面スクリーンショットの作成ルールです。
 
 ## 正本
