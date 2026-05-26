@@ -1479,10 +1479,10 @@ def run_gui(launch_check: bool = False) -> int:
 
     from core.app_config import (
         ConfigStore,
+        dake_icon_path,
         ensure_app_dirs,
         now_iso,
         open_path,
-        peakheadz_icon_path,
         peakheadz_logo_path,
     )
     from core.chatgpt_importer import ConversationsJsonNotFound, ChatGPTImportResult, import_chatgpt_export
@@ -1642,7 +1642,7 @@ def run_gui(launch_check: bool = False) -> int:
 
         def _apply_icon(self) -> None:
             try:
-                icon = peakheadz_icon_path()
+                icon = dake_icon_path()
                 if icon.exists():
                     self.iconbitmap(str(icon))
             except Exception:

@@ -25,7 +25,7 @@ pyinstaller --clean --noconfirm ^
  --onefile ^
  --noconsole ^
  --name=%APP_NAME% ^
- --icon=%DAKE_ICON% ^
+ --icon=..\..\02_assets\dake_icon.ico ^
  --add-data "%DAKE_ICON%;."
 if errorlevel 1 goto :build_error
 

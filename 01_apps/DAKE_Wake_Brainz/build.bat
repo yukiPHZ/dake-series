@@ -8,7 +8,7 @@ set "DIST_DIR=dist"
 set "BUILD_DIR=build"
 set "SPEC_FILE=%APP_NAME%.spec"
 set "OUTPUT_EXE=%DIST_DIR%\DAKE_Wake_Brainz.exe"
-set "ICON_FILE=assets\peakheadz_logo.ico"
+set "ICON_FILE=..\..\02_assets\dake_icon.ico"
 
 set "PYTHON_EXE=python"
 where python >nul 2>nul
@@ -43,7 +43,7 @@ if defined PYINSTALLER_EXE (
      --noconfirm ^
      --onefile ^
      --name %APP_NAME% ^
-     --icon=%ICON_FILE% ^
+     --icon=..\..\02_assets\dake_icon.ico ^
      --add-data "templates;templates" ^
      --add-data "static;static" ^
      --add-data "config.example.json;." ^
@@ -54,7 +54,7 @@ if defined PYINSTALLER_EXE (
      --noconfirm ^
      --onefile ^
      --name %APP_NAME% ^
-     --icon=%ICON_FILE% ^
+     --icon=..\..\02_assets\dake_icon.ico ^
      --add-data "templates;templates" ^
      --add-data "static;static" ^
      --add-data "config.example.json;." ^

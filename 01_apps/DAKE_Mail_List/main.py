@@ -74,6 +74,7 @@ CSV_HEADER = ("会社名", "お名前", "メールアドレス")
 CONFIG_FILE_NAME = "Dake_Mail_List_config.json"
 ICON_RELATIVE_PATH = Path("..") / ".." / "02_assets" / "dake_icon.ico"
 QUEUE_POLL_INTERVAL_MS = 80
+FOOTER_WIDE_THRESHOLD = 900
 EMAIL_RE = re.compile(
     r"(?<![\w.+-])([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})(?![\w.-])",
     re.IGNORECASE,
@@ -538,32 +539,66 @@ class MailListApp:
         footer = tk.Frame(parent, bg=COLORS["base_bg"])
         footer.grid(row=4, column=0, sticky="ew", pady=(16, 0))
         footer.grid_columnconfigure(0, weight=1)
+        footer.grid_columnconfigure(1, weight=1)
 
-        first_line = (
+        self.footer_frame = footer
+        self.footer_left_text = (
             f"{UI_TEXT['footer_left']} {UI_TEXT['footer_separator']} "
             f"{UI_TEXT['footer_caption']}"
         )
-        second_line = (
+        self.footer_right_text = (
             f"{UI_TEXT['footer_link_1']} {UI_TEXT['footer_separator']} "
             f"{UI_TEXT['footer_link_2']} {UI_TEXT['footer_separator']} "
             f"{UI_TEXT['footer_copyright']}"
         )
-        tk.Label(
+        self.footer_left_label = tk.Label(
             footer,
-            text=first_line,
+            text=self.footer_left_text,
             font=self.fonts["footer"],
             fg=COLORS["muted"],
             bg=COLORS["base_bg"],
             anchor="center",
-        ).grid(row=0, column=0, sticky="ew")
-        tk.Label(
+        )
+        self.footer_right_label = tk.Label(
             footer,
-            text=second_line,
+            text=self.footer_right_text,
             font=self.fonts["footer"],
             fg=COLORS["muted"],
             bg=COLORS["base_bg"],
             anchor="center",
-        ).grid(row=1, column=0, sticky="ew", pady=(2, 0))
+        )
+        self.footer_mode = ""
+        self.root.bind("<Configure>", self.handle_footer_resize, add="+")
+        self.root.after_idle(lambda: self.apply_footer_layout(self.root.winfo_width()))
+
+    def handle_footer_resize(self, event: tk.Event) -> None:
+        if event.widget is self.root:
+            self.apply_footer_layout(event.width)
+
+    def apply_footer_layout(self, width: int) -> None:
+        required_width = (
+            self.footer_left_label.winfo_reqwidth()
+            + self.footer_right_label.winfo_reqwidth()
+            + 48
+        )
+        threshold = max(FOOTER_WIDE_THRESHOLD, required_width)
+        mode = "wide" if width >= threshold else "narrow"
+        if self.footer_mode == mode:
+            return
+        self.footer_mode = mode
+        self.footer_left_label.grid_forget()
+        self.footer_right_label.grid_forget()
+        if mode == "wide":
+            self.footer_left_label.configure(anchor="w", justify="left")
+            self.footer_right_label.configure(anchor="e", justify="right")
+            self.footer_left_label.grid(row=0, column=0, sticky="ew")
+            self.footer_right_label.grid(row=0, column=1, sticky="ew")
+            return
+
+        self.footer_left_label.configure(anchor="center", justify="center")
+        self.footer_right_label.configure(anchor="center", justify="center")
+        self.footer_left_label.grid(row=0, column=0, columnspan=2, sticky="ew")
+        self.footer_right_label.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(2, 0))
 
     def create_button(self, parent: tk.Widget, label: str, command, primary: bool) -> tk.Button:
         normal_bg = COLORS["accent"] if primary else COLORS["card_bg"]

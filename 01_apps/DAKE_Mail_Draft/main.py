@@ -104,6 +104,7 @@ REPORT_FIELDS = (
 )
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 QUEUE_POLL_INTERVAL_MS = 100
+FOOTER_WIDE_THRESHOLD = 900
 
 COLORS = {
     "background": "#F5F7FA",
@@ -508,7 +509,7 @@ class MailDraftApp:
         self.root = root
         self.root.title(WINDOW_TITLE)
         self.root.configure(bg=COLORS["background"])
-        self.root.minsize(1040, 800)
+        self.root.minsize(860, 800)
         self.root.geometry("1120x820")
 
         self.font_family = choose_font_family(root)
@@ -639,32 +640,66 @@ class MailDraftApp:
         footer = tk.Frame(self.root, bg=COLORS["background"])
         footer.grid(row=3, column=0, sticky="ew", padx=24, pady=(0, 14))
         footer.columnconfigure(0, weight=1)
+        footer.columnconfigure(1, weight=1)
 
-        first_line = (
+        self.footer_frame = footer
+        self.footer_left_text = (
             f"{UI_TEXT['footer_left']} {UI_TEXT['footer_separator']} "
             f"{UI_TEXT['footer_caption']}"
         )
-        second_line = (
+        self.footer_right_text = (
             f"{UI_TEXT['footer_link_1']} {UI_TEXT['footer_separator']} "
             f"{UI_TEXT['footer_link_2']} {UI_TEXT['footer_separator']} "
             f"{UI_TEXT['footer_copyright']}"
         )
-        tk.Label(
+        self.footer_left_label = tk.Label(
             footer,
-            text=first_line,
+            text=self.footer_left_text,
             bg=COLORS["background"],
             fg=COLORS["muted"],
             font=self.fonts["footer"],
             anchor="center",
-        ).grid(row=0, column=0, sticky="ew")
-        tk.Label(
+        )
+        self.footer_right_label = tk.Label(
             footer,
-            text=second_line,
+            text=self.footer_right_text,
             bg=COLORS["background"],
             fg=COLORS["muted"],
             font=self.fonts["footer"],
             anchor="center",
-        ).grid(row=1, column=0, sticky="ew", pady=(2, 0))
+        )
+        self._footer_mode = ""
+        self.root.bind("<Configure>", self._handle_footer_resize, add="+")
+        self.root.after_idle(lambda: self._apply_footer_layout(self.root.winfo_width()))
+
+    def _handle_footer_resize(self, event: tk.Event) -> None:
+        if event.widget is self.root:
+            self._apply_footer_layout(event.width)
+
+    def _apply_footer_layout(self, width: int) -> None:
+        required_width = (
+            self.footer_left_label.winfo_reqwidth()
+            + self.footer_right_label.winfo_reqwidth()
+            + 48
+        )
+        threshold = max(FOOTER_WIDE_THRESHOLD, required_width)
+        mode = "wide" if width >= threshold else "narrow"
+        if self._footer_mode == mode:
+            return
+        self._footer_mode = mode
+        self.footer_left_label.grid_forget()
+        self.footer_right_label.grid_forget()
+        if mode == "wide":
+            self.footer_left_label.configure(anchor="w", justify="left")
+            self.footer_right_label.configure(anchor="e", justify="right")
+            self.footer_left_label.grid(row=0, column=0, sticky="ew")
+            self.footer_right_label.grid(row=0, column=1, sticky="ew")
+            return
+
+        self.footer_left_label.configure(anchor="center", justify="center")
+        self.footer_right_label.configure(anchor="center", justify="center")
+        self.footer_left_label.grid(row=0, column=0, columnspan=2, sticky="ew")
+        self.footer_right_label.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(2, 0))
 
     def _build_input_area(self, parent: tk.Frame) -> None:
         padding = {"padx": 18, "pady": 7}
