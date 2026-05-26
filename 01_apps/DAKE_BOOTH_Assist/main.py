@@ -39,6 +39,7 @@ UI_TEXT = {
     "field_title": "商品名",
     "field_price": "価格",
     "field_description": "説明文",
+    "field_product_info": "商品情報",
     "field_tags": "タグ",
     "field_ready": "booth_ready",
     "field_zip": "zipファイル",
@@ -144,6 +145,7 @@ class ProductInfo:
     app_name: str
     app_dir: Path
     product_path: Path
+    product_source: str
     title: str
     price: str
     description: str
@@ -172,6 +174,8 @@ FIELD_ALIASES = {
     "説明": "description",
     "説明文": "description",
     "商品説明": "description",
+    "商品紹介文": "description",
+    "紹介文": "description",
     "description": "description",
     "body": "description",
     "タグ": "tags",
@@ -312,9 +316,9 @@ def resolve_field_name(label: str) -> str | None:
 
 
 def read_text_safely(path: Path) -> str:
-    for encoding in ("utf-8-sig", "utf-8", "cp932"):
+    for encoding_name in ("utf-8-sig", "utf-8"):
         try:
-            return path.read_text(encoding=encoding)
+            return path.read_text(encoding=encoding_name)
         except UnicodeDecodeError:
             continue
         except OSError:
@@ -323,6 +327,29 @@ def read_text_safely(path: Path) -> str:
         return path.read_text(encoding="utf-8", errors="replace")
     except OSError:
         return ""
+
+
+def find_booth_product_path(app_dir: Path) -> Path | None:
+    candidates = (
+        app_dir / PRODUCT_FILE_NAME,
+        app_dir / READY_DIR_NAME / PRODUCT_FILE_NAME,
+    )
+    for candidate in candidates:
+        try:
+            if candidate.is_file():
+                return candidate
+        except OSError:
+            continue
+    return None
+
+
+def format_product_source(app_dir: Path, product_path: Path | None) -> str:
+    if product_path is None:
+        return ""
+    try:
+        return product_path.relative_to(app_dir).as_posix()
+    except ValueError:
+        return str(product_path)
 
 
 def clean_single_line(value: str) -> str:
@@ -443,7 +470,8 @@ def find_zip_files(ready_dir: Path) -> tuple[Path, ...]:
 
 
 def build_product_info(app_dir: Path) -> ProductInfo:
-    product_path = app_dir / PRODUCT_FILE_NAME
+    found_product_path = find_booth_product_path(app_dir)
+    product_path = found_product_path or app_dir / PRODUCT_FILE_NAME
     parsed = {
         "title": "",
         "price": "",
@@ -455,6 +483,7 @@ def build_product_info(app_dir: Path) -> ProductInfo:
         "thumbnail_path": "",
     }
     parsed.update(parse_booth_product(product_path))
+    product_source = format_product_source(app_dir, found_product_path)
     ready_dir = app_dir / READY_DIR_NAME
     ready_exists = ready_dir.exists() and ready_dir.is_dir()
     zip_files = find_zip_files(ready_dir)
@@ -475,6 +504,7 @@ def build_product_info(app_dir: Path) -> ProductInfo:
         app_name=app_dir.name,
         app_dir=app_dir,
         product_path=product_path,
+        product_source=product_source,
         title=parsed["title"],
         price=parsed["price"],
         description=parsed["description"],
@@ -498,7 +528,8 @@ def discover_apps() -> list[AppEntry]:
     try:
         for child in apps_root.iterdir():
             if child.is_dir() and not child.name.startswith("."):
-                entries.append(AppEntry(child.name, child, (child / PRODUCT_FILE_NAME).exists()))
+                product_path = find_booth_product_path(child)
+                entries.append(AppEntry(child.name, child, product_path is not None))
     except OSError:
         return []
 
@@ -697,6 +728,7 @@ class DakeBoothAssistApp:
             "title": tk.StringVar(value=UI_TEXT["value_unset"]),
             "price": tk.StringVar(value=UI_TEXT["value_unset"]),
             "tags": tk.StringVar(value=UI_TEXT["value_unset"]),
+            "product_info": tk.StringVar(value=UI_TEXT["value_file_missing"]),
             "ready": tk.StringVar(value=UI_TEXT["value_no"]),
             "zip": tk.StringVar(value=UI_TEXT["value_file_missing"]),
             "thumbnail": tk.StringVar(value=UI_TEXT["value_file_missing"]),
@@ -861,6 +893,7 @@ class DakeBoothAssistApp:
             ("field_title", "title"),
             ("field_price", "price"),
             ("field_tags", "tags"),
+            ("field_product_info", "product_info"),
             ("field_ready", "ready"),
             ("field_zip", "zip"),
             ("field_thumbnail", "thumbnail"),
@@ -1096,7 +1129,7 @@ class DakeBoothAssistApp:
         for key, variable in self.field_vars.items():
             if key in {"ready"}:
                 variable.set(UI_TEXT["value_no"])
-            elif key in {"zip", "thumbnail", "screenshot"}:
+            elif key in {"product_info", "zip", "thumbnail", "screenshot"}:
                 variable.set(UI_TEXT["value_file_missing"])
             else:
                 variable.set(UI_TEXT["value_unset"])
@@ -1106,6 +1139,7 @@ class DakeBoothAssistApp:
         self.field_vars["title"].set(product.title or UI_TEXT["value_unset"])
         self.field_vars["price"].set(product.price or UI_TEXT["value_unset"])
         self.field_vars["tags"].set(product.tags or UI_TEXT["value_unset"])
+        self.field_vars["product_info"].set(product.product_source or UI_TEXT["value_file_missing"])
         self.field_vars["ready"].set(UI_TEXT["value_yes"] if product.booth_ready_exists else UI_TEXT["value_no"])
         self.field_vars["zip"].set(self._format_zip_value(product))
         self.field_vars["thumbnail"].set(self._format_path_value(product.thumbnail_path))
@@ -1264,6 +1298,29 @@ def run_launch_check() -> int:
         if zip_product.selected_zip is None or zip_product.selected_zip.name != "a.zip":
             raise RuntimeError("zip selection fixture failed")
 
+        ready_product_app = temp_root / "ReadyProduct"
+        ready_product_dir = ready_product_app / READY_DIR_NAME
+        ready_product_dir.mkdir(parents=True)
+        (ready_product_dir / PRODUCT_FILE_NAME).write_text(
+            "TITLE=Ready Sample\nPRICE=1200\nDESCRIPTION=Ready description\nTAGS=ready,booth\n",
+            encoding="utf-8",
+        )
+        ready_product = build_product_info(ready_product_app)
+        if ready_product.title != "Ready Sample":
+            raise RuntimeError("ready product fixture failed")
+        if ready_product.product_source != f"{READY_DIR_NAME}/{PRODUCT_FILE_NAME}":
+            raise RuntimeError("ready product source fixture failed")
+
+        both_product_app = temp_root / "BothProduct"
+        both_ready_dir = both_product_app / READY_DIR_NAME
+        both_ready_dir.mkdir(parents=True)
+        both_product_app.mkdir(exist_ok=True)
+        (both_product_app / PRODUCT_FILE_NAME).write_text("TITLE=Root Sample\n", encoding="utf-8")
+        (both_ready_dir / PRODUCT_FILE_NAME).write_text("TITLE=Ready Sample\n", encoding="utf-8")
+        both_product = build_product_info(both_product_app)
+        if both_product.title != "Root Sample" or both_product.product_source != PRODUCT_FILE_NAME:
+            raise RuntimeError("root product priority fixture failed")
+
     real_import = builtins.__import__
 
     def blocked_import(name, globals=None, locals=None, fromlist=(), level=0):
@@ -1282,10 +1339,28 @@ def run_launch_check() -> int:
     if setup_kind != "error_setup":
         raise RuntimeError("playwright setup guidance fixture failed")
 
+    product_apps = sum(1 for entry in apps if entry.has_product)
+    dake_backup_source = "missing"
+    dake_backup_fields = "missing"
+    for entry in apps:
+        if entry.name == "DAKE_Backup":
+            backup_info = build_product_info(entry.path)
+            dake_backup_source = backup_info.product_source or "missing"
+            dake_backup_fields = (
+                f"title={bool(backup_info.title)},"
+                f"price={bool(backup_info.price)},"
+                f"description={bool(backup_info.description)},"
+                f"tags={bool(backup_info.tags)}"
+            )
+            break
+
     print(f"{APP_NAME} launch-check OK")
     print(f"apps_root={get_apps_root()}")
     print(f"apps={len(apps)}")
-    print("fixtures=missing_product, missing_ready, multiple_zip, missing_playwright")
+    print(f"product_apps={product_apps}")
+    print(f"dake_backup_product={dake_backup_source}")
+    print(f"dake_backup_fields={dake_backup_fields}")
+    print("fixtures=missing_product, missing_ready, multiple_zip, missing_playwright, ready_product_lookup, root_product_priority")
     return 0
 
 
