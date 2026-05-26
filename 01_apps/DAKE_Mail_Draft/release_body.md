@@ -1,8 +1,5 @@
-# DAKE Mail Draft
-
-- CSVからOutlook下書きを作成
-- 件名・本文テンプレート差し込み
-- 添付ファイル対応
-- Outlook署名保持
+- Dakeメール下書き
+- CSV名簿からOutlook下書きを作成
+- 件名・本文差し込みと添付に対応
 - 送信機能なし
-- 生成レポート出力
+- Windows向けexe

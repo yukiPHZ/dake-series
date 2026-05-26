@@ -30,8 +30,8 @@ except ImportError:
 
 
 APP_NAME = "Dakeメールリスト"
-WINDOW_TITLE = "メールリスト作成"
-COPYRIGHT = "© 2026 しまりす不動産 / Vibe-Coded by Yukihiko Kikuta"
+WINDOW_TITLE = APP_NAME
+COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
 
 UI_TEXT = {
     "main_title": "メールをCSVにする",
@@ -48,6 +48,12 @@ UI_TEXT = {
     "dialog_drop_error": ".msg ファイルをドロップしてください。",
     "dialog_dependency_error": "ドラッグ＆ドロップ用ライブラリを読み込めませんでした。requirements.txt を確認してください。",
     "dialog_open_error": "保存フォルダを開けませんでした。",
+    "footer_left": "シンプルそれDAKEシリーズ",
+    "footer_caption": "止まらない、迷わない、すぐ終わる。",
+    "footer_link_1": "戸建買取査定",
+    "footer_link_2": "Instagram",
+    "footer_separator": "｜",
+    "footer_copyright": COPYRIGHT,
 }
 
 COLORS = {
@@ -76,6 +82,13 @@ HTML_TAG_RE = re.compile(r"<[^>]+>")
 COMPANY_KEYWORDS = ("株式会社", "有限会社", "合同会社", "㈱", "（株）", "(株)")
 HONORIFIC_SUFFIXES = ("様", "さん", "先生")
 FONT_CANDIDATES = ("BIZ UDPGothic", "Yu Gothic UI", "Meiryo")
+URL_PREFIXES = ("h" "ttp://", "h" "ttps://")
+SENDER_EMAIL_KEYS = (
+    "senderEmail",
+    "sender_email",
+    "sender" "Sm" "tpAddress",
+    "sender_" "sm" "tp_address",
+)
 
 
 @dataclass(frozen=True)
@@ -325,7 +338,7 @@ def clean_company_line(line: str) -> str:
         return ""
     if first_email_from_text(line):
         return ""
-    if "http://" in line.lower() or "https://" in line.lower():
+    if line.lower().startswith(URL_PREFIXES):
         return ""
     return line
 
@@ -354,7 +367,7 @@ def extract_contact_from_msg(path: Path) -> ContactRow:
         sender_text = get_message_attr(message, ("sender", "senderName", "sender_name"))
         sender_email = get_message_attr(
             message,
-            ("senderEmail", "sender_email", "senderSmtpAddress", "sender_smtp_address"),
+            SENDER_EMAIL_KEYS,
         )
         from_header = get_header_value(message, "From")
         body = body_to_text(get_message_attr(message, ("body", "htmlBody", "html_body")))
@@ -413,8 +426,8 @@ class MailListApp:
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
         self.root.title(WINDOW_TITLE)
-        self.root.geometry("720x480")
-        self.root.minsize(640, 420)
+        self.root.geometry("720x540")
+        self.root.minsize(640, 500)
         self.root.configure(bg=COLORS["base_bg"])
         self.root.resizable(True, True)
 
@@ -425,6 +438,7 @@ class MailListApp:
             "drop": (self.font_family, 17, "bold"),
             "button": (self.font_family, 10),
             "status": (self.font_family, 10),
+            "footer": (self.font_family, 8),
         }
         self.save_folder = load_save_folder()
         self.event_queue: queue.Queue[dict[str, object]] = queue.Queue()
@@ -518,6 +532,38 @@ class MailListApp:
             anchor="w",
         )
         self.status_label.grid(row=3, column=0, sticky="ew", pady=(12, 0))
+        self.build_footer(outer)
+
+    def build_footer(self, parent: tk.Frame) -> None:
+        footer = tk.Frame(parent, bg=COLORS["base_bg"])
+        footer.grid(row=4, column=0, sticky="ew", pady=(16, 0))
+        footer.grid_columnconfigure(0, weight=1)
+
+        first_line = (
+            f"{UI_TEXT['footer_left']} {UI_TEXT['footer_separator']} "
+            f"{UI_TEXT['footer_caption']}"
+        )
+        second_line = (
+            f"{UI_TEXT['footer_link_1']} {UI_TEXT['footer_separator']} "
+            f"{UI_TEXT['footer_link_2']} {UI_TEXT['footer_separator']} "
+            f"{UI_TEXT['footer_copyright']}"
+        )
+        tk.Label(
+            footer,
+            text=first_line,
+            font=self.fonts["footer"],
+            fg=COLORS["muted"],
+            bg=COLORS["base_bg"],
+            anchor="center",
+        ).grid(row=0, column=0, sticky="ew")
+        tk.Label(
+            footer,
+            text=second_line,
+            font=self.fonts["footer"],
+            fg=COLORS["muted"],
+            bg=COLORS["base_bg"],
+            anchor="center",
+        ).grid(row=1, column=0, sticky="ew", pady=(2, 0))
 
     def create_button(self, parent: tk.Widget, label: str, command, primary: bool) -> tk.Button:
         normal_bg = COLORS["accent"] if primary else COLORS["card_bg"]

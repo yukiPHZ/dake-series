@@ -1,4 +1,4 @@
-# Dakeメールドラフト
+# Dakeメール下書き
 
 CSVからOutlook下書きだけ作る、Windows向けの小さな実務補助ツールです。
 
@@ -116,7 +116,26 @@ pip install -r requirements.txt
 build.bat
 ```
 
-PyInstallerで `dist/DAKE_Mail_Draft.exe` を作成します。共通アイコン `../../02_assets/dake_icon.ico` がある場合は使用し、ない場合もアイコンなしでビルドを継続します。
+PyInstallerで `dist/DakeMail_Draft.exe` を作成します。共通アイコン `../../02_assets/dake_icon.ico` を使用します。
+
+## 公式サイト
+
+- DAKEシリーズ公式サイト：https://dakeapp.com
+- 関連サイト：https://soredake.com
+
+## 初回起動時の注意
+
+GitHubからダウンロードしたWindows向けexeは、初回起動時にWindowsのセキュリティ確認画面が表示される場合があります。
+
+表示された場合は、内容を確認したうえで、
+
+1. 「詳細情報」をクリック
+2. 「実行」をクリック
+
+して起動してください。
+
+これは個人開発アプリや未署名アプリで表示されることがある確認画面です。
+不安な場合は、無理に起動せず、公式サイトや配布元を確認してください。
 
 ## トラブルシュート
 
@@ -182,18 +201,26 @@ BOOTH掲載時に使わない表現:
 ```json
 {
   "app_key": "DAKE_Mail_Draft",
-  "display_name": "DAKE Mail Draft",
-  "launcher_title": "Mail Draft",
-  "launcher_description": "CSVからOutlookの個別下書きだけ作る",
-  "site_title": "DAKE Mail Draft",
-  "site_description": "CSV名簿から、Outlookの下書きメールを個別に作成する実務補助ツール。",
-  "update_summary": "CSV差し込み、Outlook下書き作成、添付、署名保持、生成レポートに対応。",
+  "display_name": "Dakeメール下書き",
+  "launcher_title": "メール下書き作成",
+  "launcher_description": "CSVからOutlookの個別下書きだけ作ります。",
+  "site_title": "Dakeメール下書き",
+  "site_description": "CSV名簿からOutlookの個別下書きを作る、送信しない実務補助ツールです。",
+  "update_summary": "CSV差し込み、添付、署名保持、生成レポートに対応。送信機能はありません。",
   "folder_name": "DAKE_Mail_Draft",
-  "exe_name": "DAKE_Mail_Draft.exe",
+  "exe_name": "DakeMail_Draft.exe",
   "release_url": "",
   "screenshot_path": "assets/screenshot.webp",
-  "status": "active",
+  "status": "available",
   "show_in_launcher": true,
   "show_on_site": true
 }
 ```
+
+## RELEASE_BODY
+
+- Dakeメール下書き
+- CSV名簿からOutlook下書きを作成
+- 件名・本文差し込みと添付に対応
+- 送信機能なし
+- Windows向けexe

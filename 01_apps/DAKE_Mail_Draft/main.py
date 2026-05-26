@@ -18,15 +18,79 @@ from tkinter import filedialog, font as tkfont, messagebox, ttk
 
 
 APP_KEY = "DAKE_Mail_Draft"
-APP_NAME = "Dakeメールドラフト"
-WINDOW_TITLE = "Dakeメールドラフト"
-DISPLAY_SUBTITLE = "CSVからOutlook下書きだけ作る"
+APP_NAME = "Dakeメール下書き"
+WINDOW_TITLE = APP_NAME
+COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
+
+UI_TEXT = {
+    "display_subtitle": "CSVからOutlook下書きだけ作る",
+    "main_description": "メールは送信しません。生成後はOutlookで確認してください。",
+    "default_subject_template": "{会社名} {名前}様へのご連絡",
+    "default_body_template": "{会社名}\n{名前} 様\n\nお世話になっております。\n\n以下の内容をご確認ください。\n\nよろしくお願いいたします。",
+    "status_select_csv": "CSVを選択してください。",
+    "report_pending": "レポートは生成後に表示されます。",
+    "button_generate": "Outlook下書きを生成",
+    "button_cancel": "キャンセル",
+    "label_csv": "CSV選択",
+    "button_select": "選択",
+    "label_company_column": "会社名列",
+    "label_name_column": "名前列",
+    "label_email_column": "メール列",
+    "label_subject_template": "件名テンプレート",
+    "label_body_template": "本文テンプレート",
+    "label_attachments": "添付ファイル",
+    "button_add": "追加",
+    "button_remove": "削除",
+    "button_clear": "全削除",
+    "label_limit": "生成件数",
+    "limit_all": "全件",
+    "option_keep_displayed": "生成後もOutlook下書き画面を表示したままにする",
+    "preview_title": "プレビュー",
+    "report_title": "レポート",
+    "safety_note": "このアプリはOutlook下書き作成補助です。作成後はOutlook上で宛先・本文・添付を必ず確認してください。",
+    "dialog_csv_title": "CSV名簿を選択",
+    "dialog_attachment_title": "添付ファイルを選択",
+    "status_csv_load_error": "CSVを読み込めませんでした: {error}",
+    "dialog_csv_load_error": "CSVを読み込めませんでした。\n\n{error}",
+    "status_csv_loaded": "CSVを読み込みました。{count}件 / 文字コード {encoding}",
+    "preview_select_csv": "CSVを選択すると、先頭1件のプレビューを表示します。",
+    "preview_select_mapping": "列マッピングを選択してください。",
+    "preview_no_targets": "生成できるメールアドレスが見つかりません。スキップ候補: {count}件",
+    "preview_format": "宛先: {email}\n件名: {subject}\n\n本文:\n{body}",
+    "dialog_select_csv_error": "CSVファイルを選択してください。",
+    "dialog_mapping_error": "会社名列・名前列・メールアドレス列を選択してください。",
+    "dialog_missing_attachments": "存在しない添付ファイルがあります。\n\n{paths}",
+    "dialog_no_targets": "生成対象のメールアドレスがありません。",
+    "confirm_generation": "このアプリはOutlookの下書きを作成します。メールは送信しません。生成後はOutlookで内容・宛先・添付を確認してください。\n\n生成予定: {target_count}件\n事前スキップ: {skipped_count}件",
+    "status_generating": "Outlook下書きを生成しています。",
+    "report_generating": "生成中です。途中エラーは行ごとにレポートへ記録します。",
+    "status_cancel_requested": "キャンセル要求を受け付けました。処理中の1件が終わるまで待ちます。",
+    "status_progress": "生成中: {current}/{total}件 / 作成 {drafted}件 / エラー {errors}件",
+    "status_completed": "完了しました。",
+    "status_cancelled": "キャンセルしました。",
+    "status_complete": "{prefix} 作成 {drafted}件 / スキップ {skipped}件 / エラー {errors}件",
+    "report_complete": "{prefix}\n作成: {drafted}件\nスキップ: {skipped}件\nエラー: {errors}件\n\nレポート:\n{report_path}",
+    "report_empty_email": "メールアドレスが空です。",
+    "report_invalid_email": "メール形式が不正です。",
+    "report_duplicate_email": "重複メールアドレスのため1件目のみ作成します。",
+    "report_drafted": "Outlook下書きを作成しました。",
+    "error_pywin32_missing": "pywin32 が見つかりません。requirements.txt を確認してください。",
+    "error_outlook_connect": "Microsoft Outlook Classic に接続できませんでした。",
+    "error_outlook_not_initialized": "Outlook が初期化されていません。",
+    "footer_left": "シンプルそれDAKEシリーズ",
+    "footer_caption": "止まらない、迷わない、すぐ終わる。",
+    "footer_link_1": "戸建買取査定",
+    "footer_link_2": "Instagram",
+    "footer_separator": "｜",
+    "footer_copyright": COPYRIGHT,
+}
+DISPLAY_SUBTITLE = UI_TEXT["display_subtitle"]
 
 COMPANY_CANDIDATES = ("会社名", "company", "company_name", "organization")
 NAME_CANDIDATES = ("名前", "氏名", "name", "person_name")
 EMAIL_CANDIDATES = ("mail 1", "mail", "email", "メール", "メールアドレス", "email_address")
 PLACEHOLDERS = ("会社名", "名前", "メール", "company", "name", "email")
-LIMIT_CHOICES = ("5", "10", "20", "50", "100", "全件")
+LIMIT_CHOICES = ("5", "10", "20", "50", "100", UI_TEXT["limit_all"])
 DEFAULT_LIMIT = "50"
 REPORT_FIELDS = (
     "row_number",
@@ -55,15 +119,8 @@ COLORS = {
     "error": "#B42318",
 }
 
-DEFAULT_SUBJECT_TEMPLATE = "{会社名} {名前}様へのご連絡"
-DEFAULT_BODY_TEMPLATE = """{会社名}
-{名前} 様
-
-お世話になっております。
-
-以下の内容をご確認ください。
-
-よろしくお願いいたします。"""
+DEFAULT_SUBJECT_TEMPLATE = UI_TEXT["default_subject_template"]
+DEFAULT_BODY_TEMPLATE = UI_TEXT["default_body_template"]
 
 
 @dataclass(frozen=True)
@@ -237,7 +294,7 @@ def make_report_record(
 
 
 def parse_limit(limit_label: str) -> int | None:
-    if limit_label == "全件":
+    if limit_label == UI_TEXT["limit_all"]:
         return None
     return int(limit_label)
 
@@ -261,16 +318,16 @@ def prepare_targets(
         target = DraftTarget(record.row_number, company, name, email_address)
 
         if not email_address:
-            reports.append(make_report_record(target, "skipped_empty_email", "メールアドレスが空です。"))
+            reports.append(make_report_record(target, "skipped_empty_email", UI_TEXT["report_empty_email"]))
             continue
 
         if not is_valid_email(email_address):
-            reports.append(make_report_record(target, "skipped_invalid_email", "メール形式が不正です。"))
+            reports.append(make_report_record(target, "skipped_invalid_email", UI_TEXT["report_invalid_email"]))
             continue
 
         email_key = email_address.casefold()
         if email_key in seen_emails:
-            reports.append(make_report_record(target, "skipped_duplicate", "重複メールアドレスのため1件目のみ作成します。"))
+            reports.append(make_report_record(target, "skipped_duplicate", UI_TEXT["report_duplicate_email"]))
             continue
 
         if limit is not None and len(targets) >= limit:
@@ -325,14 +382,14 @@ class OutlookDraftSession:
             import pythoncom  # type: ignore
             import win32com.client  # type: ignore
         except ImportError as exc:
-            raise RuntimeError("pywin32 が見つかりません。requirements.txt を確認してください。") from exc
+            raise RuntimeError(UI_TEXT["error_pywin32_missing"]) from exc
 
         self.pythoncom = pythoncom
         self.pythoncom.CoInitialize()
         try:
             self.outlook = win32com.client.Dispatch("Outlook.Application")
         except Exception as exc:
-            raise RuntimeError("Microsoft Outlook Classic に接続できませんでした。") from exc
+            raise RuntimeError(UI_TEXT["error_outlook_connect"]) from exc
         return self
 
     def __exit__(self, exc_type: object, exc: object, traceback: object) -> None:
@@ -347,7 +404,7 @@ class OutlookDraftSession:
         attachment_paths: list[Path],
     ) -> None:
         if self.outlook is None:
-            raise RuntimeError("Outlook が初期化されていません。")
+            raise RuntimeError(UI_TEXT["error_outlook_not_initialized"])
 
         mail = self.outlook.CreateItem(0)
         mail.To = target.email
@@ -405,7 +462,7 @@ def create_drafts_worker(
                 else:
                     drafted_count += 1
                     report_records.append(
-                        make_report_record(target, "drafted", "Outlook下書きを作成しました。", subject=subject)
+                        make_report_record(target, "drafted", UI_TEXT["report_drafted"], subject=subject)
                     )
 
                 event_queue.put(
@@ -451,8 +508,8 @@ class MailDraftApp:
         self.root = root
         self.root.title(WINDOW_TITLE)
         self.root.configure(bg=COLORS["background"])
-        self.root.minsize(1040, 760)
-        self.root.geometry("1120x780")
+        self.root.minsize(1040, 800)
+        self.root.geometry("1120x820")
 
         self.font_family = choose_font_family(root)
         self.fonts = {
@@ -461,6 +518,7 @@ class MailDraftApp:
             "label": (self.font_family, 10, "bold"),
             "body": (self.font_family, 10),
             "small": (self.font_family, 9),
+            "footer": (self.font_family, 8),
             "button": (self.font_family, 10, "bold"),
         }
 
@@ -476,8 +534,8 @@ class MailDraftApp:
         self.name_column_var = tk.StringVar()
         self.email_column_var = tk.StringVar()
         self.limit_var = tk.StringVar(value=DEFAULT_LIMIT)
-        self.status_var = tk.StringVar(value="CSVを選択してください。")
-        self.report_var = tk.StringVar(value="レポートは生成後に表示されます。")
+        self.status_var = tk.StringVar(value=UI_TEXT["status_select_csv"])
+        self.report_var = tk.StringVar(value=UI_TEXT["report_pending"])
         self.keep_displayed_var = tk.BooleanVar(value=False)
 
         self._apply_window_icon()
@@ -512,7 +570,7 @@ class MailDraftApp:
         ).grid(row=0, column=0, sticky="ew")
         tk.Label(
             header,
-            text=DISPLAY_SUBTITLE + " / メールは送信しません。生成後はOutlookで確認してください。",
+            text=f"{DISPLAY_SUBTITLE} / {UI_TEXT['main_description']}",
             bg=COLORS["background"],
             fg=COLORS["muted"],
             font=self.fonts["subtitle"],
@@ -539,17 +597,17 @@ class MailDraftApp:
         self._build_input_area(left)
         self._build_preview_area(right)
 
-        footer = tk.Frame(self.root, bg=COLORS["background"])
-        footer.grid(row=2, column=0, sticky="ew", padx=24, pady=(0, 18))
-        footer.columnconfigure(0, weight=1)
-        footer.columnconfigure(1, weight=0)
+        action_bar = tk.Frame(self.root, bg=COLORS["background"])
+        action_bar.grid(row=2, column=0, sticky="ew", padx=24, pady=(0, 10))
+        action_bar.columnconfigure(0, weight=1)
+        action_bar.columnconfigure(1, weight=0)
 
-        self.progress = ttk.Progressbar(footer, orient="horizontal", mode="determinate")
+        self.progress = ttk.Progressbar(action_bar, orient="horizontal", mode="determinate")
         self.progress.grid(row=0, column=0, sticky="ew", padx=(0, 14))
 
         self.generate_button = self._make_button(
-            footer,
-            text="Outlook下書きを生成",
+            action_bar,
+            text=UI_TEXT["button_generate"],
             command=self._start_generation,
             bg=COLORS["accent"],
             hover_bg=COLORS["accent_hover"],
@@ -557,8 +615,8 @@ class MailDraftApp:
         self.generate_button.grid(row=0, column=1, sticky="e", padx=(0, 8))
 
         self.cancel_button = self._make_button(
-            footer,
-            text="キャンセル",
+            action_bar,
+            text=UI_TEXT["button_cancel"],
             command=self._cancel_generation,
             bg=COLORS["muted"],
             hover_bg=COLORS["text"],
@@ -567,7 +625,7 @@ class MailDraftApp:
         self.cancel_button.configure(state=tk.DISABLED)
 
         self.status_label = tk.Label(
-            footer,
+            action_bar,
             textvariable=self.status_var,
             bg=COLORS["background"],
             fg=COLORS["muted"],
@@ -575,38 +633,70 @@ class MailDraftApp:
             anchor="w",
         )
         self.status_label.grid(row=1, column=0, columnspan=3, sticky="ew", pady=(10, 0))
+        self._build_footer()
+
+    def _build_footer(self) -> None:
+        footer = tk.Frame(self.root, bg=COLORS["background"])
+        footer.grid(row=3, column=0, sticky="ew", padx=24, pady=(0, 14))
+        footer.columnconfigure(0, weight=1)
+
+        first_line = (
+            f"{UI_TEXT['footer_left']} {UI_TEXT['footer_separator']} "
+            f"{UI_TEXT['footer_caption']}"
+        )
+        second_line = (
+            f"{UI_TEXT['footer_link_1']} {UI_TEXT['footer_separator']} "
+            f"{UI_TEXT['footer_link_2']} {UI_TEXT['footer_separator']} "
+            f"{UI_TEXT['footer_copyright']}"
+        )
+        tk.Label(
+            footer,
+            text=first_line,
+            bg=COLORS["background"],
+            fg=COLORS["muted"],
+            font=self.fonts["footer"],
+            anchor="center",
+        ).grid(row=0, column=0, sticky="ew")
+        tk.Label(
+            footer,
+            text=second_line,
+            bg=COLORS["background"],
+            fg=COLORS["muted"],
+            font=self.fonts["footer"],
+            anchor="center",
+        ).grid(row=1, column=0, sticky="ew", pady=(2, 0))
 
     def _build_input_area(self, parent: tk.Frame) -> None:
         padding = {"padx": 18, "pady": 7}
         parent.grid_columnconfigure(1, weight=1)
 
-        self._make_label(parent, "CSV選択").grid(row=0, column=0, sticky="w", **padding)
+        self._make_label(parent, UI_TEXT["label_csv"]).grid(row=0, column=0, sticky="w", **padding)
         csv_entry = tk.Entry(parent, textvariable=self.csv_path_var, font=self.fonts["body"])
         csv_entry.grid(row=0, column=1, sticky="ew", padx=(0, 8), pady=7)
-        self._make_button(parent, "選択", self._browse_csv).grid(row=0, column=2, sticky="ew", padx=(0, 18), pady=7)
+        self._make_button(parent, UI_TEXT["button_select"], self._browse_csv).grid(row=0, column=2, sticky="ew", padx=(0, 18), pady=7)
 
-        self._make_label(parent, "会社名列").grid(row=1, column=0, sticky="w", **padding)
+        self._make_label(parent, UI_TEXT["label_company_column"]).grid(row=1, column=0, sticky="w", **padding)
         self.company_combo = ttk.Combobox(parent, textvariable=self.company_column_var, state="readonly")
         self.company_combo.grid(row=1, column=1, columnspan=2, sticky="ew", padx=(0, 18), pady=7)
         self.company_combo.bind("<<ComboboxSelected>>", lambda _event: self._refresh_preview())
 
-        self._make_label(parent, "名前列").grid(row=2, column=0, sticky="w", **padding)
+        self._make_label(parent, UI_TEXT["label_name_column"]).grid(row=2, column=0, sticky="w", **padding)
         self.name_combo = ttk.Combobox(parent, textvariable=self.name_column_var, state="readonly")
         self.name_combo.grid(row=2, column=1, columnspan=2, sticky="ew", padx=(0, 18), pady=7)
         self.name_combo.bind("<<ComboboxSelected>>", lambda _event: self._refresh_preview())
 
-        self._make_label(parent, "メール列").grid(row=3, column=0, sticky="w", **padding)
+        self._make_label(parent, UI_TEXT["label_email_column"]).grid(row=3, column=0, sticky="w", **padding)
         self.email_combo = ttk.Combobox(parent, textvariable=self.email_column_var, state="readonly")
         self.email_combo.grid(row=3, column=1, columnspan=2, sticky="ew", padx=(0, 18), pady=7)
         self.email_combo.bind("<<ComboboxSelected>>", lambda _event: self._refresh_preview())
 
-        self._make_label(parent, "件名テンプレート").grid(row=4, column=0, sticky="w", **padding)
+        self._make_label(parent, UI_TEXT["label_subject_template"]).grid(row=4, column=0, sticky="w", **padding)
         self.subject_entry = tk.Entry(parent, font=self.fonts["body"])
         self.subject_entry.grid(row=4, column=1, columnspan=2, sticky="ew", padx=(0, 18), pady=7)
         self.subject_entry.insert(0, DEFAULT_SUBJECT_TEMPLATE)
         self.subject_entry.bind("<KeyRelease>", lambda _event: self._refresh_preview())
 
-        body_label = self._make_label(parent, "本文テンプレート")
+        body_label = self._make_label(parent, UI_TEXT["label_body_template"])
         body_label.grid(row=5, column=0, sticky="nw", **padding)
         self.body_text = tk.Text(
             parent,
@@ -621,18 +711,18 @@ class MailDraftApp:
         self.body_text.insert("1.0", DEFAULT_BODY_TEMPLATE)
         self.body_text.bind("<KeyRelease>", lambda _event: self._refresh_preview())
 
-        self._make_label(parent, "添付ファイル").grid(row=6, column=0, sticky="nw", **padding)
+        self._make_label(parent, UI_TEXT["label_attachments"]).grid(row=6, column=0, sticky="nw", **padding)
         attachment_frame = tk.Frame(parent, bg=COLORS["surface"])
         attachment_frame.grid(row=6, column=1, columnspan=2, sticky="nsew", padx=(0, 18), pady=7)
         attachment_frame.columnconfigure(0, weight=1)
         attachment_frame.rowconfigure(0, weight=1)
         self.attachment_list = tk.Listbox(attachment_frame, height=4, font=self.fonts["small"])
         self.attachment_list.grid(row=0, column=0, columnspan=3, sticky="nsew")
-        self._make_button(attachment_frame, "追加", self._add_attachments).grid(row=1, column=0, sticky="ew", pady=(7, 0), padx=(0, 6))
-        self._make_button(attachment_frame, "削除", self._remove_selected_attachment).grid(row=1, column=1, sticky="ew", pady=(7, 0), padx=6)
-        self._make_button(attachment_frame, "全削除", self._clear_attachments).grid(row=1, column=2, sticky="ew", pady=(7, 0), padx=(6, 0))
+        self._make_button(attachment_frame, UI_TEXT["button_add"], self._add_attachments).grid(row=1, column=0, sticky="ew", pady=(7, 0), padx=(0, 6))
+        self._make_button(attachment_frame, UI_TEXT["button_remove"], self._remove_selected_attachment).grid(row=1, column=1, sticky="ew", pady=(7, 0), padx=6)
+        self._make_button(attachment_frame, UI_TEXT["button_clear"], self._clear_attachments).grid(row=1, column=2, sticky="ew", pady=(7, 0), padx=(6, 0))
 
-        self._make_label(parent, "生成件数").grid(row=7, column=0, sticky="w", **padding)
+        self._make_label(parent, UI_TEXT["label_limit"]).grid(row=7, column=0, sticky="w", **padding)
         limit_frame = tk.Frame(parent, bg=COLORS["surface"])
         limit_frame.grid(row=7, column=1, columnspan=2, sticky="ew", padx=(0, 18), pady=7)
         limit_frame.columnconfigure(0, weight=0)
@@ -642,7 +732,7 @@ class MailDraftApp:
         limit_combo.bind("<<ComboboxSelected>>", lambda _event: self._refresh_preview())
         tk.Checkbutton(
             limit_frame,
-            text="生成後もOutlook下書き画面を表示したままにする",
+            text=UI_TEXT["option_keep_displayed"],
             variable=self.keep_displayed_var,
             bg=COLORS["surface"],
             fg=COLORS["text"],
@@ -653,7 +743,7 @@ class MailDraftApp:
     def _build_preview_area(self, parent: tk.Frame) -> None:
         tk.Label(
             parent,
-            text="プレビュー",
+            text=UI_TEXT["preview_title"],
             bg=COLORS["surface"],
             fg=COLORS["text"],
             font=self.fonts["label"],
@@ -675,7 +765,7 @@ class MailDraftApp:
 
         tk.Label(
             parent,
-            text="レポート",
+            text=UI_TEXT["report_title"],
             bg=COLORS["surface"],
             fg=COLORS["text"],
             font=self.fonts["label"],
@@ -696,13 +786,9 @@ class MailDraftApp:
         self.report_text.grid(row=3, column=0, sticky="nsew", padx=18, pady=(0, 14))
         self._set_report_text(self.report_var.get())
 
-        note = (
-            "このアプリはOutlook下書き作成補助です。"
-            "作成後はOutlook上で宛先・本文・添付を必ず確認してください。"
-        )
         tk.Label(
             parent,
-            text=note,
+            text=UI_TEXT["safety_note"],
             bg=COLORS["surface"],
             fg=COLORS["warning"],
             font=self.fonts["small"],
@@ -777,7 +863,7 @@ class MailDraftApp:
 
     def _browse_csv(self) -> None:
         selected = filedialog.askopenfilename(
-            title="CSV名簿を選択",
+            title=UI_TEXT["dialog_csv_title"],
             filetypes=(("CSV files", "*.csv"), ("All files", "*.*")),
             initialdir=str(DATA_DIR),
         )
@@ -793,9 +879,9 @@ class MailDraftApp:
         except Exception as exc:
             self.csv_records = []
             self.csv_fieldnames = []
-            self._set_status(f"CSVを読み込めませんでした: {exc}", is_error=True)
+            self._set_status(UI_TEXT["status_csv_load_error"].format(error=exc), is_error=True)
             if show_message:
-                messagebox.showerror(APP_NAME, f"CSVを読み込めませんでした。\n\n{exc}")
+                messagebox.showerror(APP_NAME, UI_TEXT["dialog_csv_load_error"].format(error=exc))
             self._refresh_column_combos()
             return
 
@@ -806,7 +892,7 @@ class MailDraftApp:
         self.company_column_var.set(inferred["company"])
         self.name_column_var.set(inferred["name"])
         self.email_column_var.set(inferred["email"])
-        self._set_status(f"CSVを読み込みました。{len(records)}件 / 文字コード {encoding}")
+        self._set_status(UI_TEXT["status_csv_loaded"].format(count=len(records), encoding=encoding))
         self._refresh_preview()
 
     def _refresh_column_combos(self) -> None:
@@ -816,7 +902,7 @@ class MailDraftApp:
                 combo.set("")
 
     def _add_attachments(self) -> None:
-        selected_paths = filedialog.askopenfilenames(title="添付ファイルを選択")
+        selected_paths = filedialog.askopenfilenames(title=UI_TEXT["dialog_attachment_title"])
         for selected in selected_paths:
             path = Path(selected)
             if path in self.attachment_paths:
@@ -849,12 +935,12 @@ class MailDraftApp:
 
     def _refresh_preview(self) -> None:
         if not self.csv_records:
-            self._set_preview_text("CSVを選択すると、先頭1件のプレビューを表示します。")
+            self._set_preview_text(UI_TEXT["preview_select_csv"])
             return
 
         company_column, name_column, email_column = self._current_mapping()
         if not all((company_column, name_column, email_column)):
-            self._set_preview_text("列マッピングを選択してください。")
+            self._set_preview_text(UI_TEXT["preview_select_mapping"])
             return
 
         targets, skipped_reports = prepare_targets(
@@ -866,13 +952,13 @@ class MailDraftApp:
         )
         if not targets:
             skipped_count = len(skipped_reports)
-            self._set_preview_text(f"生成できるメールアドレスが見つかりません。スキップ候補: {skipped_count}件")
+            self._set_preview_text(UI_TEXT["preview_no_targets"].format(count=skipped_count))
             return
 
         target = targets[0]
         subject = render_template(self._get_subject_template(), target)
         body = render_template(self._get_body_template(), target)
-        preview = f"宛先: {target.email}\n件名: {subject}\n\n本文:\n{body}"
+        preview = UI_TEXT["preview_format"].format(email=target.email, subject=subject, body=body)
         self._set_preview_text(preview)
 
     def _set_preview_text(self, text: str) -> None:
@@ -896,12 +982,12 @@ class MailDraftApp:
     def _validate_before_generation(self) -> tuple[list[DraftTarget], list[ReportRecord], list[Path]] | None:
         csv_path = Path(self.csv_path_var.get().strip())
         if not csv_path.exists():
-            messagebox.showerror(APP_NAME, "CSVファイルを選択してください。")
+            messagebox.showerror(APP_NAME, UI_TEXT["dialog_select_csv_error"])
             return None
 
         company_column, name_column, email_column = self._current_mapping()
         if not all((company_column, name_column, email_column)):
-            messagebox.showerror(APP_NAME, "会社名列・名前列・メールアドレス列を選択してください。")
+            messagebox.showerror(APP_NAME, UI_TEXT["dialog_mapping_error"])
             return None
 
         if not self.csv_records:
@@ -912,7 +998,7 @@ class MailDraftApp:
         missing_attachments = [path for path in self.attachment_paths if not path.exists()]
         if missing_attachments:
             lines = "\n".join(str(path) for path in missing_attachments[:5])
-            messagebox.showerror(APP_NAME, f"存在しない添付ファイルがあります。\n\n{lines}")
+            messagebox.showerror(APP_NAME, UI_TEXT["dialog_missing_attachments"].format(paths=lines))
             return None
 
         targets, skipped_reports = prepare_targets(
@@ -923,7 +1009,7 @@ class MailDraftApp:
             self.limit_var.get(),
         )
         if not targets:
-            messagebox.showwarning(APP_NAME, "生成対象のメールアドレスがありません。")
+            messagebox.showwarning(APP_NAME, UI_TEXT["dialog_no_targets"])
             return None
 
         return targets, skipped_reports, list(self.attachment_paths)
@@ -937,10 +1023,9 @@ class MailDraftApp:
             return
 
         targets, skipped_reports, attachment_paths = validated
-        confirm_text = (
-            "このアプリはOutlookの下書きを作成します。メールは送信しません。"
-            "生成後はOutlookで内容・宛先・添付を確認してください。"
-            f"\n\n生成予定: {len(targets)}件\n事前スキップ: {len(skipped_reports)}件"
+        confirm_text = UI_TEXT["confirm_generation"].format(
+            target_count=len(targets),
+            skipped_count=len(skipped_reports),
         )
         if not messagebox.askokcancel(APP_NAME, confirm_text):
             return
@@ -949,8 +1034,8 @@ class MailDraftApp:
         self.progress.configure(maximum=max(1, len(targets)), value=0)
         self.generate_button.configure(state=tk.DISABLED)
         self.cancel_button.configure(state=tk.NORMAL)
-        self._set_status("Outlook下書きを生成しています。")
-        self._set_report_text("生成中です。途中エラーは行ごとにレポートへ記録します。")
+        self._set_status(UI_TEXT["status_generating"])
+        self._set_report_text(UI_TEXT["report_generating"])
 
         payload = {
             "csv_path": self.csv_path_var.get().strip(),
@@ -987,7 +1072,7 @@ class MailDraftApp:
     def _cancel_generation(self) -> None:
         self.cancel_event.set()
         self.cancel_button.configure(state=tk.DISABLED)
-        self._set_status("キャンセル要求を受け付けました。処理中の1件が終わるまで待ちます。")
+        self._set_status(UI_TEXT["status_cancel_requested"])
 
     def _poll_queue(self) -> None:
         try:
@@ -1008,7 +1093,7 @@ class MailDraftApp:
             drafted = int(event.get("drafted", 0))
             errors = int(event.get("errors", 0))
             self.progress.configure(value=current)
-            self._set_status(f"生成中: {current}/{total}件 / 作成 {drafted}件 / エラー {errors}件")
+            self._set_status(UI_TEXT["status_progress"].format(current=current, total=total, drafted=drafted, errors=errors))
             return
 
         if event_type == "complete":
@@ -1019,10 +1104,16 @@ class MailDraftApp:
             errors = int(event.get("errors", 0))
             cancelled = bool(event.get("cancelled", False))
             report_path = str(event.get("report_path", ""))
-            prefix = "キャンセルしました。" if cancelled else "完了しました。"
-            self._set_status(f"{prefix} 作成 {drafted}件 / スキップ {skipped}件 / エラー {errors}件")
+            prefix = UI_TEXT["status_cancelled"] if cancelled else UI_TEXT["status_completed"]
+            self._set_status(UI_TEXT["status_complete"].format(prefix=prefix, drafted=drafted, skipped=skipped, errors=errors))
             self._set_report_text(
-                f"{prefix}\n作成: {drafted}件\nスキップ: {skipped}件\nエラー: {errors}件\n\nレポート:\n{report_path}"
+                UI_TEXT["report_complete"].format(
+                    prefix=prefix,
+                    drafted=drafted,
+                    skipped=skipped,
+                    errors=errors,
+                    report_path=report_path,
+                )
             )
 
     def run(self) -> None:

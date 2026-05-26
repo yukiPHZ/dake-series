@@ -37,14 +37,33 @@ CSVはUTF-8 with BOMで保存します。列は次の3列だけです。
 build.bat
 ```
 
-PyInstallerで `dist/DakeMail_List.exe` を作成します。共通アイコンがある場合は `../../02_assets/dake_icon.ico` を使います。
+PyInstallerで `dist/DakeMail_List.exe` を作成します。共通アイコン `../../02_assets/dake_icon.ico` を使用します。
+
+## 公式サイト
+
+- DAKEシリーズ公式サイト：https://dakeapp.com
+- 関連サイト：https://soredake.com
+
+## 初回起動時の注意
+
+GitHubからダウンロードしたWindows向けexeは、初回起動時にWindowsのセキュリティ確認画面が表示される場合があります。
+
+表示された場合は、内容を確認したうえで、
+
+1. 「詳細情報」をクリック
+2. 「実行」をクリック
+
+して起動してください。
+
+これは個人開発アプリや未署名アプリで表示されることがある確認画面です。
+不安な場合は、無理に起動せず、公式サイトや配布元を確認してください。
 
 ## DAKE_META
 
 ```json
 {
   "app_key": "dake_mail_list",
-  "display_name": "メールリスト作成",
+  "display_name": "Dakeメールリスト",
   "launcher_title": "メールリスト作成",
   "launcher_description": "Outlookから保存したメールをCSVリストにします。",
   "site_title": "Dakeメールリスト",
