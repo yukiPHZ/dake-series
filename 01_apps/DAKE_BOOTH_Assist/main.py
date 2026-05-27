@@ -6,9 +6,10 @@ import json
 import os
 import queue
 import re
+import shutil
+import subprocess
 import sys
 import threading
-import time
 import tempfile
 import tkinter as tk
 from dataclasses import dataclass
@@ -30,8 +31,8 @@ UI_TEXT = {
     "section_status": "ステータス",
     "selected_app_label": "選択中アプリ",
     "button_reload": "再読み込み",
-    "button_open_booth": "BOOTH管理画面を開く",
-    "button_start_assist": "Playwrightで入力補助を開始",
+    "button_launch_chrome": "ログイン済みChromeを起動",
+    "button_start_assist": "Chrome接続で入力補助",
     "button_open_ready": "booth_readyフォルダを開く",
     "button_copy_title": "商品名をコピー",
     "button_copy_description": "説明文をコピー",
@@ -52,6 +53,13 @@ UI_TEXT = {
     "status_ready": "準備完了",
     "status_opening_booth": "BOOTHを開いています",
     "status_assisting": "入力補助中",
+    "status_chrome_launching": "Chromeを起動しています",
+    "status_chrome_ready": "Chromeを開きました。BOOTHにログインしてください",
+    "status_chrome_connecting": "Chromeへ接続しています",
+    "status_chrome_connected": "Chromeへ接続しました",
+    "status_login_required": "BOOTHへログインしてください",
+    "status_item_page_required": "BOOTH商品登録画面を開いてください",
+    "status_assist_complete": "入力補助が完了しました。内容を確認してください",
     "status_confirm": "確認してください",
     "status_error": "エラー",
     "value_unset": "未設定",
@@ -71,8 +79,11 @@ UI_TEXT = {
     "detail_copy_empty": "{label}が未設定です。booth_product.txt を確認してください。",
     "detail_ready_missing": "booth_ready フォルダが見つかりません。",
     "detail_opened_ready": "booth_ready フォルダを開きました。",
-    "detail_browser_opened": "BOOTH管理画面を開きました。ログインや画面確認は手動で進めてください。",
-    "detail_browser_closed": "ブラウザが閉じられました。",
+    "detail_chrome_launched": "Chromeを開きました。BOOTHへログインし、商品管理画面または商品登録画面を開いてください。",
+    "detail_chrome_connected": "ログイン済みChromeへ接続しました。商品登録画面を確認しています。",
+    "detail_login_required": "Chrome上でBOOTHへログインしてから、もう一度実行してください。",
+    "detail_item_page_required": "ChromeでBOOTH商品登録画面を開いてから、もう一度実行してください。",
+    "detail_assist_complete": "公開ボタンは押していません。内容を確認してください。",
     "assist_filled": "{label}: 入力しました",
     "assist_file_set": "{label}: ファイルを選択しました",
     "assist_manual": "{label}: 手動で入力してください",
@@ -82,9 +93,12 @@ UI_TEXT = {
     "dialog_notice_title": "確認してください",
     "dialog_open_folder_error": "フォルダを開けませんでした。\n\n{error}",
     "dialog_no_ready_folder": "booth_ready フォルダが見つかりません。\n\n{path}",
-    "dialog_playwright_busy": "Playwright操作中です。先に開いたブラウザを閉じてから、もう一度お試しください。",
-    "dialog_playwright_setup": "Playwrightを利用する準備がまだ完了していません。\n\n初回のみ次を実行してください。\npython -m pip install -r requirements.txt\npython -m playwright install chromium\n\n{error}",
-    "dialog_playwright_error": "BOOTH画面の操作中に止まりました。\n画面仕様が変わっている可能性があります。コピー補助として使い、手動で入力してください。\n\n{error}",
+    "dialog_playwright_busy": "Chrome接続の入力補助中です。完了してから、もう一度お試しください。",
+    "dialog_playwright_setup": "Playwright Pythonを利用する準備がまだ完了していません。\n\n初回のみ次を実行してください。\npython -m pip install -r requirements.txt\n\n{error}",
+    "dialog_playwright_error": "Chrome接続でBOOTH画面の操作中に止まりました。\n画面仕様が変わっている可能性があります。コピー補助として使い、手動で入力してください。\n\n{error}",
+    "dialog_chrome_not_found": "Chromeが見つかりませんでした。Chromeをインストールするか、以下を手動で実行してください。\n\n{command}",
+    "dialog_chrome_launch_error": "Chromeを起動できませんでした。以下を手動で実行してください。\n\n{command}\n\n{error}",
+    "dialog_chrome_connect_error": "ログイン済みChromeへ接続できませんでした。\n先に「ログイン済みChromeを起動」ボタンを押し、BOOTHへログインしてからもう一度実行してください。\n\n{error}",
     "dialog_assist_summary_title": "入力補助の結果",
     "footer_left": "シンプルそれDAKEシリーズ",
     "footer_separator": " / ",
@@ -116,6 +130,13 @@ STATUS_THEME = {
     "status_ready": (THEME["success_bg"], THEME["success"]),
     "status_opening_booth": ("#EAF2FF", THEME["accent"]),
     "status_assisting": ("#EAF2FF", THEME["accent"]),
+    "status_chrome_launching": ("#EAF2FF", THEME["accent"]),
+    "status_chrome_ready": (THEME["warning_bg"], THEME["warning"]),
+    "status_chrome_connecting": ("#EAF2FF", THEME["accent"]),
+    "status_chrome_connected": ("#EAF2FF", THEME["accent"]),
+    "status_login_required": (THEME["warning_bg"], THEME["warning"]),
+    "status_item_page_required": (THEME["warning_bg"], THEME["warning"]),
+    "status_assist_complete": (THEME["success_bg"], THEME["success"]),
     "status_confirm": (THEME["warning_bg"], THEME["warning"]),
     "status_error": (THEME["error_bg"], THEME["error"]),
 }
@@ -123,7 +144,10 @@ STATUS_THEME = {
 WINDOW_SIZE = "1040x760"
 WINDOW_MIN_SIZE = (960, 700)
 CONFIG_FILE_NAME = "dake_booth_assist_config.json"
-PROFILE_DIR_NAME = "playwright_profile"
+CHROME_REMOTE_DEBUGGING_PORT = 9222
+CHROME_CDP_URL = f"http://127.0.0.1:{CHROME_REMOTE_DEBUGGING_PORT}"
+CHROME_PROFILE_PARENT_NAME = "DakeBOOTH_Assist"
+CHROME_PROFILE_DIR_NAME = "chrome_profile"
 PRODUCT_FILE_NAME = "booth_product.txt"
 READY_DIR_NAME = "booth_ready"
 THUMBNAIL_NAME = "booth_thumbnail.jpg"
@@ -274,8 +298,49 @@ def get_config_path() -> Path:
     return get_base_dir() / CONFIG_FILE_NAME
 
 
-def get_profile_dir() -> Path:
-    return get_base_dir() / PROFILE_DIR_NAME
+def get_chrome_profile_dir() -> Path:
+    local_app_data = os.environ.get("LOCALAPPDATA")
+    if local_app_data:
+        return Path(local_app_data) / CHROME_PROFILE_PARENT_NAME / CHROME_PROFILE_DIR_NAME
+    return get_base_dir() / CHROME_PROFILE_DIR_NAME
+
+
+def build_manual_chrome_command() -> str:
+    profile_arg = f"%LOCALAPPDATA%\\{CHROME_PROFILE_PARENT_NAME}\\{CHROME_PROFILE_DIR_NAME}"
+    return (
+        f"chrome.exe --remote-debugging-port={CHROME_REMOTE_DEBUGGING_PORT} "
+        f"--user-data-dir=\"{profile_arg}\" {BOOTH_ADMIN_URL}"
+    )
+
+
+def find_chrome_executable() -> str | None:
+    candidates = [
+        Path(os.environ.get("PROGRAMFILES", "")) / "Google" / "Chrome" / "Application" / "chrome.exe",
+        Path(os.environ.get("PROGRAMFILES(X86)", "")) / "Google" / "Chrome" / "Application" / "chrome.exe",
+        Path("C:/Program Files/Google/Chrome/Application/chrome.exe"),
+        Path("C:/Program Files (x86)/Google/Chrome/Application/chrome.exe"),
+    ]
+    for candidate in candidates:
+        try:
+            if candidate.is_file():
+                return str(candidate)
+        except OSError:
+            continue
+
+    for command_name in ("chrome.exe", "chrome"):
+        found = shutil.which(command_name)
+        if found:
+            return found
+    return None
+
+
+def build_chrome_launch_args(chrome_path: str) -> list[str]:
+    return [
+        chrome_path,
+        f"--remote-debugging-port={CHROME_REMOTE_DEBUGGING_PORT}",
+        f"--user-data-dir={get_chrome_profile_dir()}",
+        BOOTH_ADMIN_URL,
+    ]
 
 
 def get_common_icon_candidates() -> list[Path]:
@@ -647,63 +712,145 @@ def assist_booth_form(page, product: ProductInfo) -> str:
     return "\n".join(results)
 
 
-def wait_for_manual_browser_close(context) -> None:
-    while True:
+def safe_page_url(page) -> str:
+    try:
+        return page.url or ""
+    except Exception:
+        return ""
+
+
+def is_booth_login_page(page) -> bool:
+    url = safe_page_url(page).lower()
+    return "accounts.pixiv.net" in url or ("login" in url and ("booth.pm" in url or "pixiv" in url))
+
+
+def is_manage_booth_page(page) -> bool:
+    return "manage.booth.pm" in safe_page_url(page).lower()
+
+
+def is_item_registration_page(page) -> bool:
+    url = safe_page_url(page).lower()
+    return "manage.booth.pm" in url and "/items/new" in url
+
+
+def collect_browser_pages(browser) -> list:
+    pages = []
+    for context in browser.contexts:
         try:
-            pages = context.pages
-            if not pages or all(page.is_closed() for page in pages):
-                return
+            pages.extend(context.pages)
         except Exception:
-            return
-        time.sleep(1.0)
+            continue
+    return pages
 
 
-def run_playwright_worker(task: str, product: ProductInfo | None, events: queue.Queue[WorkerEvent]) -> None:
+def choose_booth_page(browser):
+    manage_pages = []
+    login_pages = []
+    for page in collect_browser_pages(browser):
+        if is_manage_booth_page(page):
+            manage_pages.append(page)
+        elif is_booth_login_page(page):
+            login_pages.append(page)
+
+    for page in manage_pages:
+        if is_item_registration_page(page):
+            return page
+    if manage_pages:
+        return manage_pages[0]
+    if login_pages:
+        return login_pages[0]
+    return None
+
+
+def click_new_item_button(page) -> bool:
+    label_pattern = re.compile("商品登録|商品を登録|商品を追加|新規登録|新規商品登録")
+    candidates = []
+    for role in ("link", "button"):
+        try:
+            candidates.append(page.get_by_role(role, name=label_pattern))
+        except Exception:
+            pass
+    try:
+        candidates.append(page.get_by_text(label_pattern))
+    except Exception:
+        pass
+
+    for locator in candidates:
+        try:
+            locator.first.click(timeout=3000)
+            try:
+                page.wait_for_load_state("domcontentloaded", timeout=7000)
+            except Exception:
+                pass
+            return True
+        except Exception:
+            continue
+    return False
+
+
+def ensure_item_registration_page(page) -> str:
+    if is_booth_login_page(page):
+        return "login_required"
+    if is_item_registration_page(page):
+        return "ready"
+    if is_manage_booth_page(page):
+        click_new_item_button(page)
+        if is_booth_login_page(page):
+            return "login_required"
+        if is_item_registration_page(page):
+            return "ready"
+        try:
+            page.goto(BOOTH_NEW_ITEM_URL, wait_until="domcontentloaded", timeout=15000)
+        except Exception:
+            pass
+        if is_booth_login_page(page):
+            return "login_required"
+        if is_item_registration_page(page):
+            return "ready"
+    return "item_page_required"
+
+
+def run_chrome_assist_worker(product: ProductInfo | None, events: queue.Queue[WorkerEvent]) -> None:
     try:
         from playwright.sync_api import sync_playwright
     except Exception as exc:
         events.put(("error_setup", UI_TEXT["dialog_playwright_setup"].format(error=exc)))
         return
 
-    context = None
+    if product is None:
+        events.put(("item_page_required", UI_TEXT["detail_no_selection"]))
+        return
+
     try:
-        profile_dir = get_profile_dir()
-        profile_dir.mkdir(parents=True, exist_ok=True)
-        events.put(("status", "status_opening_booth"))
-
+        events.put(("status", "status_chrome_connecting"))
         with sync_playwright() as playwright:
-            context = playwright.chromium.launch_persistent_context(
-                str(profile_dir),
-                headless=False,
-                viewport={"width": 1360, "height": 900},
-            )
-            page = context.pages[0] if context.pages else context.new_page()
-            page.goto(BOOTH_ADMIN_URL, wait_until="domcontentloaded", timeout=45000)
+            try:
+                browser = playwright.chromium.connect_over_cdp(CHROME_CDP_URL, timeout=7000)
+            except Exception as exc:
+                events.put(("error_connect", UI_TEXT["dialog_chrome_connect_error"].format(error=exc)))
+                return
 
-            if task == "assist" and product is not None:
-                events.put(("status", "status_assisting"))
-                try:
-                    page.goto(BOOTH_NEW_ITEM_URL, wait_until="domcontentloaded", timeout=45000)
-                except Exception:
-                    pass
-                summary = assist_booth_form(page, product)
-                events.put(("summary", summary))
-            else:
-                events.put(("detail", UI_TEXT["detail_browser_opened"]))
+            events.put(("status", "status_chrome_connected"))
+            events.put(("detail", UI_TEXT["detail_chrome_connected"]))
+            page = choose_booth_page(browser)
+            if page is None:
+                events.put(("item_page_required", UI_TEXT["detail_item_page_required"]))
+                return
 
-            events.put(("status", "status_confirm"))
-            wait_for_manual_browser_close(context)
+            state = ensure_item_registration_page(page)
+            if state == "login_required":
+                events.put(("login_required", UI_TEXT["detail_login_required"]))
+                return
+            if state != "ready":
+                events.put(("item_page_required", UI_TEXT["detail_item_page_required"]))
+                return
+
+            events.put(("status", "status_assisting"))
+            summary = assist_booth_form(page, product)
+            events.put(("summary", summary))
+            events.put(("done", UI_TEXT["detail_assist_complete"]))
     except Exception as exc:
         events.put(("error", UI_TEXT["dialog_playwright_error"].format(error=exc)))
-        return
-    finally:
-        if context is not None:
-            try:
-                context.close()
-            except Exception:
-                pass
-    events.put(("done", UI_TEXT["detail_browser_closed"]))
-
 
 class DakeBoothAssistApp:
     def __init__(self) -> None:
@@ -958,11 +1105,11 @@ class DakeBoothAssistApp:
         for column in range(3):
             button_grid.grid_columnconfigure(column, weight=1)
 
-        self.open_booth_button = ttk.Button(
+        self.launch_chrome_button = ttk.Button(
             button_grid,
-            text=UI_TEXT["button_open_booth"],
+            text=UI_TEXT["button_launch_chrome"],
             style="Primary.TButton",
-            command=self.open_booth_admin,
+            command=self.launch_logged_in_chrome,
         )
         self.assist_button = ttk.Button(
             button_grid,
@@ -996,7 +1143,7 @@ class DakeBoothAssistApp:
         )
 
         buttons = (
-            self.open_booth_button,
+            self.launch_chrome_button,
             self.assist_button,
             self.open_ready_button,
             self.copy_title_button,
@@ -1176,7 +1323,7 @@ class DakeBoothAssistApp:
         has_selection = self.selected_product is not None
         normal_if_selection = tk.NORMAL if has_selection else tk.DISABLED
         playwright_state = tk.DISABLED if self.playwright_active else normal_if_selection
-        self.open_booth_button.configure(state=playwright_state)
+        self.launch_chrome_button.configure(state=playwright_state)
         self.assist_button.configure(state=playwright_state)
         self.open_ready_button.configure(state=normal_if_selection)
         self.copy_title_button.configure(state=normal_if_selection)
@@ -1215,13 +1362,48 @@ class DakeBoothAssistApp:
             return
         self._set_status("status_ready", UI_TEXT["detail_opened_ready"])
 
-    def open_booth_admin(self) -> None:
-        self._start_playwright_task("open")
+    def launch_logged_in_chrome(self) -> None:
+        if self.playwright_active:
+            messagebox.showinfo(UI_TEXT["dialog_notice_title"], UI_TEXT["dialog_playwright_busy"])
+            return
+
+        self._set_status("status_chrome_launching")
+        chrome_path = find_chrome_executable()
+        manual_command = build_manual_chrome_command()
+        if chrome_path is None:
+            self._set_status("status_error")
+            messagebox.showerror(
+                UI_TEXT["dialog_error_title"],
+                UI_TEXT["dialog_chrome_not_found"].format(command=manual_command),
+            )
+            return
+
+        try:
+            get_chrome_profile_dir().mkdir(parents=True, exist_ok=True)
+            creationflags = 0
+            if os.name == "nt":
+                creationflags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) | getattr(subprocess, "DETACHED_PROCESS", 0)
+            subprocess.Popen(
+                build_chrome_launch_args(chrome_path),
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                creationflags=creationflags,
+            )
+        except Exception as exc:
+            self._set_status("status_error")
+            messagebox.showerror(
+                UI_TEXT["dialog_error_title"],
+                UI_TEXT["dialog_chrome_launch_error"].format(command=manual_command, error=exc),
+            )
+            return
+
+        self._set_status("status_chrome_ready", UI_TEXT["detail_chrome_launched"])
 
     def start_input_assist(self) -> None:
-        self._start_playwright_task("assist")
+        self._start_chrome_assist_task()
 
-    def _start_playwright_task(self, task: str) -> None:
+    def _start_chrome_assist_task(self) -> None:
         if self.playwright_active:
             messagebox.showinfo(UI_TEXT["dialog_notice_title"], UI_TEXT["dialog_playwright_busy"])
             return
@@ -1232,10 +1414,9 @@ class DakeBoothAssistApp:
         self.playwright_active = True
         self._update_buttons()
         product = self.selected_product
-        worker = threading.Thread(target=run_playwright_worker, args=(task, product, self.playwright_events), daemon=True)
+        worker = threading.Thread(target=run_chrome_assist_worker, args=(product, self.playwright_events), daemon=True)
         worker.start()
         self.root.after(QUEUE_POLL_MS, self._poll_playwright_events)
-
     def _poll_playwright_events(self) -> None:
         while True:
             try:
@@ -1248,9 +1429,24 @@ class DakeBoothAssistApp:
             elif kind == "detail":
                 self.status_detail_var.set(payload)
             elif kind == "summary":
-                self._set_status("status_confirm", UI_TEXT["assist_publish_guard"])
+                self._set_status("status_assist_complete", UI_TEXT["assist_publish_guard"])
                 messagebox.showinfo(UI_TEXT["dialog_assist_summary_title"], payload)
+            elif kind == "login_required":
+                self.playwright_active = False
+                self._set_status("status_login_required", payload)
+                self._update_buttons()
+                messagebox.showinfo(UI_TEXT["dialog_notice_title"], payload)
+            elif kind == "item_page_required":
+                self.playwright_active = False
+                self._set_status("status_item_page_required", payload)
+                self._update_buttons()
+                messagebox.showinfo(UI_TEXT["dialog_notice_title"], payload)
             elif kind == "error_setup":
+                self.playwright_active = False
+                self._set_status("status_error")
+                self._update_buttons()
+                messagebox.showerror(UI_TEXT["dialog_error_title"], payload)
+            elif kind == "error_connect":
                 self.playwright_active = False
                 self._set_status("status_error")
                 self._update_buttons()
@@ -1262,7 +1458,7 @@ class DakeBoothAssistApp:
                 messagebox.showerror(UI_TEXT["dialog_error_title"], payload)
             elif kind == "done":
                 self.playwright_active = False
-                self._set_status("status_ready", payload)
+                self._set_status("status_assist_complete", payload)
                 self._update_buttons()
 
         if self.playwright_active:
@@ -1331,7 +1527,7 @@ def run_launch_check() -> int:
     setup_events: queue.Queue[WorkerEvent] = queue.Queue()
     try:
         builtins.__import__ = blocked_import
-        run_playwright_worker("open", None, setup_events)
+        run_chrome_assist_worker(None, setup_events)
     finally:
         builtins.__import__ = real_import
 
@@ -1360,7 +1556,10 @@ def run_launch_check() -> int:
     print(f"product_apps={product_apps}")
     print(f"dake_backup_product={dake_backup_source}")
     print(f"dake_backup_fields={dake_backup_fields}")
-    print("fixtures=missing_product, missing_ready, multiple_zip, missing_playwright, ready_product_lookup, root_product_priority")
+    print(f"cdp_url={CHROME_CDP_URL}")
+    print(f"chrome_path={find_chrome_executable() or 'missing'}")
+    print(f"chrome_profile={get_chrome_profile_dir()}")
+    print("fixtures=missing_product, missing_ready, multiple_zip, missing_playwright_python, ready_product_lookup, root_product_priority")
     return 0
 
 

@@ -5,3 +5,4 @@ __pycache__/
 *.pyc
 *_config.json
 playwright_profile/
+chrome_profile/
