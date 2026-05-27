@@ -37,14 +37,18 @@ UI_TEXT = {
     "button_copy_title": "商品名をコピー",
     "button_copy_description": "説明文をコピー",
     "button_copy_tags": "タグをコピー",
+    "button_copy_thumbnail_path": "商品画像パスをコピー",
+    "button_copy_zip_path": "zipパスをコピー",
     "field_title": "商品名",
     "field_price": "価格",
     "field_description": "説明文",
     "field_product_info": "商品情報",
     "field_tags": "タグ",
     "field_product_image": "商品画像",
+    "field_product_image_path": "商品画像パス",
     "field_ready": "booth_ready",
     "field_zip": "zipファイル",
+    "field_zip_path": "zipパス",
     "field_thumbnail": "booth_thumbnail.jpg",
     "field_category": "カテゴリ",
     "field_proxy_purchase": "代理購入サービス",
@@ -92,11 +96,14 @@ UI_TEXT = {
     "detail_assist_complete": "公開ボタンは押していません。内容を確認してください。",
     "assist_filled": "{label}: 入力しました",
     "assist_file_set": "{label}: 入力しました ({name})",
-    "assist_filechooser_set": "{label}: filechooserで入力しました ({name})",
-    "assist_filechooser_manual": "{label}: 手動で入力してください (filechooser未検出)",
-    "assist_success_marker": "入力しました",
+
     "assist_tags_filled": "{label}: {count}件入力",
     "assist_manual": "{label}: 手動で入力してください",
+    "assist_manual_set": "{label}: 手動で設定してください",
+    "assist_path": "{label}: {path}",
+    "assist_path_missing": "{label}: 未設定",
+    "assist_ready_folder": "booth_readyフォルダ: 開いて確認してください",
+    "assist_ready_folder_missing": "booth_readyフォルダ: 見つかりません",
     "assist_missing_value": "{label}: 未設定のためスキップしました",
     "assist_publish_guard": "公開ボタン・保存ボタンは押していません。内容を確認し、公開/保存判断は人間が行ってください。",
     "assist_publish_guard_result": "公開ボタン・保存ボタンは押していません",
@@ -106,23 +113,7 @@ UI_TEXT = {
     "log_file_input_try": "set_input_files試行: {label} index={index} path={path}",
     "log_file_input_success": "set_input_files成功: {label} index={index}",
     "log_file_input_failure": "set_input_files失敗: {label} index={index} error={error}",
-    "log_filechooser_try": "filechooser試行: {label} candidate={candidate} index={index} path={path}",
-    "log_filechooser_success": "filechooser成功: {label} candidate={candidate} index={index}",
-    "log_filechooser_failure": "filechooser失敗: {label} candidate={candidate} index={index} error={error}",
-    "log_filechooser_skip_danger": "危険なクリック候補をスキップ: {label} candidate={candidate} index={index} text={text}",
-    "log_filechooser_url_changed": "URL変更を検出したためfilechooser補助を停止: before={before} after={after}",
-    "upload_candidate_image_label": "商品画像ラベル",
-    "upload_candidate_image_area": "商品画像周辺",
-    "upload_candidate_image_text": "商品画像テキスト",
-    "upload_candidate_zip_manage": "ファイルの追加・管理",
-    "upload_candidate_zip_add": "ファイル追加",
-    "upload_candidate_zip_area": "作品ファイル周辺",
-    "upload_regex_zip": "ファイルの追加|ファイル追加|ファイルを追加|作品ファイル|アップロード|zip|ZIP",
-    "upload_text_file_add_manage": "ファイルの追加・管理",
-    "upload_text_file_add": "ファイル追加",
-    "upload_text_add_file": "ファイルを追加",
-    "field_work_file": "作品ファイル",
-    "danger_click_terms": "公開|保存|削除|販売|更新",
+    "log_file_input_manual": "初期DOMに安全なfile inputがないため手動案内: {label}",
     "log_category_diagnostics": "カテゴリ候補: label={label_count} select={select_count} text={text_count}",
     "log_proxy_purchase_diagnostics": "代理購入サービス候補: text={text_count}",
     "file_input_detail_line": "- {index}: accept={accept} name={name} id={id} aria-label={aria_label} nearby={nearby}",
@@ -821,13 +812,13 @@ def looks_like_zip_file_input(info: FileInputInfo) -> bool:
     return contains_any(nearby_text, zip_keywords) and not contains_any(nearby_text, image_keywords)
 
 
-def upload_result_is_success(result: str) -> bool:
-    return UI_TEXT["assist_success_marker"] in result
-
 
 def set_file_input_by_indexes(page, label: str, path: Path | None, indexes: list[int]) -> str:
     if path is None or not path.exists():
         return UI_TEXT["assist_missing_value"].format(label=label)
+    if not indexes:
+        print(UI_TEXT["log_file_input_manual"].format(label=label), flush=True)
+        return UI_TEXT["assist_manual_set"].format(label=label)
 
     for index in indexes:
         print(UI_TEXT["log_file_input_try"].format(label=label, index=index, path=path), flush=True)
@@ -839,182 +830,51 @@ def set_file_input_by_indexes(page, label: str, path: Path | None, indexes: list
         except Exception as exc:
             print(UI_TEXT["log_file_input_failure"].format(label=label, index=index, error=exc), flush=True)
             continue
-    return UI_TEXT["assist_manual"].format(label=label)
-
-
-def xpath_literal(value: str) -> str:
-    if "'" not in value:
-        return f"'{value}'"
-    if '"' not in value:
-        return f'"{value}"'
-    parts = value.split("'")
-    return "concat(" + ", \"'\", ".join(f"'{part}'" for part in parts) + ")"
-
-
-def scoped_clickables_near_text(page, text: str):
-    literal = xpath_literal(text)
-    xpath = (
-        f"//*[contains(normalize-space(.), {literal})]"
-        "/ancestor::*[self::section or self::div or self::form][1]"
-        "//*[self::button or self::label or @role='button']"
-    )
-    return page.locator(f"xpath={xpath}")
-
-
-def text_filtered_clickables(page, pattern: str):
-    return page.locator("button, [role='button'], label").filter(has_text=re.compile(pattern))
-
-
-def safe_click_target_text(locator) -> str:
-    pieces = []
-    for attribute in ("aria-label", "title", "value"):
-        value = safe_get_attribute(locator, attribute)
-        if value:
-            pieces.append(value)
-    try:
-        text = locator.inner_text(timeout=1000)
-        if text:
-            pieces.append(text)
-    except Exception:
-        pass
-    return " ".join(pieces).strip()
-
-
-def is_dangerous_click_target(locator) -> bool:
-    text = safe_click_target_text(locator)
-    terms = [term for term in UI_TEXT["danger_click_terms"].split("|") if term]
-    return any(term in text for term in terms)
-
-
-def try_filechooser_locator(page, label: str, path: Path, candidate: str, locator) -> str | None:
-    try:
-        count = locator.count()
-    except Exception as exc:
-        print(UI_TEXT["log_filechooser_failure"].format(label=label, candidate=candidate, index="-", error=exc), flush=True)
-        return None
-
-    for index in range(min(count, 4)):
-        target = locator.nth(index)
-        target_text = safe_click_target_text(target)
-        if is_dangerous_click_target(target):
-            print(
-                UI_TEXT["log_filechooser_skip_danger"].format(
-                    label=label,
-                    candidate=candidate,
-                    index=index,
-                    text=display_detail(target_text),
-                ),
-                flush=True,
-            )
-            continue
-
-        before_url = safe_page_url(page)
-        print(UI_TEXT["log_filechooser_try"].format(label=label, candidate=candidate, index=index, path=path), flush=True)
-        try:
-            with page.expect_file_chooser(timeout=2500) as chooser_info:
-                target.click(timeout=2500)
-            chooser_info.value.set_files(str(path))
-            print(UI_TEXT["log_filechooser_success"].format(label=label, candidate=candidate, index=index), flush=True)
-            return UI_TEXT["assist_filechooser_set"].format(label=label, name=path.name)
-        except Exception as exc:
-            print(UI_TEXT["log_filechooser_failure"].format(label=label, candidate=candidate, index=index, error=exc), flush=True)
-            after_url = safe_page_url(page)
-            if after_url != before_url:
-                print(UI_TEXT["log_filechooser_url_changed"].format(before=before_url, after=after_url), flush=True)
-                return UI_TEXT["assist_filechooser_manual"].format(label=label)
-            try:
-                page.wait_for_timeout(350)
-            except Exception:
-                pass
-            continue
-    return None
-
-
-def set_file_with_filechooser_candidates(page, label: str, path: Path | None, candidates) -> str:
-    if path is None or not path.exists():
-        return UI_TEXT["assist_missing_value"].format(label=label)
-
-    for candidate, locator_factory in candidates:
-        try:
-            locator = locator_factory()
-        except Exception as exc:
-            print(UI_TEXT["log_filechooser_failure"].format(label=label, candidate=candidate, index="-", error=exc), flush=True)
-            continue
-        result = try_filechooser_locator(page, label, path, candidate, locator)
-        if result is not None:
-            if upload_result_is_success(result):
-                return result
-            if UI_TEXT["assist_filechooser_manual"].format(label=label) == result:
-                return result
-    return UI_TEXT["assist_filechooser_manual"].format(label=label)
-
-
-def image_filechooser_candidates(page):
-    return [
-        (UI_TEXT["upload_candidate_image_label"], lambda: page.get_by_label(UI_TEXT["field_product_image"], exact=False)),
-        (UI_TEXT["upload_candidate_image_area"], lambda: scoped_clickables_near_text(page, UI_TEXT["field_product_image"])),
-        (UI_TEXT["upload_candidate_image_text"], lambda: page.get_by_text(UI_TEXT["field_product_image"], exact=False)),
-    ]
-
-
-def zip_filechooser_candidates(page):
-    return [
-        (UI_TEXT["upload_candidate_zip_manage"], lambda: page.get_by_text(UI_TEXT["upload_text_file_add_manage"], exact=False)),
-        (UI_TEXT["upload_candidate_zip_add"], lambda: page.get_by_text(UI_TEXT["upload_text_add_file"], exact=False)),
-        (UI_TEXT["upload_candidate_zip_add"], lambda: page.get_by_text(UI_TEXT["upload_text_file_add"], exact=False)),
-        (UI_TEXT["upload_candidate_zip_area"], lambda: scoped_clickables_near_text(page, UI_TEXT["field_work_file"])),
-        (UI_TEXT["upload_candidate_zip_add"], lambda: text_filtered_clickables(page, UI_TEXT["upload_regex_zip"])),
-    ]
+    return UI_TEXT["assist_manual_set"].format(label=label)
 
 
 def set_product_image_file(page, label: str, path: Path | None, file_inputs: tuple[FileInputInfo, ...]) -> str:
     if path is None or not path.exists():
         return UI_TEXT["assist_missing_value"].format(label=label)
+    if not file_inputs:
+        print(UI_TEXT["log_file_input_manual"].format(label=label), flush=True)
+        return UI_TEXT["assist_manual_set"].format(label=label)
 
     candidates = [info.index for info in file_inputs if looks_like_image_file_input(info)]
     if not candidates:
         non_zip = [info.index for info in file_inputs if not looks_like_zip_file_input(info)]
         if len(file_inputs) > 1 and len(non_zip) == 1:
             candidates = non_zip
-    dom_result = set_file_input_by_indexes(page, label, path, candidates)
-    if upload_result_is_success(dom_result):
-        return dom_result
-
-    chooser_result = set_file_with_filechooser_candidates(page, label, path, image_filechooser_candidates(page))
-    if upload_result_is_success(chooser_result):
-        return chooser_result
-
-    refreshed_inputs = collect_file_input_diagnostics(page)
-    refreshed_candidates = [info.index for info in refreshed_inputs if looks_like_image_file_input(info)]
-    refreshed_result = set_file_input_by_indexes(page, label, path, refreshed_candidates)
-    if upload_result_is_success(refreshed_result):
-        return refreshed_result
-    return chooser_result
+    return set_file_input_by_indexes(page, label, path, candidates)
 
 
 def set_product_zip_file(page, label: str, path: Path | None, file_inputs: tuple[FileInputInfo, ...]) -> str:
     if path is None or not path.exists():
         return UI_TEXT["assist_missing_value"].format(label=label)
+    if not file_inputs:
+        print(UI_TEXT["log_file_input_manual"].format(label=label), flush=True)
+        return UI_TEXT["assist_manual_set"].format(label=label)
 
     candidates = [info.index for info in file_inputs if looks_like_zip_file_input(info)]
     if not candidates:
         non_image = [info.index for info in file_inputs if not looks_like_image_file_input(info)]
         if len(file_inputs) > 1 and len(non_image) == 1:
             candidates = non_image
-    dom_result = set_file_input_by_indexes(page, label, path, candidates)
-    if upload_result_is_success(dom_result):
-        return dom_result
+    return set_file_input_by_indexes(page, label, path, candidates)
 
-    chooser_result = set_file_with_filechooser_candidates(page, label, path, zip_filechooser_candidates(page))
-    if upload_result_is_success(chooser_result):
-        return chooser_result
 
-    refreshed_inputs = collect_file_input_diagnostics(page)
-    refreshed_candidates = [info.index for info in refreshed_inputs if looks_like_zip_file_input(info)]
-    refreshed_result = set_file_input_by_indexes(page, label, path, refreshed_candidates)
-    if upload_result_is_success(refreshed_result):
-        return refreshed_result
-    return chooser_result
+def format_path_result(label_key: str, path: Path | None) -> str:
+    label = UI_TEXT[label_key]
+    if path is None:
+        return UI_TEXT["assist_path_missing"].format(label=label)
+    return UI_TEXT["assist_path"].format(label=label, path=path)
+
+
+def format_ready_folder_result(product: ProductInfo) -> str:
+    if product.booth_ready_exists:
+        return UI_TEXT["assist_ready_folder"]
+    return UI_TEXT["assist_ready_folder_missing"]
+
 
 def category_manual_result(page) -> str:
     label_count = 0
@@ -1063,6 +923,9 @@ def assist_booth_form(page, product: ProductInfo, diagnostics: dict[str, object]
         input_tags_one_by_one(page, UI_TEXT["field_tags"], product.tags),
         set_product_image_file(page, UI_TEXT["field_product_image"], product.thumbnail_path, file_inputs),
         set_product_zip_file(page, UI_TEXT["field_zip"], product.selected_zip, file_inputs),
+        format_path_result("field_product_image_path", product.thumbnail_path),
+        format_path_result("field_zip_path", product.selected_zip),
+        format_ready_folder_result(product),
         category_manual_result(page),
         proxy_purchase_manual_result(page),
         UI_TEXT["assist_publish_guard_result"],
@@ -1573,6 +1436,18 @@ class DakeBoothAssistApp:
             style="Secondary.TButton",
             command=lambda: self.copy_product_field("tags", "field_tags"),
         )
+        self.copy_thumbnail_path_button = ttk.Button(
+            button_grid,
+            text=UI_TEXT["button_copy_thumbnail_path"],
+            style="Secondary.TButton",
+            command=lambda: self.copy_product_field("thumbnail_path", "field_product_image_path"),
+        )
+        self.copy_zip_path_button = ttk.Button(
+            button_grid,
+            text=UI_TEXT["button_copy_zip_path"],
+            style="Secondary.TButton",
+            command=lambda: self.copy_product_field("selected_zip", "field_zip_path"),
+        )
 
         buttons = (
             self.launch_chrome_button,
@@ -1581,6 +1456,8 @@ class DakeBoothAssistApp:
             self.copy_title_button,
             self.copy_description_button,
             self.copy_tags_button,
+            self.copy_thumbnail_path_button,
+            self.copy_zip_path_button,
         )
         for index, button in enumerate(buttons):
             button.grid(row=index // 3, column=index % 3, sticky="ew", padx=5, pady=5)
@@ -1761,6 +1638,8 @@ class DakeBoothAssistApp:
         self.copy_title_button.configure(state=normal_if_selection)
         self.copy_description_button.configure(state=normal_if_selection)
         self.copy_tags_button.configure(state=normal_if_selection)
+        self.copy_thumbnail_path_button.configure(state=normal_if_selection)
+        self.copy_zip_path_button.configure(state=normal_if_selection)
 
     def copy_product_field(self, attribute: str, label_key: str) -> None:
         if self.selected_product is None:
@@ -1774,7 +1653,7 @@ class DakeBoothAssistApp:
             return
 
         self.root.clipboard_clear()
-        self.root.clipboard_append(value)
+        self.root.clipboard_append(str(value))
         self._set_status("status_ready", UI_TEXT["detail_copied"].format(label=label))
 
     def open_booth_ready(self) -> None:
@@ -1977,14 +1856,15 @@ def run_launch_check() -> int:
         raise RuntimeError("zip file input fixture failed")
     if looks_like_zip_file_input(image_file_info):
         raise RuntimeError("file input separation fixture failed")
-    if not upload_result_is_success(UI_TEXT["assist_filechooser_set"].format(label=UI_TEXT["field_product_image"], name=THUMBNAIL_NAME)):
-        raise RuntimeError("filechooser success fixture failed")
-    if upload_result_is_success(UI_TEXT["assist_filechooser_manual"].format(label=UI_TEXT["field_product_image"])):
-        raise RuntimeError("filechooser manual fixture failed")
-    if xpath_literal(UI_TEXT["field_product_image"]) != "'" + UI_TEXT["field_product_image"] + "'":
-        raise RuntimeError("xpath literal simple fixture failed")
-    if not xpath_literal("a'\"b").startswith("concat("):
-        raise RuntimeError("xpath literal quote fixture failed")
+    manual_upload_path = Path(__file__).resolve()
+    image_manual_result = set_product_image_file(None, UI_TEXT["field_product_image"], manual_upload_path, ())
+    if image_manual_result != UI_TEXT["assist_manual_set"].format(label=UI_TEXT["field_product_image"]):
+        raise RuntimeError("manual image upload fixture failed")
+    zip_manual_result = set_product_zip_file(None, UI_TEXT["field_zip"], manual_upload_path, ())
+    if zip_manual_result != UI_TEXT["assist_manual_set"].format(label=UI_TEXT["field_zip"]):
+        raise RuntimeError("manual zip upload fixture failed")
+    if not format_path_result("field_product_image_path", manual_upload_path).startswith(UI_TEXT["field_product_image_path"]):
+        raise RuntimeError("manual path result fixture failed")
 
     real_import = builtins.__import__
 
@@ -2032,7 +1912,7 @@ def run_launch_check() -> int:
     print(f"edit_url_hint={BOOTH_EDIT_URL_HINT}")
     print(f"chrome_path={find_chrome_executable() or 'missing'}")
     print(f"chrome_profile={get_chrome_profile_dir()}")
-    print("fixtures=missing_product, missing_ready, multiple_zip, missing_playwright_python, ready_product_lookup, root_product_priority, open_edit_url_only, bad_page_detection, tag_split, file_input_detection, filechooser_upload")
+    print("fixtures=missing_product, missing_ready, multiple_zip, missing_playwright_python, ready_product_lookup, root_product_priority, open_edit_url_only, bad_page_detection, tag_split, file_input_detection, manual_file_upload")
     return 0
 
 
