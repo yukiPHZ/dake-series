@@ -1,15 +1,16 @@
 # 商品名
-Dakeバックアップ
+DakeBOOTHアシスト
 
 # 価格案
-500円
+300円
 
 # 商品紹介文
-正本フォルダを、指定した避難先へ静かに残します。
+BOOTH登録に必要な商品情報と素材を確認し、開いているBOOTH編集画面への入力作業を補助します。
 
-・正本フォルダを避難先へコピー保存
-・削除は伝播しない一方向バックアップ
-・差分確認と退避保存に対応
+・DakeBOOTHアシスト
+・BOOTH登録用の商品情報と素材を確認
+・開いているBOOTH編集画面へ接続して入力作業を補助
+・最終公開は人間確認
 ・Windows向けexe
 
 実務の流れを、
@@ -30,10 +31,10 @@ assets/booth_thumbnail.jpg
 assets/screenshot.jpg
 
 # 作品ファイル
-booth_ready/DakeBackup.zip
+booth_ready/DakeBOOTH_Assist.zip
 
 # GitHub Release
-https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Backup_v1.0.0
+https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_BOOTH_Assist_v1.0.0
 
 # 注意事項
 Windows向けアプリです。

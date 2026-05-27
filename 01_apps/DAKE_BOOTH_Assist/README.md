@@ -87,7 +87,7 @@ Chromeプロファイルは `%LOCALAPPDATA%\DakeBOOTH_Assist\chrome_profile` に
   "update_summary": "開いているBOOTH編集画面への入力補助に変更",
   "folder_name": "DAKE_BOOTH_Assist",
   "exe_name": "DakeBOOTH_Assist.exe",
-  "release_url": "",
+  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_BOOTH_Assist_v1.0.0",
   "screenshot_path": "assets/screenshot.webp",
   "status": "available",
   "show_in_launcher": true,

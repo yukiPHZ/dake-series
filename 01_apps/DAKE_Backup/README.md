@@ -78,11 +78,11 @@ PyInstaller が使える環境では `dist\DakeBackup.exe` を作成します。
   "update_summary": "ローカル正本を削除伝播させずに残すバックアップアプリを追加しました。",
   "folder_name": "DAKE_Backup",
   "exe_name": "DakeBackup.exe",
-  "release_url": "",
+  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Backup_v1.0.0",
   "screenshot_path": "assets/screenshot.webp",
   "status": "available",
   "show_in_launcher": true,
-  "show_on_site": false
+  "show_on_site": true
 }
 ```
 

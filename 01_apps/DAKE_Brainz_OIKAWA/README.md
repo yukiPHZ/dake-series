@@ -343,7 +343,7 @@ dist\DakeBrainz_OIKAWA.exe
   "release_url": "",
   "screenshot_path": "assets/screenshot.webp",
   "status": "experimental",
-  "show_in_launcher": true,
+  "show_in_launcher": false,
   "show_on_site": false
 }
 ```
