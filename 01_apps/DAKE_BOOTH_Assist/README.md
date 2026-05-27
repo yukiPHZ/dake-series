@@ -4,9 +4,9 @@
 
 DakeBOOTHアシストは、DAKEアプリのBOOTH登録作業を補助するアプリです。
 
-`booth_product.txt` と `booth_ready/` を読み取り、商品名・価格・説明文・タグ・登録素材を確認しながら、ログイン済みChrome上のBOOTH商品登録画面へ入力補助します。
+`booth_product.txt` と `booth_ready/` を読み取り、商品名・価格・説明文・タグ・登録素材を確認しながら、ログイン済みChromeで既に開いているBOOTHの商品登録または編集画面へ入力補助します。
 
-ログインやreCAPTCHA、パスキー認証は人間がChrome上で行います。DakeBOOTHアシストはログイン後の入力補助だけを行い、公開ボタンは押しません。
+ログインやreCAPTCHA、パスキー認証、商品登録画面を開く操作は人間がChrome上で行います。DakeBOOTHアシストは開いている編集画面への入力補助だけを行い、公開ボタンは押しません。
 
 ## できること
 
@@ -23,6 +23,8 @@ DakeBOOTHアシストは、DAKEアプリのBOOTH登録作業を補助するア�
 - 自動販売開始
 - ログイン情報保存
 - reCAPTCHAやパスキー認証の突破
+- 商品登録URLへの自動遷移
+- 商品管理画面から登録ボタンの自動クリック
 - BOOTH内部API操作
 - 決済情報、売上情報、個人情報の取得
 
@@ -41,12 +43,13 @@ python -m pip install -r requirements.txt
 1. DakeBOOTHアシストを起動
 2. 対象アプリを選択
 3. 「ログイン済みChromeを起動」を押す
-4. Chrome上でBOOTHへログインする
-5. BOOTH商品管理画面または商品登録画面を開く
-6. DakeBOOTHアシストに戻る
-7. 「Chrome接続で入力補助」を押す
-8. 入力内容を確認する
-9. 公開ボタンは人間が最終判断する
+4. ChromeでBOOTHへログインする
+5. BOOTH上で「商品登録」または既存商品の「編集」を人間が開く
+6. URLが `https://manage.booth.pm/items/数字/edit` のようになっていることを確認する
+7. DakeBOOTHアシストに戻る
+8. 「Chrome接続で入力補助」を押す
+9. 入力内容を確認する
+10. 公開判断は人間が行う
 
 Chromeが自動検出できない場合は、以下を手動で実行してください。
 
@@ -69,10 +72,10 @@ Chromeプロファイルは `%LOCALAPPDATA%\DakeBOOTH_Assist\chrome_profile` に
   "app_key": "dake_booth_assist",
   "display_name": "BOOTHアシスト",
   "launcher_title": "BOOTHアシスト",
-  "launcher_description": "BOOTH登録に必要な商品情報と素材を確認し、ログイン済みChromeへの入力作業を補助します。",
+  "launcher_description": "BOOTH登録に必要な商品情報と素材を確認し、開いているBOOTH編集画面への入力作業を補助します。",
   "site_title": "DakeBOOTHアシスト",
-  "site_description": "DAKEアプリのBOOTH登録作業を、商品情報の確認とログイン済みChromeへの入力補助で止まらず進めるためのアプリです。",
-  "update_summary": "ログイン済みChrome接続によるBOOTH登録補助へ変更",
+  "site_description": "DAKEアプリのBOOTH登録作業を、商品情報の確認と開いているBOOTH編集画面への入力補助で止まらず進めるためのアプリです。",
+  "update_summary": "開いているBOOTH編集画面への入力補助に変更",
   "folder_name": "DAKE_BOOTH_Assist",
   "exe_name": "DakeBOOTH_Assist.exe",
   "release_url": "",
@@ -87,6 +90,6 @@ Chromeプロファイルは `%LOCALAPPDATA%\DakeBOOTH_Assist\chrome_profile` に
 
 - DakeBOOTHアシスト
 - BOOTH登録用の商品情報と素材を確認
-- ログイン済みChromeへ接続して入力作業を補助
+- 開いているBOOTH編集画面へ接続して入力作業を補助
 - 最終公開は人間確認
 - Windows向けexe

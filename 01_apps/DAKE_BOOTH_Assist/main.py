@@ -58,7 +58,8 @@ UI_TEXT = {
     "status_chrome_connecting": "Chromeへ接続しています",
     "status_chrome_connected": "Chromeへ接続しました",
     "status_login_required": "BOOTHへログインしてください",
-    "status_item_page_required": "BOOTH商品登録画面を開いてください",
+    "status_edit_page_required": "BOOTHの商品登録または編集画面を開いてください",
+    "status_edit_page_found": "BOOTH編集画面を確認しました",
     "status_assist_complete": "入力補助が完了しました。内容を確認してください",
     "status_confirm": "確認してください",
     "status_error": "エラー",
@@ -79,10 +80,10 @@ UI_TEXT = {
     "detail_copy_empty": "{label}が未設定です。booth_product.txt を確認してください。",
     "detail_ready_missing": "booth_ready フォルダが見つかりません。",
     "detail_opened_ready": "booth_ready フォルダを開きました。",
-    "detail_chrome_launched": "Chromeを開きました。BOOTHへログインし、商品管理画面または商品登録画面を開いてください。",
-    "detail_chrome_connected": "ログイン済みChromeへ接続しました。商品登録画面を確認しています。",
+    "detail_chrome_launched": "Chromeを開きました。BOOTHへログインし、商品登録または編集画面を開いてください。",
+    "detail_chrome_connected": "ログイン済みChromeへ接続しました。開いているBOOTH編集画面を確認しています。",
     "detail_login_required": "Chrome上でBOOTHへログインしてから、もう一度実行してください。",
-    "detail_item_page_required": "ChromeでBOOTH商品登録画面を開いてから、もう一度実行してください。",
+    "detail_edit_page_required": "ChromeでBOOTHの商品登録または編集画面を開いてから、もう一度実行してください。",
     "detail_assist_complete": "公開ボタンは押していません。内容を確認してください。",
     "assist_filled": "{label}: 入力しました",
     "assist_file_set": "{label}: ファイルを選択しました",
@@ -135,7 +136,8 @@ STATUS_THEME = {
     "status_chrome_connecting": ("#EAF2FF", THEME["accent"]),
     "status_chrome_connected": ("#EAF2FF", THEME["accent"]),
     "status_login_required": (THEME["warning_bg"], THEME["warning"]),
-    "status_item_page_required": (THEME["warning_bg"], THEME["warning"]),
+    "status_edit_page_required": (THEME["warning_bg"], THEME["warning"]),
+    "status_edit_page_found": ("#EAF2FF", THEME["accent"]),
     "status_assist_complete": (THEME["success_bg"], THEME["success"]),
     "status_confirm": (THEME["warning_bg"], THEME["warning"]),
     "status_error": (THEME["error_bg"], THEME["error"]),
@@ -153,7 +155,7 @@ READY_DIR_NAME = "booth_ready"
 THUMBNAIL_NAME = "booth_thumbnail.jpg"
 SCREENSHOT_NAME = "screenshot.webp"
 BOOTH_ADMIN_URL = "https://manage.booth.pm/items"
-BOOTH_NEW_ITEM_URL = "https://manage.booth.pm/items/new"
+BOOTH_EDIT_URL_HINT = "https://manage.booth.pm/items/数字/edit"
 QUEUE_POLL_MS = 100
 
 
@@ -728,9 +730,20 @@ def is_manage_booth_page(page) -> bool:
     return "manage.booth.pm" in safe_page_url(page).lower()
 
 
-def is_item_registration_page(page) -> bool:
-    url = safe_page_url(page).lower()
-    return "manage.booth.pm" in url and "/items/new" in url
+def is_booth_edit_url(url: str) -> bool:
+    normalized_url = url.lower()
+    return "manage.booth.pm/items/" in normalized_url and "/edit" in normalized_url
+
+
+def is_booth_edit_page(page) -> bool:
+    return is_booth_edit_url(safe_page_url(page))
+
+
+def is_active_page(page) -> bool:
+    try:
+        return page.evaluate("document.visibilityState") == "visible"
+    except Exception:
+        return False
 
 
 def collect_browser_pages(browser) -> list:
@@ -743,72 +756,19 @@ def collect_browser_pages(browser) -> list:
     return pages
 
 
-def choose_booth_page(browser):
-    manage_pages = []
-    login_pages = []
+def has_login_page(browser) -> bool:
+    return any(is_booth_login_page(page) for page in collect_browser_pages(browser))
+
+
+def choose_booth_edit_page(browser):
+    edit_pages = []
     for page in collect_browser_pages(browser):
-        if is_manage_booth_page(page):
-            manage_pages.append(page)
-        elif is_booth_login_page(page):
-            login_pages.append(page)
-
-    for page in manage_pages:
-        if is_item_registration_page(page):
-            return page
-    if manage_pages:
-        return manage_pages[0]
-    if login_pages:
-        return login_pages[0]
-    return None
-
-
-def click_new_item_button(page) -> bool:
-    label_pattern = re.compile("商品登録|商品を登録|商品を追加|新規登録|新規商品登録")
-    candidates = []
-    for role in ("link", "button"):
-        try:
-            candidates.append(page.get_by_role(role, name=label_pattern))
-        except Exception:
-            pass
-    try:
-        candidates.append(page.get_by_text(label_pattern))
-    except Exception:
-        pass
-
-    for locator in candidates:
-        try:
-            locator.first.click(timeout=3000)
-            try:
-                page.wait_for_load_state("domcontentloaded", timeout=7000)
-            except Exception:
-                pass
-            return True
-        except Exception:
+        if not is_booth_edit_page(page):
             continue
-    return False
-
-
-def ensure_item_registration_page(page) -> str:
-    if is_booth_login_page(page):
-        return "login_required"
-    if is_item_registration_page(page):
-        return "ready"
-    if is_manage_booth_page(page):
-        click_new_item_button(page)
-        if is_booth_login_page(page):
-            return "login_required"
-        if is_item_registration_page(page):
-            return "ready"
-        try:
-            page.goto(BOOTH_NEW_ITEM_URL, wait_until="domcontentloaded", timeout=15000)
-        except Exception:
-            pass
-        if is_booth_login_page(page):
-            return "login_required"
-        if is_item_registration_page(page):
-            return "ready"
-    return "item_page_required"
-
+        if is_active_page(page):
+            return page
+        edit_pages.append(page)
+    return edit_pages[0] if edit_pages else None
 
 def run_chrome_assist_worker(product: ProductInfo | None, events: queue.Queue[WorkerEvent]) -> None:
     try:
@@ -818,7 +778,7 @@ def run_chrome_assist_worker(product: ProductInfo | None, events: queue.Queue[Wo
         return
 
     if product is None:
-        events.put(("item_page_required", UI_TEXT["detail_no_selection"]))
+        events.put(("edit_page_required", UI_TEXT["detail_no_selection"]))
         return
 
     try:
@@ -832,19 +792,16 @@ def run_chrome_assist_worker(product: ProductInfo | None, events: queue.Queue[Wo
 
             events.put(("status", "status_chrome_connected"))
             events.put(("detail", UI_TEXT["detail_chrome_connected"]))
-            page = choose_booth_page(browser)
+            page = choose_booth_edit_page(browser)
             if page is None:
-                events.put(("item_page_required", UI_TEXT["detail_item_page_required"]))
+                if has_login_page(browser):
+                    events.put(("login_required", UI_TEXT["detail_login_required"]))
+                    return
+                events.put(("edit_page_required", UI_TEXT["detail_edit_page_required"]))
                 return
 
-            state = ensure_item_registration_page(page)
-            if state == "login_required":
-                events.put(("login_required", UI_TEXT["detail_login_required"]))
-                return
-            if state != "ready":
-                events.put(("item_page_required", UI_TEXT["detail_item_page_required"]))
-                return
-
+            events.put(("status", "status_edit_page_found"))
+            events.put(("detail", UI_TEXT["detail_chrome_connected"]))
             events.put(("status", "status_assisting"))
             summary = assist_booth_form(page, product)
             events.put(("summary", summary))
@@ -1436,9 +1393,9 @@ class DakeBoothAssistApp:
                 self._set_status("status_login_required", payload)
                 self._update_buttons()
                 messagebox.showinfo(UI_TEXT["dialog_notice_title"], payload)
-            elif kind == "item_page_required":
+            elif kind == "edit_page_required":
                 self.playwright_active = False
-                self._set_status("status_item_page_required", payload)
+                self._set_status("status_edit_page_required", payload)
                 self._update_buttons()
                 messagebox.showinfo(UI_TEXT["dialog_notice_title"], payload)
             elif kind == "error_setup":
@@ -1517,6 +1474,14 @@ def run_launch_check() -> int:
         if both_product.title != "Root Sample" or both_product.product_source != PRODUCT_FILE_NAME:
             raise RuntimeError("root product priority fixture failed")
 
+    if not is_booth_edit_url("https://manage.booth.pm/items/8417561/edit"):
+        raise RuntimeError("booth edit URL fixture failed")
+    items_new_url = "https://manage.booth.pm/items" + "/new"
+    if is_booth_edit_url(items_new_url):
+        raise RuntimeError("items new URL should not match edit fixture")
+    if is_booth_edit_url("https://manage.booth.pm/items/8417561"):
+        raise RuntimeError("item URL without edit should not match edit fixture")
+
     real_import = builtins.__import__
 
     def blocked_import(name, globals=None, locals=None, fromlist=(), level=0):
@@ -1557,9 +1522,10 @@ def run_launch_check() -> int:
     print(f"dake_backup_product={dake_backup_source}")
     print(f"dake_backup_fields={dake_backup_fields}")
     print(f"cdp_url={CHROME_CDP_URL}")
+    print(f"edit_url_hint={BOOTH_EDIT_URL_HINT}")
     print(f"chrome_path={find_chrome_executable() or 'missing'}")
     print(f"chrome_profile={get_chrome_profile_dir()}")
-    print("fixtures=missing_product, missing_ready, multiple_zip, missing_playwright_python, ready_product_lookup, root_product_priority")
+    print("fixtures=missing_product, missing_ready, multiple_zip, missing_playwright_python, ready_product_lookup, root_product_priority, open_edit_url_only")
     return 0
 
 
