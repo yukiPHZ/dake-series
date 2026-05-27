@@ -8,6 +8,8 @@ DakeBOOTHアシストは、DAKEアプリのBOOTH登録作業を補助するア�
 
 ログインやreCAPTCHA、パスキー認証、商品登録画面を開く操作は人間がChrome上で行います。DakeBOOTHアシストは開いている編集画面への入力補助だけを行い、公開ボタンは押しません。
 
+DakeBOOTHアシストは、現在開いているBOOTH編集ページへ入力補助します。新しいタブは開きません。
+
 ## できること
 
 - `booth_product.txt` 読み取り

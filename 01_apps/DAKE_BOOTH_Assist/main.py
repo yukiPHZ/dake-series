@@ -84,12 +84,16 @@ UI_TEXT = {
     "detail_chrome_connected": "ログイン済みChromeへ接続しました。開いているBOOTH編集画面を確認しています。",
     "detail_login_required": "Chrome上でBOOTHへログインしてから、もう一度実行してください。",
     "detail_edit_page_required": "ChromeでBOOTHの商品登録または編集画面を開いてから、もう一度実行してください。",
+    "detail_bad_edit_page": "404ページを検出しました。Chromeで商品編集画面を開き直してください。",
+    "detail_used_page": "使用ページ:\n{url}",
     "detail_assist_complete": "公開ボタンは押していません。内容を確認してください。",
     "assist_filled": "{label}: 入力しました",
     "assist_file_set": "{label}: ファイルを選択しました",
     "assist_manual": "{label}: 手動で入力してください",
     "assist_missing_value": "{label}: 未設定のためスキップしました",
     "assist_publish_guard": "公開ボタンは押していません。内容を確認し、公開判断は人間が行ってください。",
+    "assist_summary_template": "使用ページ:\n{url}\n\nページ情報:\ntitle: {title}\ninput数: {input_count}\ntextarea数: {textarea_count}\nfile input数: {file_count}\n\n入力結果:\n{results}",
+    "log_page_diagnostics": "使用URL={url} title={title} input数={input_count} textarea数={textarea_count} file input数={file_count}",
     "dialog_error_title": "エラー",
     "dialog_notice_title": "確認してください",
     "dialog_open_folder_error": "フォルダを開けませんでした。\n\n{error}",
@@ -721,6 +725,54 @@ def safe_page_url(page) -> str:
         return ""
 
 
+def safe_page_title(page) -> str:
+    try:
+        return page.title(timeout=2000) or ""
+    except Exception:
+        return ""
+
+
+def count_selector(page, selector: str) -> int:
+    try:
+        return page.locator(selector).count()
+    except Exception:
+        return 0
+
+
+def collect_page_diagnostics(page) -> dict[str, str | int]:
+    return {
+        "url": safe_page_url(page),
+        "title": safe_page_title(page),
+        "input_count": count_selector(page, "input"),
+        "textarea_count": count_selector(page, "textarea"),
+        "file_count": count_selector(page, "input[type='file']"),
+    }
+
+
+def format_assist_summary(diagnostics: dict[str, str | int], results: str) -> str:
+    return UI_TEXT["assist_summary_template"].format(
+        url=diagnostics["url"],
+        title=diagnostics["title"],
+        input_count=diagnostics["input_count"],
+        textarea_count=diagnostics["textarea_count"],
+        file_count=diagnostics["file_count"],
+        results=results,
+    )
+
+
+def print_page_diagnostics(diagnostics: dict[str, str | int]) -> None:
+    print(
+        UI_TEXT["log_page_diagnostics"].format(
+            url=diagnostics["url"],
+            title=diagnostics["title"],
+            input_count=diagnostics["input_count"],
+            textarea_count=diagnostics["textarea_count"],
+            file_count=diagnostics["file_count"],
+        ),
+        flush=True,
+    )
+
+
 def is_booth_login_page(page) -> bool:
     url = safe_page_url(page).lower()
     return "accounts.pixiv.net" in url or ("login" in url and ("booth.pm" in url or "pixiv" in url))
@@ -735,8 +787,23 @@ def is_booth_edit_url(url: str) -> bool:
     return "manage.booth.pm/items/" in normalized_url and "/edit" in normalized_url
 
 
+def is_booth_new_url(url: str) -> bool:
+    normalized_url = url.lower().rstrip("/")
+    return "manage.booth.pm/items" in normalized_url and normalized_url.endswith("/new")
+
+
 def is_booth_edit_page(page) -> bool:
     return is_booth_edit_url(safe_page_url(page))
+
+
+def is_bad_booth_page(page) -> bool:
+    if not is_manage_booth_page(page):
+        return False
+    if is_booth_new_url(safe_page_url(page)):
+        return True
+    title = safe_page_title(page).lower()
+    url = safe_page_url(page).lower()
+    return "404" in title or "404" in url or "not found" in title
 
 
 def is_active_page(page) -> bool:
@@ -758,6 +825,17 @@ def collect_browser_pages(browser) -> list:
 
 def has_login_page(browser) -> bool:
     return any(is_booth_login_page(page) for page in collect_browser_pages(browser))
+
+
+def find_bad_booth_page(browser):
+    pages = collect_browser_pages(browser)
+    for page in pages:
+        if is_bad_booth_page(page) and is_active_page(page):
+            return page
+    for page in pages:
+        if is_bad_booth_page(page):
+            return page
+    return None
 
 
 def choose_booth_edit_page(browser):
@@ -792,6 +870,14 @@ def run_chrome_assist_worker(product: ProductInfo | None, events: queue.Queue[Wo
 
             events.put(("status", "status_chrome_connected"))
             events.put(("detail", UI_TEXT["detail_chrome_connected"]))
+
+            bad_page = find_bad_booth_page(browser)
+            if bad_page is not None:
+                diagnostics = collect_page_diagnostics(bad_page)
+                print_page_diagnostics(diagnostics)
+                events.put(("bad_page", UI_TEXT["detail_bad_edit_page"]))
+                return
+
             page = choose_booth_edit_page(browser)
             if page is None:
                 if has_login_page(browser):
@@ -800,11 +886,13 @@ def run_chrome_assist_worker(product: ProductInfo | None, events: queue.Queue[Wo
                 events.put(("edit_page_required", UI_TEXT["detail_edit_page_required"]))
                 return
 
+            diagnostics = collect_page_diagnostics(page)
+            print_page_diagnostics(diagnostics)
             events.put(("status", "status_edit_page_found"))
-            events.put(("detail", UI_TEXT["detail_chrome_connected"]))
+            events.put(("detail", UI_TEXT["detail_used_page"].format(url=diagnostics["url"])))
             events.put(("status", "status_assisting"))
-            summary = assist_booth_form(page, product)
-            events.put(("summary", summary))
+            results = assist_booth_form(page, product)
+            events.put(("summary", format_assist_summary(diagnostics, results)))
             events.put(("done", UI_TEXT["detail_assist_complete"]))
     except Exception as exc:
         events.put(("error", UI_TEXT["dialog_playwright_error"].format(error=exc)))
@@ -1398,6 +1486,11 @@ class DakeBoothAssistApp:
                 self._set_status("status_edit_page_required", payload)
                 self._update_buttons()
                 messagebox.showinfo(UI_TEXT["dialog_notice_title"], payload)
+            elif kind == "bad_page":
+                self.playwright_active = False
+                self._set_status("status_edit_page_required", payload)
+                self._update_buttons()
+                messagebox.showinfo(UI_TEXT["dialog_notice_title"], payload)
             elif kind == "error_setup":
                 self.playwright_active = False
                 self._set_status("status_error")
@@ -1477,6 +1570,8 @@ def run_launch_check() -> int:
     if not is_booth_edit_url("https://manage.booth.pm/items/8417561/edit"):
         raise RuntimeError("booth edit URL fixture failed")
     items_new_url = "https://manage.booth.pm/items" + "/new"
+    if not is_booth_new_url(items_new_url):
+        raise RuntimeError("items new URL fixture failed")
     if is_booth_edit_url(items_new_url):
         raise RuntimeError("items new URL should not match edit fixture")
     if is_booth_edit_url("https://manage.booth.pm/items/8417561"):
@@ -1525,7 +1620,7 @@ def run_launch_check() -> int:
     print(f"edit_url_hint={BOOTH_EDIT_URL_HINT}")
     print(f"chrome_path={find_chrome_executable() or 'missing'}")
     print(f"chrome_profile={get_chrome_profile_dir()}")
-    print("fixtures=missing_product, missing_ready, multiple_zip, missing_playwright_python, ready_product_lookup, root_product_priority, open_edit_url_only")
+    print("fixtures=missing_product, missing_ready, multiple_zip, missing_playwright_python, ready_product_lookup, root_product_priority, open_edit_url_only, bad_page_detection")
     return 0
 
 
