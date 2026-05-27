@@ -42,9 +42,12 @@ UI_TEXT = {
     "field_description": "説明文",
     "field_product_info": "商品情報",
     "field_tags": "タグ",
+    "field_product_image": "商品画像",
     "field_ready": "booth_ready",
     "field_zip": "zipファイル",
     "field_thumbnail": "booth_thumbnail.jpg",
+    "field_category": "カテゴリ",
+    "field_proxy_purchase": "代理購入サービス",
     "field_screenshot": "screenshot.webp",
     "field_github_release": "GitHub Release URL",
     "status_label": "状態",
@@ -88,13 +91,23 @@ UI_TEXT = {
     "detail_used_page": "使用ページ:\n{url}",
     "detail_assist_complete": "公開ボタンは押していません。内容を確認してください。",
     "assist_filled": "{label}: 入力しました",
-    "assist_file_set": "{label}: ファイルを選択しました",
+    "assist_file_set": "{label}: 入力しました ({name})",
     "assist_tags_filled": "{label}: {count}件入力",
     "assist_manual": "{label}: 手動で入力してください",
     "assist_missing_value": "{label}: 未設定のためスキップしました",
-    "assist_publish_guard": "公開ボタンは押していません。内容を確認し、公開判断は人間が行ってください。",
-    "assist_summary_template": "使用ページ:\n{url}\n\nページ情報:\ntitle: {title}\ninput数: {input_count}\ntextarea数: {textarea_count}\nfile input数: {file_count}\n\n入力結果:\n{results}",
+    "assist_publish_guard": "公開ボタン・保存ボタンは押していません。内容を確認し、公開/保存判断は人間が行ってください。",
+    "assist_publish_guard_result": "公開ボタン・保存ボタンは押していません",
+    "assist_summary_template": "使用ページ:\n{url}\n\nページ情報:\ntitle: {title}\ninput数: {input_count}\ntextarea数: {textarea_count}\nfile input数: {file_count}\n\nfile input診断:\n{file_input_details}\n\n入力結果:\n{results}",
     "log_page_diagnostics": "使用URL={url} title={title} input数={input_count} textarea数={textarea_count} file input数={file_count}",
+    "log_file_input_detail": "file input {index}: accept={accept} name={name} id={id} aria-label={aria_label} nearby={nearby}",
+    "log_file_input_try": "set_input_files試行: {label} index={index} path={path}",
+    "log_file_input_success": "set_input_files成功: {label} index={index}",
+    "log_file_input_failure": "set_input_files失敗: {label} index={index} error={error}",
+    "log_category_diagnostics": "カテゴリ候補: label={label_count} select={select_count} text={text_count}",
+    "log_proxy_purchase_diagnostics": "代理購入サービス候補: text={text_count}",
+    "file_input_detail_line": "- {index}: accept={accept} name={name} id={id} aria-label={aria_label} nearby={nearby}",
+    "file_input_details_empty": "なし",
+    "result_bullet": "- {line}",
     "dialog_error_title": "エラー",
     "dialog_notice_title": "確認してください",
     "dialog_open_folder_error": "フォルダを開けませんでした。\n\n{error}",
@@ -191,6 +204,16 @@ class ProductInfo:
     screenshot_path: Path | None
 
 
+@dataclass(frozen=True)
+class FileInputInfo:
+    index: int
+    accept: str
+    name: str
+    input_id: str
+    aria_label: str
+    nearby: str
+
+
 WorkerEvent = tuple[str, str]
 
 
@@ -264,18 +287,6 @@ TAG_LOCATORS = (
     ("css", "input[name*='tag' i]"),
     ("css", "textarea[name*='tag' i]"),
 )
-THUMBNAIL_FILE_LOCATORS = (
-    ("css", "input[type='file'][accept*='image']"),
-    ("css", "input[type='file'][name*='image' i]"),
-    ("css", "input[type='file'][name*='thumbnail' i]"),
-)
-ZIP_FILE_LOCATORS = (
-    ("css", "input[type='file'][accept*='zip']"),
-    ("css", "input[type='file'][accept*='application']"),
-    ("css", "input[type='file'][name*='zip' i]"),
-    ("css", "input[type='file'][name*='file' i]"),
-)
-
 
 def get_source_dir() -> Path:
     return Path(__file__).resolve().parent
@@ -695,66 +706,188 @@ def input_tags_one_by_one(page, label: str, value: str) -> str:
     return UI_TEXT["assist_manual"].format(label=label)
 
 
-def set_first_file_available(page, label: str, path: Path | None, locators: tuple[tuple[str, str], ...]) -> str:
-    if path is None or not path.exists():
-        return UI_TEXT["assist_missing_value"].format(label=label)
-
-    for kind, query in locators:
-        try:
-            locator = make_locator(page, kind, query)
-            count = locator.count()
-        except Exception:
-            continue
-        for index in range(min(count, 5)):
-            try:
-                target = locator.nth(index)
-                target.set_input_files(str(path), timeout=3000)
-                return UI_TEXT["assist_file_set"].format(label=label)
-            except Exception:
-                continue
-    return UI_TEXT["assist_manual"].format(label=label)
+def display_detail(value: str) -> str:
+    stripped = (value or "").strip()
+    return stripped if stripped else UI_TEXT["value_unset"]
 
 
-def set_zip_file(page, label: str, path: Path | None) -> str:
-    result = set_first_file_available(page, label, path, ZIP_FILE_LOCATORS)
-    if result != UI_TEXT["assist_manual"].format(label=label):
-        return result
-    if path is None or not path.exists():
-        return result
+def safe_get_attribute(locator, name: str) -> str:
+    try:
+        return locator.get_attribute(name, timeout=1000) or ""
+    except Exception:
+        return ""
 
+
+def safe_nearby_text(locator) -> str:
+    try:
+        value = locator.evaluate(
+            r"""
+element => {
+  const pieces = [];
+  if (element.labels) {
+    for (const label of element.labels) {
+      pieces.push(label.innerText || label.textContent || "");
+    }
+  }
+  let node = element.parentElement;
+  for (let depth = 0; node && depth < 4; depth += 1) {
+    pieces.push(node.innerText || node.textContent || "");
+    node = node.parentElement;
+  }
+  return pieces.join(" ").replace(/\s+/g, " ").trim().slice(0, 180);
+}
+"""
+        )
+        return str(value or "")
+    except Exception:
+        return ""
+
+
+def collect_file_input_diagnostics(page) -> tuple[FileInputInfo, ...]:
     try:
         inputs = page.locator("input[type='file']")
         count = inputs.count()
     except Exception:
-        return result
+        return ()
 
-    for index in range(min(count, 8)):
+    details: list[FileInputInfo] = []
+    for index in range(min(count, 12)):
         try:
             target = inputs.nth(index)
-            accept = (target.get_attribute("accept", timeout=1000) or "").lower()
-            name = (target.get_attribute("name", timeout=1000) or "").lower()
-            if "image" in accept or "image" in name or "thumbnail" in name:
-                continue
-            if accept and not any(marker in accept for marker in ("zip", "application", "octet", "*")):
-                continue
-            target.set_input_files(str(path), timeout=3000)
-            return UI_TEXT["assist_file_set"].format(label=label)
+            details.append(
+                FileInputInfo(
+                    index=index,
+                    accept=safe_get_attribute(target, "accept"),
+                    name=safe_get_attribute(target, "name"),
+                    input_id=safe_get_attribute(target, "id"),
+                    aria_label=safe_get_attribute(target, "aria-label"),
+                    nearby=safe_nearby_text(target),
+                )
+            )
         except Exception:
             continue
-    return result
+    return tuple(details)
 
 
-def assist_booth_form(page, product: ProductInfo) -> str:
+def file_input_attr_text(info: FileInputInfo) -> str:
+    return " ".join((info.accept, info.name, info.input_id, info.aria_label)).lower()
+
+
+def contains_any(text: str, keywords: tuple[str, ...]) -> bool:
+    return any(keyword in text for keyword in keywords)
+
+
+def looks_like_image_file_input(info: FileInputInfo) -> bool:
+    image_keywords = ("image", "img", "thumbnail", "thumb", "photo", "picture", "cover", "商品画像", "画像", "サムネ")
+    zip_keywords = ("zip", ".zip", "application/zip", "application/x-zip", "octet", "作品ファイル", "ダウンロード", "download", "attachment", "digital", "item_file")
+    attr_text = file_input_attr_text(info)
+    nearby_text = info.nearby.lower()
+    if contains_any(attr_text, image_keywords):
+        return True
+    if contains_any(attr_text, zip_keywords):
+        return False
+    return contains_any(nearby_text, image_keywords) and not contains_any(nearby_text, zip_keywords)
+
+
+def looks_like_zip_file_input(info: FileInputInfo) -> bool:
+    image_keywords = ("image", "img", "thumbnail", "thumb", "photo", "picture", "cover", "商品画像", "画像", "サムネ")
+    zip_keywords = ("zip", ".zip", "application/zip", "application/x-zip", "octet", "作品ファイル", "ダウンロード", "download", "attachment", "digital", "item_file")
+    attr_text = file_input_attr_text(info)
+    nearby_text = info.nearby.lower()
+    if contains_any(attr_text, image_keywords):
+        return False
+    if contains_any(attr_text, zip_keywords) or ("application" in info.accept.lower() and "image" not in info.accept.lower()):
+        return True
+    return contains_any(nearby_text, zip_keywords) and not contains_any(nearby_text, image_keywords)
+
+
+def set_file_input_by_indexes(page, label: str, path: Path | None, indexes: list[int]) -> str:
+    if path is None or not path.exists():
+        return UI_TEXT["assist_missing_value"].format(label=label)
+
+    for index in indexes:
+        print(UI_TEXT["log_file_input_try"].format(label=label, index=index, path=path), flush=True)
+        try:
+            target = page.locator("input[type='file']").nth(index)
+            target.set_input_files(str(path), timeout=5000)
+            print(UI_TEXT["log_file_input_success"].format(label=label, index=index), flush=True)
+            return UI_TEXT["assist_file_set"].format(label=label, name=path.name)
+        except Exception as exc:
+            print(UI_TEXT["log_file_input_failure"].format(label=label, index=index, error=exc), flush=True)
+            continue
+    return UI_TEXT["assist_manual"].format(label=label)
+
+
+def set_product_image_file(page, label: str, path: Path | None, file_inputs: tuple[FileInputInfo, ...]) -> str:
+    candidates = [info.index for info in file_inputs if looks_like_image_file_input(info)]
+    if not candidates:
+        non_zip = [info.index for info in file_inputs if not looks_like_zip_file_input(info)]
+        if len(file_inputs) > 1 and len(non_zip) == 1:
+            candidates = non_zip
+    return set_file_input_by_indexes(page, label, path, candidates)
+
+
+def set_product_zip_file(page, label: str, path: Path | None, file_inputs: tuple[FileInputInfo, ...]) -> str:
+    candidates = [info.index for info in file_inputs if looks_like_zip_file_input(info)]
+    if not candidates:
+        non_image = [info.index for info in file_inputs if not looks_like_image_file_input(info)]
+        if len(file_inputs) > 1 and len(non_image) == 1:
+            candidates = non_image
+    return set_file_input_by_indexes(page, label, path, candidates)
+
+
+def category_manual_result(page) -> str:
+    label_count = 0
+    text_count = 0
+    try:
+        label_count = page.get_by_label(UI_TEXT["field_category"], exact=False).count()
+    except Exception:
+        pass
+    try:
+        text_count = page.get_by_text(UI_TEXT["field_category"], exact=False).count()
+    except Exception:
+        pass
+    select_count = count_selector(page, "select")
+    print(
+        UI_TEXT["log_category_diagnostics"].format(
+            label_count=label_count,
+            select_count=select_count,
+            text_count=text_count,
+        ),
+        flush=True,
+    )
+    return UI_TEXT["assist_manual"].format(label=UI_TEXT["field_category"])
+
+
+def proxy_purchase_manual_result(page) -> str:
+    text_count = 0
+    try:
+        text_count = page.get_by_text(UI_TEXT["field_proxy_purchase"], exact=False).count()
+    except Exception:
+        pass
+    print(UI_TEXT["log_proxy_purchase_diagnostics"].format(text_count=text_count), flush=True)
+    return UI_TEXT["assist_manual"].format(label=UI_TEXT["field_proxy_purchase"])
+
+
+def format_result_lines(results: list[str]) -> str:
+    return "\n".join(UI_TEXT["result_bullet"].format(line=result) for result in results)
+
+
+def assist_booth_form(page, product: ProductInfo, diagnostics: dict[str, object]) -> str:
+    raw_file_inputs = diagnostics.get("file_inputs", ())
+    file_inputs = raw_file_inputs if isinstance(raw_file_inputs, tuple) else ()
     results = [
         fill_first_available(page, UI_TEXT["field_title"], product.title, TITLE_LOCATORS),
         fill_first_available(page, UI_TEXT["field_description"], product.description, DESCRIPTION_LOCATORS),
         fill_first_available(page, UI_TEXT["field_price"], price_for_input(product.price), PRICE_LOCATORS),
         input_tags_one_by_one(page, UI_TEXT["field_tags"], product.tags),
-        set_first_file_available(page, UI_TEXT["field_thumbnail"], product.thumbnail_path, THUMBNAIL_FILE_LOCATORS),
-        set_zip_file(page, UI_TEXT["field_zip"], product.selected_zip),
-        UI_TEXT["assist_publish_guard"],
+        set_product_image_file(page, UI_TEXT["field_product_image"], product.thumbnail_path, file_inputs),
+        set_product_zip_file(page, UI_TEXT["field_zip"], product.selected_zip, file_inputs),
+        category_manual_result(page),
+        proxy_purchase_manual_result(page),
+        UI_TEXT["assist_publish_guard_result"],
     ]
-    return "\n".join(results)
+    return format_result_lines(results)
 
 
 def safe_page_url(page) -> str:
@@ -778,28 +911,48 @@ def count_selector(page, selector: str) -> int:
         return 0
 
 
-def collect_page_diagnostics(page) -> dict[str, str | int]:
+def collect_page_diagnostics(page) -> dict[str, object]:
     return {
         "url": safe_page_url(page),
         "title": safe_page_title(page),
         "input_count": count_selector(page, "input"),
         "textarea_count": count_selector(page, "textarea"),
         "file_count": count_selector(page, "input[type='file']"),
+        "file_inputs": collect_file_input_diagnostics(page),
     }
 
 
-def format_assist_summary(diagnostics: dict[str, str | int], results: str) -> str:
+def format_file_input_detail(info: FileInputInfo) -> str:
+    return UI_TEXT["file_input_detail_line"].format(
+        index=info.index,
+        accept=display_detail(info.accept),
+        name=display_detail(info.name),
+        id=display_detail(info.input_id),
+        aria_label=display_detail(info.aria_label),
+        nearby=display_detail(info.nearby),
+    )
+
+
+def format_file_input_details(file_inputs: object) -> str:
+    if not isinstance(file_inputs, tuple) or not file_inputs:
+        return UI_TEXT["file_input_details_empty"]
+    lines = [format_file_input_detail(info) for info in file_inputs if isinstance(info, FileInputInfo)]
+    return "\n".join(lines) if lines else UI_TEXT["file_input_details_empty"]
+
+
+def format_assist_summary(diagnostics: dict[str, object], results: str) -> str:
     return UI_TEXT["assist_summary_template"].format(
         url=diagnostics["url"],
         title=diagnostics["title"],
         input_count=diagnostics["input_count"],
         textarea_count=diagnostics["textarea_count"],
         file_count=diagnostics["file_count"],
+        file_input_details=format_file_input_details(diagnostics.get("file_inputs", ())),
         results=results,
     )
 
 
-def print_page_diagnostics(diagnostics: dict[str, str | int]) -> None:
+def print_page_diagnostics(diagnostics: dict[str, object]) -> None:
     print(
         UI_TEXT["log_page_diagnostics"].format(
             url=diagnostics["url"],
@@ -810,7 +963,22 @@ def print_page_diagnostics(diagnostics: dict[str, str | int]) -> None:
         ),
         flush=True,
     )
-
+    raw_file_inputs = diagnostics.get("file_inputs", ())
+    if isinstance(raw_file_inputs, tuple):
+        for info in raw_file_inputs:
+            if not isinstance(info, FileInputInfo):
+                continue
+            print(
+                UI_TEXT["log_file_input_detail"].format(
+                    index=info.index,
+                    accept=display_detail(info.accept),
+                    name=display_detail(info.name),
+                    id=display_detail(info.input_id),
+                    aria_label=display_detail(info.aria_label),
+                    nearby=display_detail(info.nearby),
+                ),
+                flush=True,
+            )
 
 def is_booth_login_page(page) -> bool:
     url = safe_page_url(page).lower()
@@ -930,7 +1098,7 @@ def run_chrome_assist_worker(product: ProductInfo | None, events: queue.Queue[Wo
             events.put(("status", "status_edit_page_found"))
             events.put(("detail", UI_TEXT["detail_used_page"].format(url=diagnostics["url"])))
             events.put(("status", "status_assisting"))
-            results = assist_booth_form(page, product)
+            results = assist_booth_form(page, product, diagnostics)
             events.put(("summary", format_assist_summary(diagnostics, results)))
             events.put(("done", UI_TEXT["detail_assist_complete"]))
     except Exception as exc:
@@ -1621,6 +1789,15 @@ def run_launch_check() -> int:
     if split_tags(tag_sample) != expected_tags:
         raise RuntimeError("tag split fixture failed")
 
+    image_file_info = FileInputInfo(0, "image/jpeg,image/png", "item[images][]", "thumb", "", "商品画像")
+    zip_file_info = FileInputInfo(1, ".zip,application/zip", "item[files][]", "zip", "", "作品ファイル")
+    if not looks_like_image_file_input(image_file_info):
+        raise RuntimeError("image file input fixture failed")
+    if not looks_like_zip_file_input(zip_file_info):
+        raise RuntimeError("zip file input fixture failed")
+    if looks_like_zip_file_input(image_file_info):
+        raise RuntimeError("file input separation fixture failed")
+
     real_import = builtins.__import__
 
     def blocked_import(name, globals=None, locals=None, fromlist=(), level=0):
@@ -1667,7 +1844,7 @@ def run_launch_check() -> int:
     print(f"edit_url_hint={BOOTH_EDIT_URL_HINT}")
     print(f"chrome_path={find_chrome_executable() or 'missing'}")
     print(f"chrome_profile={get_chrome_profile_dir()}")
-    print("fixtures=missing_product, missing_ready, multiple_zip, missing_playwright_python, ready_product_lookup, root_product_priority, open_edit_url_only, bad_page_detection, tag_split")
+    print("fixtures=missing_product, missing_ready, multiple_zip, missing_playwright_python, ready_product_lookup, root_product_priority, open_edit_url_only, bad_page_detection, tag_split, file_input_detection")
     return 0
 
 
