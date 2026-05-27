@@ -8,10 +8,13 @@ line and must preserve manually entered BOOTH URLs in booth_product.txt.
 
 booth_thumbnail.jpg / booth_product.txt / booth_ready/ are formal shipping
 assets. They are not optional cleanup after GitHub Release.
+The BOOTH registration source file used in practice is
+booth_ready/booth_product.txt.
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import re
@@ -59,6 +62,8 @@ FONT_CANDIDATES = {
 class AppResult:
     folder: str
     ok: bool = True
+    status: str = "unknown"
+    skipped: bool = False
     missing: list[str] = field(default_factory=list)
     generated: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
@@ -213,6 +218,19 @@ def extract_booth_url(product_text: str) -> str:
     if not match:
         return ""
     return match.group(1).strip()
+
+
+def app_meta_for_filter(app_dir: Path) -> tuple[dict | None, str]:
+    readme_path = app_dir / "README.md"
+    if not readme_path.exists():
+        return None, "missing README.md"
+    try:
+        meta = extract_meta(read_text(readme_path))
+    except json.JSONDecodeError as exc:
+        return None, f"invalid DAKE_META JSON: {exc}"
+    if meta is None:
+        return None, "missing DAKE_META"
+    return meta, str(meta.get("status") or "unknown")
 
 
 def make_product_txt(
@@ -427,7 +445,7 @@ def find_exe(app_dir: Path, meta: dict | None) -> Path | None:
     return exes[0] if exes else None
 
 
-def process_app(app_dir: Path) -> AppResult:
+def process_app(app_dir: Path, *, dry_run: bool = False) -> AppResult:
     result = AppResult(folder=app_dir.name)
     readme_path = app_dir / "README.md"
     if not readme_path.exists():
@@ -448,14 +466,18 @@ def process_app(app_dir: Path) -> AppResult:
         result.ok = False
         return result
 
+    result.status = str(meta.get("status") or "unknown")
     release_body = extract_release_body(readme_text)
     if not release_body:
         result.missing.append("RELEASE_BODY")
 
     release_body_path = app_dir / "release_body.md"
     if not release_body_path.exists() and release_body:
-        write_text(release_body_path, release_body + "\n")
-        result.generated.append("release_body.md")
+        if dry_run:
+            result.generated.append("release_body.md (dry-run)")
+        else:
+            write_text(release_body_path, release_body + "\n")
+            result.generated.append("release_body.md")
     elif not release_body_path.exists():
         result.missing.append("release_body.md")
     else:
@@ -478,34 +500,44 @@ def process_app(app_dir: Path) -> AppResult:
     booth_dir = app_dir / "booth_ready"
     booth_jpg = booth_dir / "screenshot.jpg"
     booth_thumbnail_jpg = booth_dir / "booth_thumbnail.jpg"
-    booth_dir.mkdir(parents=True, exist_ok=True)
+    if not dry_run:
+        booth_dir.mkdir(parents=True, exist_ok=True)
 
     if screenshot_webp.exists():
-        try:
-            convert_webp_to_jpg(screenshot_webp, screenshot_jpg)
-            shutil.copy2(screenshot_jpg, booth_jpg)
-            result.generated.extend(["assets/screenshot.jpg", "booth_ready/screenshot.jpg"])
-        except Exception as exc:  # noqa: BLE001
-            result.missing.append(f"screenshot.jpg conversion failed: {exc}")
-            result.ok = False
+        if dry_run:
+            result.generated.extend(["assets/screenshot.jpg (dry-run)", "booth_ready/screenshot.jpg (dry-run)"])
+        else:
+            try:
+                convert_webp_to_jpg(screenshot_webp, screenshot_jpg)
+                shutil.copy2(screenshot_jpg, booth_jpg)
+                result.generated.extend(["assets/screenshot.jpg", "booth_ready/screenshot.jpg"])
+            except Exception as exc:  # noqa: BLE001
+                result.missing.append(f"screenshot.jpg conversion failed: {exc}")
+                result.ok = False
     else:
         result.missing.append("assets/screenshot.webp")
         result.warnings.append("screenshot.jpg not generated")
 
-    if screenshot_jpg.exists():
-        try:
-            create_booth_thumbnail(
-                screenshot_jpg,
-                thumbnail_jpg,
-                thumbnail_title(meta),
-                thumbnail_description(meta),
+    thumbnail_source_ready = screenshot_jpg.exists() or (dry_run and screenshot_webp.exists())
+    if thumbnail_source_ready:
+        if dry_run:
+            result.generated.extend(
+                ["assets/booth_thumbnail.jpg (dry-run)", "booth_ready/booth_thumbnail.jpg (dry-run)"]
             )
-            shutil.copy2(thumbnail_jpg, booth_thumbnail_jpg)
-            result.generated.extend(["assets/booth_thumbnail.jpg", "booth_ready/booth_thumbnail.jpg"])
-        except Exception as exc:  # noqa: BLE001
-            result.thumbnail_error = str(exc)
-            result.missing.append(f"booth_thumbnail.jpg generation failed: {exc}")
-            result.ok = False
+        else:
+            try:
+                create_booth_thumbnail(
+                    screenshot_jpg,
+                    thumbnail_jpg,
+                    thumbnail_title(meta),
+                    thumbnail_description(meta),
+                )
+                shutil.copy2(thumbnail_jpg, booth_thumbnail_jpg)
+                result.generated.extend(["assets/booth_thumbnail.jpg", "booth_ready/booth_thumbnail.jpg"])
+            except Exception as exc:  # noqa: BLE001
+                result.thumbnail_error = str(exc)
+                result.missing.append(f"booth_thumbnail.jpg generation failed: {exc}")
+                result.ok = False
     else:
         result.thumbnail_error = "assets/screenshot.jpg missing"
         result.missing.append("assets/screenshot.jpg")
@@ -513,8 +545,6 @@ def process_app(app_dir: Path) -> AppResult:
     readme_txt = booth_dir / "README.txt"
     notice_txt = booth_dir / "注意事項.txt"
     product_txt = booth_dir / "booth_product.txt"
-    write_text(readme_txt, make_readme_txt(title, description, features))
-    write_text(notice_txt, NOTICE_TEXT)
     if product_txt.exists():
         result.booth_url = extract_booth_url(read_text(product_txt))
 
@@ -536,13 +566,28 @@ def process_app(app_dir: Path) -> AppResult:
         release_url=str(meta.get("release_url") or ""),
         booth_url=result.booth_url,
     )
-    write_text(product_txt, product)
+    if not dry_run:
+        write_text(readme_txt, make_readme_txt(title, description, features))
+        write_text(notice_txt, NOTICE_TEXT)
+        write_text(product_txt, product)
     result.product_updated = True
-    result.generated.extend(["booth_ready/README.txt", "booth_ready/注意事項.txt", "booth_ready/booth_product.txt"])
+    if dry_run:
+        result.generated.extend(
+            [
+                "booth_ready/README.txt (dry-run)",
+                "booth_ready/注意事項.txt (dry-run)",
+                "booth_ready/booth_product.txt (dry-run)",
+            ]
+        )
+    else:
+        result.generated.extend(["booth_ready/README.txt", "booth_ready/注意事項.txt", "booth_ready/booth_product.txt"])
 
     if exe_path is not None:
-        create_zip(booth_dir / zip_name, exe_path, readme_txt, notice_txt)
-        result.generated.append(f"booth_ready/{zip_name}")
+        if dry_run:
+            result.generated.append(f"booth_ready/{zip_name} (dry-run)")
+        else:
+            create_zip(booth_dir / zip_name, exe_path, readme_txt, notice_txt)
+            result.generated.append(f"booth_ready/{zip_name}")
 
     for required in ["build.bat", ".gitignore"]:
         if not (app_dir / required).exists():
@@ -556,17 +601,53 @@ def process_app(app_dir: Path) -> AppResult:
     return result
 
 
-def main() -> int:
-    app_dirs = sorted(path for path in APPS_DIR.iterdir() if path.is_dir() and path.name.startswith("DAKE_"))
-    results = [process_app(app_dir) for app_dir in app_dirs]
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Generate DAKE BOOTH-ready assets.")
+    parser.add_argument("--only-available", action="store_true", help="Process only status: available apps.")
+    parser.add_argument("--app", help="Process a single app folder such as DAKE_Mail_Draft.")
+    parser.add_argument("--dry-run", action="store_true", help="Show targets and actions without writing files.")
+    return parser.parse_args()
 
-    print(f"対象アプリ数: {len(results)}")
-    print(f"screenshot.jpg生成成功: {sum('assets/screenshot.jpg' in r.generated for r in results)}")
-    print(f"booth_thumbnail.jpg生成成功: {sum('assets/booth_thumbnail.jpg' in r.generated for r in results)}")
-    print(f"booth_ready生成成功: {sum((APPS_DIR / r.folder / 'booth_ready').exists() for r in results)}")
-    print(f"zip生成成功: {sum(any(item.endswith('.zip') for item in r.generated) for r in results)}")
-    print(f"booth_product.txt更新: {sum(r.product_updated for r in results)}")
-    print(f"BOOTH URL保持: {sum(1 for r in results if r.booth_url)}")
+
+def select_app_dirs(args: argparse.Namespace) -> tuple[list[Path], list[tuple[str, str]]]:
+    app_dirs = sorted(path for path in APPS_DIR.iterdir() if path.is_dir() and path.name.startswith("DAKE_"))
+    if args.app:
+        app_dirs = [path for path in app_dirs if path.name == args.app]
+    selected: list[Path] = []
+    skipped: list[tuple[str, str]] = []
+    for app_dir in app_dirs:
+        _meta, status = app_meta_for_filter(app_dir)
+        if args.only_available and status != "available":
+            skipped.append((app_dir.name, status))
+            continue
+        selected.append(app_dir)
+    return selected, skipped
+
+
+def main() -> int:
+    args = parse_args()
+    app_dirs, skipped = select_app_dirs(args)
+    if args.app and not app_dirs and not skipped:
+        print(f"app not found: {args.app}")
+        return 1
+    results = [process_app(app_dir, dry_run=args.dry_run) for app_dir in app_dirs]
+
+    mode = "dry-run" if args.dry_run else "write"
+    print(f"mode: {mode}")
+    print(f"only_available: {args.only_available}")
+    if args.app:
+        print(f"app: {args.app}")
+    print(f"target apps: {len(results)}")
+    print(f"skipped by status: {len(skipped)}")
+    for name, status in skipped:
+        print(f"- skipped {name}: status={status}")
+
+    print(f"screenshot.jpg actions: {sum(any(item.startswith('assets/screenshot.jpg') for item in r.generated) for r in results)}")
+    print(f"booth_thumbnail.jpg actions: {sum(any(item.startswith('assets/booth_thumbnail.jpg') for item in r.generated) for r in results)}")
+    print(f"booth_ready exists: {sum((APPS_DIR / r.folder / 'booth_ready').exists() for r in results)}")
+    print(f"zip actions: {sum(any('.zip' in item for item in r.generated) for r in results)}")
+    print(f"booth_product.txt actions: {sum(r.product_updated for r in results)}")
+    print(f"BOOTH URL preserved: {sum(1 for r in results if r.booth_url)}")
     print("")
     print("不足/警告:")
     for result in results:

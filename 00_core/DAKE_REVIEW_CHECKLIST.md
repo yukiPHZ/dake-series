@@ -132,3 +132,13 @@ DAKEアプリ横断レビュー用チェックリストです。
 - [ ] 初期画面が表示される。
 - [ ] 閉じられる。
 - [ ] 主要操作で例外が出ない。
+
+## 正式出荷ライン v2
+
+- [ ] 通常出荷候補は `status: available` のみに限定している。
+- [ ] `frozen` / `draft` / `experimental` / `private` は通常不足扱いにしていない。
+- [ ] `available` 以外で `show_in_launcher: true` になっていない。
+- [ ] `available` 以外で `show_on_site: true` になっていない。
+- [ ] BOOTH公開後、`booth_ready/booth_product.txt` の `# URL` にBOOTH URLを戻している。
+- [ ] BOOTH URL未記入のままCLOSED扱いしていない。
+- [ ] dakeapp.com掲載とCloudflare反映確認まで終えている。

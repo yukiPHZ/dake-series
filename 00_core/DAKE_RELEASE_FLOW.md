@@ -181,3 +181,20 @@ Release作成後:
 - dakeapp.comに表示されている。
 - Cloudflare反映確認済み。
 - GitHub Releaseのみで出荷完了と扱っていない。
+
+## 正式出荷ライン v2
+
+通常出荷候補は `DAKE_META.status: available` のアプリのみに限定する。
+
+以下の状態は通常出荷チェックから除外し、別枠で扱う。
+
+- `frozen`
+- `draft`
+- `experimental`
+- `private`
+
+BOOTH公開後は `booth_ready/booth_product.txt` の `# URL` 欄へBOOTH URLを戻す。
+BOOTH URL未記入のままCLOSED扱いしない。
+
+`show_in_launcher` / `show_on_site` は `available` の公開対象にのみ true を付ける。
+`frozen`、`draft`、`experimental`、`private` が true を持つ場合は、出荷ライン上の矛盾として点検する。

@@ -1,8 +1,12 @@
-"""Check DAKE app BOOTH-ready assets and icon wiring.
+"""Check DAKE formal shipping assets.
 
-The script audits every 01_apps/DAKE_* app and writes a Markdown and CSV
-report under tools/reports/. It does not launch apps, capture screenshots, or
-publish anything; missing items are reported with the next safe action.
+Version 2 treats only ``status: available`` apps as normal shipping
+candidates. Frozen, draft, experimental, and private apps are listed, but they
+are not counted as ordinary missing BOOTH assets.
+
+Formal shipping is not closed by GitHub Release alone. An available app is
+closed only when release assets, BOOTH ready assets, a GitHub Release URL, and
+the BOOTH ``# URL`` field are all present.
 """
 
 from __future__ import annotations
@@ -11,15 +15,19 @@ import argparse
 import csv
 import json
 import re
+from collections import Counter
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
 APPS_DIR = ROOT / "01_apps"
 REPORT_DIR = ROOT / "tools" / "reports"
 COMMON_ICON_PARTS = ("02_assets", "dake_icon.ico")
+SHIPPING_STATUS = "available"
+KNOWN_NON_SHIPPING_STATUSES = {"frozen", "draft", "experimental", "private"}
 ROOT_GITIGNORE_REQUIRED = [
     "build/",
     "dist/",
@@ -36,10 +44,18 @@ class AppCheck:
     app: str
     readme: bool = False
     dake_meta: bool = False
+    meta_error: str = ""
+    status: str = "unknown"
+    show_in_launcher: bool | None = None
+    show_on_site: bool | None = None
+    release_url: str = ""
     release_body: bool = False
     screenshot: bool = False
     thumbnail: bool = False
     booth_product: bool = False
+    booth_product_path: str = ""
+    booth_url_state: str = "booth_product_missing"
+    booth_url: str = ""
     booth_ready: bool = False
     zip_file: bool = False
     build_bat: bool = False
@@ -50,7 +66,17 @@ class AppCheck:
     actions: list[str] = field(default_factory=list)
 
     @property
-    def ok(self) -> bool:
+    def shipping_candidate(self) -> bool:
+        return self.status == SHIPPING_STATUS
+
+    @property
+    def flag_conflict(self) -> bool:
+        return not self.shipping_candidate and (
+            self.show_in_launcher is True or self.show_on_site is True
+        )
+
+    @property
+    def asset_ready(self) -> bool:
         return all(
             [
                 self.readme,
@@ -68,6 +94,27 @@ class AppCheck:
                 self.icon_main,
             ]
         )
+
+    @property
+    def release_ready(self) -> bool:
+        return bool(self.release_url)
+
+    @property
+    def booth_url_ready(self) -> bool:
+        return self.booth_url_state == "set"
+
+    @property
+    def closed_ready(self) -> bool:
+        return (
+            self.shipping_candidate
+            and self.asset_ready
+            and self.release_ready
+            and self.booth_url_ready
+        )
+
+    @property
+    def ok(self) -> bool:
+        return self.closed_ready
 
 
 def read_text(path: Path) -> str:
@@ -92,23 +139,42 @@ def has_release_body(readme_text: str) -> bool:
     )
 
 
-def has_valid_dake_meta(readme_text: str) -> bool:
+def parse_dake_meta(readme_text: str) -> tuple[dict[str, Any] | None, str]:
     if "## DAKE_META" not in readme_text or "```json" not in readme_text:
-        return False
+        return None, "missing DAKE_META block"
     try:
-        block = readme_text.split("## DAKE_META", 1)[1].split("```json", 1)[1].split("```", 1)[0]
-        json.loads(block)
-    except (IndexError, json.JSONDecodeError):
-        return False
-    return True
+        block = (
+            readme_text.split("## DAKE_META", 1)[1]
+            .split("```json", 1)[1]
+            .split("```", 1)[0]
+        )
+        return json.loads(block), ""
+    except IndexError:
+        return None, "broken DAKE_META fence"
+    except json.JSONDecodeError as exc:
+        return None, f"invalid DAKE_META JSON: {exc}"
 
 
 def find_booth_product(app_dir: Path) -> Path | None:
     candidates = [
-        app_dir / "booth_product.txt",
         app_dir / "booth_ready" / "booth_product.txt",
+        app_dir / "booth_product.txt",
     ]
     return next((path for path in candidates if path.exists()), None)
+
+
+def read_booth_url(app_dir: Path) -> tuple[str, str, str]:
+    product_path = find_booth_product(app_dir)
+    if product_path is None:
+        return "booth_product_missing", "", ""
+    text = read_text(product_path)
+    match = re.search(r"(?ms)^# URL\s*\n(.*?)(?=\n# |\Z)", text)
+    if not match:
+        return "url_section_missing", "", str(product_path.relative_to(app_dir))
+    url = match.group(1).strip()
+    if not url:
+        return "empty", "", str(product_path.relative_to(app_dir))
+    return "set", url, str(product_path.relative_to(app_dir))
 
 
 def check_icon_build(build_text: str) -> bool:
@@ -149,18 +215,28 @@ def check_app(app_dir: Path) -> AppCheck:
     main_path = app_dir / "main.py"
     dist_dir = app_dir / "dist"
 
+    readme_has_release = False
     result.readme = readme_path.exists()
     if result.readme:
         readme_text = read_text(readme_path)
-        result.dake_meta = has_valid_dake_meta(readme_text)
+        meta, meta_error = parse_dake_meta(readme_text)
+        result.dake_meta = meta is not None
+        result.meta_error = meta_error
         readme_has_release = has_release_body(readme_text)
+        if meta is not None:
+            result.status = str(meta.get("status") or "unknown")
+            result.show_in_launcher = meta.get("show_in_launcher")
+            result.show_on_site = meta.get("show_on_site")
+            result.release_url = str(meta.get("release_url") or "")
     else:
-        readme_has_release = False
+        result.meta_error = "README.md missing"
 
     result.release_body = release_body_path.exists()
     result.screenshot = screenshot_path.exists()
     result.thumbnail = thumbnail_path.exists()
-    result.booth_product = find_booth_product(app_dir) is not None
+    product_path = find_booth_product(app_dir)
+    result.booth_product = product_path is not None
+    result.booth_url_state, result.booth_url, result.booth_product_path = read_booth_url(app_dir)
     result.booth_ready = booth_ready_dir.exists()
     result.zip_file = booth_ready_dir.exists() and any(booth_ready_dir.glob("*.zip"))
     result.build_bat = build_path.exists()
@@ -173,6 +249,14 @@ def check_app(app_dir: Path) -> AppCheck:
     if result.main_py:
         result.icon_main = check_icon_main(read_text(main_path))
 
+    if result.flag_conflict:
+        result.actions.append("fix show_in_launcher/show_on_site for non-available status")
+
+    if not result.shipping_candidate:
+        if not result.flag_conflict:
+            result.actions.append("excluded from regular shipping check")
+        return result
+
     add_action(result, result.readme, "create README.md")
     add_action(result, result.dake_meta, "add or fix DAKE_META JSON")
     if not result.release_body:
@@ -182,7 +266,7 @@ def check_app(app_dir: Path) -> AppCheck:
             result.actions.append("add RELEASE_BODY to README and generate release_body.md")
     add_action(result, result.screenshot, "need screenshot: create assets/screenshot.webp")
     add_action(result, result.thumbnail, "generate assets/booth_thumbnail.jpg with tools/make_booth_ready.py")
-    add_action(result, result.booth_product, "generate booth_product.txt with tools/make_booth_ready.py")
+    add_action(result, result.booth_product, "generate booth_ready/booth_product.txt with tools/make_booth_ready.py")
     add_action(result, result.booth_ready, "generate booth_ready/ with tools/make_booth_ready.py")
     if not result.zip_file:
         if result.dist_exe:
@@ -194,6 +278,14 @@ def check_app(app_dir: Path) -> AppCheck:
     add_action(result, result.dist_exe, "need build: create dist/*.exe")
     add_action(result, result.icon_build, "add common --icon setting to build.bat")
     add_action(result, result.icon_main, "add safe common icon setting to main.py")
+    add_action(result, result.release_ready, "fill README DAKE_META.release_url after GitHub Release")
+
+    if result.booth_url_state == "url_section_missing":
+        result.actions.append("add # URL section to booth_product.txt")
+    elif result.booth_url_state == "empty":
+        result.actions.append("fill BOOTH URL in booth_product.txt after publication")
+    elif result.booth_url_state == "booth_product_missing" and result.booth_product:
+        result.actions.append("check booth_product.txt URL field")
 
     return result
 
@@ -210,72 +302,175 @@ def yn(value: bool) -> str:
     return "OK" if value else "NG"
 
 
+def status_counts(results: list[AppCheck]) -> Counter[str]:
+    return Counter(result.status for result in results)
+
+
+def available_results(results: list[AppCheck]) -> list[AppCheck]:
+    return [result for result in results if result.shipping_candidate]
+
+
+def non_shipping_results(results: list[AppCheck]) -> list[AppCheck]:
+    return [result for result in results if not result.shipping_candidate]
+
+
+def flag_conflicts(results: list[AppCheck]) -> list[AppCheck]:
+    return [result for result in results if result.flag_conflict]
+
+
+def release_url_empty_available(results: list[AppCheck]) -> list[AppCheck]:
+    return [result for result in available_results(results) if not result.release_url]
+
+
+def site_publish_candidates(results: list[AppCheck]) -> list[AppCheck]:
+    return [
+        result
+        for result in available_results(results)
+        if result.show_on_site is True and not result.release_url
+    ]
+
+
+def booth_url_summary(results: list[AppCheck]) -> Counter[str]:
+    return Counter(result.booth_url_state for result in available_results(results))
+
+
 def write_markdown(results: list[AppCheck], missing_gitignore: list[str], path: Path) -> None:
-    checked = len(results)
-    ok_results = [result for result in results if result.ok]
-    missing_results = [result for result in results if not result.ok]
+    shipping = available_results(results)
+    closed = [result for result in shipping if result.closed_ready]
+    not_closed = [result for result in shipping if not result.closed_ready]
+    excluded = non_shipping_results(results)
+    counts = status_counts(results)
+    booth_counts = booth_url_summary(results)
+    conflicts = flag_conflicts(results)
+    release_empty = release_url_empty_available(results)
+    site_candidates = site_publish_candidates(results)
+
     lines: list[str] = [
-        "# DAKE BOOTH Ready Check",
+        "# DAKE BOOTH Ready Check v2",
         "",
         f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
         "",
         "## Summary",
         "",
-        f"- checked: {checked}",
-        f"- ok: {len(ok_results)}",
-        f"- missing: {len(missing_results)}",
-        f"- screenshot.webp missing: {sum(not r.screenshot for r in results)}",
-        f"- booth_thumbnail.jpg missing: {sum(not r.thumbnail for r in results)}",
-        f"- booth_product.txt missing: {sum(not r.booth_product for r in results)}",
-        f"- booth_ready/ missing: {sum(not r.booth_ready for r in results)}",
-        f"- zip missing: {sum(not r.zip_file for r in results)}",
-        f"- icon build missing: {sum(not r.icon_build for r in results)}",
-        f"- icon main missing: {sum(not r.icon_main for r in results)}",
+        f"- checked: {len(results)}",
+        f"- available checked: {len(shipping)}",
+        f"- closed ok: {len(closed)}",
+        f"- not closed: {len(not_closed)}",
+        f"- excluded by status: {len(excluded)}",
+        f"- release_url empty available: {len(release_empty)}",
+        f"- show flag conflicts: {len(conflicts)}",
+        f"- dakeapp.com publish candidates: {len(site_candidates)}",
         "",
-        "## Git Ignore",
+        "## Status Counts",
         "",
     ]
+    for status in ["available", "frozen", "draft", "experimental", "private", "unknown"]:
+        lines.append(f"- {status}: {counts.get(status, 0)}")
+    for status, count in sorted(counts.items()):
+        if status not in {"available", "frozen", "draft", "experimental", "private", "unknown"}:
+            lines.append(f"- {status}: {count}")
+
+    lines.extend(
+        [
+            "",
+            "## Available Asset Summary",
+            "",
+            f"- screenshot.webp missing: {sum(not r.screenshot for r in shipping)}",
+            f"- booth_thumbnail.jpg missing: {sum(not r.thumbnail for r in shipping)}",
+            f"- booth_product.txt missing: {sum(not r.booth_product for r in shipping)}",
+            f"- booth_ready/ missing: {sum(not r.booth_ready for r in shipping)}",
+            f"- zip missing: {sum(not r.zip_file for r in shipping)}",
+            f"- icon build missing: {sum(not r.icon_build for r in shipping)}",
+            f"- icon main missing: {sum(not r.icon_main for r in shipping)}",
+            "",
+            "## BOOTH URL",
+            "",
+            f"- set: {booth_counts.get('set', 0)}",
+            f"- empty: {booth_counts.get('empty', 0)}",
+            f"- url section missing: {booth_counts.get('url_section_missing', 0)}",
+            f"- booth_product missing: {booth_counts.get('booth_product_missing', 0)}",
+            "",
+            "## Git Ignore",
+            "",
+        ]
+    )
     if missing_gitignore:
         lines.extend(f"- missing: `{pattern}`" for pattern in missing_gitignore)
     else:
         lines.append("- OK")
 
+    lines.extend(["", "## Show Flag Conflicts", ""])
+    if conflicts:
+        lines.extend(
+            [
+                "| app | status | show_in_launcher | show_on_site |",
+                "| --- | --- | --- | --- |",
+            ]
+        )
+        for result in conflicts:
+            lines.append(
+                f"| {result.app} | {result.status} | {result.show_in_launcher} | {result.show_on_site} |"
+            )
+    else:
+        lines.append("- none")
+
+    lines.extend(["", "## Release URL Empty Available", ""])
+    if release_empty:
+        for result in release_empty:
+            lines.append(f"- {result.app}")
+    else:
+        lines.append("- none")
+
+    lines.extend(["", "## dakeapp.com Publish Candidates", ""])
+    if site_candidates:
+        for result in site_candidates:
+            lines.append(f"- {result.app}")
+    else:
+        lines.append("- none")
+
     lines.extend(
         [
             "",
-            "## Missing",
+            "## Not Closed Available Apps",
             "",
-            "| app | README | DAKE_META | release_body | screenshot | thumbnail | booth_product | booth_ready | zip | dist_exe | icon_build | icon_main | next_action |",
-            "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+            "| app | asset_ready | release_url | booth_url | next_action |",
+            "| --- | --- | --- | --- | --- |",
         ]
     )
-    for result in missing_results:
+    for result in not_closed:
         action = "<br>".join(result.actions) if result.actions else "-"
         lines.append(
             "| "
             + " | ".join(
                 [
                     result.app,
-                    yn(result.readme),
-                    yn(result.dake_meta),
-                    yn(result.release_body),
-                    yn(result.screenshot),
-                    yn(result.thumbnail),
-                    yn(result.booth_product),
-                    yn(result.booth_ready),
-                    yn(result.zip_file),
-                    yn(result.dist_exe),
-                    yn(result.icon_build),
-                    yn(result.icon_main),
+                    yn(result.asset_ready),
+                    yn(result.release_ready),
+                    result.booth_url_state,
                     action,
                 ]
             )
             + " |"
         )
 
-    lines.extend(["", "## OK", "", "| app | status |", "| --- | --- |"])
-    for result in ok_results:
-        lines.append(f"| {result.app} | OK |")
+    lines.extend(
+        [
+            "",
+            "## Excluded By Status",
+            "",
+            "| app | status | show_in_launcher | show_on_site | note |",
+            "| --- | --- | --- | --- | --- |",
+        ]
+    )
+    for result in excluded:
+        note = "<br>".join(result.actions) if result.actions else "excluded"
+        lines.append(
+            f"| {result.app} | {result.status} | {result.show_in_launcher} | {result.show_on_site} | {note} |"
+        )
+
+    lines.extend(["", "## Closed OK", "", "| app | status |", "| --- | --- |"])
+    for result in closed:
+        lines.append(f"| {result.app} | CLOSED |")
 
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
@@ -283,7 +478,16 @@ def write_markdown(results: list[AppCheck], missing_gitignore: list[str], path: 
 def write_csv(results: list[AppCheck], path: Path) -> None:
     fields = [
         "app",
-        "ok",
+        "status",
+        "shipping_candidate",
+        "closed_ready",
+        "asset_ready",
+        "release_url",
+        "booth_url_state",
+        "booth_url",
+        "show_in_launcher",
+        "show_on_site",
+        "flag_conflict",
         "readme",
         "dake_meta",
         "release_body",
@@ -306,7 +510,16 @@ def write_csv(results: list[AppCheck], path: Path) -> None:
             writer.writerow(
                 {
                     "app": result.app,
-                    "ok": result.ok,
+                    "status": result.status,
+                    "shipping_candidate": result.shipping_candidate,
+                    "closed_ready": result.closed_ready,
+                    "asset_ready": result.asset_ready,
+                    "release_url": result.release_url,
+                    "booth_url_state": result.booth_url_state,
+                    "booth_url": result.booth_url,
+                    "show_in_launcher": result.show_in_launcher,
+                    "show_on_site": result.show_on_site,
+                    "flag_conflict": result.flag_conflict,
                     "readme": result.readme,
                     "dake_meta": result.dake_meta,
                     "release_body": result.release_body,
@@ -326,7 +539,7 @@ def write_csv(results: list[AppCheck], path: Path) -> None:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Check DAKE BOOTH-ready assets.")
+    parser = argparse.ArgumentParser(description="Check DAKE formal shipping assets.")
     parser.add_argument("--report-dir", type=Path, default=REPORT_DIR)
     return parser.parse_args()
 
@@ -345,30 +558,58 @@ def main() -> int:
     write_markdown(results, missing_gitignore, md_path)
     write_csv(results, csv_path)
 
-    checked = len(results)
-    ok_count = sum(result.ok for result in results)
-    missing_count = checked - ok_count
-    print("DAKE BOOTH Ready Check")
-    print(f"checked: {checked}")
-    print(f"ok: {ok_count}")
-    print(f"missing: {missing_count}")
-    print(f"screenshot.webp missing: {sum(not r.screenshot for r in results)}")
-    print(f"booth_thumbnail.jpg missing: {sum(not r.thumbnail for r in results)}")
-    print(f"booth_product.txt missing: {sum(not r.booth_product for r in results)}")
-    print(f"booth_ready/ missing: {sum(not r.booth_ready for r in results)}")
-    print(f"zip missing: {sum(not r.zip_file for r in results)}")
-    print(f"icon build missing: {sum(not r.icon_build for r in results)}")
-    print(f"icon main missing: {sum(not r.icon_main for r in results)}")
+    shipping = available_results(results)
+    closed_count = sum(result.closed_ready for result in shipping)
+    not_closed_count = len(shipping) - closed_count
+    counts = status_counts(results)
+    booth_counts = booth_url_summary(results)
+    conflicts = flag_conflicts(results)
+    release_empty = release_url_empty_available(results)
+    site_candidates = site_publish_candidates(results)
+
+    print("DAKE BOOTH Ready Check v2")
+    print(f"checked: {len(results)}")
+    print("status counts:")
+    for status in ["available", "frozen", "draft", "experimental", "private", "unknown"]:
+        print(f"  {status}: {counts.get(status, 0)}")
+    print(f"available checked: {len(shipping)}")
+    print(f"closed ok: {closed_count}")
+    print(f"not closed: {not_closed_count}")
+    print(f"screenshot.webp missing: {sum(not r.screenshot for r in shipping)}")
+    print(f"booth_thumbnail.jpg missing: {sum(not r.thumbnail for r in shipping)}")
+    print(f"booth_product.txt missing: {sum(not r.booth_product for r in shipping)}")
+    print(f"booth_ready/ missing: {sum(not r.booth_ready for r in shipping)}")
+    print(f"zip missing: {sum(not r.zip_file for r in shipping)}")
+    print(f"icon build missing: {sum(not r.icon_build for r in shipping)}")
+    print(f"icon main missing: {sum(not r.icon_main for r in shipping)}")
+    print("BOOTH URL:")
+    print(f"  set: {booth_counts.get('set', 0)}")
+    print(f"  empty: {booth_counts.get('empty', 0)}")
+    print(f"  url section missing: {booth_counts.get('url_section_missing', 0)}")
+    print(f"  booth_product missing: {booth_counts.get('booth_product_missing', 0)}")
+    print(f"release_url empty available: {len(release_empty)}")
+    if release_empty:
+        print("release_url empty apps: " + ", ".join(result.app for result in release_empty))
+    print(f"show flag conflicts: {len(conflicts)}")
+    if conflicts:
+        for result in conflicts:
+            print(
+                f"- {result.app}: status={result.status}, "
+                f"show_in_launcher={result.show_in_launcher}, show_on_site={result.show_on_site}"
+            )
+    print(f"dakeapp.com publish candidates: {len(site_candidates)}")
+    if site_candidates:
+        print("dakeapp.com candidates: " + ", ".join(result.app for result in site_candidates))
     if missing_gitignore:
         print("gitignore missing: " + ", ".join(missing_gitignore))
     else:
         print("gitignore: OK")
     print(f"report: {md_path}")
     print(f"csv: {csv_path}")
-    if missing_count:
-        print("missing apps:")
-        for result in results:
-            if not result.ok:
+    if not_closed_count:
+        print("not closed available apps:")
+        for result in shipping:
+            if not result.closed_ready:
                 print(f"- {result.app}: {', '.join(result.actions)}")
     return 0
 

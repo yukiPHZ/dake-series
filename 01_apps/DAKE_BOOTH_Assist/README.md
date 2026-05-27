@@ -102,3 +102,14 @@ Chromeプロファイルは `%LOCALAPPDATA%\DakeBOOTH_Assist\chrome_profile` に
 - 開いているBOOTH編集画面へ接続して入力作業を補助
 - 最終公開は人間確認
 - Windows向けexe
+
+## v2候補
+
+- NEW / UPDATE 自動判定
+- BOOTH URL未記入検出
+- 公開ボタンは押さない方針を維持
+- 画像1枚目が booth_thumbnail.jpg か確認
+- zip選択前に中身を表示
+- 入力後スクリーンショット保存
+- BOOTH公開後のURLを booth_product.txt に戻す導線
+- frozen / draft / private / experimental を候補から除外
