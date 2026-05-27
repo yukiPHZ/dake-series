@@ -89,6 +89,7 @@ UI_TEXT = {
     "detail_assist_complete": "公開ボタンは押していません。内容を確認してください。",
     "assist_filled": "{label}: 入力しました",
     "assist_file_set": "{label}: ファイルを選択しました",
+    "assist_tags_filled": "{label}: {count}件入力",
     "assist_manual": "{label}: 手動で入力してください",
     "assist_missing_value": "{label}: 未設定のためスキップしました",
     "assist_publish_guard": "公開ボタンは押していません。内容を確認し、公開判断は人間が行ってください。",
@@ -436,7 +437,7 @@ def clean_multiline(value: str) -> str:
     return value.strip()
 
 
-def clean_tags(value: str) -> str:
+def split_tags(value: str) -> list[str]:
     tags: list[str] = []
     for raw_line in value.replace("、", ",").splitlines():
         line = re.sub(r"^\s*[-*・]\s*", "", raw_line.strip())
@@ -444,7 +445,11 @@ def clean_tags(value: str) -> str:
             tag = part.strip()
             if tag:
                 tags.append(tag)
-    return ", ".join(dict.fromkeys(tags))
+    return list(dict.fromkeys(tags))
+
+
+def clean_tags(value: str) -> str:
+    return ", ".join(split_tags(value))
 
 
 def clean_url(value: str) -> str:
@@ -656,6 +661,40 @@ def fill_first_available(page, label: str, value: str, locators: tuple[tuple[str
     return UI_TEXT["assist_manual"].format(label=label)
 
 
+def input_tags_one_by_one(page, label: str, value: str) -> str:
+    tags = split_tags(value)
+    if not tags:
+        return UI_TEXT["assist_missing_value"].format(label=label)
+
+    for kind, query in TAG_LOCATORS:
+        try:
+            locator = make_locator(page, kind, query)
+            count = locator.count()
+        except Exception:
+            continue
+        for index in range(min(count, 5)):
+            target = locator.nth(index)
+            entered_count = 0
+            for tag in tags:
+                try:
+                    try:
+                        target.fill(tag, timeout=2500)
+                    except Exception:
+                        target.click(timeout=2500)
+                        target.type(tag, delay=20, timeout=2500)
+                    target.press("Enter", timeout=2500)
+                    try:
+                        page.wait_for_timeout(180)
+                    except Exception:
+                        pass
+                    entered_count += 1
+                except Exception:
+                    continue
+            if entered_count > 0:
+                return UI_TEXT["assist_tags_filled"].format(label=label, count=entered_count)
+    return UI_TEXT["assist_manual"].format(label=label)
+
+
 def set_first_file_available(page, label: str, path: Path | None, locators: tuple[tuple[str, str], ...]) -> str:
     if path is None or not path.exists():
         return UI_TEXT["assist_missing_value"].format(label=label)
@@ -710,7 +749,7 @@ def assist_booth_form(page, product: ProductInfo) -> str:
         fill_first_available(page, UI_TEXT["field_title"], product.title, TITLE_LOCATORS),
         fill_first_available(page, UI_TEXT["field_description"], product.description, DESCRIPTION_LOCATORS),
         fill_first_available(page, UI_TEXT["field_price"], price_for_input(product.price), PRICE_LOCATORS),
-        fill_first_available(page, UI_TEXT["field_tags"], product.tags, TAG_LOCATORS),
+        input_tags_one_by_one(page, UI_TEXT["field_tags"], product.tags),
         set_first_file_available(page, UI_TEXT["field_thumbnail"], product.thumbnail_path, THUMBNAIL_FILE_LOCATORS),
         set_zip_file(page, UI_TEXT["field_zip"], product.selected_zip),
         UI_TEXT["assist_publish_guard"],
@@ -1577,6 +1616,11 @@ def run_launch_check() -> int:
     if is_booth_edit_url("https://manage.booth.pm/items/8417561"):
         raise RuntimeError("item URL without edit should not match edit fixture")
 
+    tag_sample = "Windows, 実務、ツール\n仕事効率化, 軽量, シンプル"
+    expected_tags = ["Windows", "実務", "ツール", "仕事効率化", "軽量", "シンプル"]
+    if split_tags(tag_sample) != expected_tags:
+        raise RuntimeError("tag split fixture failed")
+
     real_import = builtins.__import__
 
     def blocked_import(name, globals=None, locals=None, fromlist=(), level=0):
@@ -1598,6 +1642,7 @@ def run_launch_check() -> int:
     product_apps = sum(1 for entry in apps if entry.has_product)
     dake_backup_source = "missing"
     dake_backup_fields = "missing"
+    dake_backup_tag_count = 0
     for entry in apps:
         if entry.name == "DAKE_Backup":
             backup_info = build_product_info(entry.path)
@@ -1608,6 +1653,7 @@ def run_launch_check() -> int:
                 f"description={bool(backup_info.description)},"
                 f"tags={bool(backup_info.tags)}"
             )
+            dake_backup_tag_count = len(split_tags(backup_info.tags))
             break
 
     print(f"{APP_NAME} launch-check OK")
@@ -1616,11 +1662,12 @@ def run_launch_check() -> int:
     print(f"product_apps={product_apps}")
     print(f"dake_backup_product={dake_backup_source}")
     print(f"dake_backup_fields={dake_backup_fields}")
+    print(f"dake_backup_tag_count={dake_backup_tag_count}")
     print(f"cdp_url={CHROME_CDP_URL}")
     print(f"edit_url_hint={BOOTH_EDIT_URL_HINT}")
     print(f"chrome_path={find_chrome_executable() or 'missing'}")
     print(f"chrome_profile={get_chrome_profile_dir()}")
-    print("fixtures=missing_product, missing_ready, multiple_zip, missing_playwright_python, ready_product_lookup, root_product_priority, open_edit_url_only, bad_page_detection")
+    print("fixtures=missing_product, missing_ready, multiple_zip, missing_playwright_python, ready_product_lookup, root_product_priority, open_edit_url_only, bad_page_detection, tag_split")
     return 0
 
 

@@ -17,6 +17,7 @@ DakeBOOTHアシストは、現在開いているBOOTH編集ページへ入力補
 - 商品情報のコピー
 - ログイン済みChromeの起動補助
 - Chrome DevTools Protocol接続による入力補助
+- タグを1件ずつ入力してEnterで確定する補助
 - 画像/zipアップロード補助
 
 ## やらないこと
