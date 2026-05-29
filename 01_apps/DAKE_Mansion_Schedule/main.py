@@ -65,6 +65,8 @@ UI_TEXT = {
     "launch_check_config": "config_save_restore=OK",
     "launch_check_folder": "open_output_folder=OK",
     "launch_check_footer": "pdf_submission_footer_removed=OK",
+    "launch_check_workdays": "workdays={workdays} allocated_workdays={allocated}",
+    "launch_check_weekend_bars": "weekend_work_bars=none",
     "footer_left": "シンプルそれDAKEシリーズ",
     "footer_tagline": "止まらない、迷わない、すぐ終わる。",
     "footer_separator": " ｜ ",
@@ -180,6 +182,10 @@ def days_between(start: date, finish: date) -> list[date]:
     return days
 
 
+def workdays_between(start: date, finish: date) -> list[date]:
+    return [day for day in days_between(start, finish) if is_weekday(day)]
+
+
 def parse_date(value: str, label: str) -> date:
     try:
         parsed = datetime.strptime(value.strip(), DATE_FORMAT).date()
@@ -235,14 +241,77 @@ def open_output_folder(output_path: Path, opener=None) -> bool:
     return True
 
 
+def compressed_work_durations(available_workdays: int) -> list[int]:
+    desired = [duration for _name, duration in WORK_ITEMS]
+    minimums: list[int] = []
+    for duration in desired:
+        if duration >= 8:
+            minimums.append(6)
+        elif duration >= 6:
+            minimums.append(5)
+        else:
+            minimums.append(1)
+
+    minimum_total = sum(minimums)
+    if available_workdays < minimum_total:
+        raise ValueError(UI_TEXT["error_pdf_no_rows"])
+    if available_workdays >= sum(desired):
+        return desired
+
+    durations = minimums[:]
+    extra_days = available_workdays - minimum_total
+    priority_indexes = (
+        [index for index, duration in enumerate(desired) if duration == 2]
+        + [index for index, duration in enumerate(desired) if duration >= 8]
+        + [index for index, duration in enumerate(desired) if duration >= 6]
+    )
+    while extra_days > 0:
+        changed = False
+        for index in priority_indexes:
+            if extra_days <= 0:
+                break
+            if durations[index] < desired[index]:
+                durations[index] += 1
+                extra_days -= 1
+                changed = True
+        if not changed:
+            break
+    return durations
+
+
+def weekday_segments(start: date, finish: date, valid_days: set[date] | None = None) -> list[tuple[date, date]]:
+    candidates = [
+        day
+        for day in days_between(start, finish)
+        if is_weekday(day) and (valid_days is None or day in valid_days)
+    ]
+    if not candidates:
+        return []
+
+    segments: list[tuple[date, date]] = []
+    segment_start = candidates[0]
+    previous = candidates[0]
+    for day in candidates[1:]:
+        if (day - previous).days == 1:
+            previous = day
+            continue
+        segments.append((segment_start, previous))
+        segment_start = day
+        previous = day
+    segments.append((segment_start, previous))
+    return segments
+
+
 def build_auto_schedule(start_date: date) -> list[ScheduleRow]:
     schedule_days = days_from(start_date, TOTAL_CALENDAR_DAYS)
+    workdays = [day for day in schedule_days if is_weekday(day)]
+    durations = compressed_work_durations(len(workdays))
     rows: list[ScheduleRow] = []
     index = 0
-    for name, duration in WORK_ITEMS:
+    for (name, _template_duration), duration in zip(WORK_ITEMS, durations):
         start_index = index
-        end_index = min(index + duration - 1, len(schedule_days) - 1)
-        rows.append(ScheduleRow(name=name, start_date=schedule_days[start_index], end_date=schedule_days[end_index]))
+        end_index = min(index + duration - 1, len(workdays) - 1)
+        rows.append(ScheduleRow(name=name, start_date=workdays[start_index], end_date=workdays[end_index]))
         index += duration
     return rows
 
@@ -429,6 +498,7 @@ def draw_schedule_pdf(output_path: Path, info: ProjectInfo, rows: list[ScheduleR
     pdf.line(chart_right, chart_bottom, chart_right, chart_top)
 
     day_index = {day: index for index, day in enumerate(axis_days)}
+    valid_days = set(day_index)
     for row_index, row in enumerate(rows):
         y_top = header_bottom - row_index * row_height
         y_bottom = y_top - row_height
@@ -444,18 +514,17 @@ def draw_schedule_pdf(output_path: Path, info: ProjectInfo, rows: list[ScheduleR
         if clipped_start > clipped_end:
             continue
 
-        start_candidates = [day for day in days_between(clipped_start, clipped_end) if day in day_index]
-        if not start_candidates:
+        segments = weekday_segments(clipped_start, clipped_end, valid_days)
+        if not segments:
             continue
-        first_day = start_candidates[0]
-        last_day = start_candidates[-1]
-        bar_x = axis_left + day_index[first_day] * day_width + 1.2
-        bar_width = (day_index[last_day] - day_index[first_day] + 1) * day_width - 2.4
-        bar_height = min(13, row_height - 6)
-        bar_y = y_mid - bar_height / 2
-        pdf.setFillColor(bar_color)
-        pdf.setStrokeColor(bar_edge)
-        pdf.roundRect(bar_x, bar_y, max(2, bar_width), bar_height, 3, stroke=1, fill=1)
+        for first_day, last_day in segments:
+            bar_x = axis_left + day_index[first_day] * day_width + 1.2
+            bar_width = (day_index[last_day] - day_index[first_day] + 1) * day_width - 2.4
+            bar_height = min(13, row_height - 6)
+            bar_y = y_mid - bar_height / 2
+            pdf.setFillColor(bar_color)
+            pdf.setStrokeColor(bar_edge)
+            pdf.roundRect(bar_x, bar_y, max(2, bar_width), bar_height, 3, stroke=1, fill=1)
 
     pdf.showPage()
     pdf.save()
@@ -860,10 +929,21 @@ def run_launch_check() -> int:
     if rows[0].start_date != start_date or rows[-1].end_date != finish_date:
         raise RuntimeError("schedule range fixture failed")
     axis_days = days_between(start_date, finish_date)
+    axis_workdays = workdays_between(start_date, finish_date)
     if len(axis_days) != TOTAL_CALENDAR_DAYS:
         raise RuntimeError("calendar day fixture failed")
     if not any(not is_weekday(day) for day in axis_days):
         raise RuntimeError("weekend fixture failed")
+    if any(not is_weekday(row.start_date) or not is_weekday(row.end_date) for row in rows):
+        raise RuntimeError("schedule weekday edge fixture failed")
+    allocated_workdays = sum(len(workdays_between(row.start_date, row.end_date)) for row in rows)
+    if allocated_workdays != len(axis_workdays):
+        raise RuntimeError("compressed weekday allocation fixture failed")
+    valid_days = set(axis_days)
+    for row in rows:
+        for segment_start, segment_finish in weekday_segments(row.start_date, row.end_date, valid_days):
+            if any(not is_weekday(day) for day in days_between(segment_start, segment_finish)):
+                raise RuntimeError("weekend bar fixture failed")
 
     info = ProjectInfo(
         site_name="テストマンション101",
@@ -908,6 +988,8 @@ def run_launch_check() -> int:
         print(UI_TEXT["launch_check_pdf"].format(path=output_path))
         print(UI_TEXT["launch_check_page"])
         print(UI_TEXT["launch_check_span"].format(days=len(axis_days), start=format_date(start_date), finish=format_date(finish_date)))
+        print(UI_TEXT["launch_check_workdays"].format(workdays=len(axis_workdays), allocated=allocated_workdays))
+        print(UI_TEXT["launch_check_weekend_bars"])
         print(UI_TEXT["launch_check_config"])
         print(UI_TEXT["launch_check_folder"])
         print(UI_TEXT["launch_check_footer"])
