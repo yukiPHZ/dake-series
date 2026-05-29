@@ -117,6 +117,7 @@ build.bat
 ## RELEASE_BODY
 
 - PDF圧縮アプリ
-- ドラッグ＆ドロップ対応
-- 保存名の自動連番に対応
+- v2のしっかり圧縮
+- 別名保存・自動連番対応
+- SHIMARISU連携CLI対応
 - Windows向けexe

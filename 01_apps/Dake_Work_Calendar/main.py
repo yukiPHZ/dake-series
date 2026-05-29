@@ -105,7 +105,6 @@ DATE_FORMATS = ("%Y/%m/%d", "%Y-%m-%d", "%Y.%m.%d", "%Y%m%d")
 FOOTER_BREAKPOINT = 900
 HEADER_BREAKPOINT = 920
 DAYS_PER_ROW = 7
-MAX_ROWS_PER_PAGE = 7
 
 LINK_TARGETS = {
     "link_1": "https://sakurayk.notion.site/22ea54b5298d80928443ec7b4d20143d?pvs=74",
@@ -446,7 +445,7 @@ def generate_pdf(request: PdfRequest) -> Path:
 
     days = iter_period_days(request.start_date, request.end_date)
     weeks = iter_period_weeks(request.start_date, request.end_date)
-    chunks = [weeks[i : i + MAX_ROWS_PER_PAGE] for i in range(0, len(weeks), MAX_ROWS_PER_PAGE)]
+    week_count = max(1, len(weeks))
     holiday_map = japanese_holidays({day.year for day in days})
 
     margin_x = 44
@@ -456,7 +455,8 @@ def generate_pdf(request: PdfRequest) -> Path:
     grid_bottom = 112
     grid_width = page_width - margin_x * 2
     cell_w = grid_width / DAYS_PER_ROW
-    cell_h = (grid_top - day_header_h - grid_bottom) / MAX_ROWS_PER_PAGE
+    usable_grid_h = grid_top - day_header_h - grid_bottom
+    cell_h = usable_grid_h / week_count
 
     site = request.site_name.strip() or UI_TEXT["pdf_site_placeholder"]
     title = UI_TEXT["pdf_title_template"].format(site=site)
@@ -468,93 +468,92 @@ def generate_pdf(request: PdfRequest) -> Path:
         phone=request.phone.strip(),
     ).strip()
 
-    for _page_index, chunk in enumerate(chunks, start=1):
-        pdf.setFont(font_name, 17)
-        pdf.setFillColor(color_hex(PDF_COLORS["text"]))
-        pdf.drawString(margin_x, header_y, title)
+    pdf.setFont(font_name, 17)
+    pdf.setFillColor(color_hex(PDF_COLORS["text"]))
+    pdf.drawString(margin_x, header_y, title)
 
-        separator = UI_TEXT["pdf_field_separator"]
-        info_y = header_y - 25
-        pdf.setFont(font_name, 9.5)
-        pdf.setFillColor(color_hex(PDF_COLORS["text"]))
-        pdf.drawString(margin_x, info_y, f"{UI_TEXT['pdf_target_period']}{separator}{period_text}")
-        pdf.drawRightString(page_width - margin_x, info_y, f"{UI_TEXT['pdf_day_count']}{separator}{day_count_text}")
+    separator = UI_TEXT["pdf_field_separator"]
+    info_y = header_y - 25
+    pdf.setFont(font_name, 9.5)
+    pdf.setFillColor(color_hex(PDF_COLORS["text"]))
+    pdf.drawString(margin_x, info_y, f"{UI_TEXT['pdf_target_period']}{separator}{period_text}")
+    pdf.drawRightString(page_width - margin_x, info_y, f"{UI_TEXT['pdf_day_count']}{separator}{day_count_text}")
 
-        for col, header in enumerate(UI_TEXT["pdf_weekday_headers"]):
+    for col, header in enumerate(UI_TEXT["pdf_weekday_headers"]):
+        x = margin_x + col * cell_w
+        y = grid_top - day_header_h
+        pdf.setFillColor(color_hex("#FFFFFF"))
+        pdf.rect(x, y, cell_w, day_header_h, stroke=0, fill=1)
+        pdf.setStrokeColor(color_hex(PDF_COLORS["border"]))
+        pdf.rect(x, y, cell_w, day_header_h, stroke=1, fill=0)
+        if col == 0:
+            pdf.setFillColor(color_hex(PDF_COLORS["holiday"]))
+        elif col == 6:
+            pdf.setFillColor(color_hex(PDF_COLORS["saturday"]))
+        else:
+            pdf.setFillColor(color_hex(PDF_COLORS["text"]))
+        pdf.setFont(font_name, 9.2)
+        pdf.drawCentredString(x + cell_w / 2, y + 7, header)
+
+    for row, week in enumerate(weeks):
+        for col, day in enumerate(week):
             x = margin_x + col * cell_w
-            y = grid_top - day_header_h
-            pdf.setFillColor(color_hex("#FFFFFF"))
-            pdf.rect(x, y, cell_w, day_header_h, stroke=0, fill=1)
-            pdf.setStrokeColor(color_hex(PDF_COLORS["border"]))
-            pdf.rect(x, y, cell_w, day_header_h, stroke=1, fill=0)
-            if col == 0:
-                pdf.setFillColor(color_hex(PDF_COLORS["holiday"]))
-            elif col == 6:
-                pdf.setFillColor(color_hex(PDF_COLORS["saturday"]))
-            else:
-                pdf.setFillColor(color_hex(PDF_COLORS["text"]))
-            pdf.setFont(font_name, 9.2)
-            pdf.drawCentredString(x + cell_w / 2, y + 7, header)
-
-        for row, week in enumerate(chunk):
-            for col, day in enumerate(week):
-                x = margin_x + col * cell_w
-                y = grid_top - day_header_h - (row + 1) * cell_h
-                if day is None:
-                    pdf.setFillColor(color_hex(PDF_COLORS["subtle_bg"]))
-                    pdf.rect(x, y, cell_w, cell_h, stroke=0, fill=1)
-                    pdf.setStrokeColor(color_hex(PDF_COLORS["border"]))
-                    pdf.rect(x, y, cell_w, cell_h, stroke=1, fill=0)
-                    continue
-
-                holiday_name = holiday_map.get(day)
-                is_saturday = day.weekday() == 5
-                is_sunday = day.weekday() == 6
-
-                if holiday_name or is_sunday:
-                    fill = PDF_COLORS["holiday_bg"]
-                elif is_saturday:
-                    fill = PDF_COLORS["weekend_bg"]
-                else:
-                    fill = "#FFFFFF"
-
-                pdf.setFillColor(color_hex(fill))
+            y = grid_top - day_header_h - (row + 1) * cell_h
+            if day is None:
+                pdf.setFillColor(color_hex(PDF_COLORS["subtle_bg"]))
                 pdf.rect(x, y, cell_w, cell_h, stroke=0, fill=1)
                 pdf.setStrokeColor(color_hex(PDF_COLORS["border"]))
                 pdf.rect(x, y, cell_w, cell_h, stroke=1, fill=0)
+                continue
 
-                date_color = PDF_COLORS["text"]
-                if holiday_name or is_sunday:
-                    date_color = PDF_COLORS["holiday"]
-                elif is_saturday:
-                    date_color = PDF_COLORS["saturday"]
+            holiday_name = holiday_map.get(day)
+            is_saturday = day.weekday() == 5
+            is_sunday = day.weekday() == 6
 
-                pdf.setFillColor(color_hex(date_color))
-                pdf.setFont(font_name, 10.5)
-                text_y = y + cell_h - 17
-                pdf.drawString(x + 7, text_y, format_cell_date(day))
+            if holiday_name or is_sunday:
+                fill = PDF_COLORS["holiday_bg"]
+            elif is_saturday:
+                fill = PDF_COLORS["weekend_bg"]
+            else:
+                fill = "#FFFFFF"
 
-                text_y -= 15
-                if holiday_name:
-                    pdf.setFont(font_name, 7.2)
-                    pdf.setFillColor(color_hex(PDF_COLORS["holiday"]))
-                    pdf.drawString(x + 7, text_y, holiday_name)
-                    text_y -= 14
+            pdf.setFillColor(color_hex(fill))
+            pdf.rect(x, y, cell_w, cell_h, stroke=0, fill=1)
+            pdf.setStrokeColor(color_hex(PDF_COLORS["border"]))
+            pdf.rect(x, y, cell_w, cell_h, stroke=1, fill=0)
 
-                if day == request.end_date:
-                    pdf.setFont(font_name, 9.5)
-                    pdf.setFillColor(color_hex(PDF_COLORS["accent"]))
-                    pdf.drawString(x + 7, text_y, UI_TEXT["pdf_completion_label"])
+            date_color = PDF_COLORS["text"]
+            if holiday_name or is_sunday:
+                date_color = PDF_COLORS["holiday"]
+            elif is_saturday:
+                date_color = PDF_COLORS["saturday"]
 
-        pdf.setStrokeColor(color_hex(PDF_COLORS["border"]))
-        pdf.line(margin_x, 84, page_width - margin_x, 84)
-        pdf.setFont(font_name, 9.4)
-        pdf.setFillColor(color_hex(PDF_COLORS["text"]))
-        pdf.drawRightString(page_width - margin_x, 65, contact_text)
-        pdf.setFont(font_name, 7.4)
-        pdf.setFillColor(color_hex(PDF_COLORS["muted"]))
-        pdf.drawString(margin_x, 49, UI_TEXT["footer_left"])
-        pdf.showPage()
+            pdf.setFillColor(color_hex(date_color))
+            pdf.setFont(font_name, 10.5)
+            text_y = y + cell_h - 17
+            pdf.drawString(x + 7, text_y, format_cell_date(day))
+
+            text_y -= 15
+            if holiday_name:
+                pdf.setFont(font_name, 7.2)
+                pdf.setFillColor(color_hex(PDF_COLORS["holiday"]))
+                pdf.drawString(x + 7, text_y, holiday_name)
+                text_y -= 14
+
+            if day == request.end_date:
+                pdf.setFont(font_name, 9.5)
+                pdf.setFillColor(color_hex(PDF_COLORS["accent"]))
+                pdf.drawString(x + 7, text_y, UI_TEXT["pdf_completion_label"])
+
+    pdf.setStrokeColor(color_hex(PDF_COLORS["border"]))
+    pdf.line(margin_x, 84, page_width - margin_x, 84)
+    pdf.setFont(font_name, 9.4)
+    pdf.setFillColor(color_hex(PDF_COLORS["text"]))
+    pdf.drawRightString(page_width - margin_x, 65, contact_text)
+    pdf.setFont(font_name, 7.4)
+    pdf.setFillColor(color_hex(PDF_COLORS["muted"]))
+    pdf.drawString(margin_x, 49, UI_TEXT["footer_left"])
+    pdf.showPage()
 
     pdf.save()
     return output_path

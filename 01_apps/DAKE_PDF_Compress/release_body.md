@@ -1,7 +1,5 @@
 - PDF圧縮アプリ
-- ドラッグ＆ドロップ対応
-- 保存名の自動連番に対応
-- SHIMARISU連携用CLIモードを追加
-- `--from-shimarisu --inputs "A.pdf"` でGUIなし圧縮に対応
-- `--help-cli` でCLI仕様を表示
+- v2のしっかり圧縮
+- 別名保存・自動連番対応
+- SHIMARISU連携CLI対応
 - Windows向けexe

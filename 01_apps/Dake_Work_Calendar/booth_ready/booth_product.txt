@@ -33,4 +33,13 @@ assets/screenshot.jpg
 # 作品ファイル
 booth_ready/DakeWork_Calendar.zip
 
+# GitHub Release
+https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Work_Calendar_v1.0.0
+
+# 注意事項
+Windows向けアプリです。
+ご利用は自己責任でお願いいたします。
+大切なファイルは事前にバックアップを推奨します。
+本ソフトウェアの無断転載・再配布を禁止します。
+
 # URL
