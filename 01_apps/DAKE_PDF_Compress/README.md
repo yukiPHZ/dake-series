@@ -91,6 +91,7 @@ build.bat
 - 2026-05-14: SHIMARISU連携用CLIモードを追加し、`--help-cli`、正常圧縮、入力なし、存在しないPDFの確認を行いました。
 - 2026-05-29: v2として Ghostscript 優先のしっかり圧縮へ変更し、内蔵fallbackと圧縮効果なし判定を確認しました。
 - 2026-05-29: Ghostscript未検出環境でfallback圧縮を確認しました。実PDFは 9,723,881 bytes から 1,118,764 bytes へ圧縮され、削減率は 88.5% でした。低圧縮時の注意表示、`python -m py_compile main.py`、`build.bat`、`dist\DakePDF_Compress.exe` 起動も確認しました。
+- 2026-05-30: SHIMARISU から `dist\DakePDF_Compress.exe --from-shimarisu --inputs "対象PDF"` のv2 CLI接続を確認しました。成功時はstdoutへ保存先PDFを出し、失敗時は短いstderrと exit `1` で終了します。
 
 ## DAKE_META
 
