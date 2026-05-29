@@ -4,6 +4,7 @@ from __future__ import annotations
 import os
 import queue
 import shutil
+import subprocess
 import sys
 import tempfile
 import threading
@@ -34,7 +35,7 @@ UI_TEXT = {
     "brand_series": "シンプルそれDAKEシリーズ",
     "header_subtitle": "止まらない、迷わない、すぐ終わる。",
     "main_title": "PDFを圧縮する",
-    "main_description": "PDFを追加して、ファイルサイズを軽くします。",
+    "main_description": "PDFを追加して、画質を保ちながらしっかり軽くします。",
     "drop_title": "PDFをドロップしてください",
     "drop_subtitle": "クリックしてPDFを選ぶこともできます",
     "drop_title_selected": "PDFが追加されました",
@@ -68,7 +69,8 @@ UI_TEXT = {
     "dialog_filetype_all": "すべてのファイル",
     "message_complete": "PDFの圧縮が完了しました。",
     "message_complete_detail": "保存先フォルダを開きます。",
-    "message_low_reduction": "このPDFはあまり圧縮できませんでした。元のPDF構造上、削減幅が小さい可能性があります。",
+    "message_low_reduction": "このPDFはあまり圧縮できませんでした。すでに圧縮済み、またはPDF構造上、削減幅が小さい可能性があります。",
+    "message_fallback_used": "Ghostscriptが見つからない、またはうまく処理できなかったため、内蔵の圧縮処理で保存しました。",
     "error_not_pdf": "PDFファイルを追加してください。",
     "error_multiple_files": "PDFは1つだけ追加してください。",
     "error_read_failed": "PDFを読み込めませんでした。",
@@ -78,6 +80,8 @@ UI_TEXT = {
     "error_file_in_use": "ファイルが使用中の可能性があります。PDFを閉じてからもう一度お試しください。",
     "error_dependency_missing": "PDF処理に必要なライブラリが見つかりません。requirements.txt をインストールしてください。",
     "error_no_file": "先にPDFを追加してください。",
+    "error_no_reduction": "このPDFは圧縮効果がありませんでした。すでに圧縮済み、またはPDF構造上、削減幅が小さい可能性があります。",
+    "error_ghostscript_failed": "しっかり圧縮を実行できませんでした。内蔵の圧縮処理に切り替えます。",
     "error_unknown": "処理中に問題が発生しました。",
     "detail_suffix": "詳細: {detail}",
     "footer_left": "シンプルそれDAKEシリーズ",
@@ -117,10 +121,14 @@ COMMON_ICON_FILENAME = "dake_icon.ico"
 WINDOW_SIZE = "860x740"
 WINDOW_MIN_SIZE = (760, 720)
 QUEUE_POLL_INTERVAL_MS = 80
-LOW_REDUCTION_THRESHOLD = 1.0
+LOW_REDUCTION_THRESHOLD = 5.0
 FOOTER_NARROW_WIDTH = 900
 STATUS_ANIMATION_INTERVAL_MS = 450
 STATUS_PHRASE_DELAY_SECONDS = 1.6
+GHOSTSCRIPT_PDF_SETTINGS = "/ebook"
+GHOSTSCRIPT_LIGHTER_PDF_SETTINGS = "/screen"
+GHOSTSCRIPT_TIMEOUT_SECONDS = 300
+DEBUG_LOG_ENV = "DAKE_PDF_COMPRESS_DEBUG"
 
 CLI_HELP_TEXT = """DakePDF_Compress CLI
 Usage:
@@ -133,6 +141,7 @@ Options:
 
 Output:
   Saves next to each source PDF as *_compressed.pdf.
+  Uses Ghostscript first when available, then built-in fallback.
   Prints output PDF path on success.
 """
 
@@ -146,6 +155,7 @@ CLI_ERROR_TEXT = {
     "save_failed": "Save failed.",
     "output_missing": "Output missing.",
     "file_in_use": "File in use.",
+    "no_reduction": "No size reduction.",
     "unknown": "Compression failed.",
 }
 
@@ -164,6 +174,9 @@ class PdfResult:
     compressed_size: int
     reduction_rate: float
     low_reduction: bool
+    engine: str
+    used_fallback: bool = False
+    ghostscript_path: str | None = None
 
 
 def get_fitz() -> Any:
@@ -305,6 +318,43 @@ def unique_output_path(source_path: Path) -> Path:
         counter += 1
 
 
+def debug_log(message: str) -> None:
+    if os.environ.get(DEBUG_LOG_ENV) == "1":
+        print(f"[DakePDF_Compress] {message}")
+
+
+def make_temp_pdf_path(source_path: Path) -> Path:
+    temp_handle, temp_name = tempfile.mkstemp(
+        prefix=".dake_pdf_compress_",
+        suffix=".pdf",
+        dir=str(source_path.parent),
+    )
+    os.close(temp_handle)
+    temp_path = Path(temp_name)
+    temp_path.unlink(missing_ok=True)
+    return temp_path
+
+
+def find_ghostscript() -> Path | None:
+    for command_name in ("gswin64c.exe", "gswin32c.exe"):
+        found = shutil.which(command_name)
+        if found:
+            return Path(found)
+
+    search_roots = [
+        (Path("C:/Program Files/gs"), "gswin64c.exe"),
+        (Path("C:/Program Files (x86)/gs"), "gswin32c.exe"),
+    ]
+    for root, executable_name in search_roots:
+        if not root.exists():
+            continue
+        candidates = sorted(root.glob(f"*/bin/{executable_name}"), reverse=True)
+        for candidate in candidates:
+            if candidate.exists():
+                return candidate
+    return None
+
+
 def validate_pdf(path: Path) -> None:
     pdf_lib = get_fitz()
     if pdf_lib is None:
@@ -397,22 +447,10 @@ def verify_created_pdf(path: Path) -> None:
                 pass
 
 
-def compress_pdf(source_path: Path) -> PdfResult:
+def save_pymupdf_compressed(source_path: Path, output_path: Path) -> None:
     pdf_lib = get_fitz()
     if pdf_lib is None:
         raise CompressError("error_dependency_missing")
-
-    validate_pdf(source_path)
-    original_size = source_path.stat().st_size
-    output_path = unique_output_path(source_path)
-    temp_handle, temp_name = tempfile.mkstemp(
-        prefix=".dake_pdf_compress_",
-        suffix=".pdf",
-        dir=str(source_path.parent),
-    )
-    os.close(temp_handle)
-    temp_path = Path(temp_name)
-    temp_path.unlink(missing_ok=True)
 
     doc = None
     try:
@@ -420,7 +458,7 @@ def compress_pdf(source_path: Path) -> PdfResult:
         if getattr(doc, "needs_pass", False):
             raise CompressError("error_encrypted")
         rewrite_images_if_supported(doc)
-        save_optimized_pdf(doc, temp_path)
+        save_optimized_pdf(doc, output_path)
     except CompressError:
         raise
     except PermissionError as exc:
@@ -434,14 +472,112 @@ def compress_pdf(source_path: Path) -> PdfResult:
             except Exception:
                 pass
 
+
+def run_ghostscript_compression(
+    source_path: Path,
+    output_path: Path,
+    ghostscript_path: Path,
+    pdf_settings: str = GHOSTSCRIPT_PDF_SETTINGS,
+) -> None:
+    command = [
+        str(ghostscript_path),
+        "-sDEVICE=pdfwrite",
+        "-dCompatibilityLevel=1.4",
+        f"-dPDFSETTINGS={pdf_settings}",
+        "-dNOPAUSE",
+        "-dQUIET",
+        "-dBATCH",
+        f"-sOutputFile={output_path}",
+        str(source_path),
+    ]
+    creationflags = 0
+    if sys.platform.startswith("win") and hasattr(subprocess, "CREATE_NO_WINDOW"):
+        creationflags = subprocess.CREATE_NO_WINDOW
+
     try:
-        verify_created_pdf(temp_path)
-        compressed_size = temp_path.stat().st_size
-        if compressed_size >= original_size:
-            temp_path.unlink(missing_ok=True)
-            shutil.copy2(source_path, output_path)
-        else:
-            temp_path.replace(output_path)
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=GHOSTSCRIPT_TIMEOUT_SECONDS,
+            creationflags=creationflags,
+            check=False,
+        )
+    except PermissionError as exc:
+        raise CompressError("error_file_in_use", str(exc)) from exc
+    except subprocess.TimeoutExpired as exc:
+        raise CompressError("error_ghostscript_failed", str(exc)) from exc
+    except Exception as exc:
+        raise CompressError("error_ghostscript_failed", str(exc)) from exc
+
+    if completed.returncode != 0:
+        detail = (completed.stderr or completed.stdout or "").strip()
+        raise CompressError("error_ghostscript_failed", detail[:160] if detail else None)
+
+
+def build_pdf_result(
+    output_path: Path,
+    original_size: int,
+    engine: str,
+    used_fallback: bool,
+    ghostscript_path: Path | None,
+) -> PdfResult:
+    compressed_size = output_path.stat().st_size
+    reduction_rate = 0.0
+    if original_size > 0:
+        reduction_rate = max(0.0, (1 - (compressed_size / original_size)) * 100)
+
+    debug_log(f"engine={engine}")
+    debug_log(f"ghostscript_path={ghostscript_path if ghostscript_path else 'not_found'}")
+    debug_log(f"original_size={original_size}")
+    debug_log(f"compressed_size={compressed_size}")
+    debug_log(f"reduction_rate={reduction_rate:.1f}")
+    debug_log(f"fallback={used_fallback}")
+
+    return PdfResult(
+        output_path=output_path,
+        original_size=original_size,
+        compressed_size=compressed_size,
+        reduction_rate=reduction_rate,
+        low_reduction=reduction_rate < LOW_REDUCTION_THRESHOLD,
+        engine=engine,
+        used_fallback=used_fallback,
+        ghostscript_path=str(ghostscript_path) if ghostscript_path else None,
+    )
+
+
+def accept_smaller_pdf(
+    temp_path: Path,
+    output_path: Path,
+    original_size: int,
+) -> bool:
+    verify_created_pdf(temp_path)
+    if temp_path.stat().st_size >= original_size:
+        temp_path.unlink(missing_ok=True)
+        return False
+    temp_path.replace(output_path)
+    return True
+
+
+def compress_with_fallback(
+    source_path: Path,
+    output_path: Path,
+    original_size: int,
+    ghostscript_path: Path | None,
+    used_fallback: bool,
+) -> PdfResult:
+    temp_path = make_temp_pdf_path(source_path)
+    try:
+        save_pymupdf_compressed(source_path, temp_path)
+        if not accept_smaller_pdf(temp_path, output_path, original_size):
+            raise CompressError("error_no_reduction")
+        return build_pdf_result(
+            output_path=output_path,
+            original_size=original_size,
+            engine="pymupdf",
+            used_fallback=used_fallback,
+            ghostscript_path=ghostscript_path,
+        )
     except PermissionError as exc:
         raise CompressError("error_file_in_use", str(exc)) from exc
     except CompressError:
@@ -455,22 +591,45 @@ def compress_pdf(source_path: Path) -> PdfResult:
             except Exception:
                 pass
 
-    if not output_path.exists():
-        raise CompressError("error_output_missing")
 
-    compressed_size = output_path.stat().st_size
-    if original_size <= 0:
-        reduction_rate = 0.0
-    else:
-        reduction_rate = max(0.0, (1 - (compressed_size / original_size)) * 100)
-    low_reduction = reduction_rate < LOW_REDUCTION_THRESHOLD
+def compress_pdf(source_path: Path) -> PdfResult:
+    if get_fitz() is None:
+        raise CompressError("error_dependency_missing")
 
-    return PdfResult(
+    validate_pdf(source_path)
+    original_size = source_path.stat().st_size
+    output_path = unique_output_path(source_path)
+    ghostscript_path = find_ghostscript()
+
+    if ghostscript_path is not None:
+        temp_path = make_temp_pdf_path(source_path)
+        try:
+            run_ghostscript_compression(source_path, temp_path, ghostscript_path)
+            if accept_smaller_pdf(temp_path, output_path, original_size):
+                return build_pdf_result(
+                    output_path=output_path,
+                    original_size=original_size,
+                    engine="ghostscript",
+                    used_fallback=False,
+                    ghostscript_path=ghostscript_path,
+                )
+        except CompressError as exc:
+            debug_log(f"ghostscript_failed={exc.message_key}")
+        except Exception as exc:
+            debug_log(f"ghostscript_failed={type(exc).__name__}")
+        finally:
+            if temp_path.exists():
+                try:
+                    temp_path.unlink()
+                except Exception:
+                    pass
+
+    return compress_with_fallback(
+        source_path=source_path,
         output_path=output_path,
         original_size=original_size,
-        compressed_size=compressed_size,
-        reduction_rate=reduction_rate,
-        low_reduction=low_reduction,
+        ghostscript_path=ghostscript_path,
+        used_fallback=True,
     )
 
 
@@ -487,6 +646,7 @@ def cli_error_for_exception(exc: CompressError) -> str:
         "error_output_missing": "output_missing",
         "error_file_in_use": "file_in_use",
         "error_dependency_missing": "dependency",
+        "error_no_reduction": "no_reduction",
     }
     return CLI_ERROR_TEXT.get(mapping.get(exc.message_key, "unknown"), CLI_ERROR_TEXT["unknown"])
 
@@ -992,17 +1152,27 @@ class DakePdfCompressApp:
         self.save_name_var.set(truncate_middle(result.output_path.name, 58))
         self.save_folder_var.set(truncate_middle(str(result.output_path.parent), 70))
 
+        notices = []
+        if result.used_fallback:
+            notices.append(UI_TEXT["message_fallback_used"])
         if result.low_reduction:
-            self.notice_var.set(UI_TEXT["message_low_reduction"])
+            notices.append(UI_TEXT["message_low_reduction"])
+        self.notice_var.set("\n".join(notices))
+
+        if result.low_reduction:
             self.set_status("status_low_reduction", "warning")
-            message = f"{UI_TEXT['message_complete']}\n\n{UI_TEXT['message_low_reduction']}\n\n{UI_TEXT['message_complete_detail']}"
+            message = f"{UI_TEXT['message_complete']}\n\n{self.notice_var.get()}\n\n{UI_TEXT['message_complete_detail']}"
+            dialog = messagebox.showwarning
         else:
-            self.notice_var.set("")
             self.set_status("status_complete", "success")
-            message = f"{UI_TEXT['message_complete']}\n\n{UI_TEXT['message_complete_detail']}"
+            if self.notice_var.get():
+                message = f"{UI_TEXT['message_complete']}\n\n{self.notice_var.get()}\n\n{UI_TEXT['message_complete_detail']}"
+            else:
+                message = f"{UI_TEXT['message_complete']}\n\n{UI_TEXT['message_complete_detail']}"
+            dialog = messagebox.showinfo
 
         self.update_action_state()
-        messagebox.showinfo(UI_TEXT["dialog_complete_title"], message)
+        dialog(UI_TEXT["dialog_complete_title"], message)
         self.open_output_folder(result.output_path.parent)
 
     def handle_worker_error(self, exc: CompressError) -> None:

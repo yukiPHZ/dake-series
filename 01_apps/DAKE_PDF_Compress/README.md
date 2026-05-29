@@ -42,6 +42,16 @@ DakePDF_Compress.exe --from-shimarisu --inputs "A.pdf" "B.pdf"
 - 暗号化PDFや破損PDFは処理できない場合があります。
 - 初期実装はPDF 1件のみ対応です。
 
+## v2 しっかり圧縮
+
+- v2では Ghostscript を優先して、標準でしっかり圧縮します。
+- Ghostscript がある環境では、`/ebook` 相当の圧縮で効果が高くなります。
+- Ghostscript が見つからない場合や処理できない場合は、内蔵fallback処理を使います。
+- 圧縮後PDFが元PDFより大きい場合は完成扱いにせず、fallbackを試します。
+- fallbackでも小さくならない場合は保存せず、圧縮効果がない旨を表示します。
+- PDFの構造によっては、圧縮効果が小さい場合があります。
+- 元PDFは上書きしません。
+
 ## ビルド方法
 
 事前に依存ライブラリをインストールします。
@@ -79,6 +89,8 @@ build.bat
 - 2026-05-06: `dist\DakePDF_Compress.exe` の短時間起動確認を行い、プロセス起動後に停止できることを確認しました。
 - 2026-05-06: 共通アイコン参照、初期ウインドウサイズ、最小高さの設定を再確認しました。
 - 2026-05-14: SHIMARISU連携用CLIモードを追加し、`--help-cli`、正常圧縮、入力なし、存在しないPDFの確認を行いました。
+- 2026-05-29: v2として Ghostscript 優先のしっかり圧縮へ変更し、内蔵fallbackと圧縮効果なし判定を確認しました。
+- 2026-05-29: Ghostscript未検出環境でfallback圧縮を確認しました。実PDFは 9,723,881 bytes から 1,118,764 bytes へ圧縮され、削減率は 88.5% でした。低圧縮時の注意表示、`python -m py_compile main.py`、`build.bat`、`dist\DakePDF_Compress.exe` 起動も確認しました。
 
 ## DAKE_META
 
