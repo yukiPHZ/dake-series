@@ -73,7 +73,7 @@ build.bat
   "update_summary": "リフォーム工程をA4縦カレンダーPDFで更新・出力できる新規アプリを追加しました。",
   "folder_name": "DAKE_Reform_Progress",
   "exe_name": "DakeReform_Progress.exe",
-  "release_url": "",
+  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Reform_Progress_v1.0.0",
   "screenshot_path": "assets/screenshot.webp",
   "status": "available",
   "show_in_launcher": true,

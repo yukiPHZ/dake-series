@@ -35,7 +35,7 @@ assets/screenshot.jpg
 booth_ready/DakeReform_Progress.zip
 
 # GitHub Release
-
+https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Reform_Progress_v1.0.0
 
 # 注意事項
 Windows向けアプリです。
