@@ -72,6 +72,8 @@ UI_TEXT = {
     "launch_check_reserve": "reserve_workdays={reserve}",
     "launch_check_selectable_rows": "selectable_rows=OK",
     "launch_check_free_rows": "free_rows=OK",
+    "launch_check_output_filename": "timestamped_output_filename=OK",
+    "launch_check_checkbox_display": "checkbox_display=OK",
     "footer_left": "シンプルそれDAKEシリーズ",
     "footer_tagline": "止まらない、迷わない、すぐ終わる。",
     "footer_link_1": "戸建買取査定",
@@ -107,6 +109,8 @@ TOTAL_INITIAL_WORKDAYS = 30
 CONFIG_KEYS = ("branch_name", "person_name", "contact")
 FOOTER_COMPACT_WIDTH = 900
 FREE_WORK_ROW_COUNT = 2
+CHECK_SYMBOL_ON = "✓"
+CHECK_SYMBOL_OFF = ""
 
 LINKS = {
     "assessment": "https://sakurayk.notion.site/22ea54b5298d80928443ec7b4d20143d?pvs=74",
@@ -240,10 +244,26 @@ def format_pdf_contact(value: str) -> str:
     return re.sub(r"\s*-\s*", " - ", value.strip())
 
 
+def checkbox_symbol(selected: bool) -> str:
+    return CHECK_SYMBOL_ON if selected else CHECK_SYMBOL_OFF
+
+
 def default_save_path(site_name: str = "") -> Path:
     clean_name = re.sub(r'[<>:"/\\|?*\r\n\t]+', "_", site_name.strip())
     clean_name = clean_name.strip(" .") or "mansion_schedule"
     return get_base_dir() / f"{clean_name}_工程表.pdf"
+
+
+def timestamped_output_path(base_path: Path, now: datetime | None = None) -> Path:
+    timestamp = (now or datetime.now()).strftime("%Y%m%d%H%M")
+    suffix = base_path.suffix or ".pdf"
+    stem = base_path.stem if base_path.suffix else base_path.name
+    candidate = base_path.with_name(f"{stem}_{timestamp}{suffix}")
+    serial = 1
+    while candidate.exists():
+        candidate = base_path.with_name(f"{stem}_{timestamp}_{serial:02d}{suffix}")
+        serial += 1
+    return candidate
 
 
 def get_config_path() -> Path:
@@ -799,7 +819,7 @@ class MansionScheduleApp:
             ).grid(row=0, column=column, sticky="ew", padx=(16 if column == 0 else 0, 16 if column == 3 else 0), pady=(14, 4))
 
         for index, vars_for_row in enumerate(self.row_vars, start=1):
-            check = ttk.Checkbutton(panel, variable=vars_for_row.selected)
+            check = self._build_check_cell(panel, vars_for_row)
             name_entry = ttk.Entry(panel, textvariable=vars_for_row.name)
             start_entry = ttk.Entry(panel, textvariable=vars_for_row.start_date)
             end_entry = ttk.Entry(panel, textvariable=vars_for_row.end_date)
@@ -807,6 +827,39 @@ class MansionScheduleApp:
             name_entry.grid(row=index, column=1, sticky="ew", padx=(0, 8), pady=2)
             start_entry.grid(row=index, column=2, sticky="ew", padx=(0, 8), pady=2)
             end_entry.grid(row=index, column=3, sticky="ew", padx=(0, 16), pady=2)
+
+    def _build_check_cell(self, parent: tk.Frame, vars_for_row: ScheduleRowVars) -> tk.Label:
+        check = tk.Label(
+            parent,
+            bg=THEME["panel"],
+            fg=THEME["accent"],
+            font=(self.font_family, 10, "bold"),
+            width=2,
+            anchor="center",
+            relief="solid",
+            bd=1,
+            cursor="hand2",
+            takefocus=1,
+        )
+
+        def refresh(*_args) -> None:
+            selected = bool(vars_for_row.selected.get())
+            check.configure(
+                text=checkbox_symbol(selected),
+                bg="#EAF2FF" if selected else THEME["panel"],
+                fg=THEME["accent"] if selected else THEME["muted"],
+            )
+
+        def toggle(_event=None) -> str:
+            vars_for_row.selected.set(not bool(vars_for_row.selected.get()))
+            return "break"
+
+        check.bind("<Button-1>", toggle)
+        check.bind("<space>", toggle)
+        check.bind("<Return>", toggle)
+        vars_for_row.selected.trace_add("write", refresh)
+        refresh()
+        return check
 
     def _build_actions(self, parent: tk.Frame) -> None:
         actions = tk.Frame(parent, bg=THEME["background"])
@@ -1020,7 +1073,7 @@ class MansionScheduleApp:
         if not save_path_value:
             self._show_error(UI_TEXT["dialog_save_cancelled"])
             return
-        output_path = Path(save_path_value)
+        output_path = timestamped_output_path(Path(save_path_value))
         try:
             info = self.collect_project_info()
             rows = self.collect_schedule_rows()
@@ -1098,6 +1151,8 @@ def run_launch_check() -> int:
         raise RuntimeError("unchecked row fixture failed")
     if selected_rows[-1].name != "追加確認工事":
         raise RuntimeError("free row fixture failed")
+    if checkbox_symbol(True) != CHECK_SYMBOL_ON or checkbox_symbol(False) != CHECK_SYMBOL_OFF:
+        raise RuntimeError("checkbox display fixture failed")
 
     info = ProjectInfo(
         site_name="テストマンション101",
@@ -1110,6 +1165,15 @@ def run_launch_check() -> int:
     )
 
     with tempfile.TemporaryDirectory(dir=get_base_dir()) as temp_dir:
+        base_output_path = Path(temp_dir) / "mansion_schedule_工程表.pdf"
+        stamped_path = timestamped_output_path(base_output_path, datetime(2026, 5, 30, 7, 3))
+        if stamped_path.name != "mansion_schedule_工程表_202605300703.pdf":
+            raise RuntimeError("timestamped output filename fixture failed")
+        stamped_path.write_bytes(b"existing")
+        next_stamped_path = timestamped_output_path(base_output_path, datetime(2026, 5, 30, 7, 3))
+        if next_stamped_path.name != "mansion_schedule_工程表_202605300703_01.pdf":
+            raise RuntimeError("timestamped output serial fixture failed")
+
         output_path = Path(temp_dir) / PDF_FILE_NAME
         draw_schedule_pdf(output_path, info, rows)
         draw_schedule_pdf(Path(temp_dir) / "selected_" / PDF_FILE_NAME, info, selected_rows)
@@ -1148,6 +1212,8 @@ def run_launch_check() -> int:
         print(UI_TEXT["launch_check_weekend_bars"])
         print(UI_TEXT["launch_check_selectable_rows"])
         print(UI_TEXT["launch_check_free_rows"])
+        print(UI_TEXT["launch_check_checkbox_display"])
+        print(UI_TEXT["launch_check_output_filename"])
         print(UI_TEXT["launch_check_config"])
         print(UI_TEXT["launch_check_folder"])
         print(UI_TEXT["launch_check_footer"])
