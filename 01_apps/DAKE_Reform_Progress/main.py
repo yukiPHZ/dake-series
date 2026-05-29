@@ -164,7 +164,7 @@ WORK_TEMPLATES: tuple[tuple[str, int], ...] = (
 )
 FREE_WORK_COUNT = 3
 DAYS_PER_ROW = 7
-FOOTER_COMPACT_WIDTH = 920
+FOOTER_COMPACT_WIDTH = 1280
 LINKS = {
     "assessment": "https://sakurayk.notion.site/22ea54b5298d80928443ec7b4d20143d?pvs=74",
     "instagram": "https://www.instagram.com/kikuta.shimarisu_fudosan",
