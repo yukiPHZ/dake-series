@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
+import json
+import os
 import re
 import sys
 import tempfile
@@ -37,15 +39,16 @@ UI_TEXT = {
     "status_ready": "入力してPDFを作成できます。",
     "status_auto_done": "日程を自動入力しました。",
     "status_pdf_done": "PDFを作成しました: {path}",
+    "status_pdf_done_folder_open_failed": "PDFを作成しました。保存フォルダは手動で確認してください: {path}",
     "status_error": "入力内容を確認してください。",
     "dialog_error_title": "確認してください",
     "dialog_done_title": "PDFを作成しました",
-    "dialog_done_message": "工程表PDFを作成しました。\n\n{path}",
+    "dialog_done_message": "工程表PDFを作成しました。\n保存先フォルダを確認してください。\n\n{path}",
     "dialog_save_cancelled": "保存先が選ばれていません。",
     "error_date_format": "{label}は YYYY-MM-DD 形式で入力してください。",
     "error_date_order": "{start_label}は{end_label}以前の日付にしてください。",
     "error_missing_reportlab": "PDF作成に必要な reportlab が見つかりません。\nrequirements.txt の内容をインストールしてください。",
-    "error_pdf_no_rows": "工程表の日付範囲に表示できる平日がありません。",
+    "error_pdf_no_rows": "工程表の日付範囲に表示できる日付がありません。",
     "pdf_title": "工事工程表",
     "pdf_site_name": "現場名",
     "pdf_branch_name": "会社支店名",
@@ -53,12 +56,18 @@ UI_TEXT = {
     "pdf_contact": "連絡先",
     "pdf_period": "工期",
     "pdf_work_name": "工事項目",
-    "pdf_note": "本工程表は、マンション管理会社への提出・申請補助を目的とした参考工程表です。実際の施工工程・管理規約・申請条件に応じて、施工会社・管理会社へ確認してください。",
+    "pdf_month_format": "{year}年{month}月",
+    "pdf_weekdays": "月火水木金土日",
     "launch_check_ok": "Dakeマンション工程表 launch-check OK",
     "launch_check_pdf": "pdf={path}",
     "launch_check_page": "a3_landscape_one_page=OK",
+    "launch_check_span": "calendar_days={days} start={start} finish={finish}",
+    "launch_check_config": "config_save_restore=OK",
+    "launch_check_folder": "open_output_folder=OK",
+    "launch_check_footer": "pdf_submission_footer_removed=OK",
     "footer_left": "シンプルそれDAKEシリーズ",
-    "footer_separator": " / ",
+    "footer_tagline": "止まらない、迷わない、すぐ終わる。",
+    "footer_separator": " ｜ ",
     "footer_note": "提出用工程表だけを作成します。",
     "footer_copyright": COPYRIGHT,
 }
@@ -82,7 +91,9 @@ WINDOW_SIZE = "1040x760"
 WINDOW_MIN_SIZE = (940, 680)
 DATE_FORMAT = "%Y-%m-%d"
 PDF_FILE_NAME = "mansion_schedule.pdf"
-TOTAL_WORKDAYS = 45
+CONFIG_FILE_NAME = "mansion_schedule_config.json"
+TOTAL_CALENDAR_DAYS = 45
+CONFIG_KEYS = ("branch_name", "person_name", "contact")
 
 WORK_ITEMS: tuple[tuple[str, int], ...] = (
     ("養生", 1),
@@ -156,41 +167,15 @@ def is_weekday(value: date) -> bool:
     return value.weekday() < 5
 
 
-def next_weekday(value: date) -> date:
-    current = value
-    while not is_weekday(current):
-        current += timedelta(days=1)
-    return current
+def days_from(start: date, count: int) -> list[date]:
+    return [start + timedelta(days=index) for index in range(max(0, count))]
 
 
-def add_workdays(start: date, workdays: int) -> date:
-    if workdays <= 1:
-        return next_weekday(start)
-    current = next_weekday(start)
-    remaining = workdays - 1
-    while remaining > 0:
-        current += timedelta(days=1)
-        if is_weekday(current):
-            remaining -= 1
-    return current
-
-
-def weekdays_from(start: date, count: int) -> list[date]:
-    days: list[date] = []
-    current = next_weekday(start)
-    while len(days) < count:
-        if is_weekday(current):
-            days.append(current)
-        current += timedelta(days=1)
-    return days
-
-
-def weekdays_between(start: date, finish: date) -> list[date]:
+def days_between(start: date, finish: date) -> list[date]:
     days: list[date] = []
     current = start
     while current <= finish:
-        if is_weekday(current):
-            days.append(current)
+        days.append(current)
         current += timedelta(days=1)
     return days
 
@@ -213,21 +198,58 @@ def default_save_path(site_name: str = "") -> Path:
     return get_base_dir() / f"{clean_name}_工程表.pdf"
 
 
+def get_config_path() -> Path:
+    return get_base_dir() / CONFIG_FILE_NAME
+
+
+def load_config(config_path: Path | None = None) -> dict[str, str]:
+    path = config_path or get_config_path()
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    return {key: value for key in CONFIG_KEYS if isinstance((value := data.get(key)), str)}
+
+
+def save_config(values: dict[str, str], config_path: Path | None = None) -> bool:
+    path = config_path or get_config_path()
+    data = {key: values.get(key, "").strip() for key in CONFIG_KEYS}
+    try:
+        path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    except OSError:
+        return False
+    return True
+
+
+def open_output_folder(output_path: Path, opener=None) -> bool:
+    folder = output_path.parent.resolve()
+    startfile = opener or getattr(os, "startfile", None)
+    if startfile is None:
+        return False
+    try:
+        startfile(str(folder))
+    except OSError:
+        return False
+    return True
+
+
 def build_auto_schedule(start_date: date) -> list[ScheduleRow]:
-    workdays = weekdays_from(start_date, TOTAL_WORKDAYS)
+    schedule_days = days_from(start_date, TOTAL_CALENDAR_DAYS)
     rows: list[ScheduleRow] = []
     index = 0
     for name, duration in WORK_ITEMS:
         start_index = index
-        end_index = min(index + duration - 1, len(workdays) - 1)
-        rows.append(ScheduleRow(name=name, start_date=workdays[start_index], end_date=workdays[end_index]))
+        end_index = min(index + duration - 1, len(schedule_days) - 1)
+        rows.append(ScheduleRow(name=name, start_date=schedule_days[start_index], end_date=schedule_days[end_index]))
         index += duration
     return rows
 
 
 def build_project_from_handover(handover_date: date) -> tuple[date, date, list[ScheduleRow]]:
-    start_date = next_weekday(handover_date + timedelta(days=3))
-    finish_date = add_workdays(start_date, TOTAL_WORKDAYS)
+    start_date = handover_date + timedelta(days=3)
+    finish_date = start_date + timedelta(days=TOTAL_CALENDAR_DAYS - 1)
     return start_date, finish_date, build_auto_schedule(start_date)
 
 
@@ -314,13 +336,13 @@ def draw_schedule_pdf(output_path: Path, info: ProjectInfo, rows: list[ScheduleR
 
     draw_pdf_header(pdf, info, font_name, bold_font, width, height)
 
-    axis_days = weekdays_between(info.start_date, info.finish_date)
+    axis_days = days_between(info.start_date, info.finish_date)
     if not axis_days:
         raise ValueError(UI_TEXT["error_pdf_no_rows"])
 
     margin_x = 28
     chart_top = height - 118
-    chart_bottom = 60
+    chart_bottom = 32
     chart_left = margin_x
     chart_right = width - margin_x
     label_width = 158
@@ -337,10 +359,13 @@ def draw_schedule_pdf(output_path: Path, info: ProjectInfo, rows: list[ScheduleR
     grid = colors.HexColor("#ECF0F5")
     header_bg = colors.HexColor("#F2F5F9")
     month_bg = colors.HexColor("#EAF2FF")
+    weekend_bg = colors.HexColor("#F8FAFD")
     bar_color = colors.HexColor("#9CC6F4")
     bar_edge = colors.HexColor("#5E9DE1")
     text = colors.HexColor("#1E2430")
     muted = colors.HexColor("#667085")
+    month_text = colors.HexColor("#334155")
+    weekend_text = colors.HexColor("#7B8797")
 
     pdf.setStrokeColor(border)
     pdf.setLineWidth(0.8)
@@ -354,22 +379,30 @@ def draw_schedule_pdf(output_path: Path, info: ProjectInfo, rows: list[ScheduleR
     pdf.drawString(chart_left + 8, header_bottom + 14, UI_TEXT["pdf_work_name"])
 
     month_start = 0
-    current_month = axis_days[0].strftime("%Y/%m")
+    current_month = (axis_days[0].year, axis_days[0].month)
     for index, day in enumerate(axis_days + [axis_days[-1] + timedelta(days=35)]):
-        month = day.strftime("%Y/%m")
+        month = (day.year, day.month)
         if month == current_month and index < len(axis_days):
             continue
         x = axis_left + month_start * day_width
         month_width = (index - month_start) * day_width
         pdf.setFillColor(month_bg)
         pdf.rect(x, chart_top - month_height, month_width, month_height, stroke=0, fill=1)
-        pdf.setFillColor(text)
-        pdf.setFont(bold_font, 7)
-        pdf.drawCentredString(x + month_width / 2, chart_top - 13, current_month)
+        pdf.setFillColor(month_text)
+        pdf.setFont(bold_font, 8)
+        month_label = UI_TEXT["pdf_month_format"].format(year=current_month[0], month=current_month[1])
+        pdf.drawCentredString(x + month_width / 2, chart_top - 13, month_label)
         pdf.setStrokeColor(border)
         pdf.line(x, chart_bottom, x, chart_top)
         month_start = index
         current_month = month
+
+    for index, day in enumerate(axis_days):
+        if is_weekday(day):
+            continue
+        x = axis_left + index * day_width
+        pdf.setFillColor(weekend_bg)
+        pdf.rect(x, chart_bottom, day_width, chart_top - chart_bottom - month_height, stroke=0, fill=1)
 
     pdf.setStrokeColor(border)
     pdf.line(axis_left, chart_bottom, axis_left, chart_top)
@@ -377,7 +410,7 @@ def draw_schedule_pdf(output_path: Path, info: ProjectInfo, rows: list[ScheduleR
     pdf.line(axis_left, chart_top - month_height, chart_right, chart_top - month_height)
     pdf.line(chart_left, chart_top - month_height - date_height, chart_right, chart_top - month_height - date_height)
 
-    pdf.setFillColor(muted)
+    weekday_labels = UI_TEXT["pdf_weekdays"]
     for index, day in enumerate(axis_days):
         x = axis_left + index * day_width
         if index % 5 == 0:
@@ -387,10 +420,11 @@ def draw_schedule_pdf(output_path: Path, info: ProjectInfo, rows: list[ScheduleR
             pdf.setStrokeColor(grid)
             pdf.setLineWidth(0.25)
         pdf.line(x, chart_bottom, x, chart_top - month_height)
+        pdf.setFillColor(weekend_text if not is_weekday(day) else muted)
         pdf.setFont(font_name, 5.5)
         pdf.drawCentredString(x + day_width / 2, header_bottom + 14, f"{day.month}/{day.day}")
         pdf.setFont(font_name, 4.8)
-        pdf.drawCentredString(x + day_width / 2, header_bottom + 5, "月火水木金"[day.weekday()])
+        pdf.drawCentredString(x + day_width / 2, header_bottom + 5, weekday_labels[day.weekday()])
     pdf.setStrokeColor(border)
     pdf.line(chart_right, chart_bottom, chart_right, chart_top)
 
@@ -410,7 +444,7 @@ def draw_schedule_pdf(output_path: Path, info: ProjectInfo, rows: list[ScheduleR
         if clipped_start > clipped_end:
             continue
 
-        start_candidates = [day for day in weekdays_between(clipped_start, clipped_end) if day in day_index]
+        start_candidates = [day for day in days_between(clipped_start, clipped_end) if day in day_index]
         if not start_candidates:
             continue
         first_day = start_candidates[0]
@@ -423,11 +457,6 @@ def draw_schedule_pdf(output_path: Path, info: ProjectInfo, rows: list[ScheduleR
         pdf.setStrokeColor(bar_edge)
         pdf.roundRect(bar_x, bar_y, max(2, bar_width), bar_height, 3, stroke=1, fill=1)
 
-    pdf.setFillColor(muted)
-    pdf.setFont(font_name, 7)
-    pdf.drawString(margin_x, 34, UI_TEXT["pdf_note"])
-    pdf.setFont(font_name, 6.5)
-    pdf.drawRightString(width - margin_x, 34, COPYRIGHT)
     pdf.showPage()
     pdf.save()
 
@@ -458,11 +487,12 @@ class MansionScheduleApp:
 
         today = date.today()
         start_date, finish_date, rows = build_project_from_handover(today)
+        saved_config = load_config()
         self.project_vars = {
             "site_name": tk.StringVar(value=""),
-            "branch_name": tk.StringVar(value=""),
-            "person_name": tk.StringVar(value=""),
-            "contact": tk.StringVar(value=""),
+            "branch_name": tk.StringVar(value=saved_config.get("branch_name", "")),
+            "person_name": tk.StringVar(value=saved_config.get("person_name", "")),
+            "contact": tk.StringVar(value=saved_config.get("contact", "")),
             "handover_date": tk.StringVar(value=format_date(today)),
             "start_date": tk.StringVar(value=format_date(start_date)),
             "finish_date": tk.StringVar(value=format_date(finish_date)),
@@ -658,15 +688,24 @@ class MansionScheduleApp:
     def _build_footer(self, parent: tk.Frame) -> None:
         footer = tk.Frame(parent, bg=THEME["background"])
         footer.pack(fill="x", pady=(12, 0))
-        footer_text = UI_TEXT["footer_left"] + UI_TEXT["footer_separator"] + UI_TEXT["footer_note"] + UI_TEXT["footer_separator"] + UI_TEXT["footer_copyright"]
+        footer_line_1 = UI_TEXT["footer_left"] + UI_TEXT["footer_separator"] + UI_TEXT["footer_tagline"]
+        footer_line_2 = UI_TEXT["footer_note"] + UI_TEXT["footer_separator"] + UI_TEXT["footer_copyright"]
         tk.Label(
             footer,
-            text=footer_text,
+            text=footer_line_1,
             bg=THEME["background"],
             fg=THEME["muted"],
             font=(self.font_family, 8),
             anchor="w",
         ).pack(fill="x")
+        tk.Label(
+            footer,
+            text=footer_line_2,
+            bg=THEME["background"],
+            fg=THEME["muted"],
+            font=(self.font_family, 8),
+            anchor="w",
+        ).pack(fill="x", pady=(2, 0))
 
     def _panel(self, parent: tk.Frame) -> tk.Frame:
         return tk.Frame(
@@ -788,7 +827,18 @@ class MansionScheduleApp:
             self._show_error(str(exc))
             return
 
-        self._set_status(UI_TEXT["status_pdf_done"].format(path=output_path), success=True)
+        save_config(
+            {
+                "branch_name": self.project_vars["branch_name"].get(),
+                "person_name": self.project_vars["person_name"].get(),
+                "contact": self.project_vars["contact"].get(),
+            }
+        )
+        folder_opened = open_output_folder(output_path)
+        if folder_opened:
+            self._set_status(UI_TEXT["status_pdf_done"].format(path=output_path), success=True)
+        else:
+            self._set_status(UI_TEXT["status_pdf_done_folder_open_failed"].format(path=output_path), success=True)
         messagebox.showinfo(UI_TEXT["dialog_done_title"], UI_TEXT["dialog_done_message"].format(path=output_path))
 
     def _show_error(self, message: str) -> None:
@@ -797,18 +847,23 @@ class MansionScheduleApp:
 
 
 def run_launch_check() -> int:
-    handover_date = date(2026, 6, 1)
+    handover_date = date(2026, 5, 29)
     start_date, finish_date, rows = build_project_from_handover(handover_date)
-    if start_date != date(2026, 6, 4):
+    if start_date != date(2026, 6, 1):
         raise RuntimeError("start date fixture failed")
+    if finish_date != date(2026, 7, 15):
+        raise RuntimeError("finish date fixture failed")
     if len(rows) != len(WORK_ITEMS):
         raise RuntimeError("work item fixture failed")
-    if sum(duration for _name, duration in WORK_ITEMS) != TOTAL_WORKDAYS:
+    if sum(duration for _name, duration in WORK_ITEMS) != TOTAL_CALENDAR_DAYS:
         raise RuntimeError("duration fixture failed")
     if rows[0].start_date != start_date or rows[-1].end_date != finish_date:
         raise RuntimeError("schedule range fixture failed")
-    if any(not is_weekday(row.start_date) or not is_weekday(row.end_date) for row in rows):
-        raise RuntimeError("weekday fixture failed")
+    axis_days = days_between(start_date, finish_date)
+    if len(axis_days) != TOTAL_CALENDAR_DAYS:
+        raise RuntimeError("calendar day fixture failed")
+    if not any(not is_weekday(day) for day in axis_days):
+        raise RuntimeError("weekend fixture failed")
 
     info = ProjectInfo(
         site_name="テストマンション101",
@@ -824,9 +879,38 @@ def run_launch_check() -> int:
         output_path = Path(temp_dir) / PDF_FILE_NAME
         draw_schedule_pdf(output_path, info, rows)
         validate_pdf_a3_landscape_one_page(output_path)
+        content = output_path.read_bytes()
+        for forbidden in (b"Vibe-Coded", b"Yukihiko", b"pdf_note"):
+            if forbidden in content:
+                raise RuntimeError("submission footer fixture failed")
+
+        config_path = Path(temp_dir) / CONFIG_FILE_NAME
+        saved_values = {
+            "branch_name": "テスト支店",
+            "person_name": "山田太郎",
+            "contact": "03-0000-0000",
+        }
+        if not save_config(saved_values, config_path):
+            raise RuntimeError("config save fixture failed")
+        if load_config(config_path) != saved_values:
+            raise RuntimeError("config restore fixture failed")
+        config_path.write_text("{", encoding="utf-8")
+        if load_config(config_path):
+            raise RuntimeError("broken config fixture failed")
+
+        opened: list[str] = []
+        if not open_output_folder(output_path, opener=opened.append):
+            raise RuntimeError("open output folder fixture failed")
+        if not opened or Path(opened[0]) != output_path.parent.resolve():
+            raise RuntimeError("open output folder path fixture failed")
+
         print(UI_TEXT["launch_check_ok"])
         print(UI_TEXT["launch_check_pdf"].format(path=output_path))
         print(UI_TEXT["launch_check_page"])
+        print(UI_TEXT["launch_check_span"].format(days=len(axis_days), start=format_date(start_date), finish=format_date(finish_date)))
+        print(UI_TEXT["launch_check_config"])
+        print(UI_TEXT["launch_check_folder"])
+        print(UI_TEXT["launch_check_footer"])
     return 0
 
 
