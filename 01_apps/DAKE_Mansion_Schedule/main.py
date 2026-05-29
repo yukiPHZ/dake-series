@@ -67,6 +67,7 @@ UI_TEXT = {
     "launch_check_footer": "pdf_submission_footer_removed=OK",
     "launch_check_workdays": "workdays={workdays} allocated_workdays={allocated}",
     "launch_check_weekend_bars": "weekend_work_bars=none",
+    "launch_check_reserve": "reserve_workdays={reserve}",
     "footer_left": "シンプルそれDAKEシリーズ",
     "footer_tagline": "止まらない、迷わない、すぐ終わる。",
     "footer_separator": " ｜ ",
@@ -95,27 +96,36 @@ DATE_FORMAT = "%Y-%m-%d"
 PDF_FILE_NAME = "mansion_schedule.pdf"
 CONFIG_FILE_NAME = "mansion_schedule_config.json"
 TOTAL_CALENDAR_DAYS = 45
+TOTAL_INITIAL_WORKDAYS = 28
 CONFIG_KEYS = ("branch_name", "person_name", "contact")
 
 WORK_ITEMS: tuple[tuple[str, int], ...] = (
     ("養生", 1),
     ("残置物撤去", 2),
-    ("電気工事", 2),
+    ("電気工事", 1),
     ("水道設備解体", 2),
-    ("建具工事", 2),
+    ("建具工事", 1),
     ("畳工事", 1),
-    ("木工事", 8),
-    ("ユニットバス設置工事", 2),
-    ("システムキッチン設置工事", 2),
-    ("木工事", 8),
-    ("クロス工事", 6),
-    ("建具工事", 2),
+    ("木工事", 5),
+    ("ユニットバス設置工事", 1),
+    ("システムキッチン設置工事", 1),
+    ("木工事", 1),
+    ("クロス工事", 5),
+    ("建具工事", 1),
     ("サッシ工事", 1),
     ("畳工事", 1),
-    ("電気工事", 2),
-    ("水道設備設置工事", 2),
-    ("ハウスクリーニング", 1),
+    ("電気工事", 1),
+    ("水道設備設置工事", 1),
+    ("ハウスクリーニング", 2),
 )
+
+RESERVE_GAP_ANCHORS_BY_COUNT = {
+    1: (10,),
+    2: (8, 16),
+    3: (6, 10, 16),
+    4: (6, 8, 12, 16),
+    5: (6, 8, 10, 12, 16),
+}
 
 
 @dataclass(frozen=True)
@@ -279,6 +289,19 @@ def compressed_work_durations(available_workdays: int) -> list[int]:
     return durations
 
 
+def reserve_gap_after_rows(reserve_workdays: int) -> dict[int, int]:
+    if reserve_workdays <= 0:
+        return {}
+
+    anchor_count = min(reserve_workdays, max(RESERVE_GAP_ANCHORS_BY_COUNT))
+    anchors = RESERVE_GAP_ANCHORS_BY_COUNT[anchor_count]
+    gaps: dict[int, int] = {}
+    for index in range(reserve_workdays):
+        row_number = anchors[index % len(anchors)]
+        gaps[row_number] = gaps.get(row_number, 0) + 1
+    return gaps
+
+
 def weekday_segments(start: date, finish: date, valid_days: set[date] | None = None) -> list[tuple[date, date]]:
     candidates = [
         day
@@ -306,13 +329,15 @@ def build_auto_schedule(start_date: date) -> list[ScheduleRow]:
     schedule_days = days_from(start_date, TOTAL_CALENDAR_DAYS)
     workdays = [day for day in schedule_days if is_weekday(day)]
     durations = compressed_work_durations(len(workdays))
+    reserve_workdays = max(0, len(workdays) - sum(durations))
+    gap_after_rows = reserve_gap_after_rows(reserve_workdays)
     rows: list[ScheduleRow] = []
     index = 0
-    for (name, _template_duration), duration in zip(WORK_ITEMS, durations):
+    for row_number, ((name, _template_duration), duration) in enumerate(zip(WORK_ITEMS, durations), start=1):
         start_index = index
         end_index = min(index + duration - 1, len(workdays) - 1)
         rows.append(ScheduleRow(name=name, start_date=workdays[start_index], end_date=workdays[end_index]))
-        index += duration
+        index += duration + gap_after_rows.get(row_number, 0)
     return rows
 
 
@@ -924,7 +949,7 @@ def run_launch_check() -> int:
         raise RuntimeError("finish date fixture failed")
     if len(rows) != len(WORK_ITEMS):
         raise RuntimeError("work item fixture failed")
-    if sum(duration for _name, duration in WORK_ITEMS) != TOTAL_CALENDAR_DAYS:
+    if sum(duration for _name, duration in WORK_ITEMS) != TOTAL_INITIAL_WORKDAYS:
         raise RuntimeError("duration fixture failed")
     if rows[0].start_date != start_date or rows[-1].end_date != finish_date:
         raise RuntimeError("schedule range fixture failed")
@@ -937,8 +962,11 @@ def run_launch_check() -> int:
     if any(not is_weekday(row.start_date) or not is_weekday(row.end_date) for row in rows):
         raise RuntimeError("schedule weekday edge fixture failed")
     allocated_workdays = sum(len(workdays_between(row.start_date, row.end_date)) for row in rows)
-    if allocated_workdays != len(axis_workdays):
-        raise RuntimeError("compressed weekday allocation fixture failed")
+    if allocated_workdays != TOTAL_INITIAL_WORKDAYS:
+        raise RuntimeError("initial weekday allocation fixture failed")
+    reserve_workdays = len(axis_workdays) - allocated_workdays
+    if reserve_workdays < 0:
+        raise RuntimeError("reserve weekday fixture failed")
     valid_days = set(axis_days)
     for row in rows:
         for segment_start, segment_finish in weekday_segments(row.start_date, row.end_date, valid_days):
@@ -989,6 +1017,7 @@ def run_launch_check() -> int:
         print(UI_TEXT["launch_check_page"])
         print(UI_TEXT["launch_check_span"].format(days=len(axis_days), start=format_date(start_date), finish=format_date(finish_date)))
         print(UI_TEXT["launch_check_workdays"].format(workdays=len(axis_workdays), allocated=allocated_workdays))
+        print(UI_TEXT["launch_check_reserve"].format(reserve=reserve_workdays))
         print(UI_TEXT["launch_check_weekend_bars"])
         print(UI_TEXT["launch_check_config"])
         print(UI_TEXT["launch_check_folder"])
