@@ -35,7 +35,7 @@ assets/screenshot.jpg
 booth_ready/DakeMansion_Schedule.zip
 
 # GitHub Release
-
+https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mansion_Schedule_v1.0.0
 
 # 注意事項
 Windows向けアプリです。
