@@ -7,6 +7,7 @@ import re
 import sys
 import tempfile
 import tkinter as tk
+import webbrowser
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -70,8 +71,9 @@ UI_TEXT = {
     "launch_check_reserve": "reserve_workdays={reserve}",
     "footer_left": "シンプルそれDAKEシリーズ",
     "footer_tagline": "止まらない、迷わない、すぐ終わる。",
+    "footer_link_1": "戸建買取査定",
+    "footer_link_2": "Instagram",
     "footer_separator": " ｜ ",
-    "footer_note": "提出用工程表だけを作成します。",
     "footer_copyright": COPYRIGHT,
 }
 
@@ -88,16 +90,24 @@ THEME = {
     "success_bg": "#EAFBF3",
     "error": "#C92A2A",
     "error_bg": "#FDECEC",
+    "link": "#58677D",
+    "link_hover": "#2F6FED",
 }
 
 WINDOW_SIZE = "1040x760"
-WINDOW_MIN_SIZE = (940, 680)
+WINDOW_MIN_SIZE = (820, 680)
 DATE_FORMAT = "%Y-%m-%d"
 PDF_FILE_NAME = "mansion_schedule.pdf"
 CONFIG_FILE_NAME = "mansion_schedule_config.json"
 TOTAL_CALENDAR_DAYS = 45
 TOTAL_INITIAL_WORKDAYS = 28
 CONFIG_KEYS = ("branch_name", "person_name", "contact")
+FOOTER_COMPACT_WIDTH = 900
+
+LINKS = {
+    "assessment": "https://sakurayk.notion.site/22ea54b5298d80928443ec7b4d20143d?pvs=74",
+    "instagram": "https://www.instagram.com/kikuta.shimarisu_fudosan",
+}
 
 WORK_ITEMS: tuple[tuple[str, int], ...] = (
     ("養生", 1),
@@ -602,6 +612,7 @@ class MansionScheduleApp:
                 }
             )
         self.status_var = tk.StringVar(value=UI_TEXT["status_ready"])
+        self.footer_compact: bool | None = None
 
         self._apply_window_icon()
         self._build_styles()
@@ -780,26 +791,63 @@ class MansionScheduleApp:
         self.status_badge.pack(side="left")
 
     def _build_footer(self, parent: tk.Frame) -> None:
-        footer = tk.Frame(parent, bg=THEME["background"])
-        footer.pack(fill="x", pady=(12, 0))
-        footer_line_1 = UI_TEXT["footer_left"] + UI_TEXT["footer_separator"] + UI_TEXT["footer_tagline"]
-        footer_line_2 = UI_TEXT["footer_note"] + UI_TEXT["footer_separator"] + UI_TEXT["footer_copyright"]
-        tk.Label(
-            footer,
-            text=footer_line_1,
+        self.footer = tk.Frame(parent, bg=THEME["background"])
+        self.footer.pack(fill="x", pady=(12, 0))
+
+        self.footer_left = tk.Frame(self.footer, bg=THEME["background"])
+        self._make_footer_text(self.footer_left, UI_TEXT["footer_left"])
+        self._make_footer_text(self.footer_left, UI_TEXT["footer_separator"])
+        self._make_footer_text(self.footer_left, UI_TEXT["footer_tagline"])
+
+        self.footer_right = tk.Frame(self.footer, bg=THEME["background"])
+        self._make_footer_link(self.footer_right, UI_TEXT["footer_link_1"], LINKS["assessment"])
+        self._make_footer_text(self.footer_right, UI_TEXT["footer_separator"])
+        self._make_footer_link(self.footer_right, UI_TEXT["footer_link_2"], LINKS["instagram"])
+        self._make_footer_text(self.footer_right, UI_TEXT["footer_separator"])
+        self._make_footer_text(self.footer_right, UI_TEXT["footer_copyright"])
+
+        self.root.bind("<Configure>", self._update_footer_layout, add="+")
+        self._update_footer_layout()
+
+    def _make_footer_link(self, parent: tk.Frame, label: str, url: str) -> None:
+        link = tk.Label(
+            parent,
+            text=label,
+            bg=THEME["background"],
+            fg=THEME["link"],
+            font=(self.font_family, 8, "bold"),
+            cursor="hand2",
+        )
+        link.pack(side="left")
+        link.bind("<Button-1>", lambda _event: webbrowser.open(url, new=2))
+        link.bind("<Enter>", lambda _event: link.configure(fg=THEME["link_hover"]))
+        link.bind("<Leave>", lambda _event: link.configure(fg=THEME["link"]))
+
+    def _make_footer_text(self, parent: tk.Frame, label: str) -> None:
+        text = tk.Label(
+            parent,
+            text=label,
             bg=THEME["background"],
             fg=THEME["muted"],
             font=(self.font_family, 8),
-            anchor="w",
-        ).pack(fill="x")
-        tk.Label(
-            footer,
-            text=footer_line_2,
-            bg=THEME["background"],
-            fg=THEME["muted"],
-            font=(self.font_family, 8),
-            anchor="w",
-        ).pack(fill="x", pady=(2, 0))
+        )
+        text.pack(side="left")
+
+    def _update_footer_layout(self, _event=None) -> None:
+        compact = self.root.winfo_width() < FOOTER_COMPACT_WIDTH
+        if compact == self.footer_compact:
+            return
+
+        self.footer_compact = compact
+        self.footer_left.pack_forget()
+        self.footer_right.pack_forget()
+        if compact:
+            self.footer_left.pack(anchor="center", pady=(0, 2))
+            self.footer_right.pack(anchor="center")
+            return
+
+        self.footer_left.pack(side="left", fill="x", expand=True)
+        self.footer_right.pack(side="right")
 
     def _panel(self, parent: tk.Frame) -> tk.Frame:
         return tk.Frame(
