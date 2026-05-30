@@ -17,7 +17,7 @@ rmdir /s /q dist 2>nul
 del /q *.spec 2>nul
 del /q version_info.txt 2>nul
 
-"%PYTHON_EXE%" ..\..\tools\generate_version_info.py --app . --out version_info.txt
+"%PYTHON_EXE%" ..\..\tools\generate_version_info.py --app-dir . --out version_info.txt
 if errorlevel 1 (
     echo.
     echo version info generation failed

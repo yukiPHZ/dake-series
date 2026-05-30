@@ -5,6 +5,7 @@ cd /d "%~dp0"
 rmdir /s /q build 2>nul
 rmdir /s /q dist 2>nul
 del /q *.spec 2>nul
+del /q version_info.txt 2>nul
 
 set "PYTHON_CMD=python"
 where python >nul 2>&1
@@ -17,7 +18,7 @@ if errorlevel 1 (
   )
 )
 
-"%PYTHON_CMD%" ..\..\tools\generate_version_info.py --app . --out version_info.txt
+"%PYTHON_CMD%" ..\..\tools\generate_version_info.py --app-dir . --out version_info.txt
 if errorlevel 1 (
   echo VersionInfo generation failed.
   pause

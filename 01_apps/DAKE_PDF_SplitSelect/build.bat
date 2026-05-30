@@ -33,6 +33,7 @@ if not exist "%ENTRY_FILE%" goto :entry_missing
 if exist build rmdir /s /q build
 if exist dist rmdir /s /q dist
 for %%F in (*.spec) do del /q "%%~fF"
+del /q version_info.txt 2>nul
 
 call :run %PYTHON_EXE% %PYTHON_ARGS% -m pip install --upgrade pip
 if errorlevel 1 goto :fail
@@ -40,7 +41,10 @@ if errorlevel 1 goto :fail
 call :run %PYTHON_EXE% %PYTHON_ARGS% -m pip install -r requirements.txt
 if errorlevel 1 goto :fail
 
-call :run %PYTHON_EXE% %PYTHON_ARGS% -m PyInstaller --noconfirm --clean --onefile --windowed --noconsole --name=DakePDF_Split_Select --icon=..\..\02_assets\dake_icon.ico --hidden-import=tkinterdnd2 --collect-all=tkinterdnd2 --hidden-import=fitz --collect-all=fitz "%ENTRY_FILE%"
+call :run %PYTHON_EXE% %PYTHON_ARGS% ..\..\tools\generate_version_info.py --app-dir . --out version_info.txt
+if errorlevel 1 goto :fail
+
+call :run %PYTHON_EXE% %PYTHON_ARGS% -m PyInstaller --noconfirm --clean --onefile --windowed --noconsole --name=DakePDF_Split_Select --paths=..\..\00_core --icon=..\..\02_assets\dake_icon.ico --version-file version_info.txt --hidden-import=tkinterdnd2 --collect-all=tkinterdnd2 --hidden-import=fitz --collect-all=fitz "%ENTRY_FILE%"
 if errorlevel 1 goto :fail
 
 if not exist "%OUTPUT_EXE%" goto :output_missing

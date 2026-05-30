@@ -2,6 +2,7 @@
 setlocal EnableExtensions
 
 cd /d "%~dp0"
+del /q version_info.txt 2>nul
 
 set "APP_EXE_NAME=DakePDF_to_Images"
 set "ENTRY_FILE=main.py"
@@ -87,6 +88,13 @@ if errorlevel 1 (
 )
 
 echo [INFO] Building exe with PyInstaller...
+python ..\..\tools\generate_version_info.py --app-dir . --out version_info.txt
+if errorlevel 1 (
+    echo VersionInfo generation failed.
+    pause
+    exit /b 1
+)
+
 "%VENV_PYTHON%" -m PyInstaller ^
   --noconfirm ^
   --clean ^
@@ -94,7 +102,9 @@ echo [INFO] Building exe with PyInstaller...
   --noconsole ^
   --onefile ^
   --name=DakePDF_to_Images ^
+--paths=..\..\00_core ^
   --icon=..\..\02_assets\dake_icon.ico ^
+--version-file version_info.txt ^
   --hidden-import fitz ^
   --collect-all fitz ^
   "%ENTRY_FILE%"

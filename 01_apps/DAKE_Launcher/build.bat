@@ -1,6 +1,7 @@
 @echo off
 setlocal
 cd /d "%~dp0"
+del /q version_info.txt 2>nul
 
 set "APP_NAME=Dake_Launcher"
 set "DIST_DIR=dist"
@@ -17,12 +18,21 @@ if exist "%BUILD_DIR%" goto :clean_error
 if exist "%DIST_DIR%" goto :clean_error
 
 echo [2/3] Building %APP_NAME%.exe...
+python ..\..\tools\generate_version_info.py --app-dir . --out version_info.txt
+if errorlevel 1 (
+    echo VersionInfo generation failed.
+    pause
+    exit /b 1
+)
+
 pyinstaller ^
 --onefile ^
 --noconsole ^
 --clean ^
 --name Dake_Launcher ^
+--paths=..\..\00_core ^
 --icon=..\..\02_assets\dake_icon.ico ^
+--version-file version_info.txt ^
 --add-data "..\..\02_assets\dake_icon.ico;." ^
 main.py
 if errorlevel 1 goto :build_error

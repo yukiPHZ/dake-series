@@ -1,5 +1,6 @@
 @echo off
 setlocal
+del /q version_info.txt 2>nul
 
 if exist build rmdir /s /q build
 if exist dist rmdir /s /q dist
@@ -20,8 +21,7 @@ if errorlevel 1 (
 set "DND_OPTION="
 %PYTHON_CMD% -c "import tkinterdnd2" >nul 2>&1
 if %errorlevel%==0 set "DND_OPTION=--collect-data=tkinterdnd2"
-
-%PYTHON_CMD% ..\..\tools\generate_version_info.py --app . --out version_info.txt
+%PYTHON_CMD% ..\..\tools\generate_version_info.py --app-dir . --out version_info.txt
 if errorlevel 1 (
     echo VersionInfo generation failed.
     pause

@@ -3,6 +3,7 @@
 rmdir /s /q build
 rmdir /s /q dist
 del *.spec
+del /q version_info.txt 2>nul
 
 where pyinstaller >nul 2>nul
 if %errorlevel%==0 (
@@ -34,12 +35,21 @@ pause
 exit /b 1
 
 :build
+python ..\..\tools\generate_version_info.py --app-dir . --out version_info.txt
+if errorlevel 1 (
+    echo VersionInfo generation failed.
+    pause
+    exit /b 1
+)
+
 %PYINSTALLER% ^
 --onefile ^
 --noconsole ^
 --clean ^
 --name=DakePDF_Viewer ^
+--paths=..\..\00_core ^
 --icon=..\..\02_assets\dake_icon.ico ^
+--version-file version_info.txt ^
 main.py
 
 pause

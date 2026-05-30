@@ -88,7 +88,7 @@ VSVersionInfo(
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Generate PyInstaller VersionInfo from README DAKE_META")
-    parser.add_argument("--app", required=True, help="DAKE app directory")
+    parser.add_argument("--app", "--app-dir", dest="app", required=True, help="DAKE app directory")
     parser.add_argument("--out", default="version_info.txt", help="output version info path")
     parser.add_argument("--print-summary", action="store_true")
     args = parser.parse_args()

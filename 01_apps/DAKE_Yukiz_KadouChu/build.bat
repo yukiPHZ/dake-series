@@ -46,6 +46,14 @@ if errorlevel 1 (
 if exist build rmdir /s /q build
 if exist dist rmdir /s /q dist
 del /q *.spec 2>nul
+del /q version_info.txt 2>nul
+
+python ..\..\tools\generate_version_info.py --app-dir . --out version_info.txt
+if errorlevel 1 (
+    echo VersionInfo generation failed.
+    pause
+    exit /b 1
+)
 
 "%PYTHON_EXE%" %PYTHON_ARGS% -m PyInstaller ^
 --onefile ^
@@ -54,7 +62,9 @@ del /q *.spec 2>nul
 --name %APP_NAME% ^
 --collect-all customtkinter ^
 --hidden-import PIL._tkinter_finder ^
+--paths=..\..\00_core ^
 --icon=..\..\02_assets\dake_icon.ico ^
+--version-file version_info.txt ^
 main.py
 
 if errorlevel 1 (

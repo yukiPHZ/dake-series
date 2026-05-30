@@ -2,6 +2,7 @@
 chcp 65001 > nul
 setlocal
 cd /d "%~dp0"
+del /q version_info.txt 2>nul
 
 set "APP_EXE=DakeImageToPDF.exe"
 set "PYTHON_CMD="
@@ -70,6 +71,13 @@ echo.
 echo ========================================
 echo Run PyInstaller
 echo ========================================
+%PYTHON_CMD% ..\..\tools\generate_version_info.py --app-dir . --out version_info.txt
+if errorlevel 1 (
+    echo VersionInfo generation failed.
+    pause
+    exit /b 1
+)
+
 %PYTHON_CMD% -m PyInstaller ^
   --noconfirm ^
   --clean ^
@@ -77,7 +85,9 @@ echo ========================================
   --windowed ^
   --noconsole ^
   --name=DakeImageToPDF ^
+--paths=..\..\00_core ^
   --icon=..\..\02_assets\dake_icon.ico ^
+--version-file version_info.txt ^
   --hidden-import tkinterdnd2 ^
   --collect-all tkinterdnd2 ^
   main.py

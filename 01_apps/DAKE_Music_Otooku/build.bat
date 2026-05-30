@@ -5,6 +5,7 @@ cd /d "%~dp0"
 rmdir /s /q build 2>nul
 rmdir /s /q dist 2>nul
 del /q *.spec 2>nul
+del /q version_info.txt 2>nul
 
 set "PYTHON_EXE=python"
 where python >nul 2>nul
@@ -29,21 +30,39 @@ if defined PYINSTALLER_EXE goto RUN_PYINSTALLER
 goto RUN_PYTHON_MODULE
 
 :RUN_PYINSTALLER
+python ..\..\tools\generate_version_info.py --app-dir . --out version_info.txt
+if errorlevel 1 (
+    echo VersionInfo generation failed.
+    pause
+    exit /b 1
+)
+
 "%PYINSTALLER_EXE%" ^
 --onefile ^
 --noconsole ^
 --clean ^
+--paths=..\..\00_core ^
 --icon=..\..\02_assets\dake_icon.ico ^
+--version-file version_info.txt ^
 --name DakeMusic_Otooku ^
 main.py
 goto CHECK_BUILD
 
 :RUN_PYTHON_MODULE
+python ..\..\tools\generate_version_info.py --app-dir . --out version_info.txt
+if errorlevel 1 (
+    echo VersionInfo generation failed.
+    pause
+    exit /b 1
+)
+
 "%PYTHON_EXE%" -m PyInstaller ^
 --onefile ^
 --noconsole ^
 --clean ^
+--paths=..\..\00_core ^
 --icon=..\..\02_assets\dake_icon.ico ^
+--version-file version_info.txt ^
 --name DakeMusic_Otooku ^
 main.py
 
@@ -57,4 +76,3 @@ if errorlevel 1 (
 
 echo.
 echo dist\DakeMusic_Otooku.exe created.
-

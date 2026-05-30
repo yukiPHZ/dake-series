@@ -2,6 +2,7 @@
 chcp 65001 > nul
 setlocal
 cd /d "%~dp0"
+del /q version_info.txt 2>nul
 
 set "APP_NAME=DakeSticky_Memo"
 set "DIST_DIR=dist"
@@ -20,12 +21,21 @@ if exist "%BUILD_DIR%" goto :clean_error
 if exist "%DIST_DIR%" goto :clean_error
 
 echo [2/3] Building %APP_NAME%.exe...
+python ..\..\tools\generate_version_info.py --app-dir . --out version_info.txt
+if errorlevel 1 (
+    echo VersionInfo generation failed.
+    pause
+    exit /b 1
+)
+
 pyinstaller --clean --noconfirm ^
  main.py ^
  --onefile ^
  --noconsole ^
  --name=%APP_NAME% ^
+--paths=..\..\00_core ^
  --icon=..\..\02_assets\dake_icon.ico ^
+--version-file version_info.txt ^
  --add-data "%DAKE_ICON%;."
 if errorlevel 1 goto :build_error
 

@@ -2,6 +2,7 @@
 chcp 65001 > nul
 setlocal
 cd /d "%~dp0"
+del /q version_info.txt 2>nul
 
 set "APP_NAME=DAKE_Wake_Brainz"
 set "DIST_DIR=dist"
@@ -38,23 +39,41 @@ if exist "%DIST_DIR%" goto :clean_error
 
 echo [2/3] Building %APP_NAME%.exe...
 if defined PYINSTALLER_EXE (
+python ..\..\tools\generate_version_info.py --app-dir . --out version_info.txt
+if errorlevel 1 (
+    echo VersionInfo generation failed.
+    pause
+    exit /b 1
+)
+
     "%PYINSTALLER_EXE%" ^
      --clean ^
      --noconfirm ^
      --onefile ^
      --name %APP_NAME% ^
+--paths=..\..\00_core ^
      --icon=..\..\02_assets\dake_icon.ico ^
+--version-file version_info.txt ^
      --add-data "templates;templates" ^
      --add-data "static;static" ^
      --add-data "config.example.json;." ^
      main.py
 ) else (
+python ..\..\tools\generate_version_info.py --app-dir . --out version_info.txt
+if errorlevel 1 (
+    echo VersionInfo generation failed.
+    pause
+    exit /b 1
+)
+
     "%PYTHON_EXE%" -m PyInstaller ^
      --clean ^
      --noconfirm ^
      --onefile ^
      --name %APP_NAME% ^
+--paths=..\..\00_core ^
      --icon=..\..\02_assets\dake_icon.ico ^
+--version-file version_info.txt ^
      --add-data "templates;templates" ^
      --add-data "static;static" ^
      --add-data "config.example.json;." ^

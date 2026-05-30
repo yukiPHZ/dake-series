@@ -33,20 +33,35 @@ if not defined PYINSTALLER_CMD (
   if defined PYTHON_CMD set "PYINSTALLER_CMD=%PYTHON_CMD% -m PyInstaller"
 )
 
+if not defined PYTHON_CMD (
+  where python > nul 2>&1
+  if %errorlevel%==0 set "PYTHON_CMD=python"
+)
+
 rmdir /s /q build 2>nul
 rmdir /s /q dist 2>nul
 del /q *.spec 2>nul
+del /q version_info.txt 2>nul
 
 if not defined PYINSTALLER_CMD (
   echo [ERROR] PyInstaller was not found.
   goto :error
 )
 
+%PYTHON_CMD% ..\..\tools\generate_version_info.py --app-dir . --out version_info.txt
+if errorlevel 1 (
+    echo VersionInfo generation failed.
+    pause
+    exit /b 1
+)
+
 %PYINSTALLER_CMD% ^
 --onefile ^
 --noconsole ^
 --clean ^
+--paths=..\..\00_core ^
 --icon=..\..\02_assets\dake_icon.ico ^
+--version-file version_info.txt ^
 --name DakeImage_PasteA4 ^
 main.py
 

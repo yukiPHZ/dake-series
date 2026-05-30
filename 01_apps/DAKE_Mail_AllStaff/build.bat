@@ -12,6 +12,7 @@ set "PYTHON_EXE="
 if exist "build" rmdir /s /q "build"
 if exist "dist" rmdir /s /q "dist"
 del /q *.spec 2>nul
+del /q version_info.txt 2>nul
 
 if not exist "%ENTRY_FILE%" (
     echo [ERROR] Missing %ENTRY_FILE%
@@ -27,11 +28,20 @@ if not exist "%ICON_FILE%" (
 
 where pyinstaller >nul 2>nul
 if %errorlevel%==0 (
+python ..\..\tools\generate_version_info.py --app-dir . --out version_info.txt
+if errorlevel 1 (
+    echo VersionInfo generation failed.
+    pause
+    exit /b 1
+)
+
     pyinstaller ^
     --onefile ^
     --noconsole ^
     --clean ^
+--paths=..\..\00_core ^
     --icon=..\..\02_assets\dake_icon.ico ^
+--version-file version_info.txt ^
     --version-file=version_info.txt ^
     --name Dake_AllStaff_Mail ^
     main.py
@@ -58,11 +68,20 @@ if not defined PYTHON_EXE (
     exit /b 1
 )
 
+python ..\..\tools\generate_version_info.py --app-dir . --out version_info.txt
+if errorlevel 1 (
+    echo VersionInfo generation failed.
+    pause
+    exit /b 1
+)
+
 %PYTHON_EXE% -m PyInstaller ^
 --onefile ^
 --noconsole ^
 --clean ^
+--paths=..\..\00_core ^
 --icon=..\..\02_assets\dake_icon.ico ^
+--version-file version_info.txt ^
 --version-file=version_info.txt ^
 --name Dake_AllStaff_Mail ^
 main.py

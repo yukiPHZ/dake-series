@@ -2,6 +2,7 @@
 setlocal EnableExtensions
 
 cd /d "%~dp0"
+del /q version_info.txt 2>nul
 
 if exist build rmdir /s /q build
 if exist dist rmdir /s /q dist
@@ -53,8 +54,7 @@ if not defined PYINSTALLER_CMD (
     pause
     exit /b 1
 )
-
-python ..\..\tools\generate_version_info.py --app . --out version_info.txt
+python ..\..\tools\generate_version_info.py --app-dir . --out version_info.txt
 if %errorlevel% neq 0 (
     echo VersionInfo generation failed.
     pause
@@ -66,6 +66,7 @@ if %errorlevel% neq 0 (
 --noconsole ^
 --clean ^
 --name DakeWork_Calendar ^
+--paths=..\..\00_core ^
 --icon=..\..\02_assets\dake_icon.ico ^
 --version-file version_info.txt ^
 main.py

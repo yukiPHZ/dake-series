@@ -1,6 +1,7 @@
 @echo off
 chcp 65001 > nul
 setlocal
+del /q version_info.txt 2>nul
 
 if exist build rmdir /s /q build
 if exist dist rmdir /s /q dist
@@ -33,6 +34,13 @@ if exist ".vendor" (
   set "PYTHONPATH=%cd%\.vendor;%PYTHONPATH%"
 )
 
+%PYTHON_CMD% ..\..\tools\generate_version_info.py --app-dir . --out version_info.txt
+if errorlevel 1 (
+    echo VersionInfo generation failed.
+    pause
+    exit /b 1
+)
+
 %PYTHON_CMD% -m PyInstaller ^
   --noconfirm ^
   --clean ^
@@ -40,7 +48,9 @@ if exist ".vendor" (
   --windowed ^
   --noconsole ^
   --name=DakePDF_Split_One ^
+--paths=..\..\00_core ^
   --icon=..\..\02_assets\dake_icon.ico ^
+--version-file version_info.txt ^
   --collect-all tkinterdnd2 ^
   main.py
 

@@ -1,6 +1,7 @@
 @echo off
 setlocal
 cd /d "%~dp0"
+del /q version_info.txt 2>nul
 
 if exist build rmdir /s /q build
 if exist dist rmdir /s /q dist
@@ -16,10 +17,18 @@ if exist "..\..\02_assets\dake_icon.ico" (
   set "ICON_OPT=--icon=..\..\02_assets\dake_icon.ico"
 )
 
+python ..\..\tools\generate_version_info.py --app-dir . --out version_info.txt
+if errorlevel 1 (
+    echo VersionInfo generation failed.
+    pause
+    exit /b 1
+)
+
 "%PYTHON_EXE%" -m PyInstaller ^
   --onefile ^
   --noconsole ^
   --clean ^
+--paths=..\..\00_core ^
   --collect-all customtkinter ^
   %ICON_OPT% ^
   --version-file version_info.txt ^
