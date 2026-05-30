@@ -5,12 +5,13 @@ Dake全社員メール起動
 300円
 
 # 商品紹介文
-宛先とCC入りの全社員宛メール作成画面を開きます。
+宛先、CC、件名入りの全社員宛メール作成画面を開きます。
 
-・全社員メール起動アプリ
-・TO・CC入力済みでメーラーを起動
-・送信は手動確認
-・Windows向けexe
+・全社員宛メールを開くアプリ
+・宛先・CC・件名を保存可能
+・メールアドレス貼り付け自動整形
+・本文なし・自動送信なし
+・実務向け軽量ツール
 
 実務の流れを、
 少し静かにするための道具です。
@@ -32,5 +33,14 @@ assets/screenshot.jpg
 
 # 作品ファイル
 booth_ready/Dake_AllStaff_Mail.zip
+
+# GitHub Release
+https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_AllStaff_v1.0.0
+
+# 注意事項
+Windows向けアプリです。
+ご利用は自己責任でお願いいたします。
+大切なファイルは事前にバックアップを推奨します。
+本ソフトウェアの無断転載・再配布を禁止します。
 
 # URL
