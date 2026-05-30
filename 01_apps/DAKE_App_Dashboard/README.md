@@ -33,11 +33,25 @@ C:\Users\yukiz\devlop\DAKE_series\01_apps
 ## 操作
 
 - 再読み込み
+- 起動時自動読込
+- 30秒ごと自動読込
+- watchdog による 01_apps 配下の変更監視
 - フィルタ切替
 - 検索
 - アプリフォルダを開く
 - README.md を開く
 - Release URL を開く
+
+## Phase2 監視対象
+
+- README.md
+- release_body.md
+- booth_product.txt
+- assets/
+- dist/
+
+変更検知時は対象アプリを再読込し、右下通知に `{folder} を再読込しました` を表示します。
+`watchdog` が未導入の環境でもアプリは落ちず、30秒ごとの自動読込で追従します。
 
 ## 品質チェック
 

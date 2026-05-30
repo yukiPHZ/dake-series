@@ -8,6 +8,7 @@ import queue
 import re
 import sys
 import threading
+import time
 import webbrowser
 from dataclasses import dataclass
 from datetime import datetime
@@ -20,6 +21,13 @@ try:
     import ctypes
 except Exception:
     ctypes = None
+
+try:
+    from watchdog.events import FileSystemEventHandler
+    from watchdog.observers import Observer
+except Exception:
+    FileSystemEventHandler = None
+    Observer = None
 
 
 APP_NAME = "DAKE Dashboard"
@@ -140,6 +148,16 @@ UI_TEXT = {
     "dialog_open_failed": "開けませんでした。\n\n{path}\n\n{error}",
     "dialog_missing_path": "対象が見つかりません。\n\n{path}",
     "dialog_release_missing": "Release URL が設定されていません。",
+    "qpsc_card_title": "QPSC通知カード",
+    "qpsc_card_subtitle": "README正本の動きを監視中",
+    "qpsc_new_apps": "新規アプリ検出",
+    "qpsc_distribution_ready": "配布準備",
+    "qpsc_needs_review": "要確認",
+    "qpsc_ship_line": "正式出荷ライン到達",
+    "watch_status_watchdog": "watchdog監視: ON",
+    "watch_status_polling": "watchdog未導入 / 30秒自動読込: ON",
+    "watch_status_error": "watchdog監視: 起動できませんでした",
+    "notification_reloaded": "{folder} を再読込しました",
     "footer_note": "一般公開・BOOTH登録・dakeapp.com掲載を行わない内部端末",
 }
 
@@ -196,6 +214,11 @@ DAKE_META_PATTERN = re.compile(
 )
 WORKER_POLL_MS = 80
 LAUNCH_CHECK_TIMEOUT_MS = 8000
+AUTO_RELOAD_MS = 30000
+WATCH_DEBOUNCE_MS = 700
+NOTIFICATION_HIDE_MS = 3600
+WATCHED_FILENAMES = {README_NAME, RELEASE_BODY_NAME, BOOTH_PRODUCT_NAME}
+WATCHED_DIR_NAMES = {"assets", DIST_DIR_NAME}
 
 
 @dataclass(frozen=True)
@@ -539,6 +562,45 @@ def scan_apps(root: Path) -> list[AppRecord]:
     return records
 
 
+def formal_ship_line_reached(record: AppRecord) -> bool:
+    return (
+        record.checks.has_release_url
+        and record.checks.has_dist_exe
+        and record.checks.has_screenshot
+        and record.checks.booth_materials_ready
+    )
+
+
+def watched_folder_for_path(path: Path, root: Path) -> str | None:
+    try:
+        relative = path.resolve().relative_to(root.resolve())
+    except (OSError, ValueError):
+        return None
+
+    parts = relative.parts
+    if not parts:
+        return None
+
+    folder_name = parts[0]
+    if folder_name.startswith("."):
+        return None
+
+    if len(parts) == 1:
+        return folder_name
+
+    if parts[-1] in WATCHED_FILENAMES:
+        return folder_name
+
+    if len(parts) >= 2 and parts[1] in WATCHED_DIR_NAMES:
+        return folder_name
+
+    return None
+
+
+def record_map(records: list[AppRecord]) -> dict[str, AppRecord]:
+    return {record.folder_name: record for record in records}
+
+
 class DashboardApp:
     def __init__(self, root: tk.Tk, launch_check: bool = False) -> None:
         self.root = root
@@ -549,6 +611,7 @@ class DashboardApp:
         self.records: list[AppRecord] = []
         self.visible_records: list[AppRecord] = []
         self.record_by_iid: dict[str, AppRecord] = {}
+        self.previous_record_map: dict[str, AppRecord] = {}
         self.selected_record: AppRecord | None = None
         self.filter_key = "all"
         self.summary_vars = {
@@ -559,22 +622,39 @@ class DashboardApp:
             "booth_ready": tk.StringVar(value="0"),
             "needs_review": tk.StringVar(value="0"),
         }
+        self.qpsc_vars = {
+            "new_apps": tk.StringVar(value="0"),
+            "distribution_ready": tk.StringVar(value="0"),
+            "needs_review": tk.StringVar(value="0"),
+            "ship_line": tk.StringVar(value="0"),
+        }
         self.search_var = tk.StringVar()
         self.last_loaded_var = tk.StringVar(value=UI_TEXT["last_loaded_waiting"])
         self.status_var = tk.StringVar(value=UI_TEXT["last_loaded_waiting"])
+        self.watch_status_var = tk.StringVar(value=UI_TEXT["watch_status_polling"])
         self.count_var = tk.StringVar(value=UI_TEXT["count_line"].format(visible=0, total=0))
         self.filter_buttons: dict[str, tk.Button] = {}
+        self.watch_observer = None
+        self.watch_pending_folder: str | None = None
+        self.watch_debounce_job: str | None = None
+        self.last_watch_event_at = 0.0
+        self.pending_reload_folder: str | None = None
 
         self.root.title(WINDOW_TITLE)
         self.root.geometry("1280x820")
         self.root.minsize(1080, 700)
         self.root.configure(bg=THEME["bg"])
+        self.root.protocol("WM_DELETE_WINDOW", self.on_close)
         apply_window_icon(self.root)
         self.configure_styles()
         self.build_ui()
+        self.build_notification()
         self.search_var.trace_add("write", lambda *_args: self.apply_filters())
         self.root.after(WORKER_POLL_MS, self.poll_worker)
-        self.reload_data()
+        self.reload_data(source="startup")
+        if not self.launch_check:
+            self.start_watchdog()
+            self.schedule_auto_reload()
         if self.launch_check:
             self.root.after(LAUNCH_CHECK_TIMEOUT_MS, self.finish_launch_check)
 
@@ -634,6 +714,7 @@ class DashboardApp:
 
         self.build_header(shell)
         self.build_summary(shell)
+        self.build_qpsc_card(shell)
         self.build_controls(shell)
         self.build_body(shell)
         self.build_footer(shell)
@@ -718,6 +799,63 @@ class DashboardApp:
                 fg=THEME["text"],
                 font=(self.font_family, 22, "bold"),
             ).pack(anchor="w", padx=14, pady=(0, 10))
+
+    def build_qpsc_card(self, parent: tk.Frame) -> None:
+        card = tk.Frame(
+            parent,
+            bg=THEME["panel"],
+            highlightbackground=THEME["border"],
+            highlightthickness=1,
+            bd=0,
+        )
+        card.pack(fill="x", pady=(0, 16))
+        card.grid_columnconfigure(1, weight=1)
+
+        title_area = tk.Frame(card, bg=THEME["panel"])
+        title_area.grid(row=0, column=0, sticky="w", padx=16, pady=13)
+
+        tk.Label(
+            title_area,
+            text=UI_TEXT["qpsc_card_title"],
+            bg=THEME["panel"],
+            fg=THEME["text"],
+            font=(self.font_family, 12, "bold"),
+        ).pack(anchor="w")
+
+        tk.Label(
+            title_area,
+            text=UI_TEXT["qpsc_card_subtitle"],
+            bg=THEME["panel"],
+            fg=THEME["muted"],
+            font=(self.font_family, 9),
+        ).pack(anchor="w", pady=(3, 0))
+
+        metrics = tk.Frame(card, bg=THEME["panel"])
+        metrics.grid(row=0, column=1, sticky="e", padx=(0, 16), pady=10)
+
+        items = [
+            ("new_apps", "qpsc_new_apps"),
+            ("distribution_ready", "qpsc_distribution_ready"),
+            ("needs_review", "qpsc_needs_review"),
+            ("ship_line", "qpsc_ship_line"),
+        ]
+        for index, (key, label_key) in enumerate(items):
+            item = tk.Frame(metrics, bg=THEME["panel_soft"], padx=12, pady=7)
+            item.grid(row=0, column=index, sticky="e", padx=(0 if index == 0 else 8, 0))
+            tk.Label(
+                item,
+                text=UI_TEXT[label_key],
+                bg=THEME["panel_soft"],
+                fg=THEME["muted"],
+                font=(self.font_family, 8, "bold"),
+            ).pack(anchor="w")
+            tk.Label(
+                item,
+                textvariable=self.qpsc_vars[key],
+                bg=THEME["panel_soft"],
+                fg=THEME["accent_hover"],
+                font=(self.font_family, 16, "bold"),
+            ).pack(anchor="w")
 
     def build_controls(self, parent: tk.Frame) -> None:
         controls = tk.Frame(parent, bg=THEME["bg"])
@@ -941,7 +1079,7 @@ class DashboardApp:
     def build_footer(self, parent: tk.Frame) -> None:
         footer = tk.Frame(parent, bg=THEME["bg"])
         footer.pack(fill="x", pady=(12, 0))
-        footer.grid_columnconfigure(0, weight=1)
+        footer.grid_columnconfigure(1, weight=1)
         tk.Label(
             footer,
             textvariable=self.status_var,
@@ -951,11 +1089,38 @@ class DashboardApp:
         ).grid(row=0, column=0, sticky="w")
         tk.Label(
             footer,
+            textvariable=self.watch_status_var,
+            bg=THEME["bg"],
+            fg=THEME["quiet"],
+            font=(self.font_family, 9),
+        ).grid(row=0, column=1, sticky="w", padx=(18, 0))
+        tk.Label(
+            footer,
             text=UI_TEXT["footer_note"],
             bg=THEME["bg"],
             fg=THEME["quiet"],
             font=(self.font_family, 9),
-        ).grid(row=0, column=1, sticky="e")
+        ).grid(row=0, column=2, sticky="e")
+
+    def build_notification(self) -> None:
+        self.notification_var = tk.StringVar(value="")
+        self.notification_frame = tk.Frame(
+            self.root,
+            bg=THEME["accent_soft"],
+            highlightbackground=THEME["border_active"],
+            highlightthickness=1,
+            bd=0,
+        )
+        tk.Label(
+            self.notification_frame,
+            textvariable=self.notification_var,
+            bg=THEME["accent_soft"],
+            fg=THEME["text"],
+            font=(self.font_family, 10, "bold"),
+            padx=16,
+            pady=11,
+        ).pack()
+        self.notification_frame.place_forget()
 
     def make_button(self, parent: tk.Misc, label: str, command, primary: bool = False) -> tk.Button:
         bg = THEME["accent_soft"] if primary else THEME["panel_alt"]
@@ -994,17 +1159,18 @@ class DashboardApp:
                 activeforeground="#FFFFFF" if selected else THEME["text"],
             )
 
-    def reload_data(self) -> None:
+    def reload_data(self, source: str = "manual", changed_folder: str | None = None) -> None:
         if self.worker_thread is not None and self.worker_thread.is_alive():
+            self.pending_reload_folder = changed_folder or self.pending_reload_folder
             return
         self.reload_button.configure(state="disabled")
         self.status_var.set(UI_TEXT["status_loading"])
-        self.worker_thread = threading.Thread(target=self.scan_worker, daemon=True)
+        self.worker_thread = threading.Thread(target=self.scan_worker, args=(source, changed_folder), daemon=True)
         self.worker_thread.start()
 
-    def scan_worker(self) -> None:
+    def scan_worker(self, source: str, changed_folder: str | None) -> None:
         records = scan_apps(apps_root())
-        self.worker_queue.put(("scan_done", records))
+        self.worker_queue.put(("scan_done", {"records": records, "source": source, "changed_folder": changed_folder}))
 
     def poll_worker(self) -> None:
         try:
@@ -1012,28 +1178,53 @@ class DashboardApp:
                 event, payload = self.worker_queue.get_nowait()
                 if event == "scan_done":
                     self.handle_scan_done(payload)
+                elif event == "watch_event":
+                    self.handle_watch_event(payload)
         except queue.Empty:
             pass
         self.root.after(WORKER_POLL_MS, self.poll_worker)
 
     def handle_scan_done(self, payload: object) -> None:
-        self.records = list(payload) if isinstance(payload, list) else []
+        if isinstance(payload, dict):
+            records = payload.get("records", [])
+            source = str(payload.get("source", "manual"))
+            changed_folder = payload.get("changed_folder")
+        else:
+            records = payload
+            source = "manual"
+            changed_folder = None
+
+        previous_map = dict(self.previous_record_map)
+        self.records = list(records) if isinstance(records, list) else []
+        current_map = record_map(self.records)
         self.reload_button.configure(state="normal")
         loaded_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.last_loaded_var.set(UI_TEXT["last_loaded_value"].format(time=loaded_at))
         self.status_var.set(UI_TEXT["status_ready"])
-        self.update_summary()
+        self.update_summary(previous_map, current_map)
         self.apply_filters()
+        self.previous_record_map = current_map
+        if source == "watch" and isinstance(changed_folder, str) and changed_folder:
+            self.show_reload_notification(changed_folder)
+        if self.pending_reload_folder:
+            folder = self.pending_reload_folder
+            self.pending_reload_folder = None
+            self.reload_data(source="watch", changed_folder=folder)
         if self.launch_check:
             self.root.after(150, self.finish_launch_check)
 
     def finish_launch_check(self) -> None:
+        self.stop_watchdog()
         try:
             self.root.destroy()
         except tk.TclError:
             pass
 
-    def update_summary(self) -> None:
+    def update_summary(
+        self,
+        previous_map: dict[str, AppRecord] | None = None,
+        current_map: dict[str, AppRecord] | None = None,
+    ) -> None:
         counts = {key: 0 for key in self.summary_vars}
         counts["total"] = len(self.records)
         for record in self.records:
@@ -1041,6 +1232,95 @@ class DashboardApp:
                 counts[record.status_key] += 1
         for key, value in counts.items():
             self.summary_vars[key].set(str(value))
+
+        previous_map = previous_map or {}
+        current_map = current_map or record_map(self.records)
+        new_app_count = len(set(current_map) - set(previous_map)) if previous_map else 0
+        self.qpsc_vars["new_apps"].set(str(new_app_count))
+        self.qpsc_vars["distribution_ready"].set(str(counts["distribution_ready"]))
+        self.qpsc_vars["needs_review"].set(str(counts["needs_review"]))
+        self.qpsc_vars["ship_line"].set(str(sum(1 for record in self.records if formal_ship_line_reached(record))))
+
+    def schedule_auto_reload(self) -> None:
+        self.root.after(AUTO_RELOAD_MS, self.auto_reload)
+
+    def auto_reload(self) -> None:
+        self.reload_data(source="auto")
+        self.schedule_auto_reload()
+
+    def start_watchdog(self) -> None:
+        if Observer is None or FileSystemEventHandler is None:
+            self.watch_status_var.set(UI_TEXT["watch_status_polling"])
+            return
+        try:
+            handler = self.create_watchdog_handler()
+            observer = Observer()
+            observer.schedule(handler, str(apps_root()), recursive=True)
+            observer.daemon = True
+            observer.start()
+            self.watch_observer = observer
+            self.watch_status_var.set(UI_TEXT["watch_status_watchdog"])
+        except Exception:
+            self.watch_status_var.set(UI_TEXT["watch_status_error"])
+
+    def create_watchdog_handler(self):
+        app = self
+        root_path = apps_root()
+
+        class DashboardWatchHandler(FileSystemEventHandler):
+            def on_any_event(self, event) -> None:
+                if getattr(event, "is_directory", False) and getattr(event, "event_type", "") not in {"created", "deleted", "moved"}:
+                    return
+                paths = [Path(getattr(event, "src_path", ""))]
+                dest_path = getattr(event, "dest_path", "")
+                if dest_path:
+                    paths.append(Path(dest_path))
+                for path in paths:
+                    folder_name = watched_folder_for_path(path, root_path)
+                    if folder_name:
+                        app.worker_queue.put(("watch_event", folder_name))
+                        return
+
+        return DashboardWatchHandler()
+
+    def stop_watchdog(self) -> None:
+        observer = self.watch_observer
+        self.watch_observer = None
+        if observer is None:
+            return
+        try:
+            observer.stop()
+            observer.join(timeout=1.0)
+        except Exception:
+            pass
+
+    def handle_watch_event(self, payload: object) -> None:
+        folder_name = str(payload).strip()
+        if not folder_name:
+            return
+        self.watch_pending_folder = folder_name
+        self.last_watch_event_at = time.monotonic()
+        if self.watch_debounce_job is None:
+            self.watch_debounce_job = self.root.after(WATCH_DEBOUNCE_MS, self.flush_watch_reload)
+
+    def flush_watch_reload(self) -> None:
+        self.watch_debounce_job = None
+        if time.monotonic() - self.last_watch_event_at < WATCH_DEBOUNCE_MS / 1000:
+            self.watch_debounce_job = self.root.after(WATCH_DEBOUNCE_MS, self.flush_watch_reload)
+            return
+        folder_name = self.watch_pending_folder
+        self.watch_pending_folder = None
+        if folder_name:
+            self.reload_data(source="watch", changed_folder=folder_name)
+
+    def show_reload_notification(self, folder_name: str) -> None:
+        self.notification_var.set(UI_TEXT["notification_reloaded"].format(folder=folder_name))
+        self.notification_frame.place(relx=1.0, rely=1.0, anchor="se", x=-22, y=-22)
+        self.root.after(NOTIFICATION_HIDE_MS, self.notification_frame.place_forget)
+
+    def on_close(self) -> None:
+        self.stop_watchdog()
+        self.root.destroy()
 
     def apply_filters(self) -> None:
         query = self.search_var.get().strip().lower()
