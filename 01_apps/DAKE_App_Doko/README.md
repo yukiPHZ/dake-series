@@ -102,7 +102,7 @@ dist\DakeApp_Doko.exe --launch-check
   "folder_name": "DAKE_App_Doko",
   "exe_name": "DakeApp_Doko.exe",
   "version": "1.0.0",
-  "release_url": "",
+  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_App_Doko_v1.0.0",
   "screenshot_path": "assets/screenshot.webp",
   "status": "available",
   "show_in_launcher": true,

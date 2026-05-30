@@ -1,6 +1,45 @@
+# 商品名
 アプリどこ
 
-PC内のDAKE系exeを探します。
-README正本を読み取って表示します。
-忘れていたアプリを発掘できます。
-Windows向けexe。
+# 価格案
+300円
+
+# 商品紹介文
+PC内に散らばったDAKE系アプリを探します。
+
+・アプリどこ
+・PC内のDAKE系exeを探します
+・README正本を読み取って表示します
+・忘れていたアプリを発掘できます
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。
+
+# タグ
+Windows
+実務
+ツール
+仕事効率化
+軽量
+シンプル
+
+# BOOTH商品画像
+assets/booth_thumbnail.jpg
+
+# 補助画像
+assets/screenshot.jpg
+
+# 作品ファイル
+booth_ready/DakeApp_Doko.zip
+
+# GitHub Release
+https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_App_Doko_v1.0.0
+
+# 注意事項
+Windows向けアプリです。
+ご利用は自己責任でお願いいたします。
+大切なファイルは事前にバックアップを推奨します。
+本ソフトウェアの無断転載・再配布を禁止します。
+
+# URL
