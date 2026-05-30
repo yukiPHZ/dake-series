@@ -6,11 +6,19 @@ rmdir /s /q build 2>nul
 rmdir /s /q dist 2>nul
 del /q *.spec 2>nul
 
+python ..\..\tools\generate_version_info.py --app . --out version_info.txt
+if errorlevel 1 (
+  echo VersionInfo generation failed.
+  pause
+  exit /b 1
+)
+
 pyinstaller ^
 --onefile ^
 --noconsole ^
 --clean ^
 --icon=..\..\02_assets\dake_icon.ico ^
+--version-file version_info.txt ^
 --name DakeMail_Draft ^
 main.py
 

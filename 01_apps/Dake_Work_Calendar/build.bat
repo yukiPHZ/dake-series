@@ -54,12 +54,20 @@ if not defined PYINSTALLER_CMD (
     exit /b 1
 )
 
+python ..\..\tools\generate_version_info.py --app . --out version_info.txt
+if %errorlevel% neq 0 (
+    echo VersionInfo generation failed.
+    pause
+    exit /b 1
+)
+
 "%PYINSTALLER_CMD%" %PYINSTALLER_ARGS% ^
 --onefile ^
 --noconsole ^
 --clean ^
 --name DakeWork_Calendar ^
 --icon=..\..\02_assets\dake_icon.ico ^
+--version-file version_info.txt ^
 main.py
 
 pause

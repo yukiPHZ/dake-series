@@ -21,11 +21,19 @@ set "DND_OPTION="
 %PYTHON_CMD% -c "import tkinterdnd2" >nul 2>&1
 if %errorlevel%==0 set "DND_OPTION=--collect-data=tkinterdnd2"
 
+%PYTHON_CMD% ..\..\tools\generate_version_info.py --app . --out version_info.txt
+if errorlevel 1 (
+    echo VersionInfo generation failed.
+    pause
+    exit /b 1
+)
+
 %PYTHON_CMD% -m PyInstaller ^
 --onefile ^
 --noconsole ^
 --clean ^
 --icon=..\..\02_assets\dake_icon.ico ^
+--version-file version_info.txt ^
 %DND_OPTION% ^
 --exclude-module pandas ^
 --exclude-module numpy ^
