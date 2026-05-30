@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import csv
 import html
-import json
+import io
 import logging
 import queue
 import re
@@ -15,6 +15,19 @@ from datetime import datetime
 from pathlib import Path
 import tkinter as tk
 from tkinter import filedialog, font as tkfont, messagebox, ttk
+
+CORE_DIR = Path(__file__).resolve().parents[2] / "00_core"
+if str(CORE_DIR) not in sys.path:
+    sys.path.insert(0, str(CORE_DIR))
+
+from dake_quality_engine import (
+    atomic_write_text,
+    run_launch_check,
+    safe_load_json_config,
+    safe_run,
+    safe_save_json_config,
+)
+from dake_quality_engine.logging import write_debug_log
 
 
 APP_KEY = "DAKE_Mail_Draft"
@@ -192,6 +205,15 @@ logging.basicConfig(
 )
 
 
+def write_app_debug_log(
+    message: str,
+    *,
+    exc: BaseException | None = None,
+    context: dict[str, object] | None = None,
+) -> None:
+    write_debug_log(message, log_dir=LOG_DIR, exc=exc, context=context)
+
+
 def normalize_header(value: str) -> str:
     return re.sub(r"\s+", " ", value.strip()).lower()
 
@@ -341,35 +363,24 @@ def prepare_targets(
 
 
 def write_report(report_records: list[ReportRecord]) -> Path:
-    LOG_DIR.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     report_path = LOG_DIR / f"draft_report_{timestamp}.csv"
     ordered_records = sorted(report_records, key=lambda item: item.row_number)
-    with report_path.open("w", encoding="utf-8-sig", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=REPORT_FIELDS)
-        writer.writeheader()
-        for record in ordered_records:
-            writer.writerow(record.as_dict())
+    buffer = io.StringIO(newline="")
+    writer = csv.DictWriter(buffer, fieldnames=REPORT_FIELDS)
+    writer.writeheader()
+    for record in ordered_records:
+        writer.writerow(record.as_dict())
+    atomic_write_text(report_path, buffer.getvalue(), encoding="utf-8-sig")
     return report_path
 
 
 def load_settings() -> dict[str, object]:
-    if not SETTINGS_PATH.exists():
-        return {}
-    try:
-        data = json.loads(SETTINGS_PATH.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        logging.warning("settings.json could not be loaded", exc_info=True)
-        return {}
-    return data if isinstance(data, dict) else {}
+    return safe_load_json_config(SETTINGS_PATH, default={})
 
 
 def save_settings(payload: dict[str, object]) -> None:
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    SETTINGS_PATH.write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
+    safe_save_json_config(SETTINGS_PATH, payload)
 
 
 class OutlookDraftSession:
@@ -452,13 +463,20 @@ def create_drafts_worker(
                 subject = render_template(subject_template, target)
                 body_text = render_template(body_template, target)
 
-                try:
-                    outlook_session.create_draft(target, subject, body_text, attachment_paths)
-                except Exception as exc:
+                result = safe_run(
+                    outlook_session.create_draft,
+                    target,
+                    subject,
+                    body_text,
+                    attachment_paths,
+                    title=APP_NAME,
+                    log_dir=str(LOG_DIR),
+                )
+                if not result.ok:
                     error_count += 1
-                    logging.exception("Draft creation failed for row %s", target.row_number)
+                    error_message = str(result.error) if result.error is not None else result.user_message
                     report_records.append(
-                        make_report_record(target, "error", str(exc), subject=subject)
+                        make_report_record(target, "error", error_message, subject=subject)
                     )
                 else:
                     drafted_count += 1
@@ -477,6 +495,7 @@ def create_drafts_worker(
                 )
     except Exception as exc:
         logging.exception("Outlook setup failed")
+        write_app_debug_log("Outlook setup failed", exc=exc)
         for target in targets:
             subject = render_template(subject_template, target)
             report_records.append(make_report_record(target, "error", str(exc), subject=subject))
@@ -1085,8 +1104,9 @@ class MailDraftApp:
         }
         try:
             save_settings(payload)
-        except OSError:
+        except OSError as exc:
             logging.warning("settings.json could not be saved", exc_info=True)
+            write_app_debug_log("settings.json could not be saved", exc=exc, context={"path": SETTINGS_PATH})
 
         self.worker_thread = threading.Thread(
             target=create_drafts_worker,
@@ -1155,10 +1175,34 @@ class MailDraftApp:
         self.root.mainloop()
 
 
-def main() -> None:
+def create_launch_check_window() -> tk.Tk:
+    root = tk.Tk()
+    root.withdraw()
+    root.title(WINDOW_TITLE)
+    try:
+        root.iconbitmap(ICON_PATH)
+    except tk.TclError as exc:
+        write_app_debug_log("launch check icon setup skipped", exc=exc, context={"path": ICON_PATH})
+    return root
+
+
+def run_app() -> None:
     root = tk.Tk()
     MailDraftApp(root).run()
 
 
+def main(argv: list[str] | None = None) -> int:
+    args = list(sys.argv[1:] if argv is None else argv)
+    if "--launch-check" in args:
+        return run_launch_check(
+            checks=(ensure_app_directories,),
+            create_window=create_launch_check_window,
+            log_dir=str(LOG_DIR),
+        )
+
+    result = safe_run(run_app, title=APP_NAME, log_dir=str(LOG_DIR), show_error=True)
+    return 0 if result.ok else 1
+
+
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
