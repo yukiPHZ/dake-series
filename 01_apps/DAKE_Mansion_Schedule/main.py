@@ -105,7 +105,7 @@ DATE_FORMAT = "%Y-%m-%d"
 PDF_FILE_NAME = "mansion_schedule.pdf"
 CONFIG_FILE_NAME = "mansion_schedule_config.json"
 TOTAL_CALENDAR_DAYS = 45
-TOTAL_INITIAL_WORKDAYS = 30
+TOTAL_INITIAL_WORKDAYS = 28
 CONFIG_KEYS = ("branch_name", "person_name", "contact")
 FOOTER_COMPACT_WIDTH = 900
 FREE_WORK_ROW_COUNT = 2
@@ -125,11 +125,11 @@ WORK_ITEMS: tuple[tuple[str, int], ...] = (
     ("クロス工事", 2),
     ("建具工事", 1),
     ("畳工事", 1),
-    ("木工事", 5),
+    ("木工事", 4),
     ("ユニットバス設置工事", 1),
     ("システムキッチン設置工事", 1),
     ("木工事", 1),
-    ("クロス工事", 5),
+    ("クロス工事", 4),
     ("建具工事", 1),
     ("サッシ工事", 1),
     ("畳工事", 1),
