@@ -255,6 +255,7 @@ EXCLUDED_DIR_NAMES = {
     ".venv",
     "__pycache__",
     "build",
+    "dake_series",
     "dist",
     "node_modules",
     "venv",
@@ -641,7 +642,7 @@ def has_site_marker(folder: Path, depth: int) -> bool:
         return True
     if (folder / README_NAME).exists():
         try:
-            if "DAKE_WEB_META" in read_text(folder / README_NAME):
+            if DAKE_WEB_META_PATTERN.search(read_text(folder / README_NAME)):
                 return True
         except OSError:
             pass
