@@ -16,6 +16,13 @@ rmdir /s /q build 2>nul
 rmdir /s /q dist 2>nul
 del /q *.spec 2>nul
 
+"%PYTHON_EXE%" ..\..\tools\generate_version_info.py --app . --out version_info.txt
+if errorlevel 1 (
+    echo.
+    echo version info generation failed
+    exit /b 1
+)
+
 set "PYINSTALLER_EXE="
 where pyinstaller >nul 2>nul
 if not errorlevel 1 (
@@ -36,6 +43,7 @@ goto RUN_PYTHON_MODULE
 --noconsole ^
 --clean ^
 --icon=..\..\02_assets\dake_icon.ico ^
+--version-file version_info.txt ^
 --name %APP_EXE_NAME% ^
 main.py
 goto CHECK_BUILD
@@ -46,6 +54,7 @@ goto CHECK_BUILD
 --noconsole ^
 --clean ^
 --icon=..\..\02_assets\dake_icon.ico ^
+--version-file version_info.txt ^
 --name %APP_EXE_NAME% ^
 main.py
 

@@ -49,7 +49,7 @@ dist\DakeMail_Address_Format.exe --launch-check
   "update_summary": "メールアドレスの貼り付け整形に対応",
   "folder_name": "DAKE_Mail_Address_Format",
   "exe_name": "DakeMail_Address_Format.exe",
-  "release_url": "",
+  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_Address_Format_v1.0.0",
   "screenshot_path": "assets/screenshot.webp",
   "status": "available",
   "show_in_launcher": true,
