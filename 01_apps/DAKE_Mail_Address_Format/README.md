@@ -1,4 +1,4 @@
-# メール整形
+# Dakeメールアドレス整形
 
 貼り付けたメールアドレスらしい文字列だけを抽出し、重複を除いてカンマ区切りに整える単機能DAKEアプリです。
 
@@ -41,10 +41,10 @@ dist\DakeMail_Address_Format.exe --launch-check
 ```json
 {
   "app_key": "DAKE_Mail_Address_Format",
-  "display_name": "メール整形",
-  "launcher_title": "メール整形",
+  "display_name": "Dakeメールアドレス整形",
+  "launcher_title": "Dakeメールアドレス整形",
   "launcher_description": "貼り付けたメールアドレスを、カンマ区切りに整えます。",
-  "site_title": "メール整形",
+  "site_title": "Dakeメールアドレス整形",
   "site_description": "名前付き表記、改行、セミコロン混在のメールアドレスをまとめて整形します。",
   "update_summary": "メールアドレスの貼り付け整形に対応",
   "folder_name": "DAKE_Mail_Address_Format",
@@ -59,7 +59,7 @@ dist\DakeMail_Address_Format.exe --launch-check
 
 ## RELEASE_BODY
 
-メール整形アプリ
+Dakeメールアドレス整形
 貼り付けた宛先を自動抽出
 カンマ区切りでコピー
 Windows向けexe

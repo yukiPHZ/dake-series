@@ -10,12 +10,12 @@ from pathlib import Path
 from tkinter import font as tkfont, messagebox
 
 
-APP_NAME = "DAKE_Mail_Address_Format"
-WINDOW_TITLE = "メール整形"
+APP_NAME = "Dakeメールアドレス整形"
+WINDOW_TITLE = "Dakeメールアドレス整形"
 COPYRIGHT = "© 2026 しまりす不動産 / Vibe-Coded by Yukihiko Kikuta"
 
 UI_TEXT = {
-    "main_title": "メール整形",
+    "main_title": "Dakeメールアドレス整形",
     "main_description_1": "メールアドレスをまとめて貼り付けるだけでOKです。",
     "main_description_2": "カンマ区切り・改行・名前付き表記から自動で整えます。",
     "input_label": "貼り付け入力",
