@@ -6,6 +6,7 @@ import json
 import os
 import queue
 import re
+import subprocess
 import sys
 import threading
 import time
@@ -154,6 +155,37 @@ UI_TEXT = {
     "qpsc_distribution_ready": "配布準備",
     "qpsc_needs_review": "要確認",
     "qpsc_ship_line": "正式出荷ライン到達",
+    "qpsc_unshipped": "未出荷",
+    "qpsc_booth_missing": "BOOTH未準備",
+    "qpsc_release_missing": "Release未作成",
+    "git_card_title": "Git状態",
+    "git_card_subtitle": "DAKE_series 全体",
+    "git_branch": "branch: {value}",
+    "git_latest": "latest: {value}",
+    "git_uncommitted": "未コミット: {value}",
+    "git_untracked": "未追跡: {value}",
+    "git_remote_clean": "remote: 同期",
+    "git_push_waiting": "push待ち: {value}",
+    "git_pull_waiting": "pull待ち: {value}",
+    "git_dashboard": "Dashboard: {value}",
+    "git_dashboard_clean": "clean",
+    "git_dashboard_dirty": "dirty",
+    "git_error": "Git状態を取得できません",
+    "shipment_title": "正式出荷ライン",
+    "shipment_rate": "正式出荷率 {percent}%",
+    "shipment_internal": "内部アプリ",
+    "shipment_missing_title": "不足:",
+    "next_candidates_title": "次にやる候補",
+    "next_candidates_empty": "候補はありません。",
+    "next_candidate_line": "{folder}\n{reason}",
+    "candidate_needs_review": "要確認",
+    "candidate_meta_broken": "README / DAKE_META破損",
+    "candidate_release_missing": "dist/*.exeあり / release_urlなし",
+    "candidate_booth_missing": "Release URLあり / BOOTH未準備",
+    "candidate_site_unknown": "BOOTH素材あり / サイト反映確認が不明",
+    "candidate_screenshot_missing": "screenshot.webpなし",
+    "candidate_release_body_missing": "release_body.mdなし",
+    "candidate_internal": "内部アプリ / 出荷対象外",
     "watch_status_watchdog": "watchdog監視: ON",
     "watch_status_polling": "watchdog未導入 / 30秒自動読込: ON",
     "watch_status_error": "watchdog監視: 起動できませんでした",
@@ -219,6 +251,29 @@ WATCH_DEBOUNCE_MS = 700
 NOTIFICATION_HIDE_MS = 3600
 WATCHED_FILENAMES = {README_NAME, RELEASE_BODY_NAME, BOOTH_PRODUCT_NAME}
 WATCHED_DIR_NAMES = {"assets", DIST_DIR_NAME}
+GIT_TIMEOUT_SECONDS = 2.5
+SHIPMENT_MISSING_KEYS = (
+    "readme",
+    "release_body",
+    "screenshot",
+    "booth_thumbnail",
+    "booth_product",
+    "booth_ready",
+    "dist_exe",
+    "release_url",
+)
+
+
+@dataclass(frozen=True)
+class GitStatus:
+    branch: str
+    latest: str
+    uncommitted_count: int
+    untracked_count: int
+    ahead_count: int
+    behind_count: int
+    dashboard_dirty: bool
+    error: str = ""
 
 
 @dataclass(frozen=True)
@@ -338,10 +393,107 @@ def safe_bool(value: object) -> bool:
     if isinstance(value, bool):
         return value
     if isinstance(value, str):
-        return value.strip().lower() in {"true", "1", "yes", "on"}
+        return value.strip().lower() in {"true", "1", "yes", "on", UI_TEXT["value_yes"].lower()}
     if isinstance(value, (int, float)):
         return bool(value)
     return False
+
+
+def meta_bool(record: AppRecord, key: str) -> bool:
+    return safe_bool(record.meta_fields.get(key, ""))
+
+
+def meta_false(record: AppRecord, key: str) -> bool:
+    value = record.meta_fields.get(key, "").strip().lower()
+    return value in {"false", "0", "no", "off", UI_TEXT["value_no"].lower()}
+
+
+def is_internal_app(record: AppRecord) -> bool:
+    status = record.meta_fields.get("status", "").strip().lower()
+    if record.folder_name == APP_FOLDER_NAME or status == "internal":
+        return True
+    return meta_false(record, "show_on_site")
+
+
+def shipment_missing_keys(record: AppRecord) -> tuple[str, ...]:
+    if is_internal_app(record):
+        return ()
+    return tuple(key for key in SHIPMENT_MISSING_KEYS if key in record.missing_keys)
+
+
+def shipment_rate(record: AppRecord) -> int | None:
+    if is_internal_app(record):
+        return None
+    missing_count = len(shipment_missing_keys(record))
+    done_count = len(SHIPMENT_MISSING_KEYS) - missing_count
+    return round(done_count / len(SHIPMENT_MISSING_KEYS) * 100)
+
+
+def git_run(repo: Path, args: list[str]) -> tuple[str, str]:
+    try:
+        result = subprocess.run(
+            ["git", *args],
+            cwd=str(repo),
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=GIT_TIMEOUT_SECONDS,
+            check=False,
+        )
+    except Exception as exc:
+        return "", str(exc)
+    if result.returncode != 0:
+        return "", (result.stderr or result.stdout).strip()
+    return result.stdout.strip(), ""
+
+
+def parse_remote_counts(status_sb: str) -> tuple[int, int]:
+    ahead = 0
+    behind = 0
+    first_line = status_sb.splitlines()[0] if status_sb else ""
+    ahead_match = re.search(r"ahead\s+(\d+)", first_line)
+    behind_match = re.search(r"behind\s+(\d+)", first_line)
+    if ahead_match:
+        ahead = int(ahead_match.group(1))
+    if behind_match:
+        behind = int(behind_match.group(1))
+    return ahead, behind
+
+
+def read_git_status(repo: Path) -> GitStatus:
+    branch, branch_error = git_run(repo, ["rev-parse", "--abbrev-ref", "HEAD"])
+    latest, latest_error = git_run(repo, ["log", "-1", "--pretty=%h"])
+    short_status, short_error = git_run(repo, ["status", "--short"])
+    status_sb, status_error = git_run(repo, ["status", "-sb"])
+
+    error = branch_error or latest_error or short_error or status_error
+    if error:
+        return GitStatus(
+            branch=UI_TEXT["value_unknown"],
+            latest=UI_TEXT["value_unknown"],
+            uncommitted_count=0,
+            untracked_count=0,
+            ahead_count=0,
+            behind_count=0,
+            dashboard_dirty=False,
+            error=error,
+        )
+
+    lines = [line for line in short_status.splitlines() if line.strip()]
+    untracked_count = sum(1 for line in lines if line.startswith("??"))
+    uncommitted_count = len(lines) - untracked_count
+    dashboard_dirty = any("01_apps/DAKE_App_Dashboard/" in line.replace("\\", "/") for line in lines)
+    ahead_count, behind_count = parse_remote_counts(status_sb)
+    return GitStatus(
+        branch=branch or UI_TEXT["value_unknown"],
+        latest=latest or UI_TEXT["value_unknown"],
+        uncommitted_count=uncommitted_count,
+        untracked_count=untracked_count,
+        ahead_count=ahead_count,
+        behind_count=behind_count,
+        dashboard_dirty=dashboard_dirty,
+    )
 
 
 def read_text_utf8(path: Path) -> str:
@@ -563,6 +715,8 @@ def scan_apps(root: Path) -> list[AppRecord]:
 
 
 def formal_ship_line_reached(record: AppRecord) -> bool:
+    if is_internal_app(record):
+        return False
     return (
         record.checks.has_release_url
         and record.checks.has_dist_exe
@@ -601,6 +755,38 @@ def record_map(records: list[AppRecord]) -> dict[str, AppRecord]:
     return {record.folder_name: record for record in records}
 
 
+def next_candidate_for_record(record: AppRecord) -> tuple[int, str] | None:
+    if record.status_key == "needs_review":
+        return 1, UI_TEXT["candidate_needs_review"]
+    if record.issue_messages or "dake_meta" in record.missing_keys:
+        return 2, UI_TEXT["candidate_meta_broken"]
+    if record.checks.has_dist_exe and not record.checks.has_release_url and not is_internal_app(record):
+        return 3, UI_TEXT["candidate_release_missing"]
+    if record.checks.has_release_url and not record.checks.booth_materials_ready and not is_internal_app(record):
+        return 4, UI_TEXT["candidate_booth_missing"]
+    if record.checks.booth_materials_ready and meta_bool(record, "show_on_site"):
+        return 5, UI_TEXT["candidate_site_unknown"]
+    if not record.checks.has_screenshot and not is_internal_app(record):
+        return 6, UI_TEXT["candidate_screenshot_missing"]
+    if not record.checks.has_release_body and not is_internal_app(record):
+        return 7, UI_TEXT["candidate_release_body_missing"]
+    if is_internal_app(record):
+        return 90, UI_TEXT["candidate_internal"]
+    return None
+
+
+def next_candidates(records: list[AppRecord], limit: int = 5) -> list[tuple[AppRecord, str]]:
+    candidates: list[tuple[int, str, AppRecord]] = []
+    for record in records:
+        candidate = next_candidate_for_record(record)
+        if candidate is None:
+            continue
+        priority, reason = candidate
+        candidates.append((priority, reason, record))
+    candidates.sort(key=lambda item: (item[0], item[2].folder_name.lower()))
+    return [(record, reason) for _priority, reason, record in candidates[:limit]]
+
+
 class DashboardApp:
     def __init__(self, root: tk.Tk, launch_check: bool = False) -> None:
         self.root = root
@@ -627,6 +813,17 @@ class DashboardApp:
             "distribution_ready": tk.StringVar(value="0"),
             "needs_review": tk.StringVar(value="0"),
             "ship_line": tk.StringVar(value="0"),
+            "unshipped": tk.StringVar(value="0"),
+            "booth_missing": tk.StringVar(value="0"),
+            "release_missing": tk.StringVar(value="0"),
+        }
+        self.git_vars = {
+            "branch": tk.StringVar(value=UI_TEXT["git_branch"].format(value=UI_TEXT["value_unknown"])),
+            "latest": tk.StringVar(value=UI_TEXT["git_latest"].format(value=UI_TEXT["value_unknown"])),
+            "uncommitted": tk.StringVar(value=UI_TEXT["git_uncommitted"].format(value=0)),
+            "untracked": tk.StringVar(value=UI_TEXT["git_untracked"].format(value=0)),
+            "remote": tk.StringVar(value=UI_TEXT["git_remote_clean"]),
+            "dashboard": tk.StringVar(value=UI_TEXT["git_dashboard"].format(value=UI_TEXT["value_unknown"])),
         }
         self.search_var = tk.StringVar()
         self.last_loaded_var = tk.StringVar(value=UI_TEXT["last_loaded_waiting"])
@@ -715,6 +912,7 @@ class DashboardApp:
         self.build_header(shell)
         self.build_summary(shell)
         self.build_qpsc_card(shell)
+        self.build_git_card(shell)
         self.build_controls(shell)
         self.build_body(shell)
         self.build_footer(shell)
@@ -838,6 +1036,9 @@ class DashboardApp:
             ("distribution_ready", "qpsc_distribution_ready"),
             ("needs_review", "qpsc_needs_review"),
             ("ship_line", "qpsc_ship_line"),
+            ("unshipped", "qpsc_unshipped"),
+            ("booth_missing", "qpsc_booth_missing"),
+            ("release_missing", "qpsc_release_missing"),
         ]
         for index, (key, label_key) in enumerate(items):
             item = tk.Frame(metrics, bg=THEME["panel_soft"], padx=12, pady=7)
@@ -856,6 +1057,45 @@ class DashboardApp:
                 fg=THEME["accent_hover"],
                 font=(self.font_family, 16, "bold"),
             ).pack(anchor="w")
+
+    def build_git_card(self, parent: tk.Frame) -> None:
+        card = tk.Frame(
+            parent,
+            bg=THEME["panel_alt"],
+            highlightbackground=THEME["border"],
+            highlightthickness=1,
+            bd=0,
+        )
+        card.pack(fill="x", pady=(0, 16))
+        card.grid_columnconfigure(1, weight=1)
+
+        title_area = tk.Frame(card, bg=THEME["panel_alt"])
+        title_area.grid(row=0, column=0, sticky="w", padx=16, pady=12)
+        tk.Label(
+            title_area,
+            text=UI_TEXT["git_card_title"],
+            bg=THEME["panel_alt"],
+            fg=THEME["text"],
+            font=(self.font_family, 12, "bold"),
+        ).pack(anchor="w")
+        tk.Label(
+            title_area,
+            text=UI_TEXT["git_card_subtitle"],
+            bg=THEME["panel_alt"],
+            fg=THEME["muted"],
+            font=(self.font_family, 9),
+        ).pack(anchor="w", pady=(3, 0))
+
+        values = tk.Frame(card, bg=THEME["panel_alt"])
+        values.grid(row=0, column=1, sticky="e", padx=(0, 16), pady=12)
+        for index, key in enumerate(("branch", "latest", "uncommitted", "untracked", "remote", "dashboard")):
+            tk.Label(
+                values,
+                textvariable=self.git_vars[key],
+                bg=THEME["panel_alt"],
+                fg=THEME["muted"] if key not in {"remote", "dashboard"} else THEME["accent_hover"],
+                font=(self.font_family, 9, "bold"),
+            ).grid(row=0, column=index, sticky="e", padx=(0 if index == 0 else 14, 0))
 
     def build_controls(self, parent: tk.Frame) -> None:
         controls = tk.Frame(parent, bg=THEME["bg"])
@@ -1042,14 +1282,18 @@ class DashboardApp:
         detail_area.grid_rowconfigure(3, weight=1)
         detail_area.grid_rowconfigure(5, weight=1)
         detail_area.grid_rowconfigure(7, weight=1)
+        detail_area.grid_rowconfigure(9, weight=1)
+        detail_area.grid_rowconfigure(11, weight=1)
 
-        self.meta_text = self.create_detail_text(detail_area, 0, UI_TEXT["detail_meta_title"])
-        self.files_text = self.create_detail_text(detail_area, 2, UI_TEXT["detail_files_title"])
-        self.missing_text = self.create_detail_text(detail_area, 4, UI_TEXT["detail_missing_title"])
-        self.next_text = self.create_detail_text(detail_area, 6, UI_TEXT["detail_next_title"])
+        self.meta_text = self.create_detail_text(detail_area, 0, UI_TEXT["detail_meta_title"], height=4)
+        self.shipment_text = self.create_detail_text(detail_area, 2, UI_TEXT["shipment_title"], height=4)
+        self.files_text = self.create_detail_text(detail_area, 4, UI_TEXT["detail_files_title"], height=4)
+        self.missing_text = self.create_detail_text(detail_area, 6, UI_TEXT["detail_missing_title"], height=4)
+        self.next_text = self.create_detail_text(detail_area, 8, UI_TEXT["detail_next_title"], height=4)
+        self.next_candidates_text = self.create_detail_text(detail_area, 10, UI_TEXT["next_candidates_title"], height=5)
         self.update_detail(None)
 
-    def create_detail_text(self, parent: tk.Frame, row: int, title: str) -> tk.Text:
+    def create_detail_text(self, parent: tk.Frame, row: int, title: str, height: int = 5) -> tk.Text:
         tk.Label(
             parent,
             text=title,
@@ -1066,7 +1310,7 @@ class DashboardApp:
             highlightbackground=THEME["border"],
             highlightcolor=THEME["border"],
             highlightthickness=1,
-            height=5,
+            height=height,
             wrap="word",
             font=(self.font_family, 10),
             padx=10,
@@ -1170,7 +1414,18 @@ class DashboardApp:
 
     def scan_worker(self, source: str, changed_folder: str | None) -> None:
         records = scan_apps(apps_root())
-        self.worker_queue.put(("scan_done", {"records": records, "source": source, "changed_folder": changed_folder}))
+        git_status = read_git_status(series_root())
+        self.worker_queue.put(
+            (
+                "scan_done",
+                {
+                    "records": records,
+                    "git_status": git_status,
+                    "source": source,
+                    "changed_folder": changed_folder,
+                },
+            )
+        )
 
     def poll_worker(self) -> None:
         try:
@@ -1187,10 +1442,12 @@ class DashboardApp:
     def handle_scan_done(self, payload: object) -> None:
         if isinstance(payload, dict):
             records = payload.get("records", [])
+            git_status = payload.get("git_status")
             source = str(payload.get("source", "manual"))
             changed_folder = payload.get("changed_folder")
         else:
             records = payload
+            git_status = None
             source = "manual"
             changed_folder = None
 
@@ -1202,7 +1459,13 @@ class DashboardApp:
         self.last_loaded_var.set(UI_TEXT["last_loaded_value"].format(time=loaded_at))
         self.status_var.set(UI_TEXT["status_ready"])
         self.update_summary(previous_map, current_map)
+        if isinstance(git_status, GitStatus):
+            self.update_git_card(git_status)
         self.apply_filters()
+        if self.selected_record is not None:
+            refreshed_record = current_map.get(self.selected_record.folder_name)
+            if refreshed_record is not None:
+                self.update_detail(refreshed_record)
         self.previous_record_map = current_map
         if source == "watch" and isinstance(changed_folder, str) and changed_folder:
             self.show_reload_notification(changed_folder)
@@ -1240,6 +1503,37 @@ class DashboardApp:
         self.qpsc_vars["distribution_ready"].set(str(counts["distribution_ready"]))
         self.qpsc_vars["needs_review"].set(str(counts["needs_review"]))
         self.qpsc_vars["ship_line"].set(str(sum(1 for record in self.records if formal_ship_line_reached(record))))
+        self.qpsc_vars["unshipped"].set(str(sum(1 for record in self.records if shipment_rate(record) not in {None, 100})))
+        self.qpsc_vars["booth_missing"].set(
+            str(sum(1 for record in self.records if not is_internal_app(record) and not record.checks.booth_materials_ready))
+        )
+        self.qpsc_vars["release_missing"].set(
+            str(sum(1 for record in self.records if not is_internal_app(record) and not record.checks.has_release_url))
+        )
+
+    def update_git_card(self, status: GitStatus) -> None:
+        if status.error:
+            self.git_vars["branch"].set(UI_TEXT["git_branch"].format(value=UI_TEXT["value_unknown"]))
+            self.git_vars["latest"].set(UI_TEXT["git_latest"].format(value=UI_TEXT["value_unknown"]))
+            self.git_vars["uncommitted"].set(UI_TEXT["git_uncommitted"].format(value=0))
+            self.git_vars["untracked"].set(UI_TEXT["git_untracked"].format(value=0))
+            self.git_vars["remote"].set(UI_TEXT["git_error"])
+            self.git_vars["dashboard"].set(UI_TEXT["git_dashboard"].format(value=UI_TEXT["value_unknown"]))
+            return
+
+        self.git_vars["branch"].set(UI_TEXT["git_branch"].format(value=status.branch))
+        self.git_vars["latest"].set(UI_TEXT["git_latest"].format(value=status.latest))
+        self.git_vars["uncommitted"].set(UI_TEXT["git_uncommitted"].format(value=status.uncommitted_count))
+        self.git_vars["untracked"].set(UI_TEXT["git_untracked"].format(value=status.untracked_count))
+        if status.ahead_count:
+            remote_text = UI_TEXT["git_push_waiting"].format(value=status.ahead_count)
+        elif status.behind_count:
+            remote_text = UI_TEXT["git_pull_waiting"].format(value=status.behind_count)
+        else:
+            remote_text = UI_TEXT["git_remote_clean"]
+        self.git_vars["remote"].set(remote_text)
+        dashboard_value = UI_TEXT["git_dashboard_dirty"] if status.dashboard_dirty else UI_TEXT["git_dashboard_clean"]
+        self.git_vars["dashboard"].set(UI_TEXT["git_dashboard"].format(value=dashboard_value))
 
     def schedule_auto_reload(self) -> None:
         self.root.after(AUTO_RELOAD_MS, self.auto_reload)
@@ -1406,9 +1700,11 @@ class DashboardApp:
             self.detail_status_var.set(UI_TEXT["value_unset"])
             self.detail_badge.configure(bg=THEME["panel_soft"], fg=THEME["muted"])
             self.set_text(self.meta_text, UI_TEXT["detail_empty"])
+            self.set_text(self.shipment_text, UI_TEXT["detail_empty"])
             self.set_text(self.files_text, UI_TEXT["detail_empty"])
             self.set_text(self.missing_text, UI_TEXT["detail_empty"])
             self.set_text(self.next_text, UI_TEXT["detail_empty"])
+            self.set_text(self.next_candidates_text, self.build_next_candidates_detail())
             self.set_detail_buttons_state(False)
             return
 
@@ -1417,9 +1713,11 @@ class DashboardApp:
         self.detail_badge.configure(bg=badge_bg, fg=badge_fg)
         self.detail_name_var.set(f"{record.folder_name}\n{record.display_name}")
         self.set_text(self.meta_text, self.build_meta_detail(record))
+        self.set_text(self.shipment_text, self.build_shipment_detail(record))
         self.set_text(self.files_text, self.build_file_detail(record))
         self.set_text(self.missing_text, self.build_missing_detail(record))
         self.set_text(self.next_text, self.build_next_detail(record))
+        self.set_text(self.next_candidates_text, self.build_next_candidates_detail())
         self.set_detail_buttons_state(True)
 
     def set_detail_buttons_state(self, enabled: bool) -> None:
@@ -1468,10 +1766,35 @@ class DashboardApp:
             lines.extend(path.name for path in checks.dist_exes)
         return "\n".join(lines)
 
+    def build_shipment_detail(self, record: AppRecord) -> str:
+        rate = shipment_rate(record)
+        if rate is None:
+            return UI_TEXT["shipment_internal"]
+
+        lines = [UI_TEXT["shipment_rate"].format(percent=rate)]
+        missing = shipment_missing_keys(record)
+        if missing:
+            lines.append("")
+            lines.append(UI_TEXT["shipment_missing_title"])
+            lines.extend(f"- {UI_TEXT[f'missing_{key}']}" for key in missing)
+        else:
+            lines.append(UI_TEXT["missing_none"])
+        return "\n".join(lines)
+
     def build_missing_detail(self, record: AppRecord) -> str:
         if not record.missing_keys:
             return UI_TEXT["missing_none"]
         return "\n".join(f"- {UI_TEXT[f'missing_{key}']}" for key in record.missing_keys)
+
+    def build_next_candidates_detail(self) -> str:
+        candidates = next_candidates(self.records)
+        if not candidates:
+            return UI_TEXT["next_candidates_empty"]
+        blocks = [
+            UI_TEXT["next_candidate_line"].format(folder=record.folder_name, reason=reason)
+            for record, reason in candidates
+        ]
+        return "\n\n".join(blocks)
 
     def build_next_detail(self, record: AppRecord) -> str:
         tasks: list[str] = []

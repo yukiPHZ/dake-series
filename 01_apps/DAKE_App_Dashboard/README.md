@@ -53,6 +53,16 @@ C:\Users\yukiz\devlop\DAKE_series\01_apps
 変更検知時は対象アプリを再読込し、右下通知に `{folder} を再読込しました` を表示します。
 `watchdog` が未導入の環境でもアプリは落ちず、30秒ごとの自動読込で追従します。
 
+## Phase3 司令塔機能
+
+- 正式出荷ライン達成率を表示
+- show_on_site=false の内部アプリは「内部アプリ」として出荷率の対象外にする
+- Git状態カードで branch、latest、未コミット、未追跡、push/pull待ち、Dashboard状態を表示
+- 次にやる候補を最大5件表示
+- 要確認、未出荷、BOOTH未準備、Release未作成をQPSC通知カードで浮上
+
+このアプリ自身は内部アプリです。一般公開、BOOTH素材作成、dakeapp.com掲載、GitHub Release作成は行いません。
+
 ## 品質チェック
 
 ```powershell
