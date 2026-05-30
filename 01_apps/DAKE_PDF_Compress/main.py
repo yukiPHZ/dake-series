@@ -14,6 +14,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+CORE_DIR = Path(__file__).resolve().parents[2] / "00_core"
+if str(CORE_DIR) not in sys.path:
+    sys.path.insert(0, str(CORE_DIR))
+
+from dake_quality_engine import atomic_replace, run_launch_check, safe_load_json_config, safe_run
+from dake_quality_engine.logging import write_debug_log
+
 tk = None
 filedialog = None
 tkfont = None
@@ -129,6 +136,7 @@ GHOSTSCRIPT_PDF_SETTINGS = "/ebook"
 GHOSTSCRIPT_LIGHTER_PDF_SETTINGS = "/screen"
 GHOSTSCRIPT_TIMEOUT_SECONDS = 300
 DEBUG_LOG_ENV = "DAKE_PDF_COMPRESS_DEBUG"
+CONFIG_FILENAME = "dake_pdf_compress_config.json"
 
 CLI_HELP_TEXT = """DakePDF_Compress CLI
 Usage:
@@ -242,6 +250,27 @@ def app_dir() -> Path:
     return Path(__file__).resolve().parent
 
 
+def app_log_dir() -> Path:
+    return app_dir() / "logs"
+
+
+def app_config_path() -> Path:
+    return app_dir() / CONFIG_FILENAME
+
+
+def load_optional_config() -> dict[str, Any]:
+    return safe_load_json_config(app_config_path(), default={})
+
+
+def write_app_debug_log(
+    message: str,
+    *,
+    exc: BaseException | None = None,
+    context: dict[str, object] | None = None,
+) -> None:
+    write_debug_log(message, log_dir=app_log_dir(), exc=exc, context=context)
+
+
 def resource_icon_path() -> Path:
     candidates: list[Path] = []
     if getattr(sys, "frozen", False):
@@ -276,7 +305,8 @@ def apply_window_icon(window: tk.Misc) -> None:
         icon_path = resource_icon_path()
         if icon_path.exists():
             window.iconbitmap(str(icon_path))
-    except Exception:
+    except Exception as exc:
+        write_app_debug_log("window icon setup skipped", exc=exc)
         pass
 
 
@@ -555,7 +585,12 @@ def accept_smaller_pdf(
     if temp_path.stat().st_size >= original_size:
         temp_path.unlink(missing_ok=True)
         return False
-    temp_path.replace(output_path)
+    try:
+        atomic_replace(temp_path, output_path)
+    except PermissionError as exc:
+        raise CompressError("error_file_in_use", str(exc)) from exc
+    except OSError as exc:
+        raise CompressError("error_save_failed", str(exc)) from exc
     return True
 
 
@@ -615,8 +650,10 @@ def compress_pdf(source_path: Path) -> PdfResult:
                 )
         except CompressError as exc:
             debug_log(f"ghostscript_failed={exc.message_key}")
+            write_app_debug_log("ghostscript compression failed", exc=exc, context={"source": source_path})
         except Exception as exc:
             debug_log(f"ghostscript_failed={type(exc).__name__}")
+            write_app_debug_log("ghostscript compression failed", exc=exc, context={"source": source_path})
         finally:
             if temp_path.exists():
                 try:
@@ -690,7 +727,14 @@ def run_cli(argv: list[str]) -> int | None:
             if not source_path.exists() or not source_path.is_file():
                 cli_write_error(CLI_ERROR_TEXT["not_found"])
                 return 1
-            result = compress_pdf(source_path)
+            result_run = safe_run(compress_pdf, source_path, title=APP_NAME, log_dir=str(app_log_dir()))
+            if not result_run.ok or result_run.value is None:
+                if isinstance(result_run.error, CompressError):
+                    cli_write_error(cli_error_for_exception(result_run.error))
+                else:
+                    cli_write_error(CLI_ERROR_TEXT["unknown"])
+                return 1
+            result = result_run.value
             output_paths.append(result.output_path)
     except CompressError as exc:
         cli_write_error(cli_error_for_exception(exc))
@@ -1119,13 +1163,15 @@ class DakePdfCompressApp:
         worker.start()
 
     def compress_worker(self, source_path: Path) -> None:
-        try:
-            result = compress_pdf(source_path)
-            self.event_queue.put(("success", result))
-        except CompressError as exc:
-            self.event_queue.put(("error", exc))
-        except Exception as exc:
-            self.event_queue.put(("error", CompressError("error_unknown", str(exc))))
+        result = safe_run(compress_pdf, source_path, title=APP_NAME, log_dir=str(app_log_dir()))
+        if result.ok and result.value is not None:
+            self.event_queue.put(("success", result.value))
+            return
+        if isinstance(result.error, CompressError):
+            self.event_queue.put(("error", result.error))
+            return
+        detail = str(result.error) if result.error is not None else result.user_message
+        self.event_queue.put(("error", CompressError("error_unknown", detail)))
 
     def poll_queue(self) -> None:
         try:
@@ -1265,15 +1311,42 @@ class DakePdfCompressApp:
         )
 
 
-def main() -> None:
-    cli_exit_code = run_cli(sys.argv[1:])
-    if cli_exit_code is not None:
-        raise SystemExit(cli_exit_code)
+def check_runtime_dependencies() -> None:
+    if get_fitz() is None:
+        raise CompressError("error_dependency_missing")
 
+
+def create_launch_check_window() -> Any:
+    root = make_root()
+    root.withdraw()
+    root.title(WINDOW_TITLE)
+    apply_window_icon(root)
+    return root
+
+
+def run_app() -> None:
+    load_optional_config()
     root = make_root()
     DakePdfCompressApp(root)
     root.mainloop()
 
 
+def main(argv: list[str] | None = None) -> int:
+    args = list(sys.argv[1:] if argv is None else argv)
+    cli_exit_code = run_cli(args)
+    if cli_exit_code is not None:
+        return cli_exit_code
+
+    if "--launch-check" in args:
+        return run_launch_check(
+            checks=(load_optional_config, check_runtime_dependencies),
+            create_window=create_launch_check_window,
+            log_dir=str(app_log_dir()),
+        )
+
+    result = safe_run(run_app, title=APP_NAME, log_dir=str(app_log_dir()), show_error=True)
+    return 0 if result.ok else 1
+
+
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
