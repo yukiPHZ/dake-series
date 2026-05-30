@@ -15,6 +15,7 @@ if errorlevel 1 (
 rmdir /s /q build 2>nul
 rmdir /s /q dist 2>nul
 del /q *.spec 2>nul
+del /q version_info.txt 2>nul
 
 "%PYTHON_EXE%" ..\..\tools\generate_version_info.py --app . --out version_info.txt
 if errorlevel 1 (
@@ -42,6 +43,7 @@ goto RUN_PYTHON_MODULE
 --onefile ^
 --noconsole ^
 --clean ^
+--paths=..\..\00_core ^
 --icon=..\..\02_assets\dake_icon.ico ^
 --version-file version_info.txt ^
 --name %APP_EXE_NAME% ^
@@ -53,6 +55,7 @@ goto CHECK_BUILD
 --onefile ^
 --noconsole ^
 --clean ^
+--paths=..\..\00_core ^
 --icon=..\..\02_assets\dake_icon.ico ^
 --version-file version_info.txt ^
 --name %APP_EXE_NAME% ^
