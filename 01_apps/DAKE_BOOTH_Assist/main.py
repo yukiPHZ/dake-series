@@ -14,6 +14,7 @@ import tempfile
 import tkinter as tk
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import urlparse
 from tkinter import font as tkfont
 from tkinter import messagebox, ttk
 
@@ -39,6 +40,8 @@ UI_TEXT = {
     "button_copy_tags": "タグをコピー",
     "button_copy_thumbnail_path": "商品画像パスをコピー",
     "button_copy_zip_path": "zipパスをコピー",
+    "button_get_chrome_url": "現在のChrome URLを取得",
+    "button_save_booth_url": "BOOTH URLを保存",
     "field_title": "商品名",
     "field_price": "価格",
     "field_description": "説明文",
@@ -54,6 +57,7 @@ UI_TEXT = {
     "field_proxy_purchase": "代理購入サービス",
     "field_screenshot": "screenshot.webp",
     "field_github_release": "GitHub Release URL",
+    "field_booth_url": "BOOTH商品URL",
     "status_label": "状態",
     "status_no_selection": "未選択",
     "status_loading": "読み込み中",
@@ -87,6 +91,8 @@ UI_TEXT = {
     "detail_copy_empty": "{label}が未設定です。booth_product.txt を確認してください。",
     "detail_ready_missing": "booth_ready フォルダが見つかりません。",
     "detail_opened_ready": "booth_ready フォルダを開きました。",
+    "detail_booth_url_fetched": "ChromeからBOOTH URLを取得しました。",
+    "detail_booth_url_saved": "BOOTH URLを保存しました。保存先: {targets}",
     "detail_chrome_launched": "Chromeを開きました。BOOTHへログインし、商品登録または編集画面を開いてください。",
     "detail_chrome_connected": "ログイン済みChromeへ接続しました。開いているBOOTH編集画面を確認しています。",
     "detail_login_required": "Chrome上でBOOTHへログインしてから、もう一度実行してください。",
@@ -129,6 +135,11 @@ UI_TEXT = {
     "dialog_chrome_not_found": "Chromeが見つかりませんでした。Chromeをインストールするか、以下を手動で実行してください。\n\n{command}",
     "dialog_chrome_launch_error": "Chromeを起動できませんでした。以下を手動で実行してください。\n\n{command}\n\n{error}",
     "dialog_chrome_connect_error": "ログイン済みChromeへ接続できませんでした。\n先に「ログイン済みChromeを起動」ボタンを押し、BOOTHへログインしてからもう一度実行してください。\n\n{error}",
+    "dialog_booth_url_empty": "BOOTH URLが空です。URLを入力するか、現在のChrome URLを取得してください。",
+    "dialog_booth_url_invalid": "BOOTHの商品URLまたは編集URLではありません。\nbooth.pm または manage.booth.pm の商品URLを指定してください。\n\n{url}",
+    "dialog_booth_url_confirm": "以下のBOOTH URLを保存します。\n\n{url}\n\n保存先:\n{targets}\n\nよろしいですか？",
+    "dialog_booth_url_saved": "BOOTH URLを保存しました。\n\n保存先:\n{targets}",
+    "dialog_booth_url_save_error": "BOOTH URLを保存できませんでした。\n\n{error}",
     "dialog_assist_summary_title": "入力補助の結果",
     "footer_left": "シンプルそれDAKEシリーズ",
     "footer_separator": " / ",
@@ -262,9 +273,12 @@ FIELD_ALIASES = {
     "thumbnail": "thumbnail_path",
     "thumbnailpath": "thumbnail_path",
     "thumbnail_path": "thumbnail_path",
+    "boothurl": "url",
 }
 
 KEY_VALUE_RE = re.compile(r"^\s*([^:=]+?)\s*[:=]\s*(.*)$")
+BOOTH_ITEM_ID_RE = re.compile(r"/items/(\d+)")
+BOOTH_URL_SAVE_KEYS = {"boothurl", "url"}
 GITHUB_RELEASE_RE = re.compile(r"https?://github\.com/[^\s)]+/releases/[^\s)]+", re.IGNORECASE)
 
 
@@ -476,6 +490,205 @@ def clean_tags(value: str) -> str:
 
 def clean_url(value: str) -> str:
     return clean_single_line(value).rstrip("、。，,)")
+
+def ensure_url_scheme(value: str) -> str:
+    cleaned = value.strip()
+    if cleaned and not re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*://", cleaned):
+        return "https://" + cleaned
+    return cleaned
+
+
+def booth_url_parts(value: str):
+    try:
+        return urlparse(ensure_url_scheme(value))
+    except Exception:
+        return urlparse("")
+
+
+def is_booth_host(host: str | None) -> bool:
+    if not host:
+        return False
+    normalized = host.lower()
+    return normalized == "booth.pm" or normalized.endswith(".booth.pm")
+
+
+def is_public_booth_shop_host(host: str | None) -> bool:
+    return is_booth_host(host) and host.lower() != "manage.booth.pm" if host else False
+
+
+def extract_booth_item_id(value: str) -> str:
+    match = BOOTH_ITEM_ID_RE.search(booth_url_parts(value).path)
+    return match.group(1) if match else ""
+
+
+def clean_booth_url(value: str) -> str:
+    parts = booth_url_parts(value)
+    if not parts.scheme or not parts.netloc:
+        return ""
+    return f"{parts.scheme}://{parts.netloc}{parts.path}".rstrip("/")
+
+
+def is_valid_booth_save_url(value: str) -> bool:
+    parts = booth_url_parts(value)
+    return is_booth_host(parts.hostname) and bool(extract_booth_item_id(value))
+
+
+def shop_host_from_url(value: str) -> str:
+    parts = booth_url_parts(value)
+    host = parts.hostname or ""
+    return host if is_public_booth_shop_host(host) else ""
+
+
+def collect_shop_hosts_from_page(page) -> list[str]:
+    try:
+        hrefs = page.evaluate("""
+() => Array.from(document.links || [])
+  .map((link) => link.href || "")
+  .filter(Boolean)
+  .slice(0, 300)
+""")
+    except Exception:
+        return []
+    hosts: list[str] = []
+    for href in hrefs if isinstance(hrefs, list) else []:
+        host = shop_host_from_url(str(href))
+        if host and host not in hosts:
+            hosts.append(host)
+    return hosts
+
+
+def infer_booth_shop_host(product: ProductInfo | None = None, browser=None, page=None) -> str:
+    if product is not None:
+        host = shop_host_from_url(product.url)
+        if host:
+            return host
+
+    if browser is not None:
+        for browser_page in collect_browser_pages(browser):
+            host = shop_host_from_url(safe_page_url(browser_page))
+            if host:
+                return host
+
+    if page is not None:
+        hosts = collect_shop_hosts_from_page(page)
+        if hosts:
+            return hosts[0]
+    return ""
+
+
+def normalize_booth_url_for_save(value: str, product: ProductInfo | None = None, browser=None, page=None) -> str:
+    cleaned = clean_booth_url(value)
+    if not cleaned:
+        return ""
+    parts = booth_url_parts(cleaned)
+    if not is_booth_host(parts.hostname):
+        return ""
+
+    item_id = extract_booth_item_id(cleaned)
+    if not item_id:
+        return cleaned
+
+    if (parts.hostname or "").lower() == "manage.booth.pm" and "/edit" in parts.path:
+        shop_host = infer_booth_shop_host(product, browser, page)
+        if shop_host:
+            return f"https://{shop_host}/items/{item_id}"
+    return cleaned
+
+
+def is_booth_url_save_label(label: str) -> bool:
+    return normalize_key(label) in BOOTH_URL_SAVE_KEYS
+
+
+def update_key_value_url_line(line: str, url: str) -> str:
+    match = re.match(r"^(\s*)([^:=]+?)(\s*)([:=]).*$", line)
+    if not match:
+        return f"BOOTH URL: {url}"
+    leading, key, spacing, separator = match.groups()
+    value_spacing = "" if separator == "=" else " "
+    return f"{leading}{key.rstrip()}{spacing}{separator}{value_spacing}{url}"
+
+
+def choose_booth_url_append_line(text: str, url: str) -> str:
+    for line in text.splitlines():
+        if "=" in line and KEY_VALUE_RE.match(line):
+            return f"BOOTH_URL={url}"
+    return f"BOOTH URL: {url}"
+
+
+def is_structured_key_value_line(line: str) -> bool:
+    stripped = line.strip()
+    if re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*://", stripped):
+        return False
+    return bool(KEY_VALUE_RE.match(stripped))
+
+
+def update_booth_url_text(text: str, url: str) -> str:
+    lines = text.splitlines()
+    output: list[str] = []
+    updated = False
+    index = 0
+
+    while index < len(lines):
+        line = lines[index]
+        stripped = line.strip()
+
+        if stripped.startswith("#") and is_booth_url_save_label(stripped.lstrip("#").strip()):
+            output.append(line)
+            output.append(url)
+            updated = True
+            index += 1
+            while index < len(lines):
+                next_stripped = lines[index].strip()
+                if next_stripped.startswith("#") or is_structured_key_value_line(next_stripped):
+                    break
+                index += 1
+            continue
+
+        match = KEY_VALUE_RE.match(line)
+        if match and is_booth_url_save_label(match.group(1)):
+            output.append(update_key_value_url_line(line, url))
+            updated = True
+            index += 1
+            continue
+
+        output.append(line)
+        index += 1
+
+    if not updated:
+        if output and output[-1].strip():
+            output.append("")
+        output.append(choose_booth_url_append_line(text, url))
+
+    return "\n".join(output).rstrip() + "\n"
+
+
+def booth_url_save_targets(app_dir: Path) -> tuple[Path, ...]:
+    primary = app_dir / READY_DIR_NAME / PRODUCT_FILE_NAME
+    root_product = app_dir / PRODUCT_FILE_NAME
+    targets = [primary]
+    if root_product.exists() and root_product != primary:
+        targets.append(root_product)
+    return tuple(targets)
+
+
+def format_save_target(app_dir: Path, target: Path) -> str:
+    try:
+        return target.relative_to(app_dir).as_posix()
+    except ValueError:
+        return str(target)
+
+
+def format_save_targets(app_dir: Path, targets: tuple[Path, ...]) -> str:
+    return "\n".join(format_save_target(app_dir, target) for target in targets)
+
+
+def save_booth_url_to_products(app_dir: Path, url: str) -> tuple[Path, ...]:
+    targets = booth_url_save_targets(app_dir)
+    for target in targets:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        current_text = read_text_safely(target) if target.exists() else ""
+        target.write_text(update_booth_url_text(current_text, url), encoding="utf-8")
+    return targets
 
 
 def parse_booth_product(path: Path) -> dict[str, str]:
@@ -1098,6 +1311,62 @@ def choose_booth_edit_page(browser):
         edit_pages.append(page)
     return edit_pages[0] if edit_pages else None
 
+
+def is_booth_page_url(url: str) -> bool:
+    return is_booth_host(booth_url_parts(url).hostname)
+
+
+def choose_booth_url_page(browser):
+    pages = collect_browser_pages(browser)
+    for page in pages:
+        if is_active_page(page) and is_valid_booth_save_url(safe_page_url(page)):
+            return page
+    for page in pages:
+        if is_active_page(page) and is_booth_page_url(safe_page_url(page)):
+            return page
+    for page in pages:
+        if is_valid_booth_save_url(safe_page_url(page)):
+            return page
+    for page in pages:
+        if is_booth_page_url(safe_page_url(page)):
+            return page
+    return None
+
+
+def run_current_booth_url_worker(product: ProductInfo | None, events: queue.Queue[WorkerEvent]) -> None:
+    try:
+        from playwright.sync_api import sync_playwright
+    except Exception as exc:
+        events.put(("error_setup", UI_TEXT["dialog_playwright_setup"].format(error=exc)))
+        return
+
+    try:
+        events.put(("status", "status_chrome_connecting"))
+        with sync_playwright() as playwright:
+            try:
+                browser = playwright.chromium.connect_over_cdp(CHROME_CDP_URL, timeout=7000)
+            except Exception as exc:
+                events.put(("error_connect", UI_TEXT["dialog_chrome_connect_error"].format(error=exc)))
+                return
+
+            events.put(("status", "status_chrome_connected"))
+            page = choose_booth_url_page(browser)
+            if page is None:
+                events.put(("booth_url_invalid", UI_TEXT["dialog_booth_url_invalid"].format(url=UI_TEXT["value_unset"])))
+                return
+
+            raw_url = safe_page_url(page)
+            booth_url = normalize_booth_url_for_save(raw_url, product, browser, page)
+            if not is_valid_booth_save_url(booth_url):
+                events.put(("booth_url_invalid", UI_TEXT["dialog_booth_url_invalid"].format(url=raw_url or UI_TEXT["value_unset"])))
+                return
+
+            events.put(("booth_url_value", booth_url))
+            events.put(("url_done", UI_TEXT["detail_booth_url_fetched"]))
+    except Exception as exc:
+        events.put(("error", UI_TEXT["dialog_playwright_error"].format(error=exc)))
+
+
 def run_chrome_assist_worker(product: ProductInfo | None, events: queue.Queue[WorkerEvent]) -> None:
     try:
         from playwright.sync_api import sync_playwright
@@ -1160,6 +1429,7 @@ class DakeBoothAssistApp:
 
         self.apps: list[AppEntry] = []
         self.selected_product: ProductInfo | None = None
+        self.booth_url_var = tk.StringVar(value="")
         self.playwright_active = False
         self.playwright_events: queue.Queue[WorkerEvent] = queue.Queue()
 
@@ -1395,6 +1665,20 @@ class DakeBoothAssistApp:
         actions = self._build_panel(parent, "section_actions")
         actions.pack(fill="x", pady=(14, 0))
 
+        booth_url_frame = tk.Frame(actions, bg=THEME["panel"])
+        booth_url_frame.pack(fill="x", padx=16, pady=(0, 10))
+        booth_url_frame.grid_columnconfigure(1, weight=1)
+        tk.Label(
+            booth_url_frame,
+            text=UI_TEXT["field_booth_url"],
+            bg=THEME["panel"],
+            fg=THEME["muted"],
+            font=(self.font_family, 9, "bold"),
+            anchor="w",
+        ).grid(row=0, column=0, sticky="w", padx=(0, 10))
+        self.booth_url_entry = ttk.Entry(booth_url_frame, textvariable=self.booth_url_var)
+        self.booth_url_entry.grid(row=0, column=1, sticky="ew")
+
         button_grid = tk.Frame(actions, bg=THEME["panel"])
         button_grid.pack(fill="x", padx=16, pady=(0, 16))
         for column in range(3):
@@ -1411,6 +1695,18 @@ class DakeBoothAssistApp:
             text=UI_TEXT["button_start_assist"],
             style="Primary.TButton",
             command=self.start_input_assist,
+        )
+        self.fetch_booth_url_button = ttk.Button(
+            button_grid,
+            text=UI_TEXT["button_get_chrome_url"],
+            style="Secondary.TButton",
+            command=self.fetch_current_chrome_url,
+        )
+        self.save_booth_url_button = ttk.Button(
+            button_grid,
+            text=UI_TEXT["button_save_booth_url"],
+            style="Secondary.TButton",
+            command=self.save_booth_url,
         )
         self.open_ready_button = ttk.Button(
             button_grid,
@@ -1452,6 +1748,8 @@ class DakeBoothAssistApp:
         buttons = (
             self.launch_chrome_button,
             self.assist_button,
+            self.fetch_booth_url_button,
+            self.save_booth_url_button,
             self.open_ready_button,
             self.copy_title_button,
             self.copy_description_button,
@@ -1590,6 +1888,7 @@ class DakeBoothAssistApp:
             else:
                 variable.set(UI_TEXT["value_unset"])
         self._set_description(UI_TEXT["value_unset"])
+        self.booth_url_var.set("")
 
     def _render_product(self, product: ProductInfo) -> None:
         self.field_vars["title"].set(product.title or UI_TEXT["value_unset"])
@@ -1601,6 +1900,7 @@ class DakeBoothAssistApp:
         self.field_vars["thumbnail"].set(self._format_path_value(product.thumbnail_path))
         self.field_vars["screenshot"].set(self._format_path_value(product.screenshot_path))
         self.field_vars["github_release"].set(product.github_release or UI_TEXT["value_unset"])
+        self.booth_url_var.set(product.url if is_valid_booth_save_url(product.url) else "")
         self._set_description(product.description or UI_TEXT["value_unset"])
 
     def _format_zip_value(self, product: ProductInfo) -> str:
@@ -1634,6 +1934,8 @@ class DakeBoothAssistApp:
         playwright_state = tk.DISABLED if self.playwright_active else normal_if_selection
         self.launch_chrome_button.configure(state=playwright_state)
         self.assist_button.configure(state=playwright_state)
+        self.fetch_booth_url_button.configure(state=playwright_state)
+        self.save_booth_url_button.configure(state=normal_if_selection)
         self.open_ready_button.configure(state=normal_if_selection)
         self.copy_title_button.configure(state=normal_if_selection)
         self.copy_description_button.configure(state=normal_if_selection)
@@ -1711,6 +2013,66 @@ class DakeBoothAssistApp:
 
         self._set_status("status_chrome_ready", UI_TEXT["detail_chrome_launched"])
 
+    def fetch_current_chrome_url(self) -> None:
+        self._start_booth_url_fetch_task()
+
+    def _start_booth_url_fetch_task(self) -> None:
+        if self.playwright_active:
+            messagebox.showinfo(UI_TEXT["dialog_notice_title"], UI_TEXT["dialog_playwright_busy"])
+            return
+        if self.selected_product is None:
+            self._set_status("status_no_selection", UI_TEXT["detail_no_selection"])
+            return
+
+        self.playwright_active = True
+        self._update_buttons()
+        product = self.selected_product
+        worker = threading.Thread(target=run_current_booth_url_worker, args=(product, self.playwright_events), daemon=True)
+        worker.start()
+        self.root.after(QUEUE_POLL_MS, self._poll_playwright_events)
+
+    def save_booth_url(self) -> None:
+        if self.selected_product is None:
+            self._set_status("status_no_selection", UI_TEXT["detail_no_selection"])
+            return
+
+        raw_url = self.booth_url_var.get().strip()
+        if not raw_url:
+            messagebox.showinfo(UI_TEXT["dialog_notice_title"], UI_TEXT["dialog_booth_url_empty"])
+            return
+
+        booth_url = normalize_booth_url_for_save(raw_url, self.selected_product)
+        if not is_valid_booth_save_url(booth_url):
+            messagebox.showerror(UI_TEXT["dialog_error_title"], UI_TEXT["dialog_booth_url_invalid"].format(url=raw_url))
+            return
+
+        targets = booth_url_save_targets(self.selected_product.app_dir)
+        targets_text = format_save_targets(self.selected_product.app_dir, targets)
+        confirmed = messagebox.askyesno(
+            UI_TEXT["dialog_notice_title"],
+            UI_TEXT["dialog_booth_url_confirm"].format(url=booth_url, targets=targets_text),
+        )
+        if not confirmed:
+            return
+
+        try:
+            saved_targets = save_booth_url_to_products(self.selected_product.app_dir, booth_url)
+        except Exception as exc:
+            self._set_status("status_error")
+            messagebox.showerror(UI_TEXT["dialog_error_title"], UI_TEXT["dialog_booth_url_save_error"].format(error=exc))
+            return
+
+        saved_targets_text = format_save_targets(self.selected_product.app_dir, saved_targets)
+        refreshed_product = build_product_info(self.selected_product.app_dir)
+        self.selected_product = refreshed_product
+        self._render_product(refreshed_product)
+        self.booth_url_var.set(booth_url)
+        self._set_status("status_ready", UI_TEXT["detail_booth_url_saved"].format(targets=saved_targets_text.replace("\n", ", ")))
+        messagebox.showinfo(
+            UI_TEXT["dialog_notice_title"],
+            UI_TEXT["dialog_booth_url_saved"].format(targets=saved_targets_text),
+        )
+
     def start_input_assist(self) -> None:
         self._start_chrome_assist_task()
 
@@ -1742,6 +2104,17 @@ class DakeBoothAssistApp:
             elif kind == "summary":
                 self._set_status("status_assist_complete", UI_TEXT["assist_publish_guard"])
                 messagebox.showinfo(UI_TEXT["dialog_assist_summary_title"], payload)
+            elif kind == "booth_url_value":
+                self.booth_url_var.set(payload)
+            elif kind == "url_done":
+                self.playwright_active = False
+                self._set_status("status_ready", payload)
+                self._update_buttons()
+            elif kind == "booth_url_invalid":
+                self.playwright_active = False
+                self._set_status("status_error")
+                self._update_buttons()
+                messagebox.showerror(UI_TEXT["dialog_error_title"], payload)
             elif kind == "login_required":
                 self.playwright_active = False
                 self._set_status("status_login_required", payload)
@@ -1833,6 +2206,24 @@ def run_launch_check() -> int:
         if both_product.title != "Root Sample" or both_product.product_source != PRODUCT_FILE_NAME:
             raise RuntimeError("root product priority fixture failed")
 
+        url_app = temp_root / "UrlApp"
+        url_ready_dir = url_app / READY_DIR_NAME
+        url_ready_dir.mkdir(parents=True)
+        url_app_product = url_app / PRODUCT_FILE_NAME
+        url_ready_product = url_ready_dir / PRODUCT_FILE_NAME
+        url_app_product.write_text("TITLE=Root URL\nURL=https://old.booth.pm/items/1\n", encoding="utf-8")
+        url_ready_product.write_text("TITLE=Ready URL\nBOOTH URL: https://old.booth.pm/items/2\n", encoding="utf-8")
+        saved_url = "https://peakheadz.booth.pm/items/8417561"
+        saved_targets = save_booth_url_to_products(url_app, saved_url)
+        if tuple(format_save_target(url_app, target) for target in saved_targets) != (f"{READY_DIR_NAME}/{PRODUCT_FILE_NAME}", PRODUCT_FILE_NAME):
+            raise RuntimeError("booth url target fixture failed")
+        if saved_url not in read_text_safely(url_ready_product):
+            raise RuntimeError("ready booth url save fixture failed")
+        if "URL=https://peakheadz.booth.pm/items/8417561" not in read_text_safely(url_app_product):
+            raise RuntimeError("root booth url update fixture failed")
+        if parse_booth_product(url_ready_product).get("url") != saved_url:
+            raise RuntimeError("booth url parse fixture failed")
+
     if not is_booth_edit_url("https://manage.booth.pm/items/8417561/edit"):
         raise RuntimeError("booth edit URL fixture failed")
     items_new_url = "https://manage.booth.pm/items" + "/new"
@@ -1842,6 +2233,17 @@ def run_launch_check() -> int:
         raise RuntimeError("items new URL should not match edit fixture")
     if is_booth_edit_url("https://manage.booth.pm/items/8417561"):
         raise RuntimeError("item URL without edit should not match edit fixture")
+    edit_url = "https://manage.booth.pm/items/8417561/edit"
+    if normalize_booth_url_for_save(edit_url) != edit_url:
+        raise RuntimeError("edit booth url fallback fixture failed")
+    if not is_valid_booth_save_url("https://peakheadz.booth.pm/items/8417561"):
+        raise RuntimeError("public booth url validation fixture failed")
+    if is_valid_booth_save_url("https://example.com/items/8417561"):
+        raise RuntimeError("external booth url rejection fixture failed")
+    if "BOOTH_URL=https://peakheadz.booth.pm/items/8417561" not in update_booth_url_text("TITLE=Sample\n", "https://peakheadz.booth.pm/items/8417561"):
+        raise RuntimeError("booth url append equals fixture failed")
+    if "# URL\nhttps://peakheadz.booth.pm/items/8417561\n# Tags" not in update_booth_url_text("# URL\nhttps://old.booth.pm/items/1\n# Tags\nalpha\n", "https://peakheadz.booth.pm/items/8417561"):
+        raise RuntimeError("booth url heading update fixture failed")
 
     tag_sample = "Windows, 実務、ツール\n仕事効率化, 軽量, シンプル"
     expected_tags = ["Windows", "実務", "ツール", "仕事効率化", "軽量", "シンプル"]
@@ -1912,7 +2314,7 @@ def run_launch_check() -> int:
     print(f"edit_url_hint={BOOTH_EDIT_URL_HINT}")
     print(f"chrome_path={find_chrome_executable() or 'missing'}")
     print(f"chrome_profile={get_chrome_profile_dir()}")
-    print("fixtures=missing_product, missing_ready, multiple_zip, missing_playwright_python, ready_product_lookup, root_product_priority, open_edit_url_only, bad_page_detection, tag_split, file_input_detection, manual_file_upload")
+    print("fixtures=missing_product, missing_ready, multiple_zip, missing_playwright_python, ready_product_lookup, root_product_priority, open_edit_url_only, bad_page_detection, tag_split, file_input_detection, manual_file_upload, booth_url_save")
     return 0
 
 
