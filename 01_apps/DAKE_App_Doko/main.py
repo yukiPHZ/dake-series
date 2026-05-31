@@ -14,8 +14,38 @@ from pathlib import Path
 import tkinter as tk
 from tkinter import font as tkfont, messagebox, ttk
 
-CORE_DIR = Path(__file__).resolve().parents[2] / "00_core"
-if CORE_DIR.exists() and str(CORE_DIR) not in sys.path:
+def get_app_base_dir() -> Path:
+    try:
+        if getattr(sys, "frozen", False):
+            return Path(sys.executable).resolve().parent
+        return Path(__file__).resolve().parent
+    except Exception:
+        return Path.cwd()
+
+
+def get_series_root(base: Path | None = None) -> Path | None:
+    try:
+        start = base or get_app_base_dir()
+        for candidate in (start, *start.parents):
+            if candidate.name == "DAKE_series":
+                return candidate
+            if (candidate / "01_apps").exists() and (candidate / "02_assets").exists():
+                return candidate
+    except Exception:
+        return None
+    return None
+
+
+def get_core_dir() -> Path | None:
+    series_root = get_series_root()
+    if series_root is None:
+        return None
+    core_dir = series_root / "00_core"
+    return core_dir if core_dir.exists() else None
+
+
+CORE_DIR = get_core_dir()
+if CORE_DIR is not None and str(CORE_DIR) not in sys.path:
     sys.path.insert(0, str(CORE_DIR))
 
 from dake_quality_engine import run_launch_check, safe_load_json_config, safe_run, safe_save_json_config
@@ -41,6 +71,7 @@ UI_TEXT = {
     "status_completed": "検索完了",
     "status_launched": "起動しました",
     "status_error": "エラー",
+    "series_root_missing": "DAKE_series ルート未検出",
     "status_cancel_requested": "キャンセルを受け付けました。途中結果を表示します。",
     "status_cancelled": "キャンセルしました",
     "status_folder_opened": "フォルダを開きました",
@@ -90,14 +121,6 @@ COLORS = {
     "error": "#B42318",
 }
 
-SEARCH_ROOTS = (
-    Path(r"C:\Users\yukiz\Downloads"),
-    Path(r"C:\Users\yukiz\Desktop"),
-    Path(r"C:\Users\yukiz\Documents"),
-    Path("D:/"),
-    Path(r"C:\Users\yukiz\devlop\DAKE_series\01_apps"),
-)
-
 EXCLUDED_DIRS = {"build", "__pycache__", ".git", "node_modules", "venv", ".venv"}
 CONFIG_FILE_NAME = "DAKE_App_Doko_config.json"
 QUEUE_POLL_INTERVAL_MS = 100
@@ -120,25 +143,28 @@ class AppCandidate:
     search_text: str
 
 
-def get_app_dir() -> Path:
-    if getattr(sys, "frozen", False):
-        return Path(sys.executable).resolve().parent
-    return Path(__file__).resolve().parent
-
-
-def get_series_root() -> Path:
-    app_dir = get_app_dir()
-    if getattr(sys, "frozen", False):
-        return app_dir.parents[2]
-    return app_dir.parents[1]
-
-
-APP_DIR = get_app_dir()
-SERIES_ROOT = get_series_root()
+APP_DIR = get_app_base_dir()
 LOG_DIR = APP_DIR / "logs"
 CONFIG_PATH = APP_DIR / CONFIG_FILE_NAME
-README_PATH = (APP_DIR.parent / "README.md") if getattr(sys, "frozen", False) else APP_DIR / "README.md"
-ICON_PATH = SERIES_ROOT / "02_assets" / "dake_icon.ico"
+
+
+def get_readme_path() -> Path:
+    candidates = [APP_DIR / "README.md", APP_DIR.parent / "README.md"]
+    series_root = get_series_root(APP_DIR)
+    if series_root is not None:
+        candidates.append(series_root / "01_apps" / APP_KEY / "README.md")
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return candidates[0]
+
+
+def get_icon_path() -> Path | None:
+    series_root = get_series_root(APP_DIR)
+    if series_root is None:
+        return None
+    icon_path = series_root / "02_assets" / "dake_icon.ico"
+    return icon_path if icon_path.exists() else None
 
 
 def read_text_fallback(path: Path) -> str:
@@ -162,10 +188,14 @@ def extract_dake_meta(readme_text: str) -> dict[str, object]:
 
 
 def read_own_meta() -> dict[str, object]:
-    text = read_text_fallback(README_PATH)
+    readme_path = get_readme_path()
+    if not readme_path.exists():
+        write_debug_log("README.md not found", log_dir=LOG_DIR, context={"path": readme_path})
+        return {}
+    text = read_text_fallback(readme_path)
     meta = extract_dake_meta(text)
     if not meta:
-        raise ValueError("DAKE_META not found")
+        write_debug_log("DAKE_META not found", log_dir=LOG_DIR, context={"path": readme_path})
     return meta
 
 
@@ -202,6 +232,39 @@ def normalize_identity(path: Path) -> str:
         return str(path.resolve())
     except OSError:
         return str(path.absolute())
+
+
+def build_default_search_roots(series_root: Path | None = None) -> tuple[Path, ...]:
+    roots: list[Path] = []
+    try:
+        home = Path.home()
+    except Exception:
+        home = Path(r"C:\Users\yukiz")
+
+    for candidate in (home / "Downloads", home / "Desktop", home / "Documents", Path("D:/")):
+        try:
+            if candidate.exists():
+                roots.append(candidate)
+        except OSError:
+            continue
+
+    resolved_series_root = series_root if series_root is not None else get_series_root(APP_DIR)
+    if resolved_series_root is not None:
+        apps_dir = resolved_series_root / "01_apps"
+        try:
+            if apps_dir.exists():
+                roots.append(apps_dir)
+        except OSError:
+            pass
+
+    unique_roots: list[Path] = []
+    seen: set[str] = set()
+    for root in roots:
+        identity = normalize_identity(root).lower()
+        if identity not in seen:
+            seen.add(identity)
+            unique_roots.append(root)
+    return tuple(unique_roots)
 
 
 def load_config() -> dict[str, object]:
@@ -326,10 +389,17 @@ class AppDoko:
         self.root.geometry("980x680")
         self.root.minsize(860, 560)
         self.root.configure(bg=COLORS["background"])
-        try:
-            self.root.iconbitmap(ICON_PATH)
-        except tk.TclError as exc:
-            write_debug_log("icon setup skipped", log_dir=LOG_DIR, exc=exc, context={"path": ICON_PATH})
+        self.series_root = get_series_root(APP_DIR)
+        if self.series_root is None:
+            write_debug_log(UI_TEXT["series_root_missing"], log_dir=LOG_DIR, context={"base": APP_DIR})
+        self.search_roots = build_default_search_roots(self.series_root)
+
+        icon_path = get_icon_path()
+        if icon_path is not None:
+            try:
+                self.root.iconbitmap(icon_path)
+            except tk.TclError as exc:
+                write_debug_log("icon setup skipped", log_dir=LOG_DIR, exc=exc, context={"path": icon_path})
 
         self.config = load_config()
         self.candidates: list[AppCandidate] = []
@@ -339,7 +409,9 @@ class AppDoko:
         self.worker_thread: threading.Thread | None = None
         self.recent_mode = False
         self.search_var = tk.StringVar()
-        self.status_var = tk.StringVar(value=UI_TEXT["status_not_searched"])
+        self.status_var = tk.StringVar(
+            value=UI_TEXT["series_root_missing"] if self.series_root is None else UI_TEXT["status_not_searched"]
+        )
         self.summary_var = tk.StringVar(value=UI_TEXT["summary_initial"])
 
         self._configure_fonts()
@@ -476,7 +548,7 @@ class AppDoko:
         self.search_entry.bind("<FocusOut>", self._restore_placeholder)
         self.search_var.trace_add("write", self._on_search_changed)
 
-        root_text = UI_TEXT["scan_root_line"].format(roots=" / ".join(str(root) for root in SEARCH_ROOTS))
+        root_text = UI_TEXT["scan_root_line"].format(roots=" / ".join(str(root) for root in self.search_roots))
         tk.Label(
             shell,
             text=root_text,
@@ -594,7 +666,7 @@ class AppDoko:
         history = self._launch_history()
         self.worker_thread = threading.Thread(
             target=scan_worker,
-            args=(self.event_queue, self.cancel_event, SEARCH_ROOTS, history),
+            args=(self.event_queue, self.cancel_event, self.search_roots, history),
             daemon=True,
         )
         self.worker_thread.start()
