@@ -53,6 +53,15 @@ python main.py --launch-check
 
 release、GitHub Release、BOOTH、dakeapp 掲載は不要です。
 
+## RELEASE_BODY
+
+```text
+QPSC全体の現在地を確認する司令塔
+App Dashboard / Web Dashboard を監視ノードとして集約
+内部QPSC用ダッシュボード
+Windows向けexe
+```
+
 ## DAKE_META
 
 ```json
@@ -67,7 +76,7 @@ release、GitHub Release、BOOTH、dakeapp 掲載は不要です。
   "folder_name": "DAKE_QPSC_Dashboard",
   "exe_name": "QPSC_Dashboard.exe",
   "release_url": "",
-  "screenshot_path": "",
+  "screenshot_path": "assets/screenshot.webp",
   "status": "internal",
   "show_in_launcher": true,
   "show_on_site": false
