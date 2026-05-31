@@ -34,7 +34,10 @@ UI_TEXT = {
     "label_end_date": "終了日",
     "label_save_folder": "保存先",
     "date_hint": "例：2026/05/29",
+    "reference_day_template": "45日目：{date}",
+    "reference_day_invalid": "45日目：-",
     "button_select_folder": "選択",
+    "button_save_project": "状態保存",
     "button_create_pdf": "PDF作成",
     "button_reschedule": "日程再配置",
     "button_today": "今日へ移動",
@@ -58,8 +61,16 @@ UI_TEXT = {
     "status_weekend_adjusted": "土日は工事日に含めないため、{from_date}から{to_date}へ移動しました。",
     "status_drag_moved": "{name}を{date}開始へ移動しました。",
     "status_drag_resized": "{name}の終了日を{date}へ変更しました。",
+    "status_drag_start_resized": "{name}の開始日を{date}へ変更しました。",
+    "status_drag_end_resized": "{name}の終了日を{date}へ変更しました。",
+    "status_dragging_start": "開始日を変更中：{date}",
+    "status_dragging_end": "終了日を変更中：{date}",
+    "status_dragging_move": "工程を移動中：{date}へ移動",
     "status_row_moved": "工程の順番を変更しました。",
     "status_config_saved": "設定を保存しました。",
+    "status_project_loaded": "前回保存した工程状態を読み込みました。",
+    "status_project_saved": "工程状態を保存しました。",
+    "status_project_save_failed": "工程状態を保存できませんでした。",
     "status_pdf_done_folder_open_failed": "PDFを保存しました。保存フォルダは手動で確認してください。",
     "dialog_error_title": "確認してください",
     "dialog_saved_title": "保存完了",
@@ -68,6 +79,7 @@ UI_TEXT = {
     "error_start_date": "開始日を正しく入力してください。",
     "error_end_date": "終了日を正しく入力してください。",
     "error_date_order": "終了日は開始日以降の日付にしてください。",
+    "error_date_too_long": "A4縦1枚で読める範囲を超えています。終了日は開始日から56日以内にしてください。",
     "error_save_folder": "保存先フォルダを選択してください。",
     "error_no_work": "PDFに出力できる工程がありません。",
     "error_reportlab_missing": "PDF生成に必要な reportlab が見つかりません。",
@@ -98,6 +110,10 @@ UI_TEXT = {
     "launch_check_rows": "row_reorder_logic=OK",
     "launch_check_reschedule": "reschedule_done_items_fixed=OK",
     "launch_check_config": "config_save_restore=OK",
+    "launch_check_project": "project_save_restore=OK",
+    "launch_check_pdf_bands": "pdf_multi_day_bands=OK",
+    "launch_check_reference": "reference_day_45=OK",
+    "launch_check_limit": "max_56_day_limit=OK",
     "launch_check_folder": "open_output_folder=OK",
     "holiday_names": {
         "new_year": "元日",
@@ -123,10 +139,14 @@ UI_TEXT = {
 }
 
 CONFIG_NAME = "reform_progress_config.json"
+PROJECT_NAME = "reform_progress_project.json"
 COMMON_ICON_RELATIVE = Path("..") / ".." / "02_assets" / "dake_icon.ico"
 COMMON_ICON_FILENAME = "dake_icon.ico"
 DATE_FORMATS = ("%Y/%m/%d", "%Y-%m-%d", "%Y.%m.%d", "%Y%m%d")
 FONT_CANDIDATES = ("BIZ UDPGothic", "Yu Gothic UI", "Meiryo")
+REFERENCE_CALENDAR_DAYS = 45
+DEFAULT_CALENDAR_DAYS = 45
+MAX_CALENDAR_DAYS = 56
 STATUS_OPTIONS = ("未着手", "作業中", "完了", "延期", "保留")
 STATUS_SYMBOLS = {
     "未着手": "",
@@ -176,6 +196,10 @@ THEME = {
     "subtle": "#EEF2F7",
     "border": "#D8DEE8",
     "grid": "#E5EAF2",
+    "band_outline": "#D4DDEB",
+    "drag_highlight": "#EAF2FF",
+    "grip": "#6B7C93",
+    "row_alt": "#FAFBFD",
     "text": "#1E2430",
     "muted": "#667085",
     "accent": "#2F6FED",
@@ -235,6 +259,10 @@ def config_path() -> Path:
     return app_dir() / CONFIG_NAME
 
 
+def project_path() -> Path:
+    return app_dir() / PROJECT_NAME
+
+
 def default_save_folder() -> str:
     downloads = Path.home() / "Downloads"
     if downloads.exists():
@@ -264,6 +292,26 @@ def save_config(values: dict[str, str], path: Path | None = None) -> bool:
     }
     try:
         target.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    except OSError:
+        return False
+    return True
+
+
+def load_project(path: Path | None = None) -> dict:
+    target = path or project_path()
+    try:
+        data = json.loads(target.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    return data
+
+
+def save_project(values: dict, path: Path | None = None) -> bool:
+    target = path or project_path()
+    try:
+        target.write_text(json.dumps(values, ensure_ascii=False, indent=2), encoding="utf-8")
     except OSError:
         return False
     return True
@@ -299,6 +347,14 @@ def apply_window_icon(window: tk.Tk) -> None:
             window.iconbitmap(str(icon_path))
         except tk.TclError:
             pass
+
+
+    try:
+        icon_photo = tk.PhotoImage(file=str(icon_path))
+        window.iconphoto(True, icon_photo)
+        window._dake_icon_photo = icon_photo  # type: ignore[attr-defined]
+    except tk.TclError:
+        pass
 
 
 def set_windows_app_id() -> None:
@@ -404,6 +460,20 @@ def days_between(start: date, end: date) -> list[date]:
     return [start + timedelta(days=index) for index in range((end - start).days + 1)]
 
 
+def calendar_day_count(start: date, end: date) -> int:
+    if end < start:
+        return 0
+    return (end - start).days + 1
+
+
+def reference_day_for_start(start: date) -> date:
+    return start + timedelta(days=REFERENCE_CALENDAR_DAYS - 1)
+
+
+def is_period_within_limit(start: date, end: date) -> bool:
+    return calendar_day_count(start, end) <= MAX_CALENDAR_DAYS
+
+
 def workdays_between(start: date, end: date) -> list[date]:
     return [day for day in days_between(start, end) if is_weekday(day)]
 
@@ -436,6 +506,86 @@ def copy_work_item(item: WorkItem) -> WorkItem:
         planned_days=item.planned_days,
         is_free=item.is_free,
     )
+
+
+def serialize_work_items(items: list[WorkItem] | tuple[WorkItem, ...]) -> list[dict[str, object]]:
+    serialized: list[dict[str, object]] = []
+    for index, item in enumerate(items):
+        serialized.append(
+            {
+                "order": index + 1,
+                "selected": bool(item.selected),
+                "name": item.name.strip(),
+                "start_date": format_date(item.start_date),
+                "end_date": format_date(item.end_date),
+                "status": item.status if item.status in STATUS_OPTIONS else STATUS_OPTIONS[0],
+                "planned_days": max(1, int(item.planned_days)),
+                "is_free": bool(item.is_free),
+            }
+        )
+    return serialized
+
+
+def deserialize_work_items(value: object) -> list[WorkItem] | None:
+    if not isinstance(value, list):
+        return None
+    rows: list[tuple[int, int, WorkItem]] = []
+    for position, entry in enumerate(value):
+        if not isinstance(entry, dict):
+            continue
+        raw_order = entry.get("order", position + 1)
+        try:
+            order = int(raw_order)
+        except (TypeError, ValueError):
+            order = position + 1
+        name = str(entry.get("name", "")).strip()
+        start_date = parse_date_text(str(entry.get("start_date", "")))
+        end_date = parse_date_text(str(entry.get("end_date", "")))
+        status = str(entry.get("status", STATUS_OPTIONS[0]))
+        if status not in STATUS_OPTIONS:
+            status = STATUS_OPTIONS[0]
+        try:
+            planned_days = max(1, int(entry.get("planned_days", 1)))
+        except (TypeError, ValueError):
+            planned_days = 1
+        item = WorkItem(
+            selected=bool(entry.get("selected", False)),
+            name=name,
+            start_date=start_date,
+            end_date=end_date,
+            status=status,
+            planned_days=planned_days,
+            is_free=bool(entry.get("is_free", False)),
+        )
+        if item.start_date and item.end_date and item.end_date >= item.start_date:
+            item.planned_days = item_duration(item)
+        rows.append((order, position, item))
+    if not rows:
+        return None
+    return [item for _order, _position, item in sorted(rows, key=lambda row: (row[0], row[1]))]
+
+
+def build_project_data(
+    site_name: str,
+    branch_name: str,
+    staff_name: str,
+    phone: str,
+    start_date_text: str,
+    end_date_text: str,
+    save_folder: str,
+    work_items: list[WorkItem] | tuple[WorkItem, ...],
+) -> dict[str, object]:
+    return {
+        "version": "1.1",
+        "site_name": site_name.strip(),
+        "branch_name": branch_name.strip(),
+        "staff_name": staff_name.strip(),
+        "phone": phone.strip(),
+        "start_date": start_date_text.strip(),
+        "end_date": end_date_text.strip(),
+        "save_folder": save_folder.strip(),
+        "work_items": serialize_work_items(work_items),
+    }
 
 
 def place_initial_work_items(start_date: date) -> list[WorkItem]:
@@ -508,6 +658,19 @@ def resize_item_to_end(item: WorkItem, end_date: date) -> tuple[WorkItem, bool, 
     if updated.start_date and snapped < updated.start_date:
         snapped = updated.start_date
     updated.end_date = snapped
+    updated.planned_days = item_duration(updated)
+    return updated, adjusted, snapped
+
+
+def resize_item_to_start(item: WorkItem, start_date: date) -> tuple[WorkItem, bool, date]:
+    updated = copy_work_item(item)
+    if updated.end_date is None:
+        end, _end_adjusted = snap_to_workday(start_date)
+        updated.end_date = end
+    snapped, adjusted = snap_to_workday(start_date)
+    if updated.end_date and snapped > updated.end_date:
+        snapped = updated.end_date
+    updated.start_date = snapped
     updated.planned_days = item_duration(updated)
     return updated, adjusted, snapped
 
@@ -689,6 +852,134 @@ def short_work_name(name: str) -> str:
     return replacements.get(name.strip(), name.strip())
 
 
+def visible_workdays_for_item(item: WorkItem, period_start: date | None = None, period_end: date | None = None) -> list[date]:
+    if not is_output_item(item):
+        return []
+    assert item.start_date is not None
+    assert item.end_date is not None
+    start = max(item.start_date, period_start) if period_start else item.start_date
+    end = min(item.end_date, period_end) if period_end else item.end_date
+    return workdays_between(start, end)
+
+
+def band_segments_for_item(item: WorkItem, period_start: date, period_end: date) -> list[list[date]]:
+    days = visible_workdays_for_item(item, period_start, period_end)
+    segments: list[list[date]] = []
+    current: list[date] = []
+    previous: date | None = None
+    for day in days:
+        if previous is not None and (day - previous).days != 1:
+            segments.append(current)
+            current = []
+        current.append(day)
+        previous = day
+    if current:
+        segments.append(current)
+    return segments
+
+
+def build_work_lanes(items: list[WorkItem] | tuple[WorkItem, ...]) -> dict[int, int]:
+    lanes: list[set[date]] = []
+    lane_by_index: dict[int, int] = {}
+    for index, item in enumerate(items):
+        days = set(visible_workdays_for_item(item))
+        if not days:
+            continue
+        for lane_index, occupied in enumerate(lanes):
+            if occupied.isdisjoint(days):
+                occupied.update(days)
+                lane_by_index[index] = lane_index
+                break
+        else:
+            lanes.append(set(days))
+            lane_by_index[index] = len(lanes) - 1
+    return lane_by_index
+
+
+def max_work_lanes(cell_h: float) -> int:
+    return max(1, int((cell_h - 34) // 9))
+
+
+def draw_pdf_band(pdf, x: float, y: float, width: float, height: float, fill_hex: str, left_round: bool, right_round: bool) -> None:
+    radius = min(height / 2, 4)
+    pdf.setFillColor(color_hex(fill_hex))
+    if left_round or right_round:
+        pdf.roundRect(x, y, width, height, radius, stroke=0, fill=1)
+        if not left_round:
+            pdf.rect(x, y, radius, height, stroke=0, fill=1)
+        if not right_round:
+            pdf.rect(x + width - radius, y, radius, height, stroke=0, fill=1)
+    else:
+        pdf.rect(x, y, width, height, stroke=0, fill=1)
+    pdf.setStrokeColor(color_hex(THEME["band_outline"]))
+    pdf.setLineWidth(0.25)
+    if left_round and right_round:
+        pdf.roundRect(x, y, width, height, radius, stroke=1, fill=0)
+    else:
+        pdf.rect(x, y, width, height, stroke=1, fill=0)
+
+
+def draw_pdf_work_items(
+    pdf,
+    items: tuple[WorkItem, ...],
+    date_boxes: dict[date, tuple[float, float, float, float]],
+    cell_h: float,
+    font_name: str,
+    period_start: date,
+    period_end: date,
+) -> None:
+    lane_by_index = build_work_lanes(items)
+    overflow_days: set[date] = set()
+    lane_step = 9.2
+    band_h = 8.0
+    for index, item in enumerate(items):
+        days = visible_workdays_for_item(item, period_start, period_end)
+        if not days:
+            continue
+        lane = lane_by_index.get(index, 0)
+        label = f"{STATUS_SYMBOLS.get(item.status, '')}{short_work_name(item.name)}"
+        workday_total = len(visible_workdays_for_item(item))
+        if workday_total <= 1:
+            day = days[0]
+            box = date_boxes.get(day)
+            if box is None:
+                continue
+            x0, y0, x1, _y1 = box
+            if lane >= max_work_lanes(cell_h):
+                overflow_days.add(day)
+                continue
+            text_y = y0 + cell_h - 24 - lane * lane_step
+            pdf.setFont(font_name, 7.1)
+            pdf.setFillColor(color_hex(THEME["text"]))
+            pdf.drawString(x0 + 5, text_y, ellipsize_text(label, x1 - x0 - 10, font_name, 7.1))
+            continue
+        for segment in band_segments_for_item(item, period_start, period_end):
+            boxes = [date_boxes[day] for day in segment if day in date_boxes]
+            if not boxes:
+                continue
+            if lane >= min(max_work_lanes(box[3] - box[1]) for box in boxes):
+                overflow_days.update(segment)
+                continue
+            first_box = boxes[0]
+            last_box = boxes[-1]
+            x0 = first_box[0] + 3
+            x1 = last_box[2] - 3
+            band_y = first_box[1] + cell_h - 27 - lane * lane_step
+            fill = STATUS_COLORS.get(item.status, STATUS_COLORS["未着手"])
+            draw_pdf_band(pdf, x0, band_y, max(4, x1 - x0), band_h, fill, True, True)
+            pdf.setFont(font_name, 6.5)
+            pdf.setFillColor(color_hex(THEME["text"]))
+            label_width = max(8, min(x1 - x0 - 8, first_box[2] - first_box[0] - 8))
+            pdf.drawString(x0 + 4, band_y + 2.1, ellipsize_text(label, label_width, font_name, 6.5))
+    for day in overflow_days:
+        box = date_boxes.get(day)
+        if box is None:
+            continue
+        pdf.setFont(font_name, 7)
+        pdf.setFillColor(color_hex(THEME["muted"]))
+        pdf.drawString(box[0] + 5, box[1] + 9, "…")
+
+
 def make_output_path(request: PdfRequest) -> Path:
     folder = Path(request.save_folder)
     folder.mkdir(parents=True, exist_ok=True)
@@ -736,6 +1027,7 @@ def generate_pdf(request: PdfRequest) -> Path:
         staff=request.staff_name.strip(),
         phone=request.phone.strip(),
     ).strip()
+    date_boxes: dict[date, tuple[float, float, float, float]] = {}
 
     pdf.setFillColor(color_hex(THEME["text"]))
     pdf.setFont(font_name, 16)
@@ -780,6 +1072,7 @@ def generate_pdf(request: PdfRequest) -> Path:
             weekday = UI_TEXT["pdf_weekday_names"][day.weekday()]
             date_x = x + 5
             date_y = y + cell_h - 13
+            date_boxes[day] = (x, y, x + cell_w, y + cell_h)
             pdf.setFont(font_name, 8.5)
             pdf.setFillColor(color_hex(THEME["text"]))
             pdf.drawString(date_x, date_y, f"{day.month}/{day.day}")
@@ -793,19 +1086,14 @@ def generate_pdf(request: PdfRequest) -> Path:
                 pdf.drawString(date_x, text_y, ellipsize_text(holiday_name, cell_w - 10, font_name, 6.6))
                 text_y -= 9
 
-            entries = daily_entries(day, request.work_items)
-            max_lines = max(1, int((text_y - (y + 10)) // 9))
-            for entry in entries[:max_lines]:
-                pdf.setFont(font_name, 7.2)
-                pdf.setFillColor(color_hex(THEME["text"]))
-                pdf.drawString(date_x, text_y, ellipsize_text(entry, cell_w - 10, font_name, 7.2))
-                text_y -= 9
-            if len(entries) > max_lines:
-                pdf.drawString(date_x, text_y, "…")
-            if day == request.end_date:
-                pdf.setFont(font_name, 8.4)
-                pdf.setFillColor(color_hex(THEME["accent"]))
-                pdf.drawString(date_x, y + 7, UI_TEXT["pdf_completion_label"])
+
+    draw_pdf_work_items(pdf, request.work_items, date_boxes, cell_h, font_name, request.start_date, request.end_date)
+    completion_box = date_boxes.get(request.end_date)
+    if completion_box:
+        x, y, _x1, _y1 = completion_box
+        pdf.setFont(font_name, 8.4)
+        pdf.setFillColor(color_hex(THEME["accent"]))
+        pdf.drawString(x + 5, y + 7, UI_TEXT["pdf_completion_label"])
 
     pdf.setStrokeColor(color_hex(THEME["border"]))
     pdf.line(margin_x, grid_bottom - 18, page_width - margin_x, grid_bottom - 18)
@@ -828,20 +1116,33 @@ class ReformProgressApp:
         apply_window_icon(self.root)
 
         self.config_data = load_config()
+        self.project_data = load_project()
         today = date.today()
-        self.site_name_var = tk.StringVar()
-        self.branch_name_var = tk.StringVar(value=self.config_data.get("branch_name", ""))
-        self.staff_name_var = tk.StringVar(value=self.config_data.get("staff_name", ""))
-        self.phone_var = tk.StringVar(value=self.config_data.get("phone", ""))
-        self.start_date_var = tk.StringVar(value=format_date(today))
-        self.end_date_var = tk.StringVar(value=format_date(today + timedelta(days=45)))
-        self.save_folder_var = tk.StringVar(value=self.config_data.get("save_folder", default_save_folder()))
-        self.status_var = tk.StringVar(value=UI_TEXT["status_ready"])
+        project_start = parse_date_text(str(self.project_data.get("start_date", ""))) if self.project_data else None
+        start_default = project_start or today
+        project_end = parse_date_text(str(self.project_data.get("end_date", ""))) if self.project_data else None
+        end_default = project_end or (start_default + timedelta(days=DEFAULT_CALENDAR_DAYS - 1))
 
-        self.work_items = place_initial_work_items(today)
+        def project_text(key: str, fallback: str = "") -> str:
+            if self.project_data and isinstance(self.project_data.get(key), str):
+                return str(self.project_data.get(key, ""))
+            return fallback
+
+        self.site_name_var = tk.StringVar(value=project_text("site_name"))
+        self.branch_name_var = tk.StringVar(value=project_text("branch_name", self.config_data.get("branch_name", "")))
+        self.staff_name_var = tk.StringVar(value=project_text("staff_name", self.config_data.get("staff_name", "")))
+        self.phone_var = tk.StringVar(value=project_text("phone", self.config_data.get("phone", "")))
+        self.start_date_var = tk.StringVar(value=format_date(start_default))
+        self.end_date_var = tk.StringVar(value=format_date(end_default))
+        self.reference_day_var = tk.StringVar()
+        self.save_folder_var = tk.StringVar(value=project_text("save_folder", self.config_data.get("save_folder", default_save_folder())))
+        self.status_var = tk.StringVar(value=UI_TEXT["status_project_loaded"] if self.project_data else UI_TEXT["status_ready"])
+
+        project_items = deserialize_work_items(self.project_data.get("work_items")) if self.project_data else None
+        self.work_items = project_items or place_initial_work_items(start_default)
         self.row_widgets: list[RowWidgets] = []
         self.preview_date_boxes: dict[date, tuple[float, float, float, float]] = {}
-        self.preview_item_refs: dict[int, tuple[int, date]] = {}
+        self.preview_item_refs: dict[int, dict[str, object]] = {}
         self.drag_context: dict[str, object] | None = None
         self.row_drag_index: int | None = None
 
@@ -862,6 +1163,7 @@ class ReformProgressApp:
         }
 
         self.build_styles()
+        self.update_reference_day()
         self.build_ui()
         self.bind_global_traces()
         self.refresh_rows()
@@ -882,12 +1184,17 @@ class ReformProgressApp:
             pass
         style.configure("TEntry", font=self.fonts["body"], padding=4)
         style.configure("TCombobox", font=self.fonts["body"], padding=2)
-        style.configure("TCheckbutton", background=THEME["panel"])
+        style.configure("TCheckbutton", background=THEME["panel"], focuscolor=THEME["panel"])
+        style.configure("Work.TCheckbutton", background=THEME["panel"], padding=(6, 0), focuscolor=THEME["panel"])
+        style.map("Work.TCheckbutton", background=[("active", THEME["row_alt"])], indicatorcolor=[("selected", THEME["accent"]), ("!selected", "#FFFFFF")])
         style.configure("Primary.TButton", font=self.fonts["button"], padding=(14, 8), background=THEME["accent"], foreground="#FFFFFF")
         style.map("Primary.TButton", background=[("active", THEME["accent_hover"]), ("disabled", THEME["accent_disabled"])])
         style.configure("Secondary.TButton", font=self.fonts["button"], padding=(10, 7), background=THEME["panel"], foreground=THEME["text"])
         style.map("Secondary.TButton", background=[("active", THEME["subtle"])])
         style.configure("Tiny.TButton", font=self.fonts["button"], padding=(6, 2), background=THEME["panel"], foreground=THEME["text"])
+        style.configure("Vertical.TScrollbar", gripcount=0, background="#CBD5E1", troughcolor=THEME["subtle"], bordercolor=THEME["panel"], lightcolor="#CBD5E1", darkcolor="#CBD5E1", arrowsize=10, width=10)
+        style.map("Vertical.TScrollbar", background=[("active", "#94A3B8")])
+        style.configure("Dake.Horizontal.TProgressbar", troughcolor=THEME["subtle"], background=THEME["accent"], bordercolor=THEME["background"], lightcolor=THEME["accent"], darkcolor=THEME["accent"])
 
     def build_ui(self) -> None:
         self.main = tk.Frame(self.root, bg=THEME["background"])
@@ -922,7 +1229,8 @@ class ReformProgressApp:
             self.add_label(panel, UI_TEXT[label_key], row, col)
             ttk.Entry(panel, textvariable=variable, width=14).grid(row=row, column=col + 1, sticky="ew", padx=(0, 10), pady=5)
 
-        tk.Label(panel, text=UI_TEXT["date_hint"], bg=THEME["panel"], fg=THEME["muted"], font=self.fonts["small"]).grid(row=1, column=4, sticky="w", padx=(0, 8), pady=5)
+        tk.Label(panel, textvariable=self.reference_day_var, bg=THEME["panel"], fg=THEME["accent"], font=self.fonts["small"]).grid(row=1, column=4, columnspan=2, sticky="w", padx=(0, 8), pady=5)
+        tk.Label(panel, text=UI_TEXT["date_hint"], bg=THEME["panel"], fg=THEME["muted"], font=self.fonts["small"]).grid(row=1, column=6, sticky="w", padx=(0, 8), pady=5)
         self.add_label(panel, UI_TEXT["label_save_folder"], 2, 0)
         ttk.Entry(panel, textvariable=self.save_folder_var).grid(row=2, column=1, columnspan=6, sticky="ew", padx=(0, 8), pady=5)
         ttk.Button(panel, text=UI_TEXT["button_select_folder"], style="Secondary.TButton", command=self.choose_save_folder).grid(row=2, column=7, sticky="ew", padx=(0, 8), pady=5)
@@ -931,6 +1239,7 @@ class ReformProgressApp:
         actions.grid(row=0, column=8, rowspan=3, columnspan=2, sticky="nse", padx=(8, 0))
         self.create_button = ttk.Button(actions, text=UI_TEXT["button_create_pdf"], style="Primary.TButton", command=self.on_create_pdf)
         self.create_button.pack(fill="x", pady=(0, 6))
+        ttk.Button(actions, text=UI_TEXT["button_save_project"], style="Secondary.TButton", command=self.on_save_project).pack(fill="x", pady=(0, 6))
         ttk.Button(actions, text=UI_TEXT["button_reschedule"], style="Secondary.TButton", command=self.on_reschedule).pack(fill="x", pady=(0, 6))
         ttk.Button(actions, text=UI_TEXT["button_today"], style="Secondary.TButton", command=self.on_move_today).pack(fill="x")
 
@@ -964,6 +1273,8 @@ class ReformProgressApp:
         self.preview_canvas.bind("<ButtonPress-1>", self.on_preview_press)
         self.preview_canvas.bind("<B1-Motion>", self.on_preview_motion)
         self.preview_canvas.bind("<ButtonRelease-1>", self.on_preview_release)
+        self.preview_canvas.bind("<Motion>", self.on_preview_hover)
+        self.preview_canvas.bind("<Leave>", lambda _event: self.preview_canvas.configure(cursor=""))
 
     def build_work_table(self, parent: tk.Frame) -> None:
         table_wrap = tk.Frame(parent, bg=THEME["panel"])
@@ -980,7 +1291,7 @@ class ReformProgressApp:
             tk.Label(header, text=UI_TEXT[key], bg=THEME["subtle"], fg=THEME["text"], font=self.fonts["small"], anchor="w", padx=5, pady=4).grid(row=0, column=index, sticky="ew")
 
         self.rows_canvas = tk.Canvas(table_wrap, bg=THEME["panel"], highlightthickness=0)
-        scrollbar = ttk.Scrollbar(table_wrap, orient="vertical", command=self.rows_canvas.yview)
+        scrollbar = ttk.Scrollbar(table_wrap, orient="vertical", command=self.rows_canvas.yview, style="Vertical.TScrollbar")
         self.rows_body = tk.Frame(self.rows_canvas, bg=THEME["panel"])
         self.rows_window = self.rows_canvas.create_window((0, 0), window=self.rows_body, anchor="nw")
         self.rows_body.bind("<Configure>", lambda _event: self.rows_canvas.configure(scrollregion=self.rows_canvas.bbox("all")))
@@ -992,7 +1303,7 @@ class ReformProgressApp:
     def build_footer(self) -> None:
         bottom = tk.Frame(self.root, bg=THEME["background"])
         bottom.pack(fill="x", padx=18, pady=(8, 10))
-        self.progress = ttk.Progressbar(bottom, mode="indeterminate", length=130)
+        self.progress = ttk.Progressbar(bottom, mode="indeterminate", length=130, style="Dake.Horizontal.TProgressbar")
         self.progress.pack(side="left", padx=(0, 10))
         tk.Label(bottom, textvariable=self.status_var, bg=THEME["background"], fg=THEME["muted"], font=self.fonts["body"], anchor="w").pack(side="left", fill="x", expand=True)
         self.footer = tk.Frame(bottom, bg=THEME["background"])
@@ -1006,9 +1317,39 @@ class ReformProgressApp:
     def add_label(self, parent: tk.Misc, text: str, row: int, col: int) -> None:
         tk.Label(parent, text=text, bg=THEME["panel"], fg=THEME["muted"], font=self.fonts["body"], anchor="w").grid(row=row, column=col, sticky="w", padx=(12 if col == 0 else 4, 6), pady=5)
 
+    def update_reference_day(self) -> None:
+        start = parse_date_text(self.start_date_var.get())
+        if start is None:
+            self.reference_day_var.set(UI_TEXT["reference_day_invalid"])
+            return
+        self.reference_day_var.set(UI_TEXT["reference_day_template"].format(date=format_short_date(reference_day_for_start(start))))
+
+    def on_top_dates_changed(self) -> None:
+        self.update_reference_day()
+        self.draw_preview()
+
     def bind_global_traces(self) -> None:
         for variable in (self.start_date_var, self.end_date_var):
-            variable.trace_add("write", lambda *_args: self.root.after_idle(self.draw_preview))
+            variable.trace_add("write", lambda *_args: self.root.after_idle(self.on_top_dates_changed))
+
+    def validate_period_limit(self, start: date, end: date, show_errors: bool) -> bool:
+        if is_period_within_limit(start, end):
+            return True
+        if show_errors:
+            messagebox.showerror(UI_TEXT["dialog_error_title"], UI_TEXT["error_date_too_long"])
+        return False
+
+    def current_project_data(self) -> dict[str, object]:
+        return build_project_data(
+            site_name=self.site_name_var.get(),
+            branch_name=self.branch_name_var.get(),
+            staff_name=self.staff_name_var.get(),
+            phone=self.phone_var.get(),
+            start_date_text=self.start_date_var.get(),
+            end_date_text=self.end_date_var.get(),
+            save_folder=self.save_folder_var.get(),
+            work_items=self.work_items,
+        )
 
     def refresh_rows(self) -> None:
         for child in self.rows_body.winfo_children():
@@ -1020,7 +1361,8 @@ class ReformProgressApp:
         self.draw_preview()
 
     def add_work_row(self, index: int, item: WorkItem) -> None:
-        frame = tk.Frame(self.rows_body, bg=THEME["panel"])
+        row_bg = THEME["panel"] if index % 2 == 0 else THEME["row_alt"]
+        frame = tk.Frame(self.rows_body, bg=row_bg, highlightthickness=0)
         frame.grid(row=index, column=0, sticky="ew", pady=1)
         frame.grid_columnconfigure(1, weight=1)
         selected = tk.BooleanVar(value=item.selected)
@@ -1032,18 +1374,18 @@ class ReformProgressApp:
         widgets = RowWidgets(frame=frame, selected=selected, name=name, start_date=start, end_date=end, status=status, days=days)
         self.row_widgets.append(widgets)
 
-        ttk.Checkbutton(frame, variable=selected, command=self.on_rows_changed).grid(row=0, column=0, padx=(4, 2), pady=2)
+        ttk.Checkbutton(frame, variable=selected, command=self.on_rows_changed, style="Work.TCheckbutton").grid(row=0, column=0, padx=(6, 4), pady=4)
         name_entry = ttk.Entry(frame, textvariable=name, width=22)
-        name_entry.grid(row=0, column=1, sticky="ew", padx=2, pady=2)
+        name_entry.grid(row=0, column=1, sticky="ew", padx=2, pady=4)
         start_entry = ttk.Entry(frame, textvariable=start, width=11)
-        start_entry.grid(row=0, column=2, padx=2, pady=2)
+        start_entry.grid(row=0, column=2, padx=2, pady=4)
         end_entry = ttk.Entry(frame, textvariable=end, width=11)
-        end_entry.grid(row=0, column=3, padx=2, pady=2)
+        end_entry.grid(row=0, column=3, padx=2, pady=4)
         status_combo = ttk.Combobox(frame, textvariable=status, values=STATUS_OPTIONS, width=8, state="readonly")
-        status_combo.grid(row=0, column=4, padx=2, pady=2)
-        tk.Label(frame, textvariable=days, bg=THEME["panel"], fg=THEME["muted"], font=self.fonts["small"], width=4).grid(row=0, column=5, padx=2)
-        buttons = tk.Frame(frame, bg=THEME["panel"])
-        buttons.grid(row=0, column=6, padx=(2, 4), pady=2)
+        status_combo.grid(row=0, column=4, padx=2, pady=4)
+        tk.Label(frame, textvariable=days, bg=row_bg, fg=THEME["muted"], font=self.fonts["small"], width=4).grid(row=0, column=5, padx=2)
+        buttons = tk.Frame(frame, bg=row_bg)
+        buttons.grid(row=0, column=6, padx=(2, 6), pady=4)
         ttk.Button(buttons, text=UI_TEXT["button_up"], style="Tiny.TButton", width=2, command=lambda i=index: self.move_row(i, -1)).pack(side="left", padx=(0, 2))
         ttk.Button(buttons, text=UI_TEXT["button_down"], style="Tiny.TButton", width=2, command=lambda i=index: self.move_row(i, 1)).pack(side="left")
 
@@ -1148,6 +1490,8 @@ class ReformProgressApp:
         if end < start:
             messagebox.showerror(UI_TEXT["dialog_error_title"], UI_TEXT["error_date_order"])
             return None
+        if not self.validate_period_limit(start, end, show_errors=True):
+            return None
         save_folder = self.save_folder_var.get().strip()
         if not save_folder:
             messagebox.showerror(UI_TEXT["dialog_error_title"], UI_TEXT["error_save_folder"])
@@ -1180,10 +1524,32 @@ class ReformProgressApp:
     def on_move_today(self) -> None:
         today = date.today()
         self.start_date_var.set(format_date(today))
-        self.end_date_var.set(format_date(today + timedelta(days=45)))
+        self.end_date_var.set(format_date(today + timedelta(days=DEFAULT_CALENDAR_DAYS - 1)))
         self.work_items = reschedule_work_items(self.work_items, today)
         self.status_var.set(UI_TEXT["status_moved_today"])
         self.refresh_rows()
+
+    def on_save_project(self) -> None:
+        if not self.sync_items_from_rows(show_errors=True):
+            return
+        start = parse_date_text(self.start_date_var.get())
+        if start is None:
+            messagebox.showerror(UI_TEXT["dialog_error_title"], UI_TEXT["error_start_date"])
+            return
+        end = parse_date_text(self.end_date_var.get())
+        if end is None:
+            messagebox.showerror(UI_TEXT["dialog_error_title"], UI_TEXT["error_end_date"])
+            return
+        if end < start:
+            messagebox.showerror(UI_TEXT["dialog_error_title"], UI_TEXT["error_date_order"])
+            return
+        if not self.validate_period_limit(start, end, show_errors=True):
+            return
+        if save_project(self.current_project_data()):
+            self.status_var.set(UI_TEXT["status_project_saved"])
+        else:
+            self.status_var.set(UI_TEXT["status_project_save_failed"])
+            messagebox.showerror(UI_TEXT["dialog_error_title"], UI_TEXT["status_project_save_failed"])
 
     def on_create_pdf(self) -> None:
         if self.is_processing:
@@ -1298,6 +1664,9 @@ class ReformProgressApp:
         if start is None or end is None or end < start:
             canvas.create_text((x0 + x1) / 2, (y0 + y1) / 2, text=UI_TEXT["error_date_order"], fill=THEME["muted"], font=self.fonts["body"])
             return
+        if not is_period_within_limit(start, end):
+            canvas.create_text((x0 + x1) / 2, (y0 + y1) / 2, text=UI_TEXT["error_date_too_long"], fill=THEME["error"], font=self.fonts["body"], width=page_w - 40)
+            return
         weeks = iter_period_weeks(start, end)
         grid_x = x0 + 14
         grid_y = y0 + 58
@@ -1325,40 +1694,86 @@ class ReformProgressApp:
                 canvas.create_text(cx + 32, cy + 10, text=weekday, anchor="w", fill=THEME["weekend_text"] if day.weekday() >= 5 else THEME["muted"], font=self.fonts["small"])
                 if day == end:
                     canvas.create_text(cx + 4, cy + cell_h - 10, text=UI_TEXT["pdf_completion_label"], anchor="w", fill=THEME["accent"], font=(self.font_family, 8, "bold"))
-                self.draw_preview_day_items(day, cx, cy, cell_w, cell_h)
+        self.draw_preview_items(start, end, cell_h)
 
-    def draw_preview_day_items(self, day: date, cx: float, cy: float, cell_w: float, cell_h: float) -> None:
-        if not is_weekday(day):
-            return
-        y = cy + 24
-        visible_count = 0
+    def draw_preview_items(self, start: date, end: date, cell_h: float) -> None:
+        lane_by_index = build_work_lanes(self.work_items)
+        lane_step = 15
+        block_h = 13
+        overflow_days: set[date] = set()
         for index, item in enumerate(self.work_items):
-            if not is_output_item(item):
+            days = visible_workdays_for_item(item, start, end)
+            if not days:
                 continue
-            assert item.start_date is not None
-            assert item.end_date is not None
-            if not (item.start_date <= day <= item.end_date):
-                continue
-            if y + 14 > cy + cell_h - 4:
-                self.preview_canvas.create_text(cx + 5, y + 5, text="…", anchor="w", fill=THEME["muted"], font=self.fonts["small"])
-                break
+            lane = lane_by_index.get(index, 0)
             label = f"{STATUS_SYMBOLS.get(item.status, '')}{short_work_name(item.name)}"
-            rect = self.preview_canvas.create_rectangle(
-                cx + 3,
-                y,
-                cx + cell_w - 3,
-                y + 13,
-                fill=STATUS_COLORS.get(item.status, STATUS_COLORS["未着手"]),
-                outline=THEME["grid"],
-                tags=(f"work:{index}", "workblock"),
-            )
-            text = self.preview_canvas.create_text(cx + 6, y + 6.5, text=label, anchor="w", fill=THEME["text"], font=(self.font_family, 7), tags=(f"work:{index}", "workblock"))
-            self.preview_item_refs[rect] = (index, day)
-            self.preview_item_refs[text] = (index, day)
-            y += 15
-            visible_count += 1
-        if visible_count:
-            pass
+            segments = band_segments_for_item(item, start, end)
+            for segment in segments:
+                boxes = [self.preview_date_boxes[day] for day in segment if day in self.preview_date_boxes]
+                if not boxes:
+                    continue
+                if lane >= max(1, int((cell_h - 30) // lane_step)):
+                    overflow_days.update(segment)
+                    continue
+                first_box = boxes[0]
+                last_box = boxes[-1]
+                x0 = first_box[0] + 3
+                x1 = last_box[2] - 3
+                y0 = first_box[1] + 24 + lane * lane_step
+                y1 = y0 + block_h
+                fill = STATUS_COLORS.get(item.status, STATUS_COLORS["未着手"])
+                line = self.preview_canvas.create_line(
+                    x0 + block_h / 2,
+                    y0 + block_h / 2,
+                    x1 - block_h / 2,
+                    y0 + block_h / 2,
+                    width=block_h,
+                    fill=fill,
+                    capstyle="round",
+                    tags=(f"work:{index}", "workblock"),
+                )
+                outline = self.preview_canvas.create_rectangle(x0, y0, x1, y1, outline=THEME["band_outline"], width=1, tags=(f"work:{index}", "workblock"))
+                text = self.preview_canvas.create_text(x0 + 7, y0 + block_h / 2, text=label, anchor="w", fill=THEME["text"], font=(self.font_family, 7), tags=(f"work:{index}", "workblock"))
+                left_grip = self.preview_canvas.create_line(x0 + 5, y0 + 3, x0 + 5, y1 - 3, fill=THEME["grip"], width=1, tags=(f"work:{index}", "workblock", "workgrip"))
+                right_grip = self.preview_canvas.create_line(x1 - 5, y0 + 3, x1 - 5, y1 - 3, fill=THEME["grip"], width=1, tags=(f"work:{index}", "workblock", "workgrip"))
+                self.register_preview_refs((line, outline, text, left_grip, right_grip), index, segment[0], (x0, y0, x1, y1))
+        for day in overflow_days:
+            box = self.preview_date_boxes.get(day)
+            if box:
+                self.preview_canvas.create_text(box[0] + 5, box[1] + cell_h - 18, text="…", anchor="w", fill=THEME["muted"], font=self.fonts["small"])
+
+    def register_preview_refs(self, item_ids: tuple[int, ...], index: int, day: date, bbox: tuple[float, float, float, float]) -> None:
+        for item_id in item_ids:
+            self.preview_item_refs[item_id] = {"index": index, "day": day, "bbox": bbox}
+
+    def preview_hit_mode(self, x: float, bbox: tuple[float, float, float, float]) -> str:
+        left, _top, right, _bottom = bbox
+        edge = min(12, max(7, (right - left) * 0.18))
+        if x <= left + edge:
+            return "resize_start"
+        if x >= right - edge:
+            return "resize_end"
+        return "move"
+
+    def ref_under_pointer(self) -> dict[str, object] | None:
+        current = self.preview_canvas.find_withtag("current")
+        if not current:
+            return None
+        return self.preview_item_refs.get(current[0])
+
+    def on_preview_hover(self, event) -> None:
+        if self.drag_context is not None:
+            return
+        ref = self.ref_under_pointer()
+        if ref is None:
+            self.preview_canvas.configure(cursor="")
+            return
+        bbox = ref.get("bbox")
+        if not isinstance(bbox, tuple):
+            self.preview_canvas.configure(cursor="")
+            return
+        mode = self.preview_hit_mode(event.x, bbox)
+        self.preview_canvas.configure(cursor="sb_h_double_arrow" if mode in ("resize_start", "resize_end") else "fleur")
 
     def date_at_canvas_point(self, x: float, y: float) -> date | None:
         for day, (x0, y0, x1, y1) in self.preview_date_boxes.items():
@@ -1367,24 +1782,23 @@ class ReformProgressApp:
         return None
 
     def on_preview_press(self, event) -> None:
-        current = self.preview_canvas.find_withtag("current")
-        if not current:
+        ref = self.ref_under_pointer()
+        if ref is None:
             return
-        item_id = current[0]
-        if item_id not in self.preview_item_refs:
+        index = ref.get("index")
+        day = ref.get("day")
+        bbox = ref.get("bbox")
+        if not isinstance(index, int) or not isinstance(day, date) or not isinstance(bbox, tuple):
             return
-        index, day = self.preview_item_refs[item_id]
-        bbox = self.preview_canvas.bbox(item_id)
-        mode = "move"
-        if bbox and abs(event.x - bbox[2]) <= 8:
-            mode = "resize"
+        mode = self.preview_hit_mode(event.x, bbox)
         self.drag_context = {
             "index": index,
             "mode": mode,
             "origin_day": day,
             "target_day": day,
-            "ghost": None,
+            "highlight": None,
         }
+        self.preview_canvas.configure(cursor="sb_h_double_arrow" if mode in ("resize_start", "resize_end") else "fleur")
 
     def on_preview_motion(self, event) -> None:
         if self.drag_context is None:
@@ -1393,33 +1807,46 @@ class ReformProgressApp:
         if target is None:
             return
         self.drag_context["target_day"] = target
-        ghost_id = self.drag_context.get("ghost")
-        if ghost_id:
-            self.preview_canvas.delete(ghost_id)
+        highlight_id = self.drag_context.get("highlight")
+        if highlight_id:
+            self.preview_canvas.delete(highlight_id)
         box = self.preview_date_boxes.get(target)
         if not box:
             return
         x0, y0, x1, y1 = box
-        self.drag_context["ghost"] = self.preview_canvas.create_rectangle(x0 + 3, y0 + 22, x1 - 3, y0 + 38, outline=THEME["accent"], dash=(3, 2), width=2)
+        self.drag_context["highlight"] = self.preview_canvas.create_rectangle(x0 + 2, y0 + 2, x1 - 2, y1 - 2, fill=THEME["drag_highlight"], outline=THEME["accent"], stipple="gray25", width=1)
+        snapped, _adjusted = snap_to_workday(target)
+        mode = str(self.drag_context.get("mode", "move"))
+        if mode == "resize_start":
+            self.status_var.set(UI_TEXT["status_dragging_start"].format(date=format_short_date(snapped)))
+        elif mode == "resize_end":
+            self.status_var.set(UI_TEXT["status_dragging_end"].format(date=format_short_date(snapped)))
+        else:
+            self.status_var.set(UI_TEXT["status_dragging_move"].format(date=format_short_date(snapped)))
 
     def on_preview_release(self, _event) -> None:
         if self.drag_context is None:
             return
-        ghost_id = self.drag_context.get("ghost")
-        if ghost_id:
-            self.preview_canvas.delete(ghost_id)
+        highlight_id = self.drag_context.get("highlight")
+        if highlight_id:
+            self.preview_canvas.delete(highlight_id)
         index = int(self.drag_context["index"])
         target_day = self.drag_context.get("target_day")
         mode = str(self.drag_context["mode"])
         self.drag_context = None
+        self.preview_canvas.configure(cursor="")
         if not isinstance(target_day, date) or index >= len(self.work_items):
             return
         self.sync_items_from_rows(show_errors=False)
         original_day = target_day
-        if mode == "resize":
+        if mode == "resize_start":
+            updated, adjusted, snapped = resize_item_to_start(self.work_items[index], target_day)
+            self.work_items[index] = updated
+            self.status_var.set(UI_TEXT["status_drag_start_resized"].format(name=updated.name, date=format_short_date(snapped)))
+        elif mode == "resize_end":
             updated, adjusted, snapped = resize_item_to_end(self.work_items[index], target_day)
             self.work_items[index] = updated
-            self.status_var.set(UI_TEXT["status_drag_resized"].format(name=updated.name, date=format_short_date(snapped)))
+            self.status_var.set(UI_TEXT["status_drag_end_resized"].format(name=updated.name, date=format_short_date(snapped)))
         else:
             updated, adjusted, snapped = move_item_to_start(self.work_items[index], target_day)
             self.work_items[index] = updated
@@ -1467,6 +1894,21 @@ def run_launch_check() -> int:
     if not resized_adjusted or resize_snapped != date(2026, 6, 12) or resized.end_date != date(2026, 6, 12):
         raise RuntimeError("drag resize fixture failed")
 
+    start_resize_item = WorkItem(True, "開始変更工程", date(2026, 6, 5), date(2026, 6, 10), STATUS_OPTIONS[0], 4)
+    start_resized, start_resize_adjusted, start_resize_snapped = resize_item_to_start(start_resize_item, date(2026, 6, 7))
+    if not start_resize_adjusted or start_resize_snapped != date(2026, 6, 8) or start_resized.start_date != date(2026, 6, 8):
+        raise RuntimeError("drag start resize fixture failed")
+
+    week_split_item = WorkItem(True, "週またぎ工程", date(2026, 6, 5), date(2026, 6, 9), STATUS_OPTIONS[1], 3)
+    segments = band_segments_for_item(week_split_item, date(2026, 6, 1), date(2026, 6, 14))
+    if segments != [[date(2026, 6, 5)], [date(2026, 6, 8), date(2026, 6, 9)]]:
+        raise RuntimeError("pdf band segment fixture failed")
+
+    if reference_day_for_start(date(2026, 5, 31)) != date(2026, 7, 14):
+        raise RuntimeError("reference day fixture failed")
+    if not is_period_within_limit(start, start + timedelta(days=55)) or is_period_within_limit(start, start + timedelta(days=56)):
+        raise RuntimeError("max day limit fixture failed")
+
     reordered = items[:]
     moved = reordered.pop(2)
     reordered.insert(0, moved)
@@ -1498,6 +1940,23 @@ def run_launch_check() -> int:
             raise RuntimeError("config save fixture failed")
         if load_config(config_file) != values:
             raise RuntimeError("config load fixture failed")
+        project_file = output_dir / PROJECT_NAME
+        project_values = build_project_data(
+            site_name="保存テスト現場",
+            branch_name="東京支店",
+            staff_name="山田太郎",
+            phone="03-0000-0000",
+            start_date_text=format_date(start),
+            end_date_text=format_date(finish),
+            save_folder=str(output_dir),
+            work_items=items[:3],
+        )
+        if not save_project(project_values, project_file):
+            raise RuntimeError("project save fixture failed")
+        loaded_project = load_project(project_file)
+        restored_items = deserialize_work_items(loaded_project.get("work_items"))
+        if loaded_project.get("site_name") != "保存テスト現場" or not restored_items or restored_items[0].name != items[0].name:
+            raise RuntimeError("project load fixture failed")
         opened: list[str] = []
         if not open_output_folder(output_path, opener=opened.append):
             raise RuntimeError("open folder fixture failed")
@@ -1514,6 +1973,10 @@ def run_launch_check() -> int:
         print(UI_TEXT["launch_check_rows"])
         print(UI_TEXT["launch_check_reschedule"])
         print(UI_TEXT["launch_check_config"])
+        print(UI_TEXT["launch_check_project"])
+        print(UI_TEXT["launch_check_pdf_bands"])
+        print(UI_TEXT["launch_check_reference"])
+        print(UI_TEXT["launch_check_limit"])
         print(UI_TEXT["launch_check_folder"])
     return 0
 

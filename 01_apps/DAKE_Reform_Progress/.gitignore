@@ -2,5 +2,6 @@ build/
 dist/
 *.spec
 *_config.json
+reform_progress_project.json
 __pycache__/
 *.pyc
