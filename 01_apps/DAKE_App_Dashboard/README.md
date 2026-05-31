@@ -104,7 +104,7 @@ git diff --check
   "release_url": "",
   "screenshot_path": "",
   "status": "internal",
-  "show_in_launcher": true,
+  "show_in_launcher": false,
   "show_on_site": false
 }
 ```

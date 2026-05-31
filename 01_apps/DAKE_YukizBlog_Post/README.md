@@ -88,18 +88,18 @@ DAKE 共通アイコン `C:\Users\yukiz\devlop\DAKE_series\02_assets\dake_icon.i
 {
   "app_key": "dake_yukizblog_post",
   "display_name": "YUKIZ BLOG 投稿DAKE",
-  "launcher_title": "YUKIZ BLOG投稿",
-  "launcher_description": "YUKIZ BLOG用の投稿HTMLとJSONを反映します。",
+  "launcher_title": "YUKIZ BLOG 投稿",
+  "launcher_description": "YUKIZ BLOG 用の投稿HTMLとJSONをローカルで作成します。",
   "site_title": "YUKIZ BLOG 投稿DAKE",
-  "site_description": "本文を書いて置くだけで、YUKIZ BLOG側のHTMLとJSONへ投稿を反映できるWindows向けアプリです。",
-  "update_summary": "READMEメタ情報とRelease本文を整備。スクリーンショットをassets/screenshot.webpに作成。",
+  "site_description": "YUKIZ BLOG 用の投稿HTMLとJSONをローカルで整える内部向けアプリです。",
+  "update_summary": "内部投稿ツールとして整理しました。",
   "folder_name": "DAKE_YukizBlog_Post",
   "exe_name": "Dake_YukizBlog_Post.exe",
   "release_url": "",
   "screenshot_path": "assets/screenshot.webp",
-  "status": "available",
-  "show_in_launcher": true,
-  "show_on_site": true
+  "status": "internal",
+  "show_in_launcher": false,
+  "show_on_site": false
 }
 ```
 

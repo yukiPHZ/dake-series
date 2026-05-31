@@ -84,18 +84,18 @@ dist/Dake_HolidayJinja_Post.exe
 {
   "app_key": "dake_holidayjinja_post",
   "display_name": "holiday-jinja 投稿DAKE",
-  "launcher_title": "holiday-jinja投稿",
-  "launcher_description": "holiday-jinja用の投稿データをPC上で作成します。",
+  "launcher_title": "holiday-jinja 投稿",
+  "launcher_description": "holiday-jinja 用の投稿データをローカルで作成します。",
   "site_title": "holiday-jinja 投稿DAKE",
-  "site_description": "写真、タイトル、本文、場所を入力してholiday-jinja用の投稿を整理できるWindows向けアプリです。",
-  "update_summary": "READMEメタ情報とRelease本文を整備。スクリーンショットをassets/screenshot.webpに作成。",
+  "site_description": "holiday-jinja 用の投稿データをローカルで整える内部向けアプリです。",
+  "update_summary": "内部投稿ツールとして整理しました。",
   "folder_name": "DAKE_HolidayJinja_Post",
   "exe_name": "Dake_HolidayJinja_Post.exe",
   "release_url": "",
   "screenshot_path": "assets/screenshot.webp",
-  "status": "available",
-  "show_in_launcher": true,
-  "show_on_site": true
+  "status": "internal",
+  "show_in_launcher": false,
+  "show_on_site": false
 }
 ```
 
