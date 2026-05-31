@@ -17,6 +17,7 @@ from pathlib import Path
 from tkinter import font as tkfont
 import tkinter as tk
 from tkinter import messagebox, ttk
+from urllib.parse import urlparse
 
 try:
     import ctypes
@@ -44,6 +45,7 @@ BOOTH_THUMBNAIL_RELATIVE = Path("assets") / "booth_thumbnail.jpg"
 DIST_DIR_NAME = "dist"
 BOOTH_ASSIST_FOLDER_NAME = "DAKE_BOOTH_Assist"
 BOOTH_ASSIST_EXE_NAME = "DakeBOOTH_Assist.exe"
+URL_BLOCKLIST = ("javascript:", "file:", "data:", "sk-", "token", "secret", "api_key")
 
 UI_TEXT = {
     "header_title": "DAKE Dashboard",
@@ -63,6 +65,24 @@ UI_TEXT = {
     "button_open_screenshot_jpg": "screenshot.jpgを開く",
     "button_open_screenshot_webp": "screenshot.webpを開く",
     "button_missing": "未作成",
+    "button_open": "開く",
+    "button_show_location": "場所を表示",
+    "workspace_links_title": "作業リンク",
+    "link_folder": "フォルダ",
+    "link_readme": "README",
+    "link_release_body": "release_body",
+    "link_assets": "assets",
+    "link_screenshot_webp": "screenshot.webp",
+    "link_screenshot_jpg": "screenshot.jpg",
+    "link_booth_thumbnail": "booth_thumbnail",
+    "link_booth_product": "booth_product",
+    "link_booth_ready": "booth_ready",
+    "link_dist": "dist",
+    "link_exe": "exe",
+    "link_release_url": "Release URL",
+    "link_github_url": "GitHub",
+    "link_missing": "未作成",
+    "link_unavailable": "未取得",
     "summary_total": "総アプリ数",
     "summary_implementation": "実装中",
     "summary_distribution_ready": "配布準備",
@@ -203,11 +223,17 @@ UI_TEXT = {
     "next_process_release": "次工程: Release作成",
     "next_process_screenshot": "次工程: スクショ作成",
     "next_process_readme": "次工程: README整備",
+    "next_process_booth_materials": "次工程: BOOTH素材作成",
     "next_process_internal": "次工程: 内部アプリ",
     "next_process_unknown": "次工程: 確認",
     "booth_assist_missing": "BOOTHアシストが見つかりません",
     "booth_assist_launched": "BOOTHアシストを起動しました: {folder}",
     "booth_links_title": "BOOTH作業リンク",
+    "notice_opened": "{target}を開きました",
+    "notice_missing_target": "対象が見つかりません",
+    "notice_url_opened": "Release URLを開きました",
+    "notice_url_failed": "URLを開けませんでした",
+    "notice_exe_location": "exeの場所を表示しました",
     "watch_status_watchdog": "watchdog監視: ON",
     "watch_status_polling": "watchdog未導入 / 30秒自動読込: ON",
     "watch_status_error": "watchdog監視: 起動できませんでした",
@@ -284,6 +310,21 @@ SHIPMENT_MISSING_KEYS = (
     "booth_ready",
     "dist_exe",
     "release_url",
+)
+WORKSPACE_LINK_KEYS = (
+    "folder",
+    "readme",
+    "release_body",
+    "assets",
+    "screenshot_webp",
+    "screenshot_jpg",
+    "booth_thumbnail",
+    "booth_product",
+    "booth_ready",
+    "dist",
+    "exe",
+    "release_url",
+    "github_url",
 )
 
 
@@ -761,16 +802,18 @@ def is_booth_registration_target(record: AppRecord) -> bool:
 
 
 def next_process_key(record: AppRecord) -> str:
-    if is_booth_registration_target(record):
-        return "booth"
     if is_internal_app(record):
         return "internal"
     if record.status_key == "needs_review" or record.issue_messages or "dake_meta" in record.missing_keys:
         return "readme"
     if record.checks.has_dist_exe and not record.checks.has_release_url:
         return "release"
+    if record.checks.has_release_url and not record.checks.booth_materials_ready:
+        return "booth_materials"
     if not record.checks.has_screenshot:
         return "screenshot"
+    if is_booth_registration_target(record):
+        return "booth"
     if not record.checks.has_readme or not record.checks.has_release_body:
         return "readme"
     return "unknown"
@@ -778,6 +821,40 @@ def next_process_key(record: AppRecord) -> str:
 
 def next_process_text(record: AppRecord) -> str:
     return UI_TEXT[f"next_process_{next_process_key(record)}"]
+
+
+def is_safe_url(url: str) -> bool:
+    stripped = url.strip()
+    if not stripped:
+        return False
+    lowered = stripped.lower()
+    if not (lowered.startswith("http://") or lowered.startswith("https://")):
+        return False
+    return not any(blocked in lowered for blocked in URL_BLOCKLIST)
+
+
+def github_repo_url(record: AppRecord) -> str:
+    url = record.release_url
+    if not is_safe_url(url):
+        return ""
+    parsed = urlparse(url)
+    if parsed.netloc.lower() != "github.com":
+        return ""
+    parts = [part for part in parsed.path.split("/") if part]
+    if len(parts) < 2:
+        return ""
+    return f"https://github.com/{parts[0]}/{parts[1]}"
+
+
+def first_dist_exe(record: AppRecord) -> Path | None:
+    return record.checks.dist_exes[0] if record.checks.dist_exes else None
+
+
+def short_display(value: str, max_length: int = 42) -> str:
+    if len(value) <= max_length:
+        return value
+    keep = max(8, (max_length - 3) // 2)
+    return f"{value[:keep]}...{value[-keep:]}"
 
 
 def watched_folder_for_path(path: Path, root: Path) -> str | None:
@@ -889,6 +966,7 @@ class DashboardApp:
         self.watch_status_var = tk.StringVar(value=UI_TEXT["watch_status_polling"])
         self.count_var = tk.StringVar(value=UI_TEXT["count_line"].format(visible=0, total=0))
         self.filter_buttons: dict[str, tk.Button] = {}
+        self.link_rows: dict[str, dict[str, object]] = {}
         self.watch_observer = None
         self.watch_pending_folder: str | None = None
         self.watch_debounce_job: str | None = None
@@ -1347,51 +1425,7 @@ class DashboardApp:
         )
         self.open_booth_assist_button.pack(side="left")
 
-        links_area = tk.Frame(container, bg=THEME["panel"])
-        links_area.grid(row=5, column=0, sticky="ew", pady=(0, 12))
-        links_area.grid_columnconfigure(0, weight=1)
-        links_area.grid_columnconfigure(1, weight=1)
-        tk.Label(
-            links_area,
-            text=UI_TEXT["booth_links_title"],
-            bg=THEME["panel"],
-            fg=THEME["muted"],
-            font=(self.font_family, 9, "bold"),
-        ).grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 6))
-        self.open_booth_ready_button = self.make_button(
-            links_area,
-            UI_TEXT["button_open_booth_ready"],
-            self.open_selected_booth_ready,
-        )
-        self.open_booth_product_button = self.make_button(
-            links_area,
-            UI_TEXT["button_open_booth_product"],
-            self.open_selected_booth_product,
-        )
-        self.open_booth_thumbnail_button = self.make_button(
-            links_area,
-            UI_TEXT["button_open_booth_thumbnail"],
-            self.open_selected_booth_thumbnail,
-        )
-        self.open_screenshot_jpg_button = self.make_button(
-            links_area,
-            UI_TEXT["button_open_screenshot_jpg"],
-            self.open_selected_screenshot_jpg,
-        )
-        self.open_screenshot_webp_button = self.make_button(
-            links_area,
-            UI_TEXT["button_open_screenshot_webp"],
-            self.open_selected_screenshot_webp,
-        )
-        link_buttons = (
-            self.open_booth_ready_button,
-            self.open_booth_product_button,
-            self.open_booth_thumbnail_button,
-            self.open_screenshot_jpg_button,
-            self.open_screenshot_webp_button,
-        )
-        for index, button in enumerate(link_buttons):
-            button.grid(row=1 + index // 2, column=index % 2, sticky="ew", padx=(0 if index % 2 == 0 else 8, 0), pady=(0, 6))
+        self.build_workspace_links(container, 5)
 
         detail_area = tk.Frame(container, bg=THEME["panel"])
         detail_area.grid(row=6, column=0, sticky="nsew")
@@ -1403,13 +1437,70 @@ class DashboardApp:
         detail_area.grid_rowconfigure(9, weight=1)
         detail_area.grid_rowconfigure(11, weight=1)
 
-        self.meta_text = self.create_detail_text(detail_area, 0, UI_TEXT["detail_meta_title"], height=4)
-        self.shipment_text = self.create_detail_text(detail_area, 2, UI_TEXT["shipment_title"], height=4)
-        self.files_text = self.create_detail_text(detail_area, 4, UI_TEXT["detail_files_title"], height=4)
-        self.missing_text = self.create_detail_text(detail_area, 6, UI_TEXT["detail_missing_title"], height=4)
-        self.next_text = self.create_detail_text(detail_area, 8, UI_TEXT["detail_next_title"], height=4)
-        self.next_candidates_text = self.create_detail_text(detail_area, 10, UI_TEXT["next_candidates_title"], height=5)
+        self.meta_text = self.create_detail_text(detail_area, 0, UI_TEXT["detail_meta_title"], height=3)
+        self.shipment_text = self.create_detail_text(detail_area, 2, UI_TEXT["shipment_title"], height=3)
+        self.files_text = self.create_detail_text(detail_area, 4, UI_TEXT["detail_files_title"], height=3)
+        self.missing_text = self.create_detail_text(detail_area, 6, UI_TEXT["detail_missing_title"], height=3)
+        self.next_text = self.create_detail_text(detail_area, 8, UI_TEXT["detail_next_title"], height=3)
+        self.next_candidates_text = self.create_detail_text(detail_area, 10, UI_TEXT["next_candidates_title"], height=4)
         self.update_detail(None)
+
+    def build_workspace_links(self, parent: tk.Frame, row: int) -> None:
+        links_area = tk.Frame(parent, bg=THEME["panel"])
+        links_area.grid(row=row, column=0, sticky="ew", pady=(0, 12))
+        links_area.grid_columnconfigure(0, weight=1)
+        links_area.grid_columnconfigure(1, weight=1)
+
+        tk.Label(
+            links_area,
+            text=UI_TEXT["workspace_links_title"],
+            bg=THEME["panel"],
+            fg=THEME["muted"],
+            font=(self.font_family, 9, "bold"),
+        ).grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 6))
+
+        for index, key in enumerate(WORKSPACE_LINK_KEYS):
+            cell = tk.Frame(
+                links_area,
+                bg=THEME["panel_soft"],
+                highlightbackground=THEME["border"],
+                highlightthickness=1,
+                bd=0,
+            )
+            cell.grid(row=1 + index // 2, column=index % 2, sticky="ew", padx=(0 if index % 2 == 0 else 8, 0), pady=(0, 6))
+            cell.grid_columnconfigure(0, weight=1)
+
+            label_var = tk.StringVar(value=UI_TEXT[f"link_{key}"])
+            value_var = tk.StringVar(value=UI_TEXT["link_missing"])
+            tk.Label(
+                cell,
+                textvariable=label_var,
+                bg=THEME["panel_soft"],
+                fg=THEME["text"],
+                font=(self.font_family, 8, "bold"),
+            ).grid(row=0, column=0, sticky="w", padx=(8, 6), pady=(5, 0))
+            tk.Label(
+                cell,
+                textvariable=value_var,
+                bg=THEME["panel_soft"],
+                fg=THEME["muted"],
+                font=(self.font_family, 8),
+                anchor="w",
+            ).grid(row=1, column=0, sticky="ew", padx=(8, 6), pady=(0, 5))
+            button = self.make_button(
+                cell,
+                UI_TEXT["button_show_location"] if key == "exe" else UI_TEXT["button_open"],
+                lambda value=key: self.open_workspace_link(value),
+                compact=True,
+            )
+            button.grid(row=0, column=1, rowspan=2, sticky="e", padx=(0, 6), pady=5)
+            self.link_rows[key] = {"value": value_var, "button": button}
+
+        self.open_booth_ready_button = self.link_rows["booth_ready"]["button"]
+        self.open_booth_product_button = self.link_rows["booth_product"]["button"]
+        self.open_booth_thumbnail_button = self.link_rows["booth_thumbnail"]["button"]
+        self.open_screenshot_jpg_button = self.link_rows["screenshot_jpg"]["button"]
+        self.open_screenshot_webp_button = self.link_rows["screenshot_webp"]["button"]
 
     def create_detail_text(self, parent: tk.Frame, row: int, title: str, height: int = 5) -> tk.Text:
         tk.Label(
@@ -1484,12 +1575,12 @@ class DashboardApp:
         ).pack()
         self.notification_frame.place_forget()
 
-    def make_button(self, parent: tk.Misc, label: str, command, primary: bool = False) -> tk.Button:
+    def make_button(self, parent: tk.Misc, label: str, command, primary: bool = False, compact: bool = False) -> tk.Button:
         bg = THEME["accent_soft"] if primary else THEME["panel_alt"]
         fg = THEME["text"] if primary else THEME["muted"]
         active_bg = THEME["accent"] if primary else THEME["selection"]
         active_fg = "#FFFFFF" if primary else THEME["text"]
-        return tk.Button(
+        button = tk.Button(
             parent,
             text=label,
             command=command,
@@ -1500,11 +1591,15 @@ class DashboardApp:
             disabledforeground=THEME["quiet"],
             relief="flat",
             bd=0,
-            padx=12,
-            pady=7,
+            padx=8 if compact else 12,
+            pady=4 if compact else 7,
             cursor="hand2",
-            font=(self.font_family, 9, "bold"),
+            font=(self.font_family, 8 if compact else 9, "bold"),
         )
+        if compact:
+            button.bind("<Enter>", lambda _event: button.configure(bg=active_bg if button["state"] != "disabled" else bg))
+            button.bind("<Leave>", lambda _event: button.configure(bg=bg))
+        return button
 
     def set_filter(self, key: str) -> None:
         self.filter_key = key
@@ -1554,7 +1649,9 @@ class DashboardApp:
                 elif event == "watch_event":
                     self.handle_watch_event(payload)
                 elif event == "booth_assist_status":
-                    self.status_var.set(str(payload))
+                    self.show_action_notification(str(payload))
+                elif event == "link_notice":
+                    self.show_action_notification(str(payload))
         except queue.Empty:
             pass
         self.root.after(WORKER_POLL_MS, self.poll_worker)
@@ -1728,7 +1825,11 @@ class DashboardApp:
             self.reload_data(source="watch", changed_folder=folder_name)
 
     def show_reload_notification(self, folder_name: str) -> None:
-        self.notification_var.set(UI_TEXT["notification_reloaded"].format(folder=folder_name))
+        self.show_action_notification(UI_TEXT["notification_reloaded"].format(folder=folder_name))
+
+    def show_action_notification(self, message: str) -> None:
+        self.status_var.set(message)
+        self.notification_var.set(message)
         self.notification_frame.place(relx=1.0, rely=1.0, anchor="se", x=-22, y=-22)
         self.root.after(NOTIFICATION_HIDE_MS, self.notification_frame.place_forget)
 
@@ -1863,23 +1964,65 @@ class DashboardApp:
             self.open_release_button.configure(text=UI_TEXT["button_release_missing"])
         else:
             self.open_release_button.configure(text=UI_TEXT["button_open_release"])
-        self.set_path_button_state(self.open_booth_ready_button, record.folder_path / BOOTH_READY_NAME if record else None)
-        self.set_path_button_state(self.open_booth_product_button, record.folder_path / BOOTH_PRODUCT_NAME if record else None)
-        self.set_path_button_state(
-            self.open_booth_thumbnail_button,
-            record.folder_path / BOOTH_THUMBNAIL_RELATIVE if record else None,
-        )
-        self.set_path_button_state(
-            self.open_screenshot_jpg_button,
-            record.folder_path / SCREENSHOT_JPG_RELATIVE if record else None,
-        )
-        self.set_path_button_state(
-            self.open_screenshot_webp_button,
-            record.folder_path / SCREENSHOT_RELATIVE if record else None,
-        )
+        self.update_workspace_links(record)
 
     def set_path_button_state(self, button: tk.Button, path: Path | None) -> None:
         button.configure(state="normal" if path is not None and path.exists() else "disabled")
+
+    def update_workspace_links(self, record: AppRecord | None) -> None:
+        for key in WORKSPACE_LINK_KEYS:
+            row = self.link_rows.get(key)
+            if not row:
+                continue
+            value_var = row["value"]
+            button = row["button"]
+            if not isinstance(value_var, tk.StringVar) or not isinstance(button, tk.Button):
+                continue
+            if record is None:
+                value_var.set(UI_TEXT["link_missing"])
+                button.configure(state="disabled")
+                continue
+            display_value, enabled = self.workspace_link_state(record, key)
+            value_var.set(display_value)
+            button.configure(state="normal" if enabled else "disabled")
+
+    def workspace_link_state(self, record: AppRecord, key: str) -> tuple[str, bool]:
+        if key == "release_url":
+            url = record.release_url
+            return (short_display(url) if url else UI_TEXT["link_missing"], bool(url))
+        if key == "github_url":
+            url = github_repo_url(record)
+            return (short_display(url) if url else UI_TEXT["link_unavailable"], bool(url))
+        path = self.workspace_link_path(record, key)
+        if path is None:
+            return UI_TEXT["link_missing"], False
+        display_value = self.display_path(record, path)
+        return display_value if path.exists() else UI_TEXT["link_missing"], path.exists()
+
+    def workspace_link_path(self, record: AppRecord, key: str) -> Path | None:
+        paths = {
+            "folder": record.folder_path,
+            "readme": record.folder_path / README_NAME,
+            "release_body": record.folder_path / RELEASE_BODY_NAME,
+            "assets": record.folder_path / "assets",
+            "screenshot_webp": record.folder_path / SCREENSHOT_RELATIVE,
+            "screenshot_jpg": record.folder_path / SCREENSHOT_JPG_RELATIVE,
+            "booth_thumbnail": record.folder_path / BOOTH_THUMBNAIL_RELATIVE,
+            "booth_product": record.folder_path / BOOTH_PRODUCT_NAME,
+            "booth_ready": record.folder_path / BOOTH_READY_NAME,
+            "dist": record.folder_path / DIST_DIR_NAME,
+            "exe": first_dist_exe(record),
+        }
+        return paths.get(key)
+
+    def display_path(self, record: AppRecord, path: Path) -> str:
+        try:
+            value = str(path.relative_to(record.folder_path))
+        except ValueError:
+            value = str(path)
+        if value == ".":
+            value = str(path)
+        return short_display(value)
 
     def set_text(self, widget: tk.Text, value: str) -> None:
         widget.configure(state="normal")
@@ -1980,20 +2123,16 @@ class DashboardApp:
 
     def open_selected_folder(self) -> None:
         if self.selected_record is not None:
-            self.open_path(self.selected_record.folder_path)
+            self.open_path(self.selected_record.folder_path, UI_TEXT["link_folder"])
 
     def open_selected_readme(self) -> None:
         if self.selected_record is not None:
-            self.open_path(self.selected_record.folder_path / README_NAME)
+            self.open_path(self.selected_record.folder_path / README_NAME, UI_TEXT["link_readme"])
 
     def open_selected_release(self) -> None:
         if self.selected_record is None:
             return
-        url = self.selected_record.release_url
-        if not url:
-            messagebox.showinfo(UI_TEXT["dialog_notice_title"], UI_TEXT["dialog_release_missing"], parent=self.root)
-            return
-        webbrowser.open(url)
+        self.open_url(self.selected_record.release_url, UI_TEXT["link_release_url"])
 
     def open_selected_booth_ready(self) -> None:
         self.open_selected_relative_path(BOOTH_READY_NAME)
@@ -2012,7 +2151,49 @@ class DashboardApp:
 
     def open_selected_relative_path(self, relative_path: str | Path) -> None:
         if self.selected_record is not None:
-            self.open_path(self.selected_record.folder_path / relative_path)
+            path = self.selected_record.folder_path / relative_path
+            self.open_path(path, self.target_label_for_path(path))
+
+    def open_workspace_link(self, key: str) -> None:
+        record = self.selected_record
+        if record is None:
+            return
+        if key == "release_url":
+            self.open_url(record.release_url, UI_TEXT["link_release_url"])
+            return
+        if key == "github_url":
+            self.open_url(github_repo_url(record), UI_TEXT["link_github_url"])
+            return
+        if key == "exe":
+            exe_path = first_dist_exe(record)
+            if exe_path is None:
+                self.show_action_notification(UI_TEXT["notice_missing_target"])
+                return
+            self.show_file_location(exe_path)
+            return
+        path = self.workspace_link_path(record, key)
+        if path is None:
+            self.show_action_notification(UI_TEXT["notice_missing_target"])
+            return
+        self.open_path(path, UI_TEXT[f"link_{key}"])
+
+    def target_label_for_path(self, path: Path) -> str:
+        name = path.name.lower()
+        if name == BOOTH_READY_NAME:
+            return UI_TEXT["link_booth_ready"]
+        if name == BOOTH_PRODUCT_NAME:
+            return UI_TEXT["link_booth_product"]
+        if name == "booth_thumbnail.jpg":
+            return UI_TEXT["link_booth_thumbnail"]
+        if name == "screenshot.jpg":
+            return UI_TEXT["link_screenshot_jpg"]
+        if name == "screenshot.webp":
+            return UI_TEXT["link_screenshot_webp"]
+        if name == README_NAME.lower():
+            return UI_TEXT["link_readme"]
+        if name == RELEASE_BODY_NAME.lower():
+            return UI_TEXT["link_release_body"]
+        return path.name
 
     def open_selected_booth_assist(self) -> None:
         if self.selected_record is not None and is_booth_registration_target(self.selected_record):
@@ -2025,16 +2206,40 @@ class DashboardApp:
         process_key = next_process_key(record)
         if process_key == "booth":
             self.launch_booth_assist(record)
-            self.open_path(record.folder_path / BOOTH_READY_NAME)
+            self.open_path(record.folder_path / BOOTH_READY_NAME, UI_TEXT["link_booth_ready"])
+            self.open_path(record.folder_path / BOOTH_PRODUCT_NAME, UI_TEXT["link_booth_product"])
         elif process_key == "release":
-            self.open_path(record.folder_path / README_NAME)
+            self.open_path(record.folder_path / README_NAME, UI_TEXT["link_readme"])
+            release_body = record.folder_path / RELEASE_BODY_NAME
+            if release_body.exists():
+                self.open_path(release_body, UI_TEXT["link_release_body"])
+            dist_dir = record.folder_path / DIST_DIR_NAME
+            if dist_dir.exists():
+                self.open_path(dist_dir, UI_TEXT["link_dist"])
+            exe_path = first_dist_exe(record)
+            if exe_path is not None:
+                self.show_file_location(exe_path)
         elif process_key == "screenshot":
             assets_dir = record.folder_path / "assets"
-            self.open_path(assets_dir if assets_dir.exists() else record.folder_path)
+            self.open_path(assets_dir if assets_dir.exists() else record.folder_path, UI_TEXT["link_assets"])
+            self.open_path(record.folder_path, UI_TEXT["link_folder"])
+            screenshot_path = record.folder_path / SCREENSHOT_RELATIVE
+            if screenshot_path.exists():
+                self.open_path(screenshot_path, UI_TEXT["link_screenshot_webp"])
         elif process_key == "readme":
-            self.open_path(record.folder_path / README_NAME)
+            self.open_path(record.folder_path / README_NAME, UI_TEXT["link_readme"])
+            self.open_path(record.folder_path, UI_TEXT["link_folder"])
+        elif process_key == "booth_materials":
+            assets_dir = record.folder_path / "assets"
+            self.open_path(assets_dir if assets_dir.exists() else record.folder_path, UI_TEXT["link_assets"])
+            booth_product = record.folder_path / BOOTH_PRODUCT_NAME
+            if booth_product.exists():
+                self.open_path(booth_product, UI_TEXT["link_booth_product"])
+            booth_ready = record.folder_path / BOOTH_READY_NAME
+            if booth_ready.exists():
+                self.open_path(booth_ready, UI_TEXT["link_booth_ready"])
         else:
-            self.open_path(record.folder_path)
+            self.open_path(record.folder_path, UI_TEXT["link_folder"])
 
     def launch_booth_assist(self, record: AppRecord) -> None:
         self.highlight_booth_work(record)
@@ -2101,25 +2306,56 @@ class DashboardApp:
         self.qpsc_status_var.set(UI_TEXT["qpsc_card_subtitle"])
         self.render_tree()
 
-    def open_path(self, path: Path) -> None:
+    def open_path(self, path: Path, target_label: str) -> None:
         if not path.exists():
-            messagebox.showinfo(
-                UI_TEXT["dialog_notice_title"],
-                UI_TEXT["dialog_missing_path"].format(path=path),
-                parent=self.root,
-            )
+            self.show_action_notification(UI_TEXT["notice_missing_target"])
             return
+        thread = threading.Thread(target=self.open_path_worker, args=(path, target_label), daemon=True)
+        thread.start()
+
+    def open_path_worker(self, path: Path, target_label: str) -> None:
         try:
             if sys.platform.startswith("win"):
                 os.startfile(str(path))
             else:
                 webbrowser.open(path.as_uri())
+            message = UI_TEXT["notice_opened"].format(target=target_label)
         except OSError as exc:
-            messagebox.showerror(
-                UI_TEXT["dialog_error_title"],
-                UI_TEXT["dialog_open_failed"].format(path=path, error=exc),
-                parent=self.root,
-            )
+            message = UI_TEXT["notice_missing_target"] if not str(exc) else UI_TEXT["notice_missing_target"]
+        self.worker_queue.put(("link_notice", message))
+
+    def open_url(self, url: str, _target_label: str) -> None:
+        if not is_safe_url(url):
+            self.show_action_notification(UI_TEXT["notice_url_failed"])
+            return
+        thread = threading.Thread(target=self.open_url_worker, args=(url,), daemon=True)
+        thread.start()
+
+    def open_url_worker(self, url: str) -> None:
+        try:
+            opened = webbrowser.open(url)
+        except Exception:
+            opened = False
+        message = UI_TEXT["notice_url_opened"] if opened else UI_TEXT["notice_url_failed"]
+        self.worker_queue.put(("link_notice", message))
+
+    def show_file_location(self, path: Path) -> None:
+        if not path.exists():
+            self.show_action_notification(UI_TEXT["notice_missing_target"])
+            return
+        thread = threading.Thread(target=self.show_file_location_worker, args=(path,), daemon=True)
+        thread.start()
+
+    def show_file_location_worker(self, path: Path) -> None:
+        try:
+            if sys.platform.startswith("win"):
+                subprocess.Popen(["explorer.exe", f"/select,{str(path)}"])
+            else:
+                webbrowser.open(path.parent.as_uri())
+            message = UI_TEXT["notice_exe_location"]
+        except Exception:
+            message = UI_TEXT["notice_missing_target"]
+        self.worker_queue.put(("link_notice", message))
 
 
 def run_gui(launch_check: bool = False) -> int:

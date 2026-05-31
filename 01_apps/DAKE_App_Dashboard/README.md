@@ -16,7 +16,6 @@ DAKE Dashboard は、DAKEシリーズ配下のアプリフォルダを読み取�
 ```text
 C:\Users\yukiz\devlop\DAKE_series\01_apps
 ```
-
 各アプリフォルダの `README.md` から `DAKE_META` JSON を読み取り、実在するファイルと照合します。
 
 ## 判定する情報
@@ -68,6 +67,14 @@ C:\Users\yukiz\devlop\DAKE_series\01_apps
 - BOOTH作業中の対象行を静かな青紫でハイライト
 - booth_ready/、booth_product.txt、booth_thumbnail、screenshot、Release URL を詳細ペインから直接開く
 - 次の作業へボタンで、BOOTH登録、Release作成、スクショ作成、README整備へ移動
+
+## Phase5 作業発射台リンク導線
+
+- 詳細ペインから各作業対象を直接開く
+- フォルダ、README.md、release_body.md、assets、screenshot、booth_product.txt、booth_ready/、dist、exe場所、Release URL に対応
+- GitHubリポジトリURLをRelease URLから取得できる場合はGitHubページを開く
+- 次の作業へボタンが、BOOTH登録、Release作成、スクショ作成、README整備、BOOTH素材作成に応じて作業対象を開く
+- exeは直接実行せず、エクスプローラーで場所表示のみ行う
 
 このアプリ自身は内部アプリです。一般公開、BOOTH素材作成、dakeapp.com掲載、GitHub Release作成は行いません。
 
