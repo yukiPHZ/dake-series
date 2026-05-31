@@ -90,16 +90,16 @@ python main.py --launch-check
   "app_key": "DAKE_Web_Dashboard",
   "display_name": "DAKE Web Dashboard",
   "launcher_title": "DAKE Web Dashboard",
-  "launcher_description": "サイト群の正本状態を見る",
+  "launcher_description": "Internal dashboard for DAKE related sites",
   "site_title": "",
   "site_description": "",
-  "update_summary": "README正本からWebサイト群の状態を確認する開発アシスト",
+  "update_summary": "Internal tool to review site status from README metadata",
   "folder_name": "DAKE_Web_Dashboard",
   "exe_name": "DakeWeb_Dashboard.exe",
   "release_url": "",
   "screenshot_path": "",
   "status": "internal",
-  "show_in_launcher": true,
+  "show_in_launcher": false,
   "show_on_site": false
 }
 ```

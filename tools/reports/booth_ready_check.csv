@@ -1,52 +1,58 @@
-app,ok,readme,dake_meta,release_body,screenshot,thumbnail,booth_product,booth_ready,zip,build_bat,main_py,dist_exe,icon_build,icon_main,actions
-DAKE_Approve_Brainz,False,True,True,True,False,False,True,True,True,True,True,True,True,True,need screenshot: create assets/screenshot.webp; generate assets/booth_thumbnail.jpg with tools/make_booth_ready.py
-DAKE_Backup,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_BGM_Loop,False,True,True,True,False,False,True,True,True,True,True,True,True,True,need screenshot: create assets/screenshot.webp; generate assets/booth_thumbnail.jpg with tools/make_booth_ready.py
-DAKE_BOOTH_Assist,False,True,True,False,False,False,False,False,False,True,True,False,True,True,generate release_body.md from README RELEASE_BODY; need screenshot: create assets/screenshot.webp; generate assets/booth_thumbnail.jpg with tools/make_booth_ready.py; generate booth_product.txt with tools/make_booth_ready.py; generate booth_ready/ with tools/make_booth_ready.py; need build: create dist/*.exe before zip; need build: create dist/*.exe
-DAKE_Brainz_OIKAWA,False,True,True,True,False,False,True,True,True,True,True,True,True,True,need screenshot: create assets/screenshot.webp; generate assets/booth_thumbnail.jpg with tools/make_booth_ready.py
-DAKE_Brainz_Search,False,True,True,True,False,False,True,True,True,True,True,True,True,True,need screenshot: create assets/screenshot.webp; generate assets/booth_thumbnail.jpg with tools/make_booth_ready.py
-DAKE_Column_Memo,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_Document_Cover,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_FAX_Cover,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_Folder_List,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_Git_Memo,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_HolidayJinja_Post,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_Image_HEICtoJPG,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_Image_iPhoneToPC,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_Image_PasteA4,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_Image_Receiver,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_Image_Resize,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_Image_ToPDF,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_Launcher,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_Mail_AllStaff,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_Mail_Draft,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_Mail_Kikuta,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_Mail_List,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_Maji_Memo,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_Music_Otooku,False,True,True,True,False,False,True,True,True,True,True,True,True,True,need screenshot: create assets/screenshot.webp; generate assets/booth_thumbnail.jpg with tools/make_booth_ready.py
-DAKE_PDF_CheckStamp,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_PDF_Compress,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_PDF_Crop,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_PDF_LookHere,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_PDF_Marker,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_PDF_Merge,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_PDF_Merge_Mini,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_PDF_Rename,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_PDF_Reorder,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_PDF_SplitOne,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_PDF_SplitSelect,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_PDF_ToImages,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_PDF_Viewer,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_Price_Apportionment,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_Price_FixedTax,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_Screen_WebP,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_Screenshot_Print,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_Sticky_Memo,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_TwoPerson_Memo,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_Wake_Brainz,False,True,True,True,False,False,True,True,True,True,True,True,True,True,need screenshot: create assets/screenshot.webp; generate assets/booth_thumbnail.jpg with tools/make_booth_ready.py
-DAKE_Work_Calendar,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_Year_Age,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_Year_Notice,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_Yesterday_Task_Memo,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
-DAKE_Yukiz_KadouChu,False,True,True,True,False,False,True,True,True,True,True,True,True,True,need screenshot: create assets/screenshot.webp; generate assets/booth_thumbnail.jpg with tools/make_booth_ready.py
-DAKE_YukizBlog_Post,True,True,True,True,True,True,True,True,True,True,True,True,True,True,
+app,status,shipping_candidate,closed_ready,asset_ready,release_url,booth_url_state,booth_url,show_in_launcher,show_on_site,flag_conflict,readme,dake_meta,release_body,screenshot,thumbnail,booth_product,booth_ready,zip,build_bat,main_py,dist_exe,icon_build,icon_main,actions
+DAKE_App_Dashboard,internal,False,False,False,,booth_product_missing,,True,False,True,True,True,False,False,False,False,False,False,True,True,True,True,True,fix show_in_launcher/show_on_site for non-available status
+DAKE_App_Doko,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_App_Doko_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_Approve_Brainz,frozen,False,False,False,,empty,,False,False,False,True,True,True,False,False,True,True,True,True,True,True,True,True,excluded from regular shipping check
+DAKE_Backup,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Backup_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_BGM_Loop,frozen,False,False,False,,empty,,False,False,False,True,True,True,False,False,True,True,True,True,True,True,True,True,excluded from regular shipping check
+DAKE_BOOTH_Assist,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_BOOTH_Assist_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_Brainz_OIKAWA,experimental,False,False,False,,empty,,False,False,False,True,True,True,False,False,True,True,True,True,True,True,True,True,excluded from regular shipping check
+DAKE_Brainz_Search,draft,False,False,False,,empty,,False,False,False,True,True,True,False,False,True,True,True,True,True,True,True,True,excluded from regular shipping check
+DAKE_Column_Memo,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Column_Memo_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_Document_Cover,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Document_Cover-v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_FAX_Cover,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_FAX_Cover_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_Folder_List,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Folder_List_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_Git_Memo,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Git_Memo_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_HolidayJinja_Post,available,True,False,True,,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill README DAKE_META.release_url after GitHub Release; fill BOOTH URL in booth_product.txt after publication
+DAKE_Image_HEICtoJPG,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_HEICtoJPG_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_Image_iPhoneToPC,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_iPhoneToPC_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_Image_PasteA4,available,True,True,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_PasteA4_v1.0.0,set,https://peakheadz.booth.pm/items/8397628,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_Image_Receiver,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_Receiver_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_Image_Resize,available,True,True,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_Resize_v1.0.0,set,https://peakheadz.booth.pm/items/8397622,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_Image_ToPDF,available,True,True,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_ToPDF_v1.0.0,set,https://peakheadz.booth.pm/items/8397610,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,
+DAKE_Launcher,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Launcher_v1.0.0,empty,,False,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_Mail_Address_Format,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_Address_Format_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_Mail_AllStaff,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_AllStaff_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_Mail_Draft,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_Draft_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_Mail_Kikuta,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_Kikuta_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_Mail_List,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_List_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_Maji_Memo,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Maji_Memo_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_Mansion_Schedule,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mansion_Schedule_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_Music_Otooku,frozen,False,False,False,,empty,,False,False,False,True,True,True,False,False,True,True,True,True,True,True,True,True,excluded from regular shipping check
+DAKE_PDF_CheckStamp,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_CheckStamp_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_PDF_Compress,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Compress_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_PDF_Crop,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Crop_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_PDF_LookHere,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_LookHere_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_PDF_Marker,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Marker_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_PDF_Merge,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Merge_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_PDF_Merge_Mini,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Merge_Mini_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_PDF_Rename,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Rename_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_PDF_Reorder,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Reorder_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_PDF_SplitOne,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitOne_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_PDF_SplitSelect,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitSelect_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_PDF_ToImages,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_ToImages_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_PDF_Viewer,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Viewer_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_Price_Apportionment,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Price_Apportionment_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_Price_FixedTax,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Price_FixedTax_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_Reform_Progress,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Reform_Progress_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_Screen_WebP,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Screen_WebP_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_Screenshot_Print,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Screenshot_Print_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_Sticky_Memo,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Sticky_Memo_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_TwoPerson_Memo,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_TwoPerson_Memo_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_Wake_Brainz,draft,False,False,False,,empty,,False,False,False,True,True,True,False,False,True,True,True,True,True,True,True,True,excluded from regular shipping check
+DAKE_Web_Dashboard,internal,False,False,False,,booth_product_missing,,False,False,False,True,True,False,False,False,False,False,False,True,True,True,True,True,excluded from regular shipping check
+DAKE_Work_Calendar,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Work_Calendar_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_Year_Age,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Year_Age_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_Year_Notice,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Year_Notice_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_Yesterday_Task_Memo,available,True,False,True,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Yesterday_Task_Memo_v1.0.0,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill BOOTH URL in booth_product.txt after publication
+DAKE_Yukiz_KadouChu,draft,False,False,False,,empty,,False,False,False,True,True,True,False,False,True,True,True,True,True,True,True,True,excluded from regular shipping check
+DAKE_YukizBlog_Post,available,True,False,True,,empty,,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,fill README DAKE_META.release_url after GitHub Release; fill BOOTH URL in booth_product.txt after publication

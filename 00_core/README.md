@@ -89,3 +89,17 @@ DAKEシリーズ全体で参照する共通仕様ファイル置き場です。
 | `DAKE_CLI_SPEC.md` | しまりすくんCLI対応の共通仕様。`--from-shimarisu`、引数、exit code、stderr、保存ルールを定義します。 |
 | `DAKE_CLI_TEMPLATE.md` | 新規アプリへCLI入口を追加するためのargparse/GUI分岐テンプレートです。 |
 | `SHIMARISU_DAKE_FLOW.md` | しまりすくんとDAKEの責務分担、呼び出し構造、実務パイプラインの考え方です。 |
+
+
+## DAKE Status Model v3
+
+`DAKE_META.status` controls whether an app enters the formal shipping line.
+
+- `available`: formal shipping candidate. Release / BOOTH / dakeapp.com target.
+- `draft`: work in progress. Excluded from formal shipping.
+- `experimental`: exploratory app. Excluded from formal shipping. `show_in_launcher` and `show_on_site` should be false.
+- `frozen`: preserved but inactive. Excluded from formal shipping. Existing assets are not treated as missing.
+- `private`: personal or non-public app. Excluded from formal shipping.
+- `internal`: operations or management tool. Excluded from normal distribution, BOOTH, dakeapp.com, and Launcher listing.
+
+Only `available` apps are normal formal shipping check targets.

@@ -1,8 +1,8 @@
 """Check DAKE formal shipping assets.
 
 Version 2 treats only ``status: available`` apps as normal shipping
-candidates. Frozen, draft, experimental, and private apps are listed, but they
-are not counted as ordinary missing BOOTH assets.
+candidates. Frozen, draft, experimental, private, and internal apps are
+listed, but they are not counted as ordinary missing BOOTH assets.
 
 Formal shipping is not closed by GitHub Release alone. An available app is
 closed only when release assets, BOOTH ready assets, a GitHub Release URL, and
@@ -27,7 +27,8 @@ APPS_DIR = ROOT / "01_apps"
 REPORT_DIR = ROOT / "tools" / "reports"
 COMMON_ICON_PARTS = ("02_assets", "dake_icon.ico")
 SHIPPING_STATUS = "available"
-KNOWN_NON_SHIPPING_STATUSES = {"frozen", "draft", "experimental", "private"}
+KNOWN_NON_SHIPPING_STATUSES = {"frozen", "draft", "experimental", "private", "internal"}
+STATUS_DISPLAY_ORDER = ["available", "frozen", "draft", "experimental", "private", "internal", "unknown"]
 ROOT_GITIGNORE_REQUIRED = [
     "build/",
     "dist/",
@@ -364,10 +365,10 @@ def write_markdown(results: list[AppCheck], missing_gitignore: list[str], path: 
         "## Status Counts",
         "",
     ]
-    for status in ["available", "frozen", "draft", "experimental", "private", "unknown"]:
+    for status in STATUS_DISPLAY_ORDER:
         lines.append(f"- {status}: {counts.get(status, 0)}")
     for status, count in sorted(counts.items()):
-        if status not in {"available", "frozen", "draft", "experimental", "private", "unknown"}:
+        if status not in set(STATUS_DISPLAY_ORDER):
             lines.append(f"- {status}: {count}")
 
     lines.extend(
@@ -570,7 +571,7 @@ def main() -> int:
     print("DAKE BOOTH Ready Check v2")
     print(f"checked: {len(results)}")
     print("status counts:")
-    for status in ["available", "frozen", "draft", "experimental", "private", "unknown"]:
+    for status in STATUS_DISPLAY_ORDER:
         print(f"  {status}: {counts.get(status, 0)}")
     print(f"available checked: {len(shipping)}")
     print(f"closed ok: {closed_count}")

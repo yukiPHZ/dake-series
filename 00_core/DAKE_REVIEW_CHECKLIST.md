@@ -142,3 +142,13 @@ DAKEアプリ横断レビュー用チェックリストです。
 - [ ] BOOTH公開後、`booth_ready/booth_product.txt` の `# URL` にBOOTH URLを戻している。
 - [ ] BOOTH URL未記入のままCLOSED扱いしていない。
 - [ ] dakeapp.com掲載とCloudflare反映確認まで終えている。
+
+
+## Formal Shipping Line v3
+
+- [ ] Normal shipping candidates are limited to `status: available`.
+- [ ] `frozen` / `draft` / `experimental` / `private` / `internal` are not counted as normal missing assets.
+- [ ] `internal` is treated as an operations or management tool, excluded from Release / BOOTH / dakeapp.com / Launcher listing.
+- [ ] Non-available apps do not have `show_in_launcher: true`.
+- [ ] Non-available apps do not have `show_on_site: true`.
+- [ ] Apps are not treated as CLOSED while the BOOTH URL is missing.

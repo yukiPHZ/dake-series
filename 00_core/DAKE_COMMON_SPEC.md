@@ -162,3 +162,17 @@ DAKEシリーズの最上位共通仕様です。個別仕様や実装判断で�
 - 過去プロジェクトを丸ごと流用しない。
 - Release用exeをGit管理の正本にしない。
 - README以外の別台帳を増やさない。
+
+
+## DAKE_META Status Model
+
+`DAKE_META.status` decides whether an app is allowed into the formal shipping line.
+
+- `available`: formal shipping candidate. Release / BOOTH / dakeapp.com target.
+- `draft`: work in progress. Excluded from formal shipping.
+- `experimental`: exploratory app. Excluded from formal shipping. `show_in_launcher` and `show_on_site` should be false.
+- `frozen`: preserved but inactive. Excluded from formal shipping. Existing assets are not treated as missing.
+- `private`: personal or non-public app. Excluded from formal shipping.
+- `internal`: operations or management tool. Excluded from normal distribution, BOOTH, dakeapp.com, and Launcher listing.
+
+Formal shipping checks, BOOTH ready generation, and dakeapp.com publish candidates target `available` apps only.

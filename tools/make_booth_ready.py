@@ -10,6 +10,10 @@ booth_thumbnail.jpg / booth_product.txt / booth_ready/ are formal shipping
 assets. They are not optional cleanup after GitHub Release.
 The BOOTH registration source file used in practice is
 booth_ready/booth_product.txt.
+
+When --only-available is used, only DAKE_META.status == available is processed.
+Frozen, draft, experimental, private, and internal apps are skipped as
+non-shipping candidates.
 """
 
 from __future__ import annotations
@@ -603,7 +607,7 @@ def process_app(app_dir: Path, *, dry_run: bool = False) -> AppResult:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate DAKE BOOTH-ready assets.")
-    parser.add_argument("--only-available", action="store_true", help="Process only status: available apps.")
+    parser.add_argument("--only-available", action="store_true", help="Process only status: available apps; skips frozen/draft/experimental/private/internal.")
     parser.add_argument("--app", help="Process a single app folder such as DAKE_Mail_Draft.")
     parser.add_argument("--dry-run", action="store_true", help="Show targets and actions without writing files.")
     return parser.parse_args()

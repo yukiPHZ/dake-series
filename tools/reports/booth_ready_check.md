@@ -1,81 +1,133 @@
-# DAKE BOOTH Ready Check
+# DAKE BOOTH Ready Check v2
 
-Generated: 2026-05-27 08:07:02
+Generated: 2026-05-31 11:09:23
 
 ## Summary
 
-- checked: 51
-- ok: 43
-- missing: 8
-- screenshot.webp missing: 8
-- booth_thumbnail.jpg missing: 8
-- booth_product.txt missing: 1
-- booth_ready/ missing: 1
-- zip missing: 1
+- checked: 57
+- available checked: 48
+- closed ok: 3
+- not closed: 45
+- excluded by status: 9
+- release_url empty available: 2
+- show flag conflicts: 1
+- dakeapp.com publish candidates: 2
+
+## Status Counts
+
+- available: 48
+- frozen: 3
+- draft: 3
+- experimental: 1
+- private: 0
+- internal: 2
+- unknown: 0
+
+## Available Asset Summary
+
+- screenshot.webp missing: 0
+- booth_thumbnail.jpg missing: 0
+- booth_product.txt missing: 0
+- booth_ready/ missing: 0
+- zip missing: 0
 - icon build missing: 0
 - icon main missing: 0
+
+## BOOTH URL
+
+- set: 3
+- empty: 45
+- url section missing: 0
+- booth_product missing: 0
 
 ## Git Ignore
 
 - OK
 
-## Missing
+## Show Flag Conflicts
 
-| app | README | DAKE_META | release_body | screenshot | thumbnail | booth_product | booth_ready | zip | dist_exe | icon_build | icon_main | next_action |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| DAKE_Approve_Brainz | OK | OK | OK | NG | NG | OK | OK | OK | OK | OK | OK | need screenshot: create assets/screenshot.webp<br>generate assets/booth_thumbnail.jpg with tools/make_booth_ready.py |
-| DAKE_BGM_Loop | OK | OK | OK | NG | NG | OK | OK | OK | OK | OK | OK | need screenshot: create assets/screenshot.webp<br>generate assets/booth_thumbnail.jpg with tools/make_booth_ready.py |
-| DAKE_BOOTH_Assist | OK | OK | NG | NG | NG | NG | NG | NG | NG | OK | OK | generate release_body.md from README RELEASE_BODY<br>need screenshot: create assets/screenshot.webp<br>generate assets/booth_thumbnail.jpg with tools/make_booth_ready.py<br>generate booth_product.txt with tools/make_booth_ready.py<br>generate booth_ready/ with tools/make_booth_ready.py<br>need build: create dist/*.exe before zip<br>need build: create dist/*.exe |
-| DAKE_Brainz_OIKAWA | OK | OK | OK | NG | NG | OK | OK | OK | OK | OK | OK | need screenshot: create assets/screenshot.webp<br>generate assets/booth_thumbnail.jpg with tools/make_booth_ready.py |
-| DAKE_Brainz_Search | OK | OK | OK | NG | NG | OK | OK | OK | OK | OK | OK | need screenshot: create assets/screenshot.webp<br>generate assets/booth_thumbnail.jpg with tools/make_booth_ready.py |
-| DAKE_Music_Otooku | OK | OK | OK | NG | NG | OK | OK | OK | OK | OK | OK | need screenshot: create assets/screenshot.webp<br>generate assets/booth_thumbnail.jpg with tools/make_booth_ready.py |
-| DAKE_Wake_Brainz | OK | OK | OK | NG | NG | OK | OK | OK | OK | OK | OK | need screenshot: create assets/screenshot.webp<br>generate assets/booth_thumbnail.jpg with tools/make_booth_ready.py |
-| DAKE_Yukiz_KadouChu | OK | OK | OK | NG | NG | OK | OK | OK | OK | OK | OK | need screenshot: create assets/screenshot.webp<br>generate assets/booth_thumbnail.jpg with tools/make_booth_ready.py |
+| app | status | show_in_launcher | show_on_site |
+| --- | --- | --- | --- |
+| DAKE_App_Dashboard | internal | True | False |
 
-## OK
+## Release URL Empty Available
+
+- DAKE_HolidayJinja_Post
+- DAKE_YukizBlog_Post
+
+## dakeapp.com Publish Candidates
+
+- DAKE_HolidayJinja_Post
+- DAKE_YukizBlog_Post
+
+## Not Closed Available Apps
+
+| app | asset_ready | release_url | booth_url | next_action |
+| --- | --- | --- | --- | --- |
+| DAKE_App_Doko | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_Backup | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_BOOTH_Assist | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_Column_Memo | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_Document_Cover | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_FAX_Cover | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_Folder_List | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_Git_Memo | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_HolidayJinja_Post | OK | NG | empty | fill README DAKE_META.release_url after GitHub Release<br>fill BOOTH URL in booth_product.txt after publication |
+| DAKE_Image_HEICtoJPG | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_Image_iPhoneToPC | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_Image_Receiver | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_Launcher | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_Mail_Address_Format | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_Mail_AllStaff | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_Mail_Draft | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_Mail_Kikuta | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_Mail_List | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_Maji_Memo | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_Mansion_Schedule | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_PDF_CheckStamp | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_PDF_Compress | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_PDF_Crop | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_PDF_LookHere | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_PDF_Marker | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_PDF_Merge | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_PDF_Merge_Mini | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_PDF_Rename | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_PDF_Reorder | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_PDF_SplitOne | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_PDF_SplitSelect | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_PDF_ToImages | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_PDF_Viewer | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_Price_Apportionment | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_Price_FixedTax | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_Reform_Progress | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_Screen_WebP | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_Screenshot_Print | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_Sticky_Memo | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_TwoPerson_Memo | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_Work_Calendar | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_Year_Age | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_Year_Notice | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_Yesterday_Task_Memo | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| DAKE_YukizBlog_Post | OK | NG | empty | fill README DAKE_META.release_url after GitHub Release<br>fill BOOTH URL in booth_product.txt after publication |
+
+## Excluded By Status
+
+| app | status | show_in_launcher | show_on_site | note |
+| --- | --- | --- | --- | --- |
+| DAKE_App_Dashboard | internal | True | False | fix show_in_launcher/show_on_site for non-available status |
+| DAKE_Approve_Brainz | frozen | False | False | excluded from regular shipping check |
+| DAKE_BGM_Loop | frozen | False | False | excluded from regular shipping check |
+| DAKE_Brainz_OIKAWA | experimental | False | False | excluded from regular shipping check |
+| DAKE_Brainz_Search | draft | False | False | excluded from regular shipping check |
+| DAKE_Music_Otooku | frozen | False | False | excluded from regular shipping check |
+| DAKE_Wake_Brainz | draft | False | False | excluded from regular shipping check |
+| DAKE_Web_Dashboard | internal | False | False | excluded from regular shipping check |
+| DAKE_Yukiz_KadouChu | draft | False | False | excluded from regular shipping check |
+
+## Closed OK
 
 | app | status |
 | --- | --- |
-| DAKE_Backup | OK |
-| DAKE_Column_Memo | OK |
-| DAKE_Document_Cover | OK |
-| DAKE_FAX_Cover | OK |
-| DAKE_Folder_List | OK |
-| DAKE_Git_Memo | OK |
-| DAKE_HolidayJinja_Post | OK |
-| DAKE_Image_HEICtoJPG | OK |
-| DAKE_Image_iPhoneToPC | OK |
-| DAKE_Image_PasteA4 | OK |
-| DAKE_Image_Receiver | OK |
-| DAKE_Image_Resize | OK |
-| DAKE_Image_ToPDF | OK |
-| DAKE_Launcher | OK |
-| DAKE_Mail_AllStaff | OK |
-| DAKE_Mail_Draft | OK |
-| DAKE_Mail_Kikuta | OK |
-| DAKE_Mail_List | OK |
-| DAKE_Maji_Memo | OK |
-| DAKE_PDF_CheckStamp | OK |
-| DAKE_PDF_Compress | OK |
-| DAKE_PDF_Crop | OK |
-| DAKE_PDF_LookHere | OK |
-| DAKE_PDF_Marker | OK |
-| DAKE_PDF_Merge | OK |
-| DAKE_PDF_Merge_Mini | OK |
-| DAKE_PDF_Rename | OK |
-| DAKE_PDF_Reorder | OK |
-| DAKE_PDF_SplitOne | OK |
-| DAKE_PDF_SplitSelect | OK |
-| DAKE_PDF_ToImages | OK |
-| DAKE_PDF_Viewer | OK |
-| DAKE_Price_Apportionment | OK |
-| DAKE_Price_FixedTax | OK |
-| DAKE_Screen_WebP | OK |
-| DAKE_Screenshot_Print | OK |
-| DAKE_Sticky_Memo | OK |
-| DAKE_TwoPerson_Memo | OK |
-| DAKE_Work_Calendar | OK |
-| DAKE_Year_Age | OK |
-| DAKE_Year_Notice | OK |
-| DAKE_Yesterday_Task_Memo | OK |
-| DAKE_YukizBlog_Post | OK |
+| DAKE_Image_PasteA4 | CLOSED |
+| DAKE_Image_Resize | CLOSED |
+| DAKE_Image_ToPDF | CLOSED |

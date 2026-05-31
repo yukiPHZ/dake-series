@@ -198,3 +198,20 @@ BOOTH URL未記入のままCLOSED扱いしない。
 
 `show_in_launcher` / `show_on_site` は `available` の公開対象にのみ true を付ける。
 `frozen`、`draft`、`experimental`、`private` が true を持つ場合は、出荷ライン上の矛盾として点検する。
+
+
+## Formal Shipping Line v3
+
+Normal shipping candidates are limited to `DAKE_META.status: available`.
+
+Excluded statuses:
+
+- `frozen`
+- `draft`
+- `experimental`
+- `private`
+- `internal`
+
+`internal` means an operations or management tool. It is excluded from normal distribution, BOOTH, dakeapp.com, and Launcher listing.
+`show_in_launcher` and `show_on_site` should be true only for public `available` apps.
+If a non-available app has either flag set to true, treat it as a formal shipping line conflict.
