@@ -61,6 +61,14 @@ C:\Users\yukiz\devlop\DAKE_series\01_apps
 - 次にやる候補を最大5件表示
 - 要確認、未出荷、BOOTH未準備、Release未作成をQPSC通知カードで浮上
 
+## Phase4 BOOTH作業導線
+
+- 次工程がBOOTH登録のアプリを判定
+- BOOTHアシストを対象アプリ付きで起動
+- BOOTH作業中の対象行を静かな青紫でハイライト
+- booth_ready/、booth_product.txt、booth_thumbnail、screenshot、Release URL を詳細ペインから直接開く
+- 次の作業へボタンで、BOOTH登録、Release作成、スクショ作成、README整備へ移動
+
 このアプリ自身は内部アプリです。一般公開、BOOTH素材作成、dakeapp.com掲載、GitHub Release作成は行いません。
 
 ## 品質チェック

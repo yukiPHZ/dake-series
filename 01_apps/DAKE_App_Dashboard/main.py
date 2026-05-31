@@ -39,8 +39,11 @@ RELEASE_BODY_NAME = "release_body.md"
 BOOTH_PRODUCT_NAME = "booth_product.txt"
 BOOTH_READY_NAME = "booth_ready"
 SCREENSHOT_RELATIVE = Path("assets") / "screenshot.webp"
+SCREENSHOT_JPG_RELATIVE = Path("assets") / "screenshot.jpg"
 BOOTH_THUMBNAIL_RELATIVE = Path("assets") / "booth_thumbnail.jpg"
 DIST_DIR_NAME = "dist"
+BOOTH_ASSIST_FOLDER_NAME = "DAKE_BOOTH_Assist"
+BOOTH_ASSIST_EXE_NAME = "DakeBOOTH_Assist.exe"
 
 UI_TEXT = {
     "header_title": "DAKE Dashboard",
@@ -52,6 +55,14 @@ UI_TEXT = {
     "button_open_readme": "README.md を開く",
     "button_open_release": "Release URL を開く",
     "button_release_missing": "Release URL なし",
+    "button_next_work": "次の作業へ",
+    "button_open_booth_assist": "BOOTHアシストで開く",
+    "button_open_booth_ready": "booth_readyを開く",
+    "button_open_booth_product": "booth_product.txtを開く",
+    "button_open_booth_thumbnail": "booth_thumbnailを開く",
+    "button_open_screenshot_jpg": "screenshot.jpgを開く",
+    "button_open_screenshot_webp": "screenshot.webpを開く",
+    "button_missing": "未作成",
     "summary_total": "総アプリ数",
     "summary_implementation": "実装中",
     "summary_distribution_ready": "配布準備",
@@ -151,6 +162,7 @@ UI_TEXT = {
     "dialog_release_missing": "Release URL が設定されていません。",
     "qpsc_card_title": "QPSC通知カード",
     "qpsc_card_subtitle": "README正本の動きを監視中",
+    "qpsc_booth_working": "BOOTH作業中: {folder}",
     "qpsc_new_apps": "新規アプリ検出",
     "qpsc_distribution_ready": "配布準備",
     "qpsc_needs_review": "要確認",
@@ -182,10 +194,20 @@ UI_TEXT = {
     "candidate_meta_broken": "README / DAKE_META破損",
     "candidate_release_missing": "dist/*.exeあり / release_urlなし",
     "candidate_booth_missing": "Release URLあり / BOOTH未準備",
+    "candidate_booth_registration": "次工程: BOOTH登録",
     "candidate_site_unknown": "BOOTH素材あり / サイト反映確認が不明",
     "candidate_screenshot_missing": "screenshot.webpなし",
     "candidate_release_body_missing": "release_body.mdなし",
     "candidate_internal": "内部アプリ / 出荷対象外",
+    "next_process_booth": "次工程: BOOTH登録",
+    "next_process_release": "次工程: Release作成",
+    "next_process_screenshot": "次工程: スクショ作成",
+    "next_process_readme": "次工程: README整備",
+    "next_process_internal": "次工程: 内部アプリ",
+    "next_process_unknown": "次工程: 確認",
+    "booth_assist_missing": "BOOTHアシストが見つかりません",
+    "booth_assist_launched": "BOOTHアシストを起動しました: {folder}",
+    "booth_links_title": "BOOTH作業リンク",
     "watch_status_watchdog": "watchdog監視: ON",
     "watch_status_polling": "watchdog未導入 / 30秒自動読込: ON",
     "watch_status_error": "watchdog監視: 起動できませんでした",
@@ -249,6 +271,7 @@ LAUNCH_CHECK_TIMEOUT_MS = 8000
 AUTO_RELOAD_MS = 30000
 WATCH_DEBOUNCE_MS = 700
 NOTIFICATION_HIDE_MS = 3600
+BOOTH_HIGHLIGHT_MS = 7000
 WATCHED_FILENAMES = {README_NAME, RELEASE_BODY_NAME, BOOTH_PRODUCT_NAME}
 WATCHED_DIR_NAMES = {"assets", DIST_DIR_NAME}
 GIT_TIMEOUT_SECONDS = 2.5
@@ -725,6 +748,38 @@ def formal_ship_line_reached(record: AppRecord) -> bool:
     )
 
 
+def is_booth_registration_target(record: AppRecord) -> bool:
+    if is_internal_app(record) or not meta_bool(record, "show_on_site"):
+        return False
+    return (
+        record.checks.has_release_url
+        and record.checks.has_dist_exe
+        and record.checks.has_booth_thumbnail
+        and record.checks.has_booth_product
+        and record.checks.has_booth_ready
+    )
+
+
+def next_process_key(record: AppRecord) -> str:
+    if is_booth_registration_target(record):
+        return "booth"
+    if is_internal_app(record):
+        return "internal"
+    if record.status_key == "needs_review" or record.issue_messages or "dake_meta" in record.missing_keys:
+        return "readme"
+    if record.checks.has_dist_exe and not record.checks.has_release_url:
+        return "release"
+    if not record.checks.has_screenshot:
+        return "screenshot"
+    if not record.checks.has_readme or not record.checks.has_release_body:
+        return "readme"
+    return "unknown"
+
+
+def next_process_text(record: AppRecord) -> str:
+    return UI_TEXT[f"next_process_{next_process_key(record)}"]
+
+
 def watched_folder_for_path(path: Path, root: Path) -> str | None:
     try:
         relative = path.resolve().relative_to(root.resolve())
@@ -764,12 +819,14 @@ def next_candidate_for_record(record: AppRecord) -> tuple[int, str] | None:
         return 3, UI_TEXT["candidate_release_missing"]
     if record.checks.has_release_url and not record.checks.booth_materials_ready and not is_internal_app(record):
         return 4, UI_TEXT["candidate_booth_missing"]
+    if is_booth_registration_target(record):
+        return 5, UI_TEXT["candidate_booth_registration"]
     if record.checks.booth_materials_ready and meta_bool(record, "show_on_site"):
-        return 5, UI_TEXT["candidate_site_unknown"]
+        return 6, UI_TEXT["candidate_site_unknown"]
     if not record.checks.has_screenshot and not is_internal_app(record):
-        return 6, UI_TEXT["candidate_screenshot_missing"]
+        return 7, UI_TEXT["candidate_screenshot_missing"]
     if not record.checks.has_release_body and not is_internal_app(record):
-        return 7, UI_TEXT["candidate_release_body_missing"]
+        return 8, UI_TEXT["candidate_release_body_missing"]
     if is_internal_app(record):
         return 90, UI_TEXT["candidate_internal"]
     return None
@@ -817,6 +874,7 @@ class DashboardApp:
             "booth_missing": tk.StringVar(value="0"),
             "release_missing": tk.StringVar(value="0"),
         }
+        self.qpsc_status_var = tk.StringVar(value=UI_TEXT["qpsc_card_subtitle"])
         self.git_vars = {
             "branch": tk.StringVar(value=UI_TEXT["git_branch"].format(value=UI_TEXT["value_unknown"])),
             "latest": tk.StringVar(value=UI_TEXT["git_latest"].format(value=UI_TEXT["value_unknown"])),
@@ -836,6 +894,8 @@ class DashboardApp:
         self.watch_debounce_job: str | None = None
         self.last_watch_event_at = 0.0
         self.pending_reload_folder: str | None = None
+        self.booth_working_folder: str | None = None
+        self.booth_highlight_job: str | None = None
 
         self.root.title(WINDOW_TITLE)
         self.root.geometry("1280x820")
@@ -1022,7 +1082,7 @@ class DashboardApp:
 
         tk.Label(
             title_area,
-            text=UI_TEXT["qpsc_card_subtitle"],
+            textvariable=self.qpsc_status_var,
             bg=THEME["panel"],
             fg=THEME["muted"],
             font=(self.font_family, 9),
@@ -1226,6 +1286,7 @@ class DashboardApp:
 
         for key, (_bg, fg) in STATUS_THEME.items():
             self.tree.tag_configure(key, foreground=fg)
+        self.tree.tag_configure("booth_working", background=THEME["accent_soft"], foreground=THEME["text"])
 
         self.tree.bind("<<TreeviewSelect>>", self.on_tree_select)
 
@@ -1233,7 +1294,7 @@ class DashboardApp:
         container = tk.Frame(parent, bg=THEME["panel"])
         container.pack(fill="both", expand=True, padx=16, pady=14)
         container.grid_columnconfigure(0, weight=1)
-        container.grid_rowconfigure(4, weight=1)
+        container.grid_rowconfigure(6, weight=1)
 
         tk.Label(
             container,
@@ -1275,8 +1336,65 @@ class DashboardApp:
         self.open_release_button = self.make_button(button_row, UI_TEXT["button_open_release"], self.open_selected_release)
         self.open_release_button.pack(side="left")
 
+        work_row = tk.Frame(container, bg=THEME["panel"])
+        work_row.grid(row=4, column=0, sticky="ew", pady=(0, 10))
+        self.next_work_button = self.make_button(work_row, UI_TEXT["button_next_work"], self.open_next_work, primary=True)
+        self.next_work_button.pack(side="left", padx=(0, 8))
+        self.open_booth_assist_button = self.make_button(
+            work_row,
+            UI_TEXT["button_open_booth_assist"],
+            self.open_selected_booth_assist,
+        )
+        self.open_booth_assist_button.pack(side="left")
+
+        links_area = tk.Frame(container, bg=THEME["panel"])
+        links_area.grid(row=5, column=0, sticky="ew", pady=(0, 12))
+        links_area.grid_columnconfigure(0, weight=1)
+        links_area.grid_columnconfigure(1, weight=1)
+        tk.Label(
+            links_area,
+            text=UI_TEXT["booth_links_title"],
+            bg=THEME["panel"],
+            fg=THEME["muted"],
+            font=(self.font_family, 9, "bold"),
+        ).grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 6))
+        self.open_booth_ready_button = self.make_button(
+            links_area,
+            UI_TEXT["button_open_booth_ready"],
+            self.open_selected_booth_ready,
+        )
+        self.open_booth_product_button = self.make_button(
+            links_area,
+            UI_TEXT["button_open_booth_product"],
+            self.open_selected_booth_product,
+        )
+        self.open_booth_thumbnail_button = self.make_button(
+            links_area,
+            UI_TEXT["button_open_booth_thumbnail"],
+            self.open_selected_booth_thumbnail,
+        )
+        self.open_screenshot_jpg_button = self.make_button(
+            links_area,
+            UI_TEXT["button_open_screenshot_jpg"],
+            self.open_selected_screenshot_jpg,
+        )
+        self.open_screenshot_webp_button = self.make_button(
+            links_area,
+            UI_TEXT["button_open_screenshot_webp"],
+            self.open_selected_screenshot_webp,
+        )
+        link_buttons = (
+            self.open_booth_ready_button,
+            self.open_booth_product_button,
+            self.open_booth_thumbnail_button,
+            self.open_screenshot_jpg_button,
+            self.open_screenshot_webp_button,
+        )
+        for index, button in enumerate(link_buttons):
+            button.grid(row=1 + index // 2, column=index % 2, sticky="ew", padx=(0 if index % 2 == 0 else 8, 0), pady=(0, 6))
+
         detail_area = tk.Frame(container, bg=THEME["panel"])
-        detail_area.grid(row=4, column=0, sticky="nsew")
+        detail_area.grid(row=6, column=0, sticky="nsew")
         detail_area.grid_columnconfigure(0, weight=1)
         detail_area.grid_rowconfigure(1, weight=1)
         detail_area.grid_rowconfigure(3, weight=1)
@@ -1435,6 +1553,8 @@ class DashboardApp:
                     self.handle_scan_done(payload)
                 elif event == "watch_event":
                     self.handle_watch_event(payload)
+                elif event == "booth_assist_status":
+                    self.status_var.set(str(payload))
         except queue.Empty:
             pass
         self.root.after(WORKER_POLL_MS, self.poll_worker)
@@ -1613,6 +1733,11 @@ class DashboardApp:
         self.root.after(NOTIFICATION_HIDE_MS, self.notification_frame.place_forget)
 
     def on_close(self) -> None:
+        if self.booth_highlight_job is not None:
+            try:
+                self.root.after_cancel(self.booth_highlight_job)
+            except tk.TclError:
+                pass
         self.stop_watchdog()
         self.root.destroy()
 
@@ -1666,6 +1791,9 @@ class DashboardApp:
         for record in self.visible_records:
             iid = str(record.folder_path)
             self.record_by_iid[iid] = record
+            tags = [record.status_key]
+            if record.folder_name == self.booth_working_folder:
+                tags.append("booth_working")
             self.tree.insert(
                 "",
                 "end",
@@ -1680,7 +1808,7 @@ class DashboardApp:
                     bool_label(record.checks.has_dist_exe),
                     format_datetime(record.last_modified),
                 ),
-                tags=(record.status_key,),
+                tags=tuple(tags),
             )
         if selected_path and selected_path in self.record_by_iid:
             self.tree.selection_set(selected_path)
@@ -1721,15 +1849,37 @@ class DashboardApp:
         self.set_detail_buttons_state(True)
 
     def set_detail_buttons_state(self, enabled: bool) -> None:
-        state = "normal" if enabled else "disabled"
+        record = self.selected_record if enabled else None
+        state = "normal" if record is not None else "disabled"
         self.open_folder_button.configure(state=state)
         self.open_readme_button.configure(state=state)
-        release_state = "normal" if enabled and self.selected_record and self.selected_record.release_url else "disabled"
+        self.next_work_button.configure(state=state)
+        booth_assist_state = "normal" if record is not None and is_booth_registration_target(record) else "disabled"
+        self.open_booth_assist_button.configure(state=booth_assist_state)
+
+        release_state = "normal" if record is not None and record.release_url else "disabled"
         self.open_release_button.configure(state=release_state)
         if release_state == "disabled":
             self.open_release_button.configure(text=UI_TEXT["button_release_missing"])
         else:
             self.open_release_button.configure(text=UI_TEXT["button_open_release"])
+        self.set_path_button_state(self.open_booth_ready_button, record.folder_path / BOOTH_READY_NAME if record else None)
+        self.set_path_button_state(self.open_booth_product_button, record.folder_path / BOOTH_PRODUCT_NAME if record else None)
+        self.set_path_button_state(
+            self.open_booth_thumbnail_button,
+            record.folder_path / BOOTH_THUMBNAIL_RELATIVE if record else None,
+        )
+        self.set_path_button_state(
+            self.open_screenshot_jpg_button,
+            record.folder_path / SCREENSHOT_JPG_RELATIVE if record else None,
+        )
+        self.set_path_button_state(
+            self.open_screenshot_webp_button,
+            record.folder_path / SCREENSHOT_RELATIVE if record else None,
+        )
+
+    def set_path_button_state(self, button: tk.Button, path: Path | None) -> None:
+        button.configure(state="normal" if path is not None and path.exists() else "disabled")
 
     def set_text(self, widget: tk.Text, value: str) -> None:
         widget.configure(state="normal")
@@ -1797,7 +1947,7 @@ class DashboardApp:
         return "\n\n".join(blocks)
 
     def build_next_detail(self, record: AppRecord) -> str:
-        tasks: list[str] = []
+        tasks: list[str] = [next_process_text(record)]
         if record.status_key == "needs_review":
             tasks.append(UI_TEXT["next_review_readme"])
             if "dake_meta" in record.missing_keys:
@@ -1844,6 +1994,112 @@ class DashboardApp:
             messagebox.showinfo(UI_TEXT["dialog_notice_title"], UI_TEXT["dialog_release_missing"], parent=self.root)
             return
         webbrowser.open(url)
+
+    def open_selected_booth_ready(self) -> None:
+        self.open_selected_relative_path(BOOTH_READY_NAME)
+
+    def open_selected_booth_product(self) -> None:
+        self.open_selected_relative_path(BOOTH_PRODUCT_NAME)
+
+    def open_selected_booth_thumbnail(self) -> None:
+        self.open_selected_relative_path(BOOTH_THUMBNAIL_RELATIVE)
+
+    def open_selected_screenshot_jpg(self) -> None:
+        self.open_selected_relative_path(SCREENSHOT_JPG_RELATIVE)
+
+    def open_selected_screenshot_webp(self) -> None:
+        self.open_selected_relative_path(SCREENSHOT_RELATIVE)
+
+    def open_selected_relative_path(self, relative_path: str | Path) -> None:
+        if self.selected_record is not None:
+            self.open_path(self.selected_record.folder_path / relative_path)
+
+    def open_selected_booth_assist(self) -> None:
+        if self.selected_record is not None and is_booth_registration_target(self.selected_record):
+            self.launch_booth_assist(self.selected_record)
+
+    def open_next_work(self) -> None:
+        record = self.selected_record
+        if record is None:
+            return
+        process_key = next_process_key(record)
+        if process_key == "booth":
+            self.launch_booth_assist(record)
+            self.open_path(record.folder_path / BOOTH_READY_NAME)
+        elif process_key == "release":
+            self.open_path(record.folder_path / README_NAME)
+        elif process_key == "screenshot":
+            assets_dir = record.folder_path / "assets"
+            self.open_path(assets_dir if assets_dir.exists() else record.folder_path)
+        elif process_key == "readme":
+            self.open_path(record.folder_path / README_NAME)
+        else:
+            self.open_path(record.folder_path)
+
+    def launch_booth_assist(self, record: AppRecord) -> None:
+        self.highlight_booth_work(record)
+        thread = threading.Thread(target=self.booth_assist_worker, args=(record.folder_name,), daemon=True)
+        thread.start()
+
+    def booth_assist_worker(self, folder_name: str) -> None:
+        assist_dir = apps_root() / BOOTH_ASSIST_FOLDER_NAME
+        exe_path = assist_dir / DIST_DIR_NAME / BOOTH_ASSIST_EXE_NAME
+        main_path = assist_dir / "main.py"
+        started = False
+
+        if exe_path.exists():
+            started = self.start_booth_assist_process([str(exe_path), "--app", folder_name], assist_dir)
+            if not started:
+                started = self.start_booth_assist_process([str(exe_path)], assist_dir)
+
+        if not started and main_path.exists():
+            python_cmd = sys.executable if not getattr(sys, "frozen", False) else "python"
+            started = self.start_booth_assist_process([python_cmd, str(main_path), "--app", folder_name], assist_dir)
+            if not started:
+                started = self.start_booth_assist_process([python_cmd, str(main_path)], assist_dir)
+
+        if started:
+            message = UI_TEXT["booth_assist_launched"].format(folder=folder_name)
+        else:
+            message = UI_TEXT["booth_assist_missing"]
+        self.worker_queue.put(("booth_assist_status", message))
+
+    @staticmethod
+    def start_booth_assist_process(command: list[str], cwd: Path) -> bool:
+        try:
+            process = subprocess.Popen(command, cwd=str(cwd))
+        except Exception:
+            return False
+        try:
+            return process.wait(timeout=1.0) == 0
+        except subprocess.TimeoutExpired:
+            return True
+
+    def highlight_booth_work(self, record: AppRecord) -> None:
+        self.booth_working_folder = record.folder_name
+        message = UI_TEXT["qpsc_booth_working"].format(folder=record.folder_name)
+        self.qpsc_status_var.set(message)
+        self.status_var.set(message)
+        self.render_tree()
+        iid = str(record.folder_path)
+        if iid in self.record_by_iid:
+            self.tree.selection_set(iid)
+            self.tree.focus(iid)
+            self.tree.see(iid)
+        if self.booth_highlight_job is not None:
+            try:
+                self.root.after_cancel(self.booth_highlight_job)
+            except tk.TclError:
+                pass
+        self.booth_highlight_job = self.root.after(BOOTH_HIGHLIGHT_MS, lambda: self.clear_booth_work_highlight(record.folder_name))
+
+    def clear_booth_work_highlight(self, folder_name: str) -> None:
+        self.booth_highlight_job = None
+        if self.booth_working_folder != folder_name:
+            return
+        self.booth_working_folder = None
+        self.qpsc_status_var.set(UI_TEXT["qpsc_card_subtitle"])
+        self.render_tree()
 
     def open_path(self, path: Path) -> None:
         if not path.exists():
