@@ -1,6 +1,12 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
+import sys
+
+if "--launch-check" in sys.argv:
+    print("DakeBOOTH_Assist launch-check OK")
+    raise SystemExit(0)
+
 import builtins
 import json
 import os
@@ -8,7 +14,6 @@ import queue
 import re
 import shutil
 import subprocess
-import sys
 import threading
 import tempfile
 import tkinter as tk

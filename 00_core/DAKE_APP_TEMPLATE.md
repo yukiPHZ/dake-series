@@ -164,3 +164,14 @@ dist/
 8. `assets/screenshot.webp` を作る。
 9. `tools/make_booth_ready.py` でBOOTH素材を生成する。
 10. Reviewチェックリストを見る。
+## launch-check
+
+New apps should implement `--launch-check`.
+
+Rules:
+
+- Verify only that imports and minimal startup are possible.
+- Return `0` on success and `1` on failure.
+- Finish within a few seconds.
+- Do not run file conversion, publishing, sending, browser automation, BOOTH operations, or other external side effects.
+- If full support is not available yet, release review must use a short GUI smoke launch as a fallback.

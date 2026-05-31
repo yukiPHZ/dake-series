@@ -152,3 +152,7 @@ DAKEアプリ横断レビュー用チェックリストです。
 - [ ] Non-available apps do not have `show_in_launcher: true`.
 - [ ] Non-available apps do not have `show_on_site: true`.
 - [ ] Apps are not treated as CLOSED while the BOOTH URL is missing.
+- [ ] Available apps have actual `dist/*.exe` launch confirmation.
+- [ ] Prefer `dist/*.exe --launch-check` for launch confirmation.
+- [ ] If `--launch-check` is not implemented, perform only a short GUI smoke launch.
+- [ ] New apps implement `--launch-check` without file conversion, sending, publishing, browser automation, or external side effects.

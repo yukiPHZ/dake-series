@@ -215,3 +215,14 @@ Excluded statuses:
 `internal` means an operations or management tool. It is excluded from normal distribution, BOOTH, dakeapp.com, and Launcher listing.
 `show_in_launcher` and `show_on_site` should be true only for public `available` apps.
 If a non-available app has either flag set to true, treat it as a formal shipping line conflict.
+
+### v3 exe launch check
+
+For `status: available` apps, the actual `dist/*.exe` launch check is required before treating the app as ready for release.
+
+Priority:
+
+1. Run `dist/*.exe --launch-check`.
+2. If `--launch-check` is not implemented yet, run a short GUI smoke launch and close it.
+
+New DAKE apps should implement `--launch-check` by default. The command must only verify launchability, return quickly, and exit with code `0` on success. It must not run file conversion, publishing, sending, browser automation, BOOTH operations, or other external side effects. Failures should exit with code `1` and a short stderr message.
