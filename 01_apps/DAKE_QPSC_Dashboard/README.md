@@ -2,15 +2,18 @@
 
 QPSC Dashboard は、QPSC 全体の現在地を確認するための最上位レイヤーです。
 
-App Dashboard と Web Dashboard は完成形ではなく監視ノードです。QPSC Dashboard は、それらを作り直さず、既存ノードから取れる状態を束ねて一目で見せます。
+QPSC_Dashboardは、正本から未処理と次にやる候補を返す司令塔です。
+
+App Dashboard / Web Dashboardは監視ノードであり、QPSC_Dashboardの下位に位置します。QPSC_Dashboardは関連アプリを自動起動せず、必要な時だけ詳細へ潜る導線を提供します。
 
 ## 役割
 
 - App Dashboard の状態を取得する
 - Web Dashboard の状態を取得する
-- 全体要約を表示する
-- 既存 App Dashboard を起動する
-- 既存 Web Dashboard を起動する
+- BOOTH未登録、Release未作成、スクショ未作成、README不足を表示する
+- Cloudflare未確認、health未確認、Git未反映を表示する
+- 次にやる候補を優先順位順に表示する
+- 必要な時だけ詳細ノードや対象フォルダを開く
 
 ## 初版の対象
 
@@ -27,6 +30,8 @@ BRAINZ、OIKAWA、Slack、Git、ORBIT は将来ノードです。初版では内
 既存 Dashboard の `main.py` を動的に読み込み、既存の状態取得関数を利用します。
 
 QPSC Dashboard 側では、README 再解析、Git 取得、Cloudflare 取得、API 接続などを大量に再実装しません。
+
+v0.2では未処理レーダーとして、既存ノードの正本読み取り結果を使い、未処理件数と次アクションを返します。QPSC起動時に App Dashboard / Web Dashboard / BOOTH Assist を自動起動しません。
 
 ## 起動
 
@@ -72,7 +77,7 @@ Windows向けexe
   "launcher_description": "QPSC全体の現在地を束ねて確認する司令塔",
   "site_title": "",
   "site_description": "",
-  "update_summary": "App DashboardとWeb Dashboardの状態を束ねる内部司令塔",
+  "update_summary": "正本からBOOTH未登録、Release未作成、スクショ未作成、Cloudflare未確認を集計する未処理レーダーに対応しました。",
   "folder_name": "DAKE_QPSC_Dashboard",
   "exe_name": "QPSC_Dashboard.exe",
   "release_url": "",
