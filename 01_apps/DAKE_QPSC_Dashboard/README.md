@@ -33,6 +33,8 @@ QPSC Dashboard 側では、README 再解析、Git 取得、Cloudflare 取得、A
 
 v0.2では未処理レーダーとして、既存ノードの正本読み取り結果を使い、未処理件数と次アクションを返します。QPSC起動時に App Dashboard / Web Dashboard / BOOTH Assist を自動起動しません。
 
+v0.3では、未処理件数を単純表示するだけでなく、優先・通常・保留に分類します。QPSC_Dashboardは、全件数ではなく「今やるべき未処理」を上に出すことで、次の行動を決めやすくします。
+
 ## 起動
 
 ```powershell
@@ -77,7 +79,7 @@ Windows向けexe
   "launcher_description": "QPSC全体の現在地を束ねて確認する司令塔",
   "site_title": "",
   "site_description": "",
-  "update_summary": "正本からBOOTH未登録、Release未作成、スクショ未作成、Cloudflare未確認を集計する未処理レーダーに対応しました。",
+  "update_summary": "未処理項目を優先・通常・保留に分類し、次にやる候補の精度を改善しました。",
   "folder_name": "DAKE_QPSC_Dashboard",
   "exe_name": "QPSC_Dashboard.exe",
   "release_url": "",
