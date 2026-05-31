@@ -74,6 +74,7 @@ UI_TEXT = {
     "button_open_production": "production_url を開く",
     "button_open_health": "health_url を開く",
     "button_open_github": "GitHub を開く",
+    "button_open_cloudflare": "Cloudflare を開く",
     "button_url_missing": "URL なし",
     "summary_total": "総サイト数",
     "summary_normal": "正常",
@@ -144,6 +145,10 @@ UI_TEXT = {
     "value_env_design": "env経由",
     "value_watchdog_missing": "watchdog未導入",
     "label_folder_path": "フォルダパス",
+    "label_readme_path": "README.md",
+    "label_domain": "domain",
+    "label_cloudflare_project": "cloudflare_project",
+    "label_cloudflare_url": "Cloudflare URL",
     "label_readme": "README状態",
     "label_meta": "DAKE_WEB_META状態",
     "label_git": "Git状態",
@@ -212,6 +217,7 @@ UI_TEXT = {
     "dialog_open_failed": "開けませんでした。\n\n{path}\n\n{error}",
     "dialog_missing_path": "対象が見つかりません。\n\n{path}",
     "dialog_url_missing": "URL が設定されていません。",
+    "dialog_url_invalid": "安全に開ける http/https URL ではありません。",
     "notification_reloaded": "{folder} を再読込しました",
     "footer_note": "内部用。一般公開・BOOTH登録・GitHub Release作成・dakeapp.com反映は行いません。",
 }
@@ -272,6 +278,7 @@ DAKE_WEB_META_PATTERN = re.compile(
 URL_PATTERN = re.compile(r"https?://[^\s)>\]\"']+")
 GITHUB_PATTERN = re.compile(r"https?://github\.com/[^\s)>\]\"']+", re.IGNORECASE)
 SK_KEY_PATTERN = re.compile(r"\bsk-[A-Za-z0-9_\-]{12,}")
+SECRET_URL_PATTERN = re.compile(r"(sk-[A-Za-z0-9_\-]{8,}|[?&](?:api[_-]?key|apikey|token|secret|key)=)", re.IGNORECASE)
 WRANGLER_NAME_PATTERN = re.compile(r"(?m)^\s*name\s*=\s*[\"']([^\"']+)[\"']")
 PAGES_OUTPUT_PATTERN = re.compile(r"(?m)^\s*pages_build_output_dir\s*=")
 
@@ -343,6 +350,7 @@ class SiteRecord:
     production_url: str
     health_url: str
     github_url: str
+    cloudflare_url: str
     files: FileChecks
     cloudflare: CloudflareInfo
     api: ApiInfo
@@ -500,6 +508,20 @@ def first_url_from_readme(readme_path: Path, prefer_github: bool = False) -> str
     return ""
 
 
+def first_cloudflare_url_from_readme(readme_path: Path) -> str:
+    if not readme_path.exists():
+        return ""
+    try:
+        text = read_text(readme_path)
+    except OSError:
+        return ""
+    for url in URL_PATTERN.findall(text):
+        lowered = url.lower()
+        if "dash.cloudflare.com" in lowered or ".pages.dev" in lowered or "workers.dev" in lowered:
+            return url.rstrip(".,")
+    return ""
+
+
 def domain_from_url(url: str) -> str:
     if not url:
         return ""
@@ -508,6 +530,34 @@ def domain_from_url(url: str) -> str:
         return without_scheme.split("/", 1)[0].strip()
     except Exception:
         return ""
+
+
+def normalize_http_url(url: str) -> str:
+    value = str(url or "").strip()
+    if not re.match(r"^https?://", value, flags=re.IGNORECASE):
+        return ""
+    if SECRET_URL_PATTERN.search(value):
+        return ""
+    return value
+
+
+def url_from_domain(domain: str) -> str:
+    value = str(domain or "").strip()
+    if not value or SECRET_URL_PATTERN.search(value):
+        return ""
+    if re.match(r"^https?://", value, flags=re.IGNORECASE):
+        return normalize_http_url(value)
+    if re.match(r"^[A-Za-z0-9.-]+(?::\d+)?$", value):
+        return f"https://{value}"
+    return ""
+
+
+def first_safe_url(*values: str) -> str:
+    for value in values:
+        normalized = normalize_http_url(value)
+        if normalized:
+            return normalized
+    return ""
 
 
 def package_display_name(package_path: Path) -> str:
@@ -1003,6 +1053,12 @@ def scan_site(folder: Path) -> SiteRecord:
     status_value = safe_text(meta.get("status", "")) or UI_TEXT["value_unknown"]
     show_on_dashboard = safe_bool(meta.get("show_on_dashboard", True), default=True)
     github_url = first_url_from_readme(readme_path, prefer_github=True)
+    cloudflare_url = first_safe_url(
+        safe_text(meta.get("cloudflare_url", "")),
+        safe_text(meta.get("cloudflare_project_url", "")),
+        safe_text(meta.get("cloudflare_dashboard_url", "")),
+        first_cloudflare_url_from_readme(readme_path),
+    )
     class_key = classify_record(
         files,
         cloudflare,
@@ -1041,6 +1097,7 @@ def scan_site(folder: Path) -> SiteRecord:
         production_url=production_url,
         health_url=health_url,
         github_url=github_url,
+        cloudflare_url=cloudflare_url,
         files=files,
         cloudflare=cloudflare,
         api=api,
@@ -1081,6 +1138,7 @@ def error_site(folder: Path, exc: Exception) -> SiteRecord:
         production_url="",
         health_url="",
         github_url="",
+        cloudflare_url="",
         files=files,
         cloudflare=cloudflare,
         api=api,
@@ -1196,6 +1254,7 @@ class WebDashboardApp:
         self.qpsc_vars = {key: tk.StringVar(value="0") for key in ("new_sites", "readme_missing", "meta_missing", "api_review", "cloudflare_review", "git_dirty")}
         self.git_vars = {key: tk.StringVar(value="0") for key in ("dirty_sites", "untracked_sites", "ahead_sites", "error_sites")}
         self.filter_buttons: dict[str, tk.Button] = {}
+        self.detail_link_counter = 0
 
         self.configure_styles()
         self.build_ui()
@@ -1439,6 +1498,7 @@ class WebDashboardApp:
         self.tree.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
         self.tree.bind("<<TreeviewSelect>>", self.on_tree_select)
+        self.tree.bind("<ButtonRelease-1>", self.on_tree_click_open)
 
         self.build_detail_panel(detail_panel)
 
@@ -1465,6 +1525,7 @@ class WebDashboardApp:
         self.open_production_button = self.make_button(buttons, UI_TEXT["button_open_production"], self.open_selected_production)
         self.open_health_button = self.make_button(buttons, UI_TEXT["button_open_health"], self.open_selected_health)
         self.open_github_button = self.make_button(buttons, UI_TEXT["button_open_github"], self.open_selected_github)
+        self.open_cloudflare_button = self.make_button(buttons, UI_TEXT["button_open_cloudflare"], self.open_selected_cloudflare)
         for index, button in enumerate(
             [
                 self.open_folder_button,
@@ -1472,6 +1533,7 @@ class WebDashboardApp:
                 self.open_production_button,
                 self.open_health_button,
                 self.open_github_button,
+                self.open_cloudflare_button,
             ]
         ):
             button.grid(row=index // 2, column=index % 2, sticky="ew", padx=(0 if index % 2 == 0 else 8, 0), pady=(0, 7))
@@ -1780,6 +1842,7 @@ class WebDashboardApp:
                 record.status_value,
                 record.production_url,
                 record.github_url,
+                record.cloudflare_url,
             ]
         ).lower()
         return query in haystack
@@ -1819,6 +1882,19 @@ class WebDashboardApp:
         record = self.record_by_iid.get(selection[0])
         self.update_detail(record)
 
+    def on_tree_click_open(self, event) -> None:
+        if self.tree.identify("region", event.x, event.y) != "cell":
+            return
+        row_id = self.tree.identify_row(event.y)
+        column_id = self.tree.identify_column(event.x)
+        record = self.record_by_iid.get(row_id)
+        if record is None:
+            return
+        if column_id == "#4":
+            self.open_url(first_safe_url(record.production_url, url_from_domain(record.domain)), quiet=True)
+        elif column_id == "#5":
+            self.open_url(record.cloudflare_url, quiet=True)
+
     def update_detail(self, record: SiteRecord | None) -> None:
         self.selected_record = record
         if record is None:
@@ -1833,17 +1909,19 @@ class WebDashboardApp:
         self.detail_badge_var.set(record.class_text)
         self.detail_badge.configure(bg=badge_bg, fg=badge_fg)
         self.detail_title_var.set(f"{record.folder_name}\n{record.display_name}")
-        self.set_text(self.detail_text, self.build_detail_text(record))
+        self.render_detail_text(record)
         self.set_text(self.next_text, "\n".join(f"- {item}" for item in record.next_items))
         self.set_detail_buttons_state(True)
 
     def set_detail_buttons_state(self, enabled: bool) -> None:
         state = "normal" if enabled else "disabled"
         self.open_folder_button.configure(state=state)
-        self.open_readme_button.configure(state=state)
-        self.open_production_button.configure(state=state if enabled and self.selected_record and self.selected_record.production_url else "disabled")
-        self.open_health_button.configure(state=state if enabled and self.selected_record and self.selected_record.health_url else "disabled")
-        self.open_github_button.configure(state=state if enabled and self.selected_record and self.selected_record.github_url else "disabled")
+        record = self.selected_record if enabled else None
+        self.open_readme_button.configure(state=state if record and (record.folder_path / README_NAME).exists() else "disabled")
+        self.open_production_button.configure(state=state if record and normalize_http_url(record.production_url) else "disabled")
+        self.open_health_button.configure(state=state if record and normalize_http_url(record.health_url) else "disabled")
+        self.open_github_button.configure(state=state if record and normalize_http_url(record.github_url) else "disabled")
+        self.open_cloudflare_button.configure(state=state if record and normalize_http_url(record.cloudflare_url) else "disabled")
 
     def set_text(self, widget: tk.Text, value: str) -> None:
         widget.configure(state="normal")
@@ -1851,12 +1929,49 @@ class WebDashboardApp:
         widget.insert("end", value)
         widget.configure(state="disabled")
 
+    def render_detail_text(self, record: SiteRecord) -> None:
+        self.detail_text.configure(state="normal")
+        self.detail_text.delete("1.0", "end")
+        self.detail_link_counter = 0
+        readme_path = record.folder_path / README_NAME
+        domain_url = url_from_domain(record.domain)
+        production_url = normalize_http_url(record.production_url)
+        health_url = normalize_http_url(record.health_url)
+        github_url = normalize_http_url(record.github_url)
+        cloudflare_url = normalize_http_url(record.cloudflare_url)
+        self.insert_detail_field(UI_TEXT["label_folder_path"], str(record.folder_path), lambda: self.open_path(record.folder_path))
+        self.insert_detail_field(
+            UI_TEXT["label_readme_path"],
+            str(readme_path) if readme_path.exists() else UI_TEXT["value_unset"],
+            lambda: self.open_path(readme_path) if readme_path.exists() else None,
+        )
+        self.insert_detail_field(UI_TEXT["label_domain"], record.domain or UI_TEXT["value_unset"], (lambda url=domain_url: self.open_url(url)) if domain_url else None)
+        self.insert_detail_field(UI_TEXT["label_production_url"], record.production_url or UI_TEXT["value_unset"], (lambda url=production_url: self.open_url(url)) if production_url else None)
+        self.insert_detail_field(UI_TEXT["label_health_url"], record.health_url or UI_TEXT["value_unset"], (lambda url=health_url: self.open_url(url)) if health_url else None)
+        self.insert_detail_field(UI_TEXT["label_repo_url"], record.github_url or UI_TEXT["value_unset"], (lambda url=github_url: self.open_url(url)) if github_url else None)
+        self.insert_detail_field(UI_TEXT["label_cloudflare_project"], record.cloudflare_project or UI_TEXT["value_unset"], (lambda url=cloudflare_url: self.open_url(url)) if cloudflare_url else None)
+        self.insert_detail_field(UI_TEXT["label_cloudflare_url"], record.cloudflare_url or UI_TEXT["value_unset"], (lambda url=cloudflare_url: self.open_url(url)) if cloudflare_url else None)
+        self.detail_text.insert("end", "\n")
+        self.detail_text.insert("end", self.build_detail_text(record))
+        self.detail_text.configure(state="disabled")
+
+    def insert_detail_field(self, label: str, value: str, action=None) -> None:
+        self.detail_text.insert("end", f"{label}: ")
+        start = self.detail_text.index("end")
+        self.detail_text.insert("end", value)
+        end = self.detail_text.index("end")
+        if action is not None and value != UI_TEXT["value_unset"]:
+            tag = f"detail_link_{self.detail_link_counter}"
+            self.detail_link_counter += 1
+            self.detail_text.tag_add(tag, start, end)
+            self.detail_text.tag_configure(tag, foreground=THEME["accent_hover"])
+            self.detail_text.tag_bind(tag, "<Button-1>", lambda _event, callback=action: callback())
+            self.detail_text.tag_bind(tag, "<Enter>", lambda _event: self.detail_text.configure(cursor="hand2"))
+            self.detail_text.tag_bind(tag, "<Leave>", lambda _event: self.detail_text.configure(cursor=""))
+        self.detail_text.insert("end", "\n")
+
     def build_detail_text(self, record: SiteRecord) -> str:
         lines = [
-            f"{UI_TEXT['label_folder_path']}: {record.folder_path}",
-            f"{UI_TEXT['label_production_url']}: {record.production_url or UI_TEXT['value_unset']}",
-            f"{UI_TEXT['label_health_url']}: {record.health_url or UI_TEXT['value_unset']}",
-            f"{UI_TEXT['label_repo_url']}: {record.github_url or UI_TEXT['value_unset']}",
             f"{UI_TEXT['label_site_type']}: {record.site_type or UI_TEXT['value_unset']}",
             f"{UI_TEXT['label_status']}: {record.status_value or UI_TEXT['value_unset']}",
             f"{UI_TEXT['label_show_dashboard']}: {bool_label(record.show_on_dashboard)}",
@@ -1930,11 +2045,23 @@ class WebDashboardApp:
         if self.selected_record:
             self.open_url(self.selected_record.github_url)
 
-    def open_url(self, url: str) -> None:
-        if not url:
+    def open_selected_cloudflare(self) -> None:
+        if self.selected_record:
+            self.open_url(self.selected_record.cloudflare_url)
+
+    def open_url(self, url: str, quiet: bool = False) -> None:
+        normalized = normalize_http_url(url)
+        if not str(url or "").strip():
+            if quiet:
+                return
             messagebox.showinfo(UI_TEXT["dialog_notice_title"], UI_TEXT["dialog_url_missing"], parent=self.root)
             return
-        webbrowser.open(url)
+        if not normalized:
+            if quiet:
+                return
+            messagebox.showinfo(UI_TEXT["dialog_notice_title"], UI_TEXT["dialog_url_invalid"], parent=self.root)
+            return
+        webbrowser.open(normalized)
 
     def open_path(self, path: Path) -> None:
         if not path.exists():
