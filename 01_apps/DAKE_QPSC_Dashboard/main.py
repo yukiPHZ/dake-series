@@ -65,6 +65,11 @@ UI_TEXT = {
     "label_release_missing": "Release未作成",
     "label_screenshot_missing": "スクショ未作成",
     "label_readme_missing": "README不足",
+    "label_role_attention": "分類別 要確認",
+    "label_market_count": "市場向け",
+    "label_system_count": "QPSC / 補助脳系",
+    "label_personal_count": "ユキズ専用",
+    "label_frozen_count": "凍結",
     "label_site_total": "サイト総数",
     "label_cloudflare_unchecked": "Cloudflare未確認",
     "label_health_attention": "health未確認または異常",
@@ -94,6 +99,7 @@ UI_TEXT = {
     "dialog_release_title": "Release未作成アプリ",
     "dialog_screenshot_title": "スクショ未作成アプリ",
     "dialog_readme_title": "README不足アプリ",
+    "dialog_role_title": "分類別 要確認アプリ",
     "dialog_cloudflare_title": "Cloudflare未確認サイト",
     "dialog_health_title": "health未確認または異常サイト",
     "dialog_site_git_title": "Git未反映または未commitサイト",
@@ -104,6 +110,7 @@ UI_TEXT = {
     "next_screenshot": "スクショ作成が必要な公開アプリ",
     "next_release": "Release作成が必要な出荷候補",
     "next_readme": "README不足のアプリ",
+    "next_role": "分類別の確認が必要なアプリ",
     "next_cloudflare": "Cloudflare確認が必要な公開サイト",
     "next_health": "health確認が必要な公開サイト",
     "next_site_git": "サイト系Git未反映を確認",
@@ -118,6 +125,25 @@ UI_TEXT = {
     "reason_release_body_missing": "RELEASE_BODYまたはrelease_body.mdがありません",
     "reason_meta_fields_missing": "DAKE_META必須項目が不足",
     "reason_update_summary_missing": "update_summaryが不足",
+    "reason_role_unknown": "app_typeまたはcompletion_goalが未分類です",
+    "reason_role_goal_mismatch": "app_typeとcompletion_goalの組み合わせを確認してください",
+    "reason_system_ready_attention": "システム稼働の完成条件を確認してください",
+    "reason_reference_ready_attention": "正本提示の完成条件を確認してください",
+    "reason_personal_ready_attention": "ローカル運用の完成条件を確認してください",
+    "reason_frozen_ready_attention": "凍結理由と再開条件を確認してください",
+    "reason_role_missing_items": "不足: {items}",
+    "app_type_market": "市場向け",
+    "app_type_system": "QPSC / 補助脳系",
+    "app_type_personal": "ユキズ専用",
+    "app_type_frozen": "凍結",
+    "app_type_archived": "保管",
+    "app_type_unknown": "未分類",
+    "completion_goal_formal_release": "正式出荷",
+    "completion_goal_system_ready": "システム稼働",
+    "completion_goal_reference_ready": "正本提示",
+    "completion_goal_local_ready": "ローカル運用",
+    "completion_goal_frozen_closed": "凍結完了",
+    "completion_goal_unknown": "未設定",
     "reason_cloudflare_missing": "Cloudflare URLまたはProjectが未確認",
     "reason_health_attention": "health_urlまたはFunctions healthが未確認",
     "reason_site_git": "Git未反映または未commitがあります",
@@ -132,7 +158,7 @@ UI_TEXT = {
     "error_scan_failed": "既存Dashboardの状態取得に失敗しました: {error}",
     "booth_assist_notice": "DAKE_BOOTH_Assistを起動しました: {folder}",
     "booth_assist_fallback": "DAKE_BOOTH_Assistが見つからないためフォルダを開きます。",
-    "launch_check_template": "LAUNCH CHECK OK: apps={apps} booth={booth_urgent}/{booth_total} release={release_urgent}/{release_total} screenshot={screenshot_urgent}/{screenshot_total} readme={readme_urgent}/{readme_total} sites={sites} cloudflare={cloudflare_urgent}/{cloudflare_total} health={health_urgent}/{health_total} site_git={site_git_urgent}/{site_git_total} series_git={series_git}",
+    "launch_check_template": "LAUNCH CHECK OK: apps={apps} booth={booth_urgent}/{booth_total} release={release_urgent}/{release_total} screenshot={screenshot_urgent}/{screenshot_total} readme={readme_urgent}/{readme_total} role={role_urgent}/{role_total} sites={sites} cloudflare={cloudflare_urgent}/{cloudflare_total} health={health_urgent}/{health_total} site_git={site_git_urgent}/{site_git_total} series_git={series_git}",
 }
 
 THEME = {
@@ -156,7 +182,11 @@ THEME = {
 }
 
 FONT_CANDIDATES = ["BIZ UDPGothic", "Yu Gothic UI", "Meiryo", "MS Gothic"]
-EXCLUDED_APP_STATUS = {"internal", "frozen", "deprecated", "archived"}
+EXCLUDED_APP_STATUS = {"internal", "frozen", "deprecated", "archived", "draft", "experimental", "private"}
+APP_TYPE_DEFAULT = "market"
+COMPLETION_GOAL_DEFAULT = "formal_release"
+APP_TYPE_KEYS = ("market", "system", "personal", "frozen", "archived", "unknown")
+COMPLETION_GOAL_KEYS = ("formal_release", "system_ready", "reference_ready", "local_ready", "frozen_closed", "unknown")
 LATER_APP_NAMES = {"qpsc", "brainz", "oikawa", "orbit"}
 LATER_SITE_STATUS = {"internal", "draft", "archived", "frozen", "deprecated"}
 PRIORITY_URGENT = "urgent"
@@ -183,10 +213,15 @@ class TargetItem:
 @dataclass(frozen=True)
 class AppRadar:
     total: int = 0
+    market_count: int = 0
+    system_count: int = 0
+    personal_count: int = 0
+    frozen_count: int = 0
     booth_missing: tuple[TargetItem, ...] = ()
     release_missing: tuple[TargetItem, ...] = ()
     screenshot_missing: tuple[TargetItem, ...] = ()
     readme_missing: tuple[TargetItem, ...] = ()
+    role_attention: tuple[TargetItem, ...] = ()
     error: str = ""
 
 
@@ -221,6 +256,7 @@ class RadarSummary:
             + priority_count(self.app.release_missing, PRIORITY_URGENT)
             + priority_count(self.app.screenshot_missing, PRIORITY_URGENT)
             + priority_count(self.app.readme_missing, PRIORITY_URGENT)
+            + priority_count(self.app.role_attention, PRIORITY_URGENT)
             + priority_count(self.site.cloudflare_unchecked, PRIORITY_URGENT)
             + priority_count(self.site.health_attention, PRIORITY_URGENT)
             + priority_count(self.site.git_uncommitted, PRIORITY_URGENT)
@@ -235,6 +271,7 @@ class RadarSummary:
             + len(self.app.release_missing)
             + len(self.app.screenshot_missing)
             + len(self.app.readme_missing)
+            + len(self.app.role_attention)
             + len(self.site.cloudflare_unchecked)
             + len(self.site.health_attention)
             + len(self.site.git_uncommitted)
@@ -429,6 +466,46 @@ def meta_status(record: object, meta: dict[str, object]) -> str:
     return ""
 
 
+def normalized_choice(value: str, allowed: tuple[str, ...], default: str) -> str:
+    normalized = value.strip().lower()
+    return normalized if normalized in allowed else default
+
+
+def meta_or_record_field(record: object, meta: dict[str, object], key: str) -> str:
+    value = safe_text(meta.get(key, ""))
+    if value:
+        return value
+    fields = getattr(record, "meta_fields", {})
+    if isinstance(fields, dict):
+        return safe_text(fields.get(key, ""))
+    return ""
+
+
+def app_type_value(record: object, meta: dict[str, object]) -> str:
+    return normalized_choice(meta_or_record_field(record, meta, "app_type"), APP_TYPE_KEYS, APP_TYPE_DEFAULT)
+
+
+def completion_goal_value(record: object, meta: dict[str, object]) -> str:
+    return normalized_choice(meta_or_record_field(record, meta, "completion_goal"), COMPLETION_GOAL_KEYS, COMPLETION_GOAL_DEFAULT)
+
+
+def app_type_label(value: str) -> str:
+    key = normalized_choice(value, APP_TYPE_KEYS, "unknown")
+    return UI_TEXT.get(f"app_type_{key}", UI_TEXT["app_type_unknown"])
+
+
+def completion_goal_label(value: str) -> str:
+    key = normalized_choice(value, COMPLETION_GOAL_KEYS, "unknown")
+    return UI_TEXT.get(f"completion_goal_{key}", UI_TEXT["completion_goal_unknown"])
+
+
+def is_market_formal_app(record: object, meta: dict[str, object]) -> bool:
+    status = meta_status(record, meta)
+    if status in EXCLUDED_APP_STATUS:
+        return False
+    return app_type_value(record, meta) == "market" and completion_goal_value(record, meta) == "formal_release"
+
+
 def meta_show_on_site(meta: dict[str, object]) -> bool:
     return safe_bool(meta.get("show_on_site", False))
 
@@ -453,18 +530,31 @@ def app_has_dist(record: object) -> bool:
         return False
 
 
+def app_booth_product_candidates(folder: Path) -> tuple[Path, ...]:
+    return (
+        folder / "booth_product.txt",
+        folder / "booth_ready" / "booth_product.txt",
+    )
+
+
+def find_app_booth_product_path(folder: Path) -> Path | None:
+    for candidate in app_booth_product_candidates(folder):
+        if candidate.is_file():
+            return candidate
+    return None
+
+
 def app_booth_material_flags(record: object) -> tuple[bool, bool, bool, bool]:
     folder = Path(getattr(record, "folder_path", ""))
     checks = getattr(record, "checks", None)
-    root_booth_product = folder / "booth_product.txt"
     ready_booth_product = folder / "booth_ready" / "booth_product.txt"
     ready_dir = folder / "booth_ready"
     thumbnail = folder / "assets" / "booth_thumbnail.jpg"
-    has_root_product = root_booth_product.exists()
+    has_product = bool(getattr(checks, "has_booth_product", False)) or find_app_booth_product_path(folder) is not None
     has_ready_product = ready_booth_product.exists()
     has_ready_dir = bool(getattr(checks, "has_booth_ready", ready_dir.is_dir()))
     has_thumbnail = bool(getattr(checks, "has_booth_thumbnail", thumbnail.exists()))
-    return has_root_product, has_ready_product, has_ready_dir, has_thumbnail
+    return has_product, has_ready_product, has_ready_dir, has_thumbnail
 
 
 def app_has_release_body(folder: Path) -> bool:
@@ -472,27 +562,18 @@ def app_has_release_body(folder: Path) -> bool:
 
 
 def app_is_later_market_target(record: object, meta: dict[str, object]) -> bool:
-    status = meta_status(record, meta)
+    if not is_market_formal_app(record, meta):
+        return True
     folder_name = safe_text(getattr(record, "folder_name", ""))
     title = app_display_name(record, meta)
     combined = f"{folder_name} {title}".lower()
-    if status in EXCLUDED_APP_STATUS:
-        return True
     if not meta_show_on_site(meta) and not meta_show_in_launcher(record, meta):
         return True
     return any(token in combined for token in LATER_APP_NAMES)
 
 
 def is_public_app(record: object, meta: dict[str, object]) -> bool:
-    status = meta_status(record, meta)
-    if status == "available":
-        return True
-    if status in EXCLUDED_APP_STATUS:
-        return False
-    show_on_site = meta.get("show_on_site")
-    if show_on_site is not None and not safe_bool(show_on_site):
-        return False
-    return status not in EXCLUDED_APP_STATUS
+    return is_market_formal_app(record, meta) and (meta_status(record, meta) == "available" or meta_show_on_site(meta))
 
 
 def is_launcher_internal_screenshot_target(record: object, meta: dict[str, object]) -> bool:
@@ -543,12 +624,14 @@ def app_readme_issue(folder: Path, record: object, meta: dict[str, object], issu
 
 
 def classify_booth_priority(record: object, meta: dict[str, object]) -> str:
+    if not is_market_formal_app(record, meta):
+        return PRIORITY_LATER
     status = meta_status(record, meta)
     has_release = bool(app_release_url(record, meta))
     has_distribution = app_has_dist(record) or has_release
     visible = meta_show_on_site(meta) or meta_show_in_launcher(record, meta)
-    has_root_product, has_ready_product, has_ready_dir, has_thumbnail = app_booth_material_flags(record)
-    materials_complete = has_root_product and has_ready_product and has_ready_dir and has_thumbnail
+    has_booth_product, _has_ready_product, has_ready_dir, has_thumbnail = app_booth_material_flags(record)
+    materials_complete = has_booth_product and has_ready_dir and has_thumbnail
     needs_only_booth_url = materials_complete and not safe_text(meta.get("booth_url", ""))
     if app_is_later_market_target(record, meta):
         return PRIORITY_LATER
@@ -560,6 +643,8 @@ def classify_booth_priority(record: object, meta: dict[str, object]) -> str:
 
 
 def classify_release_priority(record: object, meta: dict[str, object], has_readme_issue: bool) -> str:
+    if not is_market_formal_app(record, meta):
+        return PRIORITY_LATER
     status = meta_status(record, meta)
     if status in EXCLUDED_APP_STATUS:
         return PRIORITY_LATER
@@ -573,6 +658,8 @@ def classify_release_priority(record: object, meta: dict[str, object], has_readm
 
 
 def classify_screenshot_priority(record: object, meta: dict[str, object]) -> str:
+    if not is_market_formal_app(record, meta):
+        return PRIORITY_LATER
     status = meta_status(record, meta)
     if status in {"frozen", "deprecated", "archived"}:
         return PRIORITY_LATER
@@ -584,19 +671,76 @@ def classify_screenshot_priority(record: object, meta: dict[str, object]) -> str
 
 
 def app_booth_missing(record: object, meta: dict[str, object]) -> bool:
-    folder = Path(getattr(record, "folder_path", ""))
-    root_booth_product = folder / "booth_product.txt"
-    ready_booth_product = folder / "booth_ready" / "booth_product.txt"
+    if not is_market_formal_app(record, meta):
+        return False
     booth_url = safe_text(meta.get("booth_url", ""))
     has_booth_product, _has_ready_product, has_booth_ready, has_booth_thumbnail = app_booth_material_flags(record)
     status = meta_status(record, meta)
     materials_missing = not has_booth_product or not has_booth_ready or not has_booth_thumbnail
     return (
-        not root_booth_product.exists()
-        or not ready_booth_product.exists()
+        not has_booth_product
         or not booth_url
         or (status == "available" and materials_missing)
     )
+
+
+def app_role_family(record: object, meta: dict[str, object]) -> str:
+    app_type = app_type_value(record, meta)
+    if app_type in {"market", "system", "personal", "frozen"}:
+        return app_type
+    return "frozen" if app_type == "archived" else "unknown"
+
+
+def read_optional_text(path: Path) -> str:
+    try:
+        return read_text_utf8(path)
+    except OSError:
+        return ""
+
+
+def app_role_attention(record: object, meta: dict[str, object], readme_text: str) -> tuple[str, str]:
+    if is_market_formal_app(record, meta):
+        return "", PRIORITY_ACTIVE
+
+    app_type = app_type_value(record, meta)
+    goal = completion_goal_value(record, meta)
+    folder = Path(getattr(record, "folder_path", ""))
+    detail_bits = [f"{app_type_label(app_type)} / {completion_goal_label(goal)}"]
+
+    if app_type == "unknown" or goal == "unknown":
+        return UI_TEXT["reason_role_unknown"], PRIORITY_ACTIVE
+
+    expected_goals = {
+        "system": {"system_ready", "reference_ready"},
+        "personal": {"local_ready"},
+        "frozen": {"frozen_closed"},
+        "archived": {"frozen_closed", "reference_ready"},
+    }
+    if goal not in expected_goals.get(app_type, {"formal_release"}):
+        return f"{UI_TEXT['reason_role_goal_mismatch']} ({' / '.join(detail_bits)})", PRIORITY_ACTIVE
+
+    missing: list[str] = []
+    if app_type == "system" and goal == "system_ready":
+        if not (folder / "build.bat").exists():
+            missing.append("build.bat")
+        main_text = read_optional_text(folder / "main.py")
+        if "--launch-check" not in readme_text and "--launch-check" not in main_text:
+            missing.append("--launch-check")
+        if "system_ready" not in readme_text and "Positioning" not in readme_text:
+            missing.append("role docs")
+        if missing:
+            return f"{UI_TEXT['reason_system_ready_attention']} {UI_TEXT['reason_role_missing_items'].format(items=', '.join(missing))}", PRIORITY_ACTIVE
+    elif app_type == "system" and goal == "reference_ready":
+        if "reference_ready" not in readme_text and "正本" not in readme_text:
+            return UI_TEXT["reason_reference_ready_attention"], PRIORITY_ACTIVE
+    elif app_type == "personal" and goal == "local_ready":
+        if "local_ready" not in readme_text and "ローカル" not in readme_text:
+            return UI_TEXT["reason_personal_ready_attention"], PRIORITY_LATER
+    elif app_type == "frozen" and goal == "frozen_closed":
+        if "frozen" not in readme_text.lower() and "凍結" not in readme_text:
+            return UI_TEXT["reason_frozen_ready_attention"], PRIORITY_LATER
+
+    return "", PRIORITY_ACTIVE
 
 
 def collect_app_radar() -> tuple[AppRadar, GitRadar, tuple[str, ...]]:
@@ -610,26 +754,46 @@ def collect_app_radar() -> tuple[AppRadar, GitRadar, tuple[str, ...]]:
         release_missing: list[TargetItem] = []
         screenshot_missing: list[TargetItem] = []
         readme_missing: list[TargetItem] = []
+        role_attention: list[TargetItem] = []
+        role_counts = {"market": 0, "system": 0, "personal": 0, "frozen": 0}
         for record in records:
             record_folder = Path(getattr(record, "folder_path", ""))
             meta, issue_key = extract_meta(record_folder / README_NAME, DAKE_META_PATTERN)
+            role_family = app_role_family(record, meta)
+            if role_family in role_counts:
+                role_counts[role_family] += 1
             reason, readme_priority = app_readme_issue(record_folder, record, meta, issue_key)
+            readme_text = read_optional_text(record_folder / README_NAME)
             if reason:
-                readme_missing.append(target_for_app(record, meta, "reason_meta_missing", reason, readme_priority))
-            if app_booth_missing(record, meta):
-                booth_missing.append(target_for_app(record, meta, "reason_booth_missing", priority=classify_booth_priority(record, meta)))
-            if not app_release_url(record, meta):
-                release_priority = classify_release_priority(record, meta, bool(reason))
-                release_missing.append(target_for_app(record, meta, "reason_release_missing", priority=release_priority))
-            if app_screenshot_missing(record, meta):
-                screenshot_missing.append(target_for_app(record, meta, "reason_screenshot_missing", priority=classify_screenshot_priority(record, meta)))
+                target = target_for_app(record, meta, "reason_meta_missing", reason, readme_priority)
+                if is_market_formal_app(record, meta):
+                    readme_missing.append(target)
+                else:
+                    role_attention.append(target)
+            if is_market_formal_app(record, meta):
+                if app_booth_missing(record, meta):
+                    booth_missing.append(target_for_app(record, meta, "reason_booth_missing", priority=classify_booth_priority(record, meta)))
+                if not app_release_url(record, meta):
+                    release_priority = classify_release_priority(record, meta, bool(reason))
+                    release_missing.append(target_for_app(record, meta, "reason_release_missing", priority=release_priority))
+                if app_screenshot_missing(record, meta):
+                    screenshot_missing.append(target_for_app(record, meta, "reason_screenshot_missing", priority=classify_screenshot_priority(record, meta)))
+            else:
+                role_reason, role_priority = app_role_attention(record, meta, readme_text)
+                if role_reason:
+                    role_attention.append(target_for_app(record, meta, "reason_role_unknown", role_reason, role_priority))
         return (
             AppRadar(
                 total=len(records),
+                market_count=role_counts["market"],
+                system_count=role_counts["system"],
+                personal_count=role_counts["personal"],
+                frozen_count=role_counts["frozen"],
                 booth_missing=tuple(booth_missing),
                 release_missing=tuple(release_missing),
                 screenshot_missing=tuple(screenshot_missing),
                 readme_missing=tuple(readme_missing),
+                role_attention=tuple(role_attention),
             ),
             collect_git_radar(module, folder.parent.parent),
             (),
@@ -838,6 +1002,11 @@ class QpscDashboardApp:
             "release": tk.StringVar(value=UI_TEXT["value_waiting"]),
             "screenshot": tk.StringVar(value=UI_TEXT["value_waiting"]),
             "readme": tk.StringVar(value=UI_TEXT["value_waiting"]),
+            "role": tk.StringVar(value=UI_TEXT["value_waiting"]),
+            "market": tk.StringVar(value=UI_TEXT["value_waiting"]),
+            "system": tk.StringVar(value=UI_TEXT["value_waiting"]),
+            "personal": tk.StringVar(value=UI_TEXT["value_waiting"]),
+            "frozen": tk.StringVar(value=UI_TEXT["value_waiting"]),
         }
         self.site_vars = {
             "total": tk.StringVar(value=UI_TEXT["value_waiting"]),
@@ -919,7 +1088,12 @@ class QpscDashboardApp:
         self.metric_row(body, UI_TEXT["label_booth_missing"], self.app_vars["booth"], lambda: self.show_targets("booth")).pack(fill="x", pady=(0, 8))
         self.metric_row(body, UI_TEXT["label_release_missing"], self.app_vars["release"], lambda: self.show_targets("release")).pack(fill="x", pady=(0, 8))
         self.metric_row(body, UI_TEXT["label_screenshot_missing"], self.app_vars["screenshot"], lambda: self.show_targets("screenshot")).pack(fill="x", pady=(0, 8))
-        self.metric_row(body, UI_TEXT["label_readme_missing"], self.app_vars["readme"], lambda: self.show_targets("readme")).pack(fill="x")
+        self.metric_row(body, UI_TEXT["label_readme_missing"], self.app_vars["readme"], lambda: self.show_targets("readme")).pack(fill="x", pady=(0, 8))
+        self.metric_row(body, UI_TEXT["label_role_attention"], self.app_vars["role"], lambda: self.show_targets("role")).pack(fill="x", pady=(0, 8))
+        self.metric_row(body, UI_TEXT["label_market_count"], self.app_vars["market"], None).pack(fill="x", pady=(0, 8))
+        self.metric_row(body, UI_TEXT["label_system_count"], self.app_vars["system"], None).pack(fill="x", pady=(0, 8))
+        self.metric_row(body, UI_TEXT["label_personal_count"], self.app_vars["personal"], None).pack(fill="x", pady=(0, 8))
+        self.metric_row(body, UI_TEXT["label_frozen_count"], self.app_vars["frozen"], None).pack(fill="x")
         return frame
 
     def build_site_card(self, parent: tk.Misc) -> tk.Frame:
@@ -1004,6 +1178,11 @@ class QpscDashboardApp:
         self.app_vars["release"].set(priority_summary(summary.app.release_missing))
         self.app_vars["screenshot"].set(priority_summary(summary.app.screenshot_missing))
         self.app_vars["readme"].set(priority_summary(summary.app.readme_missing))
+        self.app_vars["role"].set(priority_summary(summary.app.role_attention))
+        self.app_vars["market"].set(str(summary.app.market_count))
+        self.app_vars["system"].set(str(summary.app.system_count))
+        self.app_vars["personal"].set(str(summary.app.personal_count))
+        self.app_vars["frozen"].set(str(summary.app.frozen_count))
         self.site_vars["total"].set(str(summary.site.total))
         self.site_vars["cloudflare"].set(priority_summary(summary.site.cloudflare_unchecked))
         self.site_vars["health"].set(priority_summary(summary.site.health_attention))
@@ -1037,6 +1216,7 @@ class QpscDashboardApp:
             ("next_screenshot", priority_count(summary.app.screenshot_missing, PRIORITY_URGENT), "screenshot"),
             ("next_release", priority_count(summary.app.release_missing, PRIORITY_URGENT), "release"),
             ("next_readme", priority_count(summary.app.readme_missing, PRIORITY_URGENT), "readme"),
+            ("next_role", priority_count(summary.app.role_attention, PRIORITY_URGENT), "role"),
             ("next_cloudflare", priority_count(summary.site.cloudflare_unchecked, PRIORITY_URGENT), "cloudflare"),
             ("next_health", priority_count(summary.site.health_attention, PRIORITY_URGENT), "health"),
             ("next_site_git", priority_count(summary.site.git_uncommitted, PRIORITY_URGENT), "site_git"),
@@ -1056,6 +1236,8 @@ class QpscDashboardApp:
             return UI_TEXT["dialog_screenshot_title"], summary.app.screenshot_missing
         if key == "readme":
             return UI_TEXT["dialog_readme_title"], summary.app.readme_missing
+        if key == "role":
+            return UI_TEXT["dialog_role_title"], summary.app.role_attention
         if key == "cloudflare":
             return UI_TEXT["dialog_cloudflare_title"], summary.site.cloudflare_unchecked
         if key == "health":
@@ -1169,6 +1351,8 @@ def run_launch_check() -> int:
             screenshot_total=len(summary.app.screenshot_missing),
             readme_urgent=priority_count(summary.app.readme_missing, PRIORITY_URGENT),
             readme_total=len(summary.app.readme_missing),
+            role_urgent=priority_count(summary.app.role_attention, PRIORITY_URGENT),
+            role_total=len(summary.app.role_attention),
             sites=summary.site.total,
             cloudflare_urgent=priority_count(summary.site.cloudflare_unchecked, PRIORITY_URGENT),
             cloudflare_total=len(summary.site.cloudflare_unchecked),

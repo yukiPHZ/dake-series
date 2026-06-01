@@ -90,6 +90,15 @@ Windows向けexe
 
 This app is a system/operations app, not a market-facing standalone product. Its completion goal is `system_ready`: README, launch-check, build, and its role inside the QPSC workflow are documented and working.
 
+## app_type / completion_goal 対応
+
+QPSC Dashboard は README 正本の `app_type` と `completion_goal` を読み取り、市場向け・QPSC/補助脳系・ユキズ専用・凍結を分けて扱います。
+
+市場向けアプリだけを正式出荷ラインの主な未処理として扱います。
+QPSC/補助脳系はシステム稼働または正本提示を完成ゴールとします。
+ユキズ専用アプリはローカル運用を完成ゴールとします。
+凍結アプリは凍結理由と再開条件が正本化されていれば、凍結完了として扱います。
+
 ## DAKE_META
 ```json
 {
@@ -99,7 +108,7 @@ This app is a system/operations app, not a market-facing standalone product. Its
   "launcher_description": "QPSC全体の現在地を束ねて確認する司令塔",
   "site_title": "",
   "site_description": "",
-  "update_summary": "QPSC正式名称を Quiet Personal Cognitive System に統一し、司令塔としての表記へ整理しました。",
+  "update_summary": "app_type / completion_goal を読み取り、市場向け・QPSC系・専用・凍結を分けた未処理レーダーに対応しました。",
   "folder_name": "DAKE_QPSC_Dashboard",
   "exe_name": "QPSC_Dashboard.exe",
   "release_url": "",
