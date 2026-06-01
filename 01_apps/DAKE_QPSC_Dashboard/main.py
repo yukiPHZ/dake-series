@@ -132,6 +132,7 @@ UI_TEXT = {
     "reason_personal_ready_attention": "ローカル運用の完成条件を確認してください",
     "reason_frozen_ready_attention": "凍結理由と再開条件を確認してください",
     "reason_role_missing_items": "不足: {items}",
+    "target_app_detail": "{detail} / {app_type} / {completion_goal}",
     "app_type_market": "市場向け",
     "app_type_system": "QPSC / 補助脳系",
     "app_type_personal": "ユキズ専用",
@@ -441,9 +442,14 @@ def app_display_name(record: object, meta: dict[str, object]) -> str:
 
 def target_for_app(record: object, meta: dict[str, object], reason_key: str, detail: str = "", priority: str = PRIORITY_ACTIVE) -> TargetItem:
     folder = Path(getattr(record, "folder_path", ""))
+    detail_text = UI_TEXT["target_app_detail"].format(
+        detail=detail or UI_TEXT[reason_key],
+        app_type=app_type_label(app_type_value(record, meta)),
+        completion_goal=completion_goal_label(completion_goal_value(record, meta)),
+    )
     return TargetItem(
         title=app_display_name(record, meta),
-        detail=detail or UI_TEXT[reason_key],
+        detail=detail_text,
         path=folder,
         folder_name=safe_text(getattr(record, "folder_name", folder.name)),
         priority=priority,
@@ -1216,7 +1222,7 @@ class QpscDashboardApp:
             ("next_screenshot", priority_count(summary.app.screenshot_missing, PRIORITY_URGENT), "screenshot"),
             ("next_release", priority_count(summary.app.release_missing, PRIORITY_URGENT), "release"),
             ("next_readme", priority_count(summary.app.readme_missing, PRIORITY_URGENT), "readme"),
-            ("next_role", priority_count(summary.app.role_attention, PRIORITY_URGENT), "role"),
+            ("next_role", len(summary.app.role_attention), "role"),
             ("next_cloudflare", priority_count(summary.site.cloudflare_unchecked, PRIORITY_URGENT), "cloudflare"),
             ("next_health", priority_count(summary.site.health_attention, PRIORITY_URGENT), "health"),
             ("next_site_git", priority_count(summary.site.git_uncommitted, PRIORITY_URGENT), "site_git"),
