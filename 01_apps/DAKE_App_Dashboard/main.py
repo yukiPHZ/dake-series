@@ -493,6 +493,25 @@ def shipment_rate(record: AppRecord) -> int | None:
     return round(done_count / len(SHIPMENT_MISSING_KEYS) * 100)
 
 
+def hidden_subprocess_kwargs() -> dict[str, object]:
+    if not sys.platform.startswith("win"):
+        return {}
+
+    kwargs: dict[str, object] = {}
+    try:
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= getattr(subprocess, "STARTF_USESHOWWINDOW", 1)
+        startupinfo.wShowWindow = 0
+        kwargs["startupinfo"] = startupinfo
+    except Exception:
+        pass
+
+    create_no_window = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    if create_no_window:
+        kwargs["creationflags"] = create_no_window
+    return kwargs
+
+
 def git_run(repo: Path, args: list[str]) -> tuple[str, str]:
     try:
         result = subprocess.run(
@@ -504,6 +523,7 @@ def git_run(repo: Path, args: list[str]) -> tuple[str, str]:
             errors="replace",
             timeout=GIT_TIMEOUT_SECONDS,
             check=False,
+            **hidden_subprocess_kwargs(),
         )
     except Exception as exc:
         return "", str(exc)
@@ -2272,7 +2292,7 @@ class DashboardApp:
     @staticmethod
     def start_booth_assist_process(command: list[str], cwd: Path) -> bool:
         try:
-            process = subprocess.Popen(command, cwd=str(cwd))
+            process = subprocess.Popen(command, cwd=str(cwd), **hidden_subprocess_kwargs())
         except Exception:
             return False
         try:
@@ -2349,7 +2369,7 @@ class DashboardApp:
     def show_file_location_worker(self, path: Path) -> None:
         try:
             if sys.platform.startswith("win"):
-                subprocess.Popen(["explorer.exe", f"/select,{str(path)}"])
+                subprocess.Popen(["explorer.exe", f"/select,{str(path)}"], **hidden_subprocess_kwargs())
             else:
                 webbrowser.open(path.parent.as_uri())
             message = UI_TEXT["notice_exe_location"]
