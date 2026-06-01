@@ -86,8 +86,11 @@ App Dashboard / Web Dashboard を監視ノードとして集約
 Windows向けexe
 ```
 
-## DAKE_META
+## Positioning
 
+This app is a system/operations app, not a market-facing standalone product. Its completion goal is `system_ready`: README, launch-check, build, and its role inside the QPSC workflow are documented and working.
+
+## DAKE_META
 ```json
 {
   "app_key": "DAKE_QPSC_Dashboard",
@@ -102,6 +105,8 @@ Windows向けexe
   "release_url": "",
   "screenshot_path": "assets/screenshot.webp",
   "status": "internal",
+  "app_type": "system",
+  "completion_goal": "system_ready",
   "show_in_launcher": true,
   "show_on_site": false
 }

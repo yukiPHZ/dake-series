@@ -103,3 +103,12 @@ DAKEシリーズ全体で参照する共通仕様ファイル置き場です。
 - `internal`: operations or management tool. Excluded from normal distribution, BOOTH, dakeapp.com, and Launcher listing.
 
 Only `available` apps are normal formal shipping check targets.
+
+## DAKE_META Role Model
+
+DAKE app README files also carry role and completion metadata:
+
+- `app_type`: role classification such as `market`, `personal`, `system`, `frozen`, or `archived`.
+- `completion_goal`: the correct done condition such as `formal_release`, `local_ready`, `system_ready`, `reference_ready`, or `frozen_closed`.
+
+Dashboards should read these fields from README instead of assuming every app must reach BOOTH / dakeapp.com formal release. Market apps use `formal_release`; QPSC / BRAINZ / Dashboard / Wake apps generally use `system_ready` or `reference_ready`.

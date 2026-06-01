@@ -617,8 +617,11 @@ Aru Inbox は、既存の Slack Inbox とは別の「在る」専用取り込み
 - attachments / unfurl は補助情報として保存し、本文の代替にはしません
 - 将来的に記事 / 小説 / 散文素材へ戻すための素材箱として使います
 
-## DAKE_META
+## Positioning
 
+This app is a system/reference app for local documentation and assistive brain workflows. Its completion goal is `reference_ready`: README explains its role and local/reference use. It is not treated as a market-facing formal_release app.
+
+## DAKE_META
 ```json
 {
   "app_key": "DAKE_Brainz_Search",
@@ -633,6 +636,8 @@ Aru Inbox は、既存の Slack Inbox とは別の「在る」専用取り込み
   "release_url": "",
   "screenshot_path": "assets/screenshot.webp",
   "status": "draft",
+  "app_type": "system",
+  "completion_goal": "reference_ready",
   "show_in_launcher": false,
   "show_on_site": false
 }

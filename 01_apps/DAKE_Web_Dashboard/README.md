@@ -115,8 +115,11 @@ python main.py --launch-check
 .\dist\DakeWeb_Dashboard.exe --launch-check
 ```
 
-## DAKE_META
+## Positioning
 
+This app is a system/operations dashboard, not a market-facing standalone product. Its completion goal is `system_ready`: README, launch-check, build, and dashboard role are documented and working.
+
+## DAKE_META
 ```json
 {
   "app_key": "DAKE_Web_Dashboard",
@@ -131,6 +134,8 @@ python main.py --launch-check
   "release_url": "",
   "screenshot_path": "",
   "status": "internal",
+  "app_type": "system",
+  "completion_goal": "system_ready",
   "show_in_launcher": false,
   "show_on_site": false
 }

@@ -139,8 +139,11 @@ dist\DAKE_Wake_Brainz.exe
 
 Sleep、Queue、Codex 監視、Slack bridge は将来フェーズで追加します。
 
-## DAKE_META
+## Positioning
 
+This app is a system/operations app, not a market-facing standalone product. Its completion goal is `system_ready`: README, launch-check, build, and its role in the local workflow are documented and working.
+
+## DAKE_META
 ```json
 {
   "app_key": "DAKE_Wake_Brainz",
@@ -155,6 +158,8 @@ Sleep、Queue、Codex 監視、Slack bridge は将来フェーズで追加しま
   "release_url": "",
   "screenshot_path": "assets/screenshot.webp",
   "status": "draft",
+  "app_type": "system",
+  "completion_goal": "system_ready",
   "show_in_launcher": false,
   "show_on_site": false
 }

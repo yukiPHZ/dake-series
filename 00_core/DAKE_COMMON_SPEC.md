@@ -176,3 +176,34 @@ DAKEシリーズの最上位共通仕様です。個別仕様や実装判断で�
 - `internal`: operations or management tool. Excluded from normal distribution, BOOTH, dakeapp.com, and Launcher listing.
 
 Formal shipping checks, BOOTH ready generation, and dakeapp.com publish candidates target `available` apps only.
+
+## DAKE_META Role And Completion Goal
+
+`status` describes the current state. `app_type` describes the app role. `completion_goal` describes the correct definition of done.
+
+Add these fields to `DAKE_META`:
+
+```json
+{
+  "app_type": "market",
+  "completion_goal": "formal_release"
+}
+```
+
+`app_type` values:
+
+- `market`: public DAKE app for GitHub Release / BOOTH / dakeapp.com.
+- `personal`: Yukiz/local-purpose app. Public release is optional, but the primary goal is local use or reference.
+- `system`: QPSC / BRAINZ / OIKAWA / Dashboard / Wake / operations app. Not treated as a standalone market product.
+- `frozen`: frozen app preserved as history or experiment.
+- `archived`: archived or legacy app, excluded from normal unresolved lanes.
+
+`completion_goal` values:
+
+- `formal_release`: README, release body, screenshots, BOOTH assets, build, dist exe, GitHub Release, BOOTH, dakeapp.com, and Cloudflare confirmation.
+- `local_ready`: README, launch-check, build, local operation notes, and safe config handling.
+- `system_ready`: README, launch-check, build, system role, source/read target notes, and dashboard relationship are documented.
+- `reference_ready`: README explains the reference/sample/local-document role and public-use cautions.
+- `frozen_closed`: README explains frozen reason, current state, reopen conditions, and exclusion from shipping.
+
+Dashboards should use `completion_goal` to choose the correct completion lane. Do not place `system`, `personal`, `frozen`, or `archived` apps in the same unresolved lane as `market` apps waiting for `formal_release`.

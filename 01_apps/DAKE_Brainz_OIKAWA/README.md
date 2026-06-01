@@ -327,8 +327,11 @@ build.bat
 dist\DakeBrainz_OIKAWA.exe
 ```
 
-## DAKE_META
+## Positioning
 
+This app is a system/reference app for local documentation and assistive brain workflows. Its completion goal is `reference_ready`: README explains its role and local/reference use. It is not treated as a market-facing formal_release app.
+
+## DAKE_META
 ```json
 {
   "app_key": "DAKE_Brainz_OIKAWA",
@@ -343,6 +346,8 @@ dist\DakeBrainz_OIKAWA.exe
   "release_url": "",
   "screenshot_path": "assets/screenshot.webp",
   "status": "experimental",
+  "app_type": "system",
+  "completion_goal": "reference_ready",
   "show_in_launcher": false,
   "show_on_site": false
 }

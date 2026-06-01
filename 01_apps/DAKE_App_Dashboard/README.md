@@ -96,8 +96,11 @@ python main.py --launch-check
 git diff --check
 ```
 
-## DAKE_META
+## Positioning
 
+This app is a system/operations dashboard, not a market-facing standalone product. Its completion goal is `system_ready`: README, launch-check, build, and dashboard role are documented and working.
+
+## DAKE_META
 ```json
 {
   "app_key": "DAKE_App_Dashboard",
@@ -112,6 +115,8 @@ git diff --check
   "release_url": "",
   "screenshot_path": "",
   "status": "internal",
+  "app_type": "system",
+  "completion_goal": "system_ready",
   "show_in_launcher": false,
   "show_on_site": false
 }

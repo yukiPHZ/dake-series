@@ -96,6 +96,10 @@ DAKEアプリ横断レビュー用チェックリストです。
 
 - [ ] `DAKE_META` がある。
 - [ ] `DAKE_META` がJSONとして読める。
+- [ ] `DAKE_META.app_type` がある。
+- [ ] `DAKE_META.completion_goal` がある。
+- [ ] `status` / `app_type` / `completion_goal` の組み合わせが実態と一致している。
+- [ ] `formal_release` 以外のアプリを市場向け未完了レーンに入れていない。
 - [ ] `folder_name` が実フォルダ名と一致する。
 - [ ] `exe_name` がdist内exeと一致する。
 - [ ] `release_url` は未確定なら空文字。
