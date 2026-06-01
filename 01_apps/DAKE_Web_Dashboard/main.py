@@ -90,6 +90,12 @@ UI_TEXT = {
     "qpsc_api_review": "API確認が必要",
     "qpsc_cloudflare_review": "Cloudflare確認が必要",
     "qpsc_git_dirty": "Git未コミットあり",
+    "qpsc_git_error": "Git取得不可",
+    "qpsc_candidate_components": "誤検出候補",
+    "qpsc_hint_meta": "README正本化が必要",
+    "qpsc_hint_api": "Functions / OpenAI / health を確認",
+    "qpsc_hint_git": "repo外またはGit状態取得失敗",
+    "qpsc_hint_candidate": "public / functions / sitemap など",
     "git_card_title": "Git状態カード",
     "git_dirty_sites": "未コミット変更ありサイト",
     "git_untracked_sites": "未追跡ありサイト",
@@ -101,6 +107,7 @@ UI_TEXT = {
     "filter_api_review": "API確認",
     "filter_deploy_review": "デプロイ確認",
     "filter_dirty": "未コミット",
+    "filter_candidate": "候補",
     "filter_internal": "内部 / 凍結",
     "search_label": "検索",
     "search_placeholder": "フォルダ名・表示名・domain・Cloudflare・status を検索",
@@ -117,11 +124,13 @@ UI_TEXT = {
     "column_git": "Git状態",
     "column_api": "API",
     "column_functions": "Functions",
+    "column_reason": "判定理由",
     "column_updated": "最終更新",
     "class_normal": "正常",
     "class_needs_review": "要確認",
     "class_api_review": "API確認",
     "class_deploy_review": "デプロイ確認",
+    "class_candidate": "候補",
     "class_internal": "内部 / 凍結",
     "status_loading": "読み込み中",
     "status_ready": "正本を読み込みました",
@@ -155,8 +164,15 @@ UI_TEXT = {
     "label_cloudflare": "Cloudflare構成",
     "label_api": "API構成",
     "label_openai_safety": "OpenAI API安全性チェック",
+    "label_detection_basis": "判定根拠",
+    "label_status_reasons": "状態理由",
+    "label_api_reasons": "API理由",
+    "label_git_reasons": "Git理由",
     "label_missing": "不足項目",
     "label_next": "次に必要そうな作業",
+    "label_next_reasons": "次にやる理由",
+    "label_detection_score": "検出スコア",
+    "label_candidate_type": "candidate_type",
     "label_repo_url": "GitHub URL",
     "label_production_url": "production_url",
     "label_health_url": "health_url",
@@ -212,6 +228,48 @@ UI_TEXT = {
     "next_add_health": "Functionsありサイトに /api/health を用意する",
     "next_add_domain": "production_url / domain を正本へ記録する",
     "next_no_action": "現時点で明確な追加作業はありません。",
+    "reason_none": "明確な追加理由はありません。",
+    "reason_git_exists": ".git あり",
+    "reason_readme_exists": "README.md あり",
+    "reason_wrangler_exists": "wrangler.toml あり",
+    "reason_package_exists": "package.json あり",
+    "reason_public_exists": "public/ あり",
+    "reason_functions_exists": "functions/ あり",
+    "reason_meta_exists": "DAKE_WEB_META あり",
+    "reason_package_public": "package.json + public/ あり",
+    "reason_wrangler_functions": "wrangler.toml + functions/ あり",
+    "reason_name_site": "フォルダ名がサイト系",
+    "reason_component_public": "public単体のためサイト本体ではない可能性",
+    "reason_component_functions": "functions単体のためサイト本体ではない可能性",
+    "reason_component_sitemap": "sitemap単体のためサイト本体ではない可能性",
+    "reason_parent_site_component": "親フォルダがサイトの構成要素",
+    "reason_low_signal": ".git / README.md / wrangler.toml がありません",
+    "reason_status_meta_missing": "DAKE_WEB_META が未整備",
+    "reason_status_readme_missing": "README.md がありません",
+    "reason_status_git_error": "Git状態を取得できません",
+    "reason_status_production_missing": "production_url が未設定",
+    "reason_status_cloudflare_missing": "cloudflare_project が未設定",
+    "reason_status_functions_health": "functions あり / health 未確認",
+    "reason_status_api_review": "OpenAI API確認が必要",
+    "reason_status_internal": "内部 / 凍結扱い",
+    "reason_status_clean": "主要な不足は見つかっていません",
+    "reason_api_key": "APIキー直書き疑い",
+    "reason_api_front_direct": "フロントOpenAI直叩き疑い",
+    "reason_api_env": "OPENAI_API_KEY参照あり",
+    "reason_api_functions": "functions側OpenAI接続あり",
+    "reason_api_health_missing": "health_url または /api/health 未確認",
+    "reason_api_routes_missing": "_routes.json /api/* 未確認",
+    "reason_api_none": "API確認理由なし",
+    "reason_git_no_repo": "Gitリポジトリではありません",
+    "reason_git_error": "Git取得不可",
+    "reason_git_dirty": "未コミットあり",
+    "reason_git_untracked": "未追跡あり",
+    "reason_git_ahead": "push待ち疑い",
+    "reason_git_behind": "pull待ち疑い",
+    "reason_git_clean": "Git clean",
+    "candidate_type_site": "site",
+    "candidate_type_candidate": "candidate",
+    "candidate_type_ignored": "ignored_component",
     "dialog_error_title": "エラー",
     "dialog_notice_title": "確認",
     "dialog_open_failed": "開けませんでした。\n\n{path}\n\n{error}",
@@ -249,11 +307,13 @@ STATUS_THEME = {
     "needs_review": ("#301B34", THEME["review"]),
     "api_review": ("#32201B", THEME["warning"]),
     "deploy_review": ("#1D213B", THEME["purple"]),
+    "candidate": ("#202736", THEME["muted"]),
     "internal": ("#1B2333", THEME["muted"]),
 }
 
 FONT_CANDIDATES = ["BIZ UDPGothic", "Yu Gothic UI", "Meiryo", "MS Gothic"]
-FILTER_KEYS = ("all", "normal", "needs_review", "api_review", "deploy_review", "dirty", "internal")
+FILTER_KEYS = ("all", "normal", "needs_review", "api_review", "deploy_review", "dirty", "candidate", "internal")
+COMPONENT_DIR_NAMES = {"public", "functions", "sitemap"}
 EXCLUDED_DIR_NAMES = {
     ".git",
     ".wrangler",
@@ -338,6 +398,13 @@ class ApiInfo:
 
 
 @dataclass(frozen=True)
+class CandidateInfo:
+    score: int
+    candidate_type: str
+    reasons: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class SiteRecord:
     folder_name: str
     folder_path: Path
@@ -356,6 +423,13 @@ class SiteRecord:
     api: ApiInfo
     git: GitInfo
     class_key: str
+    detection_score: int
+    detection_reasons: tuple[str, ...]
+    status_reasons: tuple[str, ...]
+    api_reasons: tuple[str, ...]
+    git_reasons: tuple[str, ...]
+    next_action_reasons: tuple[str, ...]
+    candidate_type: str
     missing_items: tuple[str, ...]
     next_items: tuple[str, ...]
     last_modified: float
@@ -675,38 +749,87 @@ def is_excluded_dir(path: Path) -> bool:
     return path.name.lower() in EXCLUDED_DIR_NAMES
 
 
-def has_site_marker(folder: Path, depth: int) -> bool:
+def build_candidate_info(folder: Path, parent_is_site: bool = False) -> CandidateInfo:
     name = folder.name.lower()
-    if name.endswith("-site") or name == "site" or "site" in name:
-        return True
-    direct_markers = [
-        folder / WRANGLER_NAME,
-        folder / FUNCTIONS_DIR,
-        folder / PUBLIC_DIR,
-        folder / PUBLIC_ROUTES,
-        folder / ROUTES_NAME,
-    ]
-    if any(path.exists() for path in direct_markers):
-        return True
-    if (folder / PACKAGE_NAME).exists() and ((folder / PUBLIC_DIR).exists() or (folder / FUNCTIONS_DIR).exists()):
-        return True
-    if (folder / README_NAME).exists():
+    reasons: list[str] = []
+    score = 0
+
+    has_git = (folder / GIT_DIR).exists()
+    has_readme = (folder / README_NAME).exists()
+    has_wrangler = (folder / WRANGLER_NAME).exists()
+    has_package = (folder / PACKAGE_NAME).exists()
+    has_public = (folder / PUBLIC_DIR).is_dir()
+    has_functions = (folder / FUNCTIONS_DIR).is_dir()
+    has_meta = False
+
+    if has_git:
+        score += 4
+        reasons.append(UI_TEXT["reason_git_exists"])
+    if has_readme:
+        score += 2
+        reasons.append(UI_TEXT["reason_readme_exists"])
         try:
-            if DAKE_WEB_META_PATTERN.search(read_text(folder / README_NAME)):
-                return True
+            has_meta = bool(DAKE_WEB_META_PATTERN.search(read_text(folder / README_NAME)))
         except OSError:
-            pass
-    if depth == 0 and (folder / GIT_DIR).exists() and (folder / PACKAGE_NAME).exists():
-        return True
-    return False
+            has_meta = False
+    if has_wrangler:
+        score += 3
+        reasons.append(UI_TEXT["reason_wrangler_exists"])
+    if has_package:
+        score += 2
+        reasons.append(UI_TEXT["reason_package_exists"])
+    if has_public:
+        score += 1
+        reasons.append(UI_TEXT["reason_public_exists"])
+    if has_functions:
+        score += 2
+        reasons.append(UI_TEXT["reason_functions_exists"])
+    if has_meta:
+        score += 4
+        reasons.append(UI_TEXT["reason_meta_exists"])
+    if has_package and has_public:
+        score += 2
+        reasons.append(UI_TEXT["reason_package_public"])
+    if has_wrangler and has_functions:
+        score += 2
+        reasons.append(UI_TEXT["reason_wrangler_functions"])
+    if name.endswith("-site") or name == "site" or "site" in name:
+        score += 1
+        reasons.append(UI_TEXT["reason_name_site"])
+
+    if name in COMPONENT_DIR_NAMES:
+        if name == "public":
+            reasons.append(UI_TEXT["reason_component_public"])
+        elif name == "functions":
+            reasons.append(UI_TEXT["reason_component_functions"])
+        else:
+            reasons.append(UI_TEXT["reason_component_sitemap"])
+        if parent_is_site and not has_git:
+            reasons.append(UI_TEXT["reason_parent_site_component"])
+            return CandidateInfo(score=score, candidate_type="ignored_component", reasons=tuple(reasons))
+        if not has_git:
+            return CandidateInfo(score=score, candidate_type="ignored_component", reasons=tuple(reasons))
+
+    if not has_git and not has_readme and not has_wrangler:
+        reasons.append(UI_TEXT["reason_low_signal"])
+        return CandidateInfo(score=score, candidate_type="ignored_component", reasons=tuple(reasons))
+
+    strong_site = has_git or has_wrangler or (has_package and has_public) or (has_readme and has_meta)
+    if strong_site or score >= 5:
+        candidate_type = "site"
+    elif score >= 2:
+        candidate_type = "candidate"
+    else:
+        candidate_type = "ignored_component"
+    return CandidateInfo(score=score, candidate_type=candidate_type, reasons=tuple(reasons))
 
 
-def discover_site_folders(root: Path) -> list[Path]:
-    found: dict[str, Path] = {}
+def discover_site_candidates(root: Path) -> list[tuple[Path, CandidateInfo]]:
+    found: dict[str, tuple[Path, CandidateInfo]] = {}
     if not root.exists() or not root.is_dir():
         return []
 
-    def walk(folder: Path, depth: int) -> None:
+    def walk(folder: Path, depth: int, parent_is_site: bool = False) -> None:
         if depth > MAX_SCAN_DEPTH:
             return
         try:
@@ -716,16 +839,26 @@ def discover_site_folders(root: Path) -> list[Path]:
         for child in children:
             if is_excluded_dir(child):
                 continue
-            if has_site_marker(child, depth):
+            info = build_candidate_info(child, parent_is_site=parent_is_site)
+            if info.candidate_type != "ignored_component":
                 try:
-                    found[str(child.resolve()).lower()] = child
+                    found[str(child.resolve()).lower()] = (child, info)
                 except OSError:
-                    found[str(child).lower()] = child
+                    found[str(child).lower()] = (child, info)
             if depth < MAX_SCAN_DEPTH:
-                walk(child, depth + 1)
+                walk(child, depth + 1, parent_is_site=info.candidate_type == "site")
 
     walk(root, 0)
-    return sorted(found.values(), key=lambda path: str(path).lower())
+    return [item for _key, item in sorted(found.items(), key=lambda pair: str(pair[1][0]).lower())]
+
+
+def has_site_marker(folder: Path, depth: int) -> bool:
+    info = build_candidate_info(folder)
+    return info.candidate_type != "ignored_component"
+
+
+def discover_site_folders(root: Path) -> list[Path]:
+    return [folder for folder, _info in discover_site_candidates(root)]
 
 
 def run_git_command(folder: Path, args: list[str]) -> tuple[int, str, str]:
@@ -1032,7 +1165,123 @@ def build_next_items(
     return tuple(tasks[:5])
 
 
-def scan_site(folder: Path) -> SiteRecord:
+def unique_reasons(items: list[str]) -> tuple[str, ...]:
+    result: list[str] = []
+    for item in items:
+        if item and item not in result:
+            result.append(item)
+    return tuple(result) if result else (UI_TEXT["reason_none"],)
+
+
+def build_status_reasons(
+    files: FileChecks,
+    cloudflare: CloudflareInfo,
+    api: ApiInfo,
+    git: GitInfo,
+    class_key: str,
+    status_value: str,
+    show_on_dashboard: bool,
+    domain: str,
+    production_url: str,
+    cloudflare_project: str,
+) -> tuple[str, ...]:
+    reasons: list[str] = []
+    if not files.has_readme:
+        reasons.append(UI_TEXT["reason_status_readme_missing"])
+    if not files.has_meta:
+        reasons.append(UI_TEXT["reason_status_meta_missing"])
+    if git.error:
+        reasons.append(UI_TEXT["reason_status_git_error"])
+    if cloudflare.likely_pages and not (domain or production_url):
+        reasons.append(UI_TEXT["reason_status_production_missing"])
+    if cloudflare.likely_pages and not cloudflare_project:
+        reasons.append(UI_TEXT["reason_status_cloudflare_missing"])
+    if files.has_functions and not cloudflare.has_health_file:
+        reasons.append(UI_TEXT["reason_status_functions_health"])
+    if class_key == "api_review" or api.has_hardcoded_key_suspect or api.has_frontend_openai_direct:
+        reasons.append(UI_TEXT["reason_status_api_review"])
+    if class_key == "internal" or status_value.lower() in {"internal", "frozen", "archived"} or not show_on_dashboard:
+        reasons.append(UI_TEXT["reason_status_internal"])
+    if not reasons:
+        reasons.append(UI_TEXT["reason_status_clean"])
+    return unique_reasons(reasons)
+
+
+def build_api_reasons(files: FileChecks, cloudflare: CloudflareInfo, api: ApiInfo, health_url: str) -> tuple[str, ...]:
+    reasons: list[str] = []
+    if api.has_hardcoded_key_suspect:
+        reasons.append(UI_TEXT["reason_api_key"])
+    if api.has_frontend_openai_direct:
+        reasons.append(UI_TEXT["reason_api_front_direct"])
+    if api.has_openai_env_ref:
+        reasons.append(UI_TEXT["reason_api_env"])
+    if api.has_functions_openai:
+        reasons.append(UI_TEXT["reason_api_functions"])
+    if files.has_functions and (not health_url or not cloudflare.has_health_file):
+        reasons.append(UI_TEXT["reason_api_health_missing"])
+    if files.has_functions and not cloudflare.has_routes_api:
+        reasons.append(UI_TEXT["reason_api_routes_missing"])
+    if not reasons:
+        reasons.append(UI_TEXT["reason_api_none"])
+    return unique_reasons(reasons)
+
+
+def build_git_reasons(git: GitInfo) -> tuple[str, ...]:
+    reasons: list[str] = []
+    if not git.is_repo:
+        reasons.append(UI_TEXT["reason_git_no_repo"])
+    elif git.error:
+        reasons.append(UI_TEXT["reason_git_error"])
+    else:
+        if git.has_dirty:
+            reasons.append(UI_TEXT["reason_git_dirty"])
+        if git.has_untracked:
+            reasons.append(UI_TEXT["reason_git_untracked"])
+        if git.ahead > 0:
+            reasons.append(UI_TEXT["reason_git_ahead"])
+        if git.behind > 0:
+            reasons.append(UI_TEXT["reason_git_behind"])
+        if not reasons:
+            reasons.append(UI_TEXT["reason_git_clean"])
+    return unique_reasons(reasons)
+
+
+def build_next_action_reasons(
+    record_name: str,
+    class_key: str,
+    status_reasons: tuple[str, ...],
+    api_reasons: tuple[str, ...],
+    git_reasons: tuple[str, ...],
+) -> tuple[str, ...]:
+    reasons: list[str] = []
+    if class_key == "api_review":
+        reasons.append(f"{record_name}: {UI_TEXT['summary_api_review']}: {api_reasons[0]}")
+    if class_key == "needs_review":
+        reasons.append(f"{record_name}: {UI_TEXT['summary_needs_review']}: {status_reasons[0]}")
+    if UI_TEXT["reason_git_dirty"] in git_reasons:
+        reasons.append(f"{record_name}: {UI_TEXT['label_git']}: {UI_TEXT['reason_git_dirty']}")
+    if class_key == "deploy_review":
+        reasons.append(f"{record_name}: {UI_TEXT['summary_deploy_review']}: {status_reasons[0]}")
+    if not reasons:
+        reasons.append(f"{record_name}: {UI_TEXT['next_no_action']}")
+    return tuple(reasons[:5])
+
+
+def short_reason(record: SiteRecord) -> str:
+    source: tuple[str, ...]
+    if record.candidate_type == "candidate":
+        source = record.detection_reasons
+    elif record.class_key == "api_review":
+        source = record.api_reasons
+    elif record.git.error or record.git.has_dirty:
+        source = record.git_reasons
+    else:
+        source = record.status_reasons
+    return " / ".join(reason for reason in source[:2] if reason)
+
+
+def scan_site(folder: Path, candidate_info: CandidateInfo | None = None) -> SiteRecord:
+    candidate_info = candidate_info or build_candidate_info(folder)
     readme_path = folder / README_NAME
     package_path = folder / PACKAGE_NAME
     wrangler_path = folder / WRANGLER_NAME
@@ -1071,8 +1320,25 @@ def scan_site(folder: Path) -> SiteRecord:
         cloudflare_project,
         health_url,
     )
+    if candidate_info.candidate_type == "candidate":
+        class_key = "candidate"
+    status_reasons = build_status_reasons(
+        files,
+        cloudflare,
+        api,
+        git,
+        class_key,
+        status_value,
+        show_on_dashboard,
+        domain,
+        production_url,
+        cloudflare_project,
+    )
+    api_reasons = build_api_reasons(files, cloudflare, api, health_url)
+    git_reasons = build_git_reasons(git)
     missing_items = build_missing_items(files, cloudflare, api, git, domain, production_url, cloudflare_project)
-    next_items = build_next_items(files, cloudflare, api, git, domain, production_url)
+    next_action_reasons = build_next_action_reasons(folder.name, class_key, status_reasons, api_reasons, git_reasons)
+    next_items = next_action_reasons or build_next_items(files, cloudflare, api, git, domain, production_url)
     last_modified = latest_mtime(
         [
             readme_path,
@@ -1103,6 +1369,13 @@ def scan_site(folder: Path) -> SiteRecord:
         api=api,
         git=git,
         class_key=class_key,
+        detection_score=candidate_info.score,
+        detection_reasons=candidate_info.reasons,
+        status_reasons=status_reasons,
+        api_reasons=api_reasons,
+        git_reasons=git_reasons,
+        next_action_reasons=next_action_reasons,
+        candidate_type=candidate_info.candidate_type,
         missing_items=missing_items,
         next_items=next_items,
         last_modified=last_modified,
@@ -1110,6 +1383,7 @@ def scan_site(folder: Path) -> SiteRecord:
 
 
 def error_site(folder: Path, exc: Exception) -> SiteRecord:
+    candidate_info = build_candidate_info(folder)
     files = FileChecks(
         has_readme=(folder / README_NAME).exists(),
         has_meta=False,
@@ -1144,6 +1418,13 @@ def error_site(folder: Path, exc: Exception) -> SiteRecord:
         api=api,
         git=git,
         class_key="needs_review",
+        detection_score=candidate_info.score,
+        detection_reasons=candidate_info.reasons,
+        status_reasons=(str(exc),),
+        api_reasons=(UI_TEXT["reason_api_none"],),
+        git_reasons=build_git_reasons(git),
+        next_action_reasons=(UI_TEXT["next_no_action"],),
+        candidate_type=candidate_info.candidate_type,
         missing_items=(str(exc),),
         next_items=(UI_TEXT["next_no_action"],),
         last_modified=latest_mtime([folder / README_NAME], folder),
@@ -1152,9 +1433,9 @@ def error_site(folder: Path, exc: Exception) -> SiteRecord:
 
 def scan_sites(root: Path = DEV_ROOT) -> list[SiteRecord]:
     records: list[SiteRecord] = []
-    for folder in discover_site_folders(root):
+    for folder, candidate_info in discover_site_candidates(root):
         try:
-            records.append(scan_site(folder))
+            records.append(scan_site(folder, candidate_info))
         except Exception as exc:
             records.append(error_site(folder, exc))
     return records
@@ -1251,7 +1532,19 @@ class WebDashboardApp:
         self.detail_badge_var = tk.StringVar(value=UI_TEXT["value_unset"])
         self.notification_var = tk.StringVar(value="")
         self.summary_vars = {key: tk.StringVar(value="0") for key in ("total", "normal", "needs_review", "api_review", "deploy_review", "dirty")}
-        self.qpsc_vars = {key: tk.StringVar(value="0") for key in ("new_sites", "readme_missing", "meta_missing", "api_review", "cloudflare_review", "git_dirty")}
+        self.qpsc_vars = {
+            key: tk.StringVar(value="0")
+            for key in (
+                "new_sites",
+                "readme_missing",
+                "meta_missing",
+                "api_review",
+                "cloudflare_review",
+                "git_dirty",
+                "git_error",
+                "candidate_components",
+            )
+        }
         self.git_vars = {key: tk.StringVar(value="0") for key in ("dirty_sites", "untracked_sites", "ahead_sites", "error_sites")}
         self.filter_buttons: dict[str, tk.Button] = {}
         self.detail_link_counter = 0
@@ -1394,10 +1687,12 @@ class WebDashboardApp:
         pairs = [
             ("new_sites", UI_TEXT["qpsc_new_sites"]),
             ("readme_missing", UI_TEXT["qpsc_readme_missing"]),
-            ("meta_missing", UI_TEXT["qpsc_meta_missing"]),
-            ("api_review", UI_TEXT["qpsc_api_review"]),
+            ("meta_missing", UI_TEXT["qpsc_meta_missing"], UI_TEXT["qpsc_hint_meta"]),
+            ("api_review", UI_TEXT["qpsc_api_review"], UI_TEXT["qpsc_hint_api"]),
             ("cloudflare_review", UI_TEXT["qpsc_cloudflare_review"]),
             ("git_dirty", UI_TEXT["qpsc_git_dirty"]),
+            ("git_error", UI_TEXT["qpsc_git_error"], UI_TEXT["qpsc_hint_git"]),
+            ("candidate_components", UI_TEXT["qpsc_candidate_components"], UI_TEXT["qpsc_hint_candidate"]),
         ]
         self.compact_metrics(body, pairs, self.qpsc_vars)
         return frame
@@ -1416,13 +1711,19 @@ class WebDashboardApp:
         self.compact_metrics(body, pairs, self.git_vars)
         return frame
 
-    def compact_metrics(self, parent: tk.Misc, pairs: list[tuple[str, str]], vars_map: dict[str, tk.StringVar]) -> None:
-        for index, (key, label) in enumerate(pairs):
-            parent.columnconfigure(index, weight=1)
+    def compact_metrics(self, parent: tk.Misc, pairs: list[tuple[str, ...]], vars_map: dict[str, tk.StringVar]) -> None:
+        for index, item_data in enumerate(pairs):
+            key, label = item_data[0], item_data[1]
+            hint = item_data[2] if len(item_data) > 2 else ""
+            row = index // 4
+            column = index % 4
+            parent.columnconfigure(column, weight=1)
             item = tk.Frame(parent, bg=THEME["panel_alt"], highlightthickness=1, highlightbackground=THEME["border"])
-            item.grid(row=0, column=index, sticky="ew", padx=(0 if index == 0 else 7, 0))
+            item.grid(row=row, column=column, sticky="ew", padx=(0 if column == 0 else 7, 0), pady=(0 if row == 0 else 7, 0))
             tk.Label(item, text=label, bg=THEME["panel_alt"], fg=THEME["muted"], font=(self.font_family, 8)).pack(anchor="w", padx=10, pady=(8, 1))
             tk.Label(item, textvariable=vars_map[key], bg=THEME["panel_alt"], fg=THEME["text"], font=(self.font_family, 15, "bold")).pack(anchor="w", padx=10, pady=(0, 8))
+            if hint:
+                tk.Label(item, text=hint, bg=THEME["panel_alt"], fg=THEME["quiet"], font=(self.font_family, 7)).pack(anchor="w", padx=10, pady=(0, 8))
 
     def build_controls(self, parent: tk.Misc) -> None:
         controls = tk.Frame(parent, bg=THEME["bg"])
@@ -1464,7 +1765,7 @@ class WebDashboardApp:
 
         tree_frame = tk.Frame(list_panel, bg=THEME["panel"])
         tree_frame.pack(fill="both", expand=True, padx=14, pady=(0, 14))
-        columns = ("status", "folder", "display", "domain", "cloudflare", "git", "api", "functions", "updated")
+        columns = ("status", "folder", "display", "domain", "cloudflare", "git", "api", "functions", "reason", "updated")
         self.tree = ttk.Treeview(tree_frame, columns=columns, show="headings", style="Dashboard.Treeview", selectmode="browse")
         headings = {
             "status": UI_TEXT["column_status"],
@@ -1475,6 +1776,7 @@ class WebDashboardApp:
             "git": UI_TEXT["column_git"],
             "api": UI_TEXT["column_api"],
             "functions": UI_TEXT["column_functions"],
+            "reason": UI_TEXT["column_reason"],
             "updated": UI_TEXT["column_updated"],
         }
         widths = {
@@ -1486,6 +1788,7 @@ class WebDashboardApp:
             "git": 100,
             "api": 92,
             "functions": 88,
+            "reason": 180,
             "updated": 118,
         }
         for column in columns:
@@ -1685,8 +1988,10 @@ class WebDashboardApp:
 
     def update_summary(self, previous: dict[str, SiteRecord], current: dict[str, SiteRecord]) -> None:
         counts = {key: 0 for key in self.summary_vars}
-        counts["total"] = len(self.records)
-        for record in self.records:
+        site_records = [record for record in self.records if record.candidate_type == "site"]
+        candidate_records = [record for record in self.records if record.candidate_type == "candidate"]
+        counts["total"] = len(site_records)
+        for record in site_records:
             if record.class_key in counts:
                 counts[record.class_key] += 1
             if record.git.has_dirty:
@@ -1696,16 +2001,18 @@ class WebDashboardApp:
 
         new_sites = len(set(current) - set(previous)) if previous else 0
         self.qpsc_vars["new_sites"].set(str(new_sites))
-        self.qpsc_vars["readme_missing"].set(str(sum(1 for record in self.records if not record.files.has_readme)))
-        self.qpsc_vars["meta_missing"].set(str(sum(1 for record in self.records if not record.files.has_meta)))
-        self.qpsc_vars["api_review"].set(str(sum(1 for record in self.records if record.class_key == "api_review")))
-        self.qpsc_vars["cloudflare_review"].set(str(sum(1 for record in self.records if record.class_key == "deploy_review")))
-        self.qpsc_vars["git_dirty"].set(str(sum(1 for record in self.records if record.git.has_dirty)))
+        self.qpsc_vars["readme_missing"].set(str(sum(1 for record in site_records if not record.files.has_readme)))
+        self.qpsc_vars["meta_missing"].set(str(sum(1 for record in site_records if not record.files.has_meta)))
+        self.qpsc_vars["api_review"].set(str(sum(1 for record in site_records if record.class_key == "api_review")))
+        self.qpsc_vars["cloudflare_review"].set(str(sum(1 for record in site_records if record.class_key == "deploy_review")))
+        self.qpsc_vars["git_dirty"].set(str(sum(1 for record in site_records if record.git.has_dirty)))
+        self.qpsc_vars["git_error"].set(str(sum(1 for record in site_records if record.git.error)))
+        self.qpsc_vars["candidate_components"].set(str(len(candidate_records)))
 
-        self.git_vars["dirty_sites"].set(str(sum(1 for record in self.records if record.git.has_dirty)))
-        self.git_vars["untracked_sites"].set(str(sum(1 for record in self.records if record.git.has_untracked)))
-        self.git_vars["ahead_sites"].set(str(sum(1 for record in self.records if record.git.ahead > 0)))
-        self.git_vars["error_sites"].set(str(sum(1 for record in self.records if record.git.error)))
+        self.git_vars["dirty_sites"].set(str(sum(1 for record in site_records if record.git.has_dirty)))
+        self.git_vars["untracked_sites"].set(str(sum(1 for record in site_records if record.git.has_untracked)))
+        self.git_vars["ahead_sites"].set(str(sum(1 for record in site_records if record.git.ahead > 0)))
+        self.git_vars["error_sites"].set(str(sum(1 for record in site_records if record.git.error)))
 
     def schedule_auto_reload(self) -> None:
         self.root.after(AUTO_RELOAD_MS, self.auto_reload)
@@ -1816,7 +2123,8 @@ class WebDashboardApp:
             filtered.append(record)
         self.visible_records = filtered
         self.render_tree()
-        self.count_var.set(UI_TEXT["count_line"].format(visible=len(filtered), total=len(self.records)))
+        total_base = sum(1 for record in self.records if record.candidate_type == ("candidate" if self.filter_key == "candidate" else "site"))
+        self.count_var.set(UI_TEXT["count_line"].format(visible=len(filtered), total=total_base))
         if self.selected_record not in filtered:
             self.update_detail(filtered[0] if filtered else None)
             if filtered:
@@ -1826,7 +2134,11 @@ class WebDashboardApp:
 
     def matches_filter(self, record: SiteRecord) -> bool:
         if self.filter_key == "all":
-            return True
+            return record.candidate_type == "site"
+        if self.filter_key == "candidate":
+            return record.candidate_type == "candidate"
+        if record.candidate_type != "site":
+            return False
         if self.filter_key == "dirty":
             return record.git.has_dirty
         return record.class_key == self.filter_key
@@ -1843,6 +2155,9 @@ class WebDashboardApp:
                 record.production_url,
                 record.github_url,
                 record.cloudflare_url,
+                record.candidate_type,
+                " ".join(record.detection_reasons),
+                " ".join(record.status_reasons),
             ]
         ).lower()
         return query in haystack
@@ -1867,6 +2182,7 @@ class WebDashboardApp:
                     git_status_label(record.git),
                     api_label(record),
                     functions_label(record),
+                    short_reason(record),
                     format_datetime(record.last_modified),
                 ),
                 tags=(record.class_key,),
@@ -1972,9 +2288,26 @@ class WebDashboardApp:
 
     def build_detail_text(self, record: SiteRecord) -> str:
         lines = [
+            f"{UI_TEXT['label_detection_score']}: {record.detection_score}",
+            f"{UI_TEXT['label_candidate_type']}: {UI_TEXT.get(f'candidate_type_{record.candidate_type}', record.candidate_type)}",
             f"{UI_TEXT['label_site_type']}: {record.site_type or UI_TEXT['value_unset']}",
             f"{UI_TEXT['label_status']}: {record.status_value or UI_TEXT['value_unset']}",
             f"{UI_TEXT['label_show_dashboard']}: {bool_label(record.show_on_dashboard)}",
+            "",
+            UI_TEXT["label_detection_basis"],
+            *[f"- {reason}" for reason in record.detection_reasons],
+            "",
+            UI_TEXT["label_status_reasons"],
+            *[f"- {reason}" for reason in record.status_reasons],
+            "",
+            UI_TEXT["label_api_reasons"],
+            *[f"- {reason}" for reason in record.api_reasons],
+            "",
+            UI_TEXT["label_git_reasons"],
+            *[f"- {reason}" for reason in record.git_reasons],
+            "",
+            UI_TEXT["label_next_reasons"],
+            *[f"- {reason}" for reason in record.next_action_reasons],
             "",
             UI_TEXT["label_readme"],
             f"- {UI_TEXT['label_has_readme']}: {bool_label(record.files.has_readme)}",
@@ -2098,11 +2431,14 @@ def run_gui() -> int:
 
 def run_launch_check() -> int:
     records = scan_sites(DEV_ROOT)
-    api_review_count = sum(1 for record in records if record.class_key == "api_review")
-    dirty_count = sum(1 for record in records if record.git.has_dirty)
-    git_error_count = sum(1 for record in records if record.git.error)
+    site_records = [record for record in records if record.candidate_type == "site"]
+    candidate_count = sum(1 for record in records if record.candidate_type == "candidate")
+    component_site_count = sum(1 for record in site_records if record.folder_name.lower() in COMPONENT_DIR_NAMES)
+    api_review_count = sum(1 for record in site_records if record.class_key == "api_review")
+    dirty_count = sum(1 for record in site_records if record.git.has_dirty)
+    git_error_count = sum(1 for record in site_records if record.git.error)
     print(
-        f"{UI_TEXT['status_launch_check_ok']}: sites={len(records)} "
+        f"{UI_TEXT['status_launch_check_ok']}: sites={len(site_records)} candidates={candidate_count} component_sites={component_site_count} "
         f"api_review={api_review_count} dirty_sites={dirty_count} git_errors={git_error_count}"
     )
     return 0
