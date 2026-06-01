@@ -25,8 +25,6 @@ except Exception:
     ctypes = None
 
 
-APP_NAME = "QPSC Dashboard"
-WINDOW_TITLE = "QPSC Dashboard"
 APP_ID = "dake.qpsc.dashboard"
 APP_FOLDER_NAME = "DAKE_QPSC_Dashboard"
 APP_DASHBOARD_FOLDER = "DAKE_App_Dashboard"
@@ -44,9 +42,12 @@ WORKER_POLL_MS = 80
 MAX_NEXT_ACTIONS = 5
 
 UI_TEXT = {
-    "app_title": "QPSC Dashboard",
-    "header_title": "QPSCの現在地",
+    "window_title": "Quiet Personal Cognitive System",
+    "app_title": "Quiet Personal Cognitive System",
+    "header_title": "Quiet Personal Cognitive System",
+    "header_kicker": "QPSC",
     "header_subtitle": "正本を読み、次にやることだけを静かに表示します。",
+    "section_current_title": "現在地",
     "button_reload": "再確認",
     "button_open_app_dashboard": "App詳細",
     "button_open_web_dashboard": "Web詳細",
@@ -58,7 +59,7 @@ UI_TEXT = {
     "card_app_title": "アプリ",
     "card_site_title": "サイト",
     "card_git_title": "Git",
-    "card_next_title": "次にやる候補",
+    "card_next_title": "いま見るもの",
     "label_app_total": "アプリ総数",
     "label_booth_missing": "BOOTH未登録",
     "label_release_missing": "Release未作成",
@@ -857,7 +858,7 @@ class QpscDashboardApp:
         self.root.after(120, self.refresh)
 
     def configure_root(self) -> None:
-        self.root.title(WINDOW_TITLE)
+        self.root.title(UI_TEXT["window_title"])
         self.root.geometry("1200x800")
         self.root.minsize(1080, 720)
         self.root.configure(bg=THEME["bg"])
@@ -871,7 +872,8 @@ class QpscDashboardApp:
         title_area = tk.Frame(header, bg=THEME["bg"])
         title_area.pack(side="left", anchor="w")
         tk.Label(title_area, text=UI_TEXT["header_title"], bg=THEME["bg"], fg=THEME["text"], font=(self.font_family, 26, "bold")).pack(anchor="w")
-        tk.Label(title_area, text=UI_TEXT["header_subtitle"], bg=THEME["bg"], fg=THEME["muted"], font=(self.font_family, 12)).pack(anchor="w", pady=(4, 0))
+        tk.Label(title_area, text=UI_TEXT["header_kicker"], bg=THEME["bg"], fg=THEME["quiet"], font=(self.font_family, 10, "bold")).pack(anchor="w", pady=(3, 0))
+        tk.Label(title_area, text=UI_TEXT["header_subtitle"], bg=THEME["bg"], fg=THEME["muted"], font=(self.font_family, 12)).pack(anchor="w", pady=(5, 0))
         actions = tk.Frame(header, bg=THEME["bg"])
         actions.pack(side="right", anchor="e")
         self.reload_button = self.make_button(actions, UI_TEXT["button_reload"], self.refresh, primary=True)
@@ -879,8 +881,9 @@ class QpscDashboardApp:
         self.make_button(actions, UI_TEXT["button_open_app_dashboard"], self.open_app_dashboard).pack(side="left", padx=(0, 8))
         self.make_button(actions, UI_TEXT["button_open_web_dashboard"], self.open_web_dashboard).pack(side="left")
 
+        tk.Label(outer, text=UI_TEXT["section_current_title"], bg=THEME["bg"], fg=THEME["text"], font=(self.font_family, 13, "bold")).pack(anchor="w", pady=(24, 8))
         cards = tk.Frame(outer, bg=THEME["bg"])
-        cards.pack(fill="x", pady=(24, 18))
+        cards.pack(fill="x", pady=(0, 18))
         cards.grid_columnconfigure(0, weight=1, uniform="cards")
         cards.grid_columnconfigure(1, weight=1, uniform="cards")
         self.build_app_card(cards).grid(row=0, column=0, sticky="nsew", padx=(0, 10))
@@ -1188,7 +1191,7 @@ def run_launch_check() -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=APP_NAME)
+    parser = argparse.ArgumentParser(description=UI_TEXT["window_title"])
     parser.add_argument("--launch-check", action="store_true")
     args = parser.parse_args()
     if args.launch_check:
