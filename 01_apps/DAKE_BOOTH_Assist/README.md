@@ -74,6 +74,21 @@ BOOTH画面が変わるため、無理に自動アップロードしません。
 
 Chromeプロファイルは `%LOCALAPPDATA%\DakeBOOTH_Assist\chrome_profile` に作成されます。ログイン状態の保存はChrome側の通常機能に任せ、アプリ側でログインID、パスワード、cookieを読み取りません。
 
+## Factory v2 読み取り
+
+DakeBOOTHアシストは Factory v2 の `booth_product.txt` を正本として読み取ります。
+
+読み取り優先順位：
+
+1. `booth_ready/booth_product.txt`
+2. ルート直下 `booth_product.txt`
+3. README.md の `DAKE_META`
+
+`booth_product.txt` から商品名、価格、説明文、タグ、GitHub Release URL、BOOTH URL、商品画像、zipを読み取ります。
+不足時のみ README の `display_name` / `site_title` / `site_description` / `update_summary` / `release_url` を fallback として使います。
+
+公開ボタンは押さず、入力補助とURL戻し補助だけを行います。
+
 ## DAKE_META
 
 ```json

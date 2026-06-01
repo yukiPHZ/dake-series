@@ -430,11 +430,16 @@ def normalize_key(value: str) -> str:
     return normalized
 
 
+def normalized_field_aliases() -> dict[str, str]:
+    return {normalize_key(alias): field_name for alias, field_name in FIELD_ALIASES.items()}
+
+
 def resolve_field_name(label: str) -> str | None:
     key = normalize_key(label)
-    if key in FIELD_ALIASES:
-        return FIELD_ALIASES[key]
-    for alias, field_name in FIELD_ALIASES.items():
+    aliases = normalized_field_aliases()
+    if key in aliases:
+        return aliases[key]
+    for alias, field_name in aliases.items():
         if alias and alias in key:
             return field_name
     return None
@@ -446,7 +451,7 @@ def is_stop_section_label(value: str) -> bool:
 
 
 def resolve_section_field(value: str) -> tuple[str | None, bool]:
-    field_name = FIELD_ALIASES.get(normalize_key(value))
+    field_name = normalized_field_aliases().get(normalize_key(value))
     if field_name:
         return field_name, True
     if is_stop_section_label(value):
@@ -773,12 +778,13 @@ def parse_booth_product(path: Path) -> dict[str, str]:
                 buffers.setdefault(field_name, [])
                 continue
 
-        field_name, is_section = resolve_section_field(stripped)
-        if is_section:
-            current_field = field_name
-            if field_name:
-                buffers.setdefault(field_name, [])
-            continue
+        if current_field != "tags":
+            field_name, is_section = resolve_section_field(stripped)
+            if is_section:
+                current_field = field_name
+                if field_name:
+                    buffers.setdefault(field_name, [])
+                continue
 
         if current_field:
             buffers.setdefault(current_field, []).append(line)
@@ -857,10 +863,11 @@ def build_product_info(app_dir: Path) -> ProductInfo:
     }
     parsed.update(parse_booth_product(product_path))
     readme_meta = extract_readme_meta(app_dir)
-    readme_title = safe_text(readme_meta.get("display_name")) or safe_text(readme_meta.get("launcher_title")) or safe_text(readme_meta.get("site_title"))
+    readme_title = safe_text(readme_meta.get("display_name")) or safe_text(readme_meta.get("site_title")) or safe_text(readme_meta.get("launcher_title"))
+    readme_description = safe_text(readme_meta.get("site_description")) or safe_text(readme_meta.get("update_summary"))
     parsed["title"] = parsed["title"] or readme_title
-    parsed["description"] = parsed["description"] or safe_text(readme_meta.get("update_summary"))
-    parsed["github_release"] = safe_text(readme_meta.get("release_url")) or parsed["github_release"]
+    parsed["description"] = parsed["description"] or readme_description
+    parsed["github_release"] = parsed["github_release"] or safe_text(readme_meta.get("release_url"))
     product_source = format_product_source(app_dir, found_product_path)
     ready_dir = app_dir / READY_DIR_NAME
     ready_exists = ready_dir.exists() and ready_dir.is_dir()
