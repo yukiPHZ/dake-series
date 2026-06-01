@@ -1,0 +1,108 @@
+# encoding: utf-8
+
+【絶対ルール】
+すべてのファイルはUTF-8で扱うこと。
+文字コードを確認する質問は禁止。
+
+【DAKEシリーズ｜UI_TEXT共通テンプレート】
+
+■ 目的
+・DAKEシリーズで共通して使うUI文言定義のテンプレート
+・文字化け防止
+・文言一元管理
+・差し替えしやすい構造を固定する
+
+■ Python実装テンプレート
+
+# -*- coding: utf-8 -*-
+
+APP_NAME = "アプリ名"
+WINDOW_TITLE = "ウィンドウタイトル"
+COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
+
+UI_TEXT = {
+    "brand_series": "シンプルそれDAKEシリーズ",
+  
+    "main_title": "画面メイン見出し",
+    "main_description": "画面説明文",
+
+    "button_add": "追加",
+    "button_select_folder": "保存先を選ぶ",
+    "button_refresh": "リフレッシュ",
+    "button_cancel": "キャンセル",
+    "button_execute": "実行",
+
+    "empty_title": "追加してください",
+    "empty_title_drop": "ドロップしてください",
+    "empty_subtitle": "ドラッグ＆ドロップ または クリックして追加",
+
+    "status_idle": "未選択",
+    "status_loading": "読み込み中",
+    "status_ready": "準備完了",
+    "status_processing": "処理中",
+    "status_saving": "保存中",
+    "status_complete": "完了",
+    "status_error": "エラー",
+
+    "footer_left": "シンプルそれDAKEシリーズ",
+    "footer_link_1": "リンク1",
+    "footer_link_2": "リンク2",
+    "footer_separator": " ｜ ",
+    "footer_copyright": "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta",
+}
+
+【追記｜ヘッダー・フッター表示レイアウト補足】
+
+■ 原則
+・main_title と main_description は横並びを基本とする
+・footer_left / footer_link_1 / footer_link_2 / footer_copyright は左右ブロック構成を基本とする
+
+■ 例外
+・ウインドウ幅が狭い場合は、縦並びを認める
+・フッター部のみ中央揃えを認める
+・文言キーは変更せず、配置だけを調整する
+【ここまで追記｜ヘッダー・フッター表示レイアウト補足】
+
+■ DakePDF結合 用の確定例
+
+APP_NAME = "DakePDF結合"
+WINDOW_TITLE = "DakePDF結合"
+
+UI_TEXT = {
+    "brand_series": "シンプルそれDAKEシリーズ",
+    "header_subtitle": "止まらない、迷わない、すぐ終わる。",
+
+    "main_title": "PDFを結合する",
+    "main_description": "複数のPDFを追加して、そのまま1つにまとめます。",
+
+    "button_add": "PDFを追加",
+    "button_select_folder": "保存先を選ぶ",
+    "button_refresh": "リフレッシュ",
+    "button_cancel": "キャンセル",
+    "button_execute": "結合して保存",
+
+    "empty_title": "PDFを追加してください",
+    "empty_title_drop": "PDFをドロップしてください",
+    "empty_subtitle": "ドラッグ＆ドロップ または クリックして追加",
+
+    "status_idle": "未選択",
+    "status_loading": "読み込み中",
+    "status_ready": "準備完了",
+    "status_processing": "処理中",
+    "status_saving": "保存中",
+    "status_complete": "保存完了",
+    "status_error": "エラー",
+
+    "footer_left": "シンプルそれDAKEシリーズ",
+    "footer_link_1": "戸建買取査定",
+    "footer_link_2": "Instagram",
+    "footer_separator": " ｜ ",
+    "footer_copyright": "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta",
+}
+
+"status_processing_base": "処理中",
+"status_processing_dots": ["処理中.", "処理中..", "処理中..."],
+
+"status_phrase_1": "Simple",
+"status_phrase_2": "Simple, fast",
+"status_phrase_3": "Simple, fast, for real work.",
