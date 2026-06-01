@@ -3,10 +3,6 @@ from __future__ import annotations
 
 import sys
 
-if "--launch-check" in sys.argv:
-    print("DakeBOOTH_Assist launch-check OK")
-    raise SystemExit(0)
-
 import builtins
 import json
 import os
@@ -250,8 +246,11 @@ FIELD_ALIASES = {
     "name": "title",
     "title": "title",
     "価格": "price",
+    "価格案": "price",
     "販売価格": "price",
     "price": "price",
+    "概要": "description",
+    "できること": "description",
     "説明": "description",
     "説明文": "description",
     "商品説明": "description",
@@ -269,11 +268,14 @@ FIELD_ALIASES = {
     "releaseurl": "github_release",
     "release_url": "github_release",
     "ファイル": "zip_path",
+    "作品ファイル": "zip_path",
+    "配布zip": "zip_path",
     "zip": "zip_path",
     "zipfile": "zip_path",
     "zippath": "zip_path",
     "zip_path": "zip_path",
     "商品画像": "thumbnail_path",
+    "booth商品画像": "thumbnail_path",
     "画像": "thumbnail_path",
     "thumbnail": "thumbnail_path",
     "thumbnailpath": "thumbnail_path",
@@ -285,6 +287,16 @@ KEY_VALUE_RE = re.compile(r"^\s*([^:=]+?)\s*[:=]\s*(.*)$")
 BOOTH_ITEM_ID_RE = re.compile(r"/items/(\d+)")
 BOOTH_URL_SAVE_KEYS = {"boothurl", "url"}
 GITHUB_RELEASE_RE = re.compile(r"https?://github\.com/[^\s)]+/releases/[^\s)]+", re.IGNORECASE)
+DAKE_META_RE = re.compile(r"##\s*DAKE_META\b.*?```(?:json)?\s*(\{.*?\})\s*```", re.IGNORECASE | re.DOTALL)
+STOP_SECTION_LABELS = {
+    "使い方",
+    "注意事項",
+    "DAKEシリーズ表記",
+    "対象",
+    "配布物",
+    "免責",
+    "コピーライト",
+}
 
 
 TITLE_LOCATORS = (
@@ -428,6 +440,20 @@ def resolve_field_name(label: str) -> str | None:
     return None
 
 
+def is_stop_section_label(value: str) -> bool:
+    key = normalize_key(value)
+    return any(key == normalize_key(label) for label in STOP_SECTION_LABELS)
+
+
+def resolve_section_field(value: str) -> tuple[str | None, bool]:
+    field_name = FIELD_ALIASES.get(normalize_key(value))
+    if field_name:
+        return field_name, True
+    if is_stop_section_label(value):
+        return None, True
+    return None, False
+
+
 def read_text_safely(path: Path) -> str:
     for encoding_name in ("utf-8-sig", "utf-8"):
         try:
@@ -442,10 +468,31 @@ def read_text_safely(path: Path) -> str:
         return ""
 
 
+def safe_text(value: object) -> str:
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def extract_readme_meta(app_dir: Path) -> dict[str, object]:
+    readme_path = app_dir / "README.md"
+    text = read_text_safely(readme_path)
+    if not text:
+        return {}
+    match = DAKE_META_RE.search(text)
+    if not match:
+        return {}
+    try:
+        loaded = json.loads(match.group(1))
+    except json.JSONDecodeError:
+        return {}
+    return loaded if isinstance(loaded, dict) else {}
+
+
 def find_booth_product_path(app_dir: Path) -> Path | None:
     candidates = (
-        app_dir / PRODUCT_FILE_NAME,
         app_dir / READY_DIR_NAME / PRODUCT_FILE_NAME,
+        app_dir / PRODUCT_FILE_NAME,
     )
     for candidate in candidates:
         try:
@@ -703,13 +750,14 @@ def parse_booth_product(path: Path) -> dict[str, str]:
     fields: dict[str, str] = {}
     buffers: dict[str, list[str]] = {}
     current_field: str | None = None
+    text = read_text_safely(path)
 
-    for raw_line in read_text_safely(path).splitlines():
+    for raw_line in text.splitlines():
         line = raw_line.rstrip()
         stripped = line.strip()
 
         if stripped.startswith("#"):
-            field_name = resolve_field_name(stripped.lstrip("#").strip())
+            field_name, _is_section = resolve_section_field(stripped.lstrip("#").strip())
             current_field = field_name
             if field_name:
                 buffers.setdefault(field_name, [])
@@ -725,15 +773,24 @@ def parse_booth_product(path: Path) -> dict[str, str]:
                 buffers.setdefault(field_name, [])
                 continue
 
+        field_name, is_section = resolve_section_field(stripped)
+        if is_section:
+            current_field = field_name
+            if field_name:
+                buffers.setdefault(field_name, [])
+            continue
+
         if current_field:
             buffers.setdefault(current_field, []).append(line)
 
     for field_name, lines in buffers.items():
-        if field_name not in fields and any(line.strip() for line in lines):
+        if fields.get(field_name, "").strip():
+            continue
+        if any(line.strip() for line in lines):
             fields[field_name] = "\n".join(lines).strip()
 
     if "github_release" not in fields:
-        release_match = GITHUB_RELEASE_RE.search(read_text_safely(path))
+        release_match = GITHUB_RELEASE_RE.search(text)
         if release_match:
             fields["github_release"] = release_match.group(0).rstrip("、。，,)")
 
@@ -799,6 +856,11 @@ def build_product_info(app_dir: Path) -> ProductInfo:
         "thumbnail_path": "",
     }
     parsed.update(parse_booth_product(product_path))
+    readme_meta = extract_readme_meta(app_dir)
+    readme_title = safe_text(readme_meta.get("display_name")) or safe_text(readme_meta.get("launcher_title")) or safe_text(readme_meta.get("site_title"))
+    parsed["title"] = parsed["title"] or readme_title
+    parsed["description"] = parsed["description"] or safe_text(readme_meta.get("update_summary"))
+    parsed["github_release"] = safe_text(readme_meta.get("release_url")) or parsed["github_release"]
     product_source = format_product_source(app_dir, found_product_path)
     ready_dir = app_dir / READY_DIR_NAME
     ready_exists = ready_dir.exists() and ready_dir.is_dir()
@@ -2208,8 +2270,41 @@ def run_launch_check() -> int:
         (both_product_app / PRODUCT_FILE_NAME).write_text("TITLE=Root Sample\n", encoding="utf-8")
         (both_ready_dir / PRODUCT_FILE_NAME).write_text("TITLE=Ready Sample\n", encoding="utf-8")
         both_product = build_product_info(both_product_app)
-        if both_product.title != "Root Sample" or both_product.product_source != PRODUCT_FILE_NAME:
-            raise RuntimeError("root product priority fixture failed")
+        if both_product.title != "Ready Sample" or both_product.product_source != f"{READY_DIR_NAME}/{PRODUCT_FILE_NAME}":
+            raise RuntimeError("ready product priority fixture failed")
+
+        factory_app = temp_root / "FactoryV2"
+        factory_ready_dir = factory_app / READY_DIR_NAME
+        factory_ready_dir.mkdir(parents=True)
+        (factory_app / PRODUCT_FILE_NAME).write_text(
+            "商品名\nRoot Title\n\n概要\nRoot description\n\nできること\n- Root feature\n\n使い方\n1. Root usage\n",
+            encoding="utf-8",
+        )
+        (factory_ready_dir / PRODUCT_FILE_NAME).write_text(
+            "# 商品名\nReady Title\n\n# 価格案\n500円\n\n# 商品紹介文\nReady description\n\n# タグ\nPDF\nWindows\n\n# GitHub Release\nhttps://github.com/yukiPHZ/dake-series/releases/tag/Ready_v1.0.0\n\n# URL\n",
+            encoding="utf-8",
+        )
+        factory_product = build_product_info(factory_app)
+        if factory_product.title != "Ready Title" or factory_product.price != "500円":
+            raise RuntimeError("factory v2 title/price fixture failed")
+        if split_tags(factory_product.tags) != ["PDF", "Windows"]:
+            raise RuntimeError("factory v2 tags fixture failed")
+        if factory_product.github_release != "https://github.com/yukiPHZ/dake-series/releases/tag/Ready_v1.0.0":
+            raise RuntimeError("factory v2 github release fixture failed")
+
+        readme_fallback_app = temp_root / "ReadmeFallback"
+        readme_fallback_app.mkdir()
+        (readme_fallback_app / "README.md").write_text(
+            "## DAKE_META\n\n```json\n{\"display_name\":\"Fallback Name\",\"update_summary\":\"Fallback summary\",\"release_url\":\"https://github.com/yukiPHZ/dake-series/releases/tag/Fallback_v1.0.0\"}\n```\n",
+            encoding="utf-8",
+        )
+        readme_fallback_product = build_product_info(readme_fallback_app)
+        if readme_fallback_product.title != "Fallback Name":
+            raise RuntimeError("readme display_name fallback fixture failed")
+        if readme_fallback_product.description != "Fallback summary":
+            raise RuntimeError("readme update_summary fallback fixture failed")
+        if readme_fallback_product.github_release != "https://github.com/yukiPHZ/dake-series/releases/tag/Fallback_v1.0.0":
+            raise RuntimeError("readme release_url fallback fixture failed")
 
         url_app = temp_root / "UrlApp"
         url_ready_dir = url_app / READY_DIR_NAME
@@ -2319,7 +2414,7 @@ def run_launch_check() -> int:
     print(f"edit_url_hint={BOOTH_EDIT_URL_HINT}")
     print(f"chrome_path={find_chrome_executable() or 'missing'}")
     print(f"chrome_profile={get_chrome_profile_dir()}")
-    print("fixtures=missing_product, missing_ready, multiple_zip, missing_playwright_python, ready_product_lookup, root_product_priority, open_edit_url_only, bad_page_detection, tag_split, file_input_detection, manual_file_upload, booth_url_save")
+    print("fixtures=missing_product, missing_ready, multiple_zip, missing_playwright_python, ready_product_lookup, ready_product_priority, factory_v2_product, readme_fallback, open_edit_url_only, bad_page_detection, tag_split, file_input_detection, manual_file_upload, booth_url_save")
     return 0
 
 
