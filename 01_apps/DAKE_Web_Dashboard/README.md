@@ -6,10 +6,10 @@ DAKE Web Dashboard は、菊田さん本人の開発アシスト専用に作成�
 
 ## 役割
 
-- DAKE / QPSC / PEAKHEADZ / BORINEF / holiday-jinja / JapanMemoryLane / SHIMARISU などのサイト群の開発管制塔
-- README正本可視化アプリ
-- Cloudflare Pages / Functions / 独自ドメイン / Git状態 / OpenAI API構成の確認補助
-- Notionや記憶頼みの管理から、リポジトリ内の正本情報を読む運用への移行補助
+- DAKE / QPSC / PEAKHEADZ / BORINEF / holiday-jinja / JapanMemoryLane / SHIMARISU などのサイト群を一覧で見るサイト台帳
+- サイト名、ドメイン / URL、カテゴリ、公開状態、説明、フォルダ、最終更新の確認
+- Notionや記憶頼みの管理から、リポジトリ内のREADME / DAKE_WEB_METAを読む運用への移行補助
+- Cloudflare Pages / Functions / Git状態 / OpenAI API構成は、詳細ペインで確認する補助情報
 
 ## 読み取り対象
 
@@ -34,21 +34,38 @@ C:\Users\yukiz\devlop
 
 ## 判定内容
 
+- サイト名、説明、カテゴリ、domain / production_url の台帳表示
+- 公開中 / 制作中 / URL不明 / 要整理 / 休止・凍結の分類
 - README.md と DAKE_WEB_META の有無
-- Gitリポジトリ、ブランチ、最新コミット、未コミット変更、未追跡ファイル、push / pull 待ち疑い
-- Cloudflare Pagesらしさ、pages_build_output_dir、functions/api、/api/health、_routes.json の /api/* include
-- OpenAI API関連の安全性確認
-- production_url / domain / cloudflare_project の正本記載状況
+- domain / production_url / README内URL / package.json homepage / known domain map からのURL推定
+- Gitリポジトリ、Cloudflare Pages、Functions、OpenAI API構成の確認補助
 
 APIキーらしき値は表示しません。`sk-` らしき文字列を見つけた場合も全文は出さず、直書き疑いとして表示します。
 
 ## 状態分類
 
-- 正常
-- 要確認
-- API確認
-- デプロイ確認
-- 内部 / 凍結
+- 公開中
+- 制作中
+- URL不明
+- 要整理
+- 休止 / 凍結
+- 候補
+
+APIあり、Git未コミット、Functions構成などは主状態ではなく、補助ラベルや詳細ペインで扱います。
+
+## Phase3 サイト台帳モード
+
+Phase3では、画面の主役を監査情報からサイト一覧・サイト台帳へ変更しています。
+
+- 上部カードは、総サイト数、公開中、制作中、休止 / 凍結、URL不明、要整理を表示
+- 一覧列は、状態、サイト名、ドメイン / URL、カテゴリ、説明、フォルダ、最終更新、整理メモを優先
+- Git / API / Functions / Cloudflare構成は補助情報として右側列または詳細ペインへ移動
+- domain / production_url は DAKE_WEB_META、README、package.json、known domain map の順で推定
+- GitHub URL、Cloudflare管理画面URL、google.com系URLは本番URLとして誤検出しない
+- カテゴリは DAKE、SHIMARISU、PEAKHEADZ、BORINEF、holiday、QPSC、blog、note、other に分類
+- 「Codex指示をコピー」で、選択中サイトのREADME / DAKE_WEB_META整備指示をクリップボードへコピー
+- 「META候補をコピー」で、選択中サイト用の DAKE_WEB_META JSON 候補をクリップボードへコピー
+- DAKE_WEB_META未整備は強い警告ではなく、補助情報を整える候補として扱う
 
 ## Phase2.5 判定透明化
 
@@ -74,6 +91,8 @@ Phase2.5 では、状態名だけでなく「なぜその判定になったか�
 - production_url をブラウザで開く
 - health_url をブラウザで開く
 - README等から取得できたGitHub URLを開く
+- 選択中サイト用のCodex指示をコピー
+- 選択中サイト用のDAKE_WEB_META候補をコピー
 - フィルタ切替
 - 検索
 

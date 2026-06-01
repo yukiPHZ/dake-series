@@ -71,69 +71,80 @@ UI_TEXT = {
     "button_watch_stop": "監視停止",
     "button_open_folder": "サイトフォルダを開く",
     "button_open_readme": "README.md を開く",
-    "button_open_production": "production_url を開く",
+    "button_open_site": "サイトを開く",
     "button_open_health": "health_url を開く",
     "button_open_github": "GitHub を開く",
     "button_open_cloudflare": "Cloudflare を開く",
+    "button_copy_codex": "Codex指示をコピー",
+    "button_copy_meta": "META候補をコピー",
     "button_url_missing": "URL なし",
     "summary_total": "総サイト数",
-    "summary_normal": "正常",
-    "summary_needs_review": "要確認",
+    "summary_active": "公開中",
+    "summary_working": "制作中",
+    "summary_paused": "休止 / 凍結",
+    "summary_url_missing": "URL不明",
+    "summary_needs_organizing": "要整理",
+    "summary_dirty": "未コミットあり",
     "summary_api_review": "API確認",
     "summary_deploy_review": "デプロイ確認",
-    "summary_dirty": "未コミットあり",
-    "qpsc_title": "QPSC通知カード",
-    "qpsc_subtitle": "正本と構成差分を監視中",
-    "qpsc_new_sites": "新規サイト検出",
+    "qpsc_title": "サイト台帳メモ",
+    "qpsc_subtitle": "URL・説明・カテゴリなど、台帳として整える候補",
+    "qpsc_url_missing": "URL未整理",
+    "qpsc_description_missing": "説明未整理",
+    "qpsc_category_missing": "カテゴリ未整理",
     "qpsc_readme_missing": "README未整備",
     "qpsc_meta_missing": "DAKE_WEB_META未整備",
-    "qpsc_api_review": "API確認が必要",
+    "qpsc_api_review": "API確認あり",
     "qpsc_cloudflare_review": "Cloudflare確認が必要",
     "qpsc_git_dirty": "Git未コミットあり",
     "qpsc_git_error": "Git取得不可",
     "qpsc_candidate_components": "誤検出候補",
-    "qpsc_hint_meta": "README正本化が必要",
-    "qpsc_hint_api": "Functions / OpenAI / health を確認",
+    "qpsc_hint_meta": "補助情報を整える候補",
+    "qpsc_hint_api": "必要なら Functions / health を確認",
     "qpsc_hint_git": "repo外またはGit状態取得失敗",
     "qpsc_hint_candidate": "public / functions / sitemap など",
-    "git_card_title": "Git状態カード",
+    "git_card_title": "開発補助カード",
     "git_dirty_sites": "未コミット変更ありサイト",
     "git_untracked_sites": "未追跡ありサイト",
     "git_ahead_sites": "push待ち疑い",
     "git_error_sites": "Git取得不可",
     "filter_all": "全部",
-    "filter_normal": "正常",
-    "filter_needs_review": "要確認",
-    "filter_api_review": "API確認",
-    "filter_deploy_review": "デプロイ確認",
+    "filter_active": "公開中",
+    "filter_working": "制作中",
+    "filter_url_missing": "URL不明",
+    "filter_needs_organizing": "要整理",
+    "filter_api": "APIあり",
     "filter_dirty": "未コミット",
     "filter_candidate": "候補",
-    "filter_internal": "内部 / 凍結",
+    "filter_paused": "休止 / 凍結",
     "search_label": "検索",
-    "search_placeholder": "フォルダ名・表示名・domain・Cloudflare・status を検索",
-    "list_title": "サイト一覧",
+    "search_placeholder": "サイト名・URL・カテゴリ・説明・フォルダを検索",
+    "list_title": "サイト台帳",
     "detail_title": "詳細ペイン",
-    "detail_empty": "サイトを選択すると、正本情報と不足項目を確認できます。",
+    "detail_empty": "サイトを選択すると、サイト情報と整理候補を確認できます。",
     "next_title": "次にやる候補",
     "count_line": "{visible} / {total} 件を表示",
     "column_status": "状態",
-    "column_folder": "フォルダ名",
-    "column_display": "表示名",
-    "column_domain": "ドメイン",
+    "column_folder": "フォルダ",
+    "column_display": "サイト名",
+    "column_site_url": "ドメイン / URL",
+    "column_category": "カテゴリ",
+    "column_description": "説明",
     "column_cloudflare": "Cloudflare Project",
-    "column_git": "Git状態",
+    "column_git": "Git",
     "column_api": "API",
     "column_functions": "Functions",
-    "column_reason": "判定理由",
+    "column_inventory_note": "整理メモ",
     "column_updated": "最終更新",
-    "class_normal": "正常",
-    "class_needs_review": "要確認",
-    "class_api_review": "API確認",
-    "class_deploy_review": "デプロイ確認",
+    "class_active": "公開中",
+    "class_working": "制作中",
+    "class_url_missing": "URL不明",
+    "class_needs_organizing": "要整理",
+    "class_api_available": "APIあり",
     "class_candidate": "候補",
-    "class_internal": "内部 / 凍結",
+    "class_paused": "休止 / 凍結",
     "status_loading": "読み込み中",
-    "status_ready": "正本を読み込みました",
+    "status_ready": "サイト台帳を読み込みました",
     "status_error": "確認が必要です",
     "status_launch_check_ok": "LAUNCH CHECK OK",
     "value_yes": "あり",
@@ -148,11 +159,22 @@ UI_TEXT = {
     "value_not_repo": "Gitなし",
     "value_static": "静的",
     "value_functions": "Functions",
+    "value_api_available": "APIあり",
     "value_api_review": "API要確認",
     "value_direct_key": "直書き疑い",
     "value_front_direct": "直叩き疑い",
     "value_env_design": "env経由",
     "value_watchdog_missing": "watchdog未導入",
+    "value_inferred": "推定",
+    "value_candidate": "候補",
+    "value_other": "other",
+    "label_site_name": "サイト名",
+    "label_site_url": "ドメイン / URL",
+    "label_category": "カテゴリ",
+    "label_description": "説明",
+    "label_public_status": "公開状態",
+    "label_url_source": "URL根拠",
+    "label_development_info": "開発情報",
     "label_folder_path": "フォルダパス",
     "label_readme_path": "README.md",
     "label_domain": "domain",
@@ -205,9 +227,11 @@ UI_TEXT = {
     "label_untracked_count": "未追跡ファイル数",
     "label_ahead": "push待ち疑い",
     "label_behind": "pull待ち疑い",
-    "missing_none": "不足は見つかっていません。",
+    "missing_none": "整理候補は見つかっていません。",
     "missing_readme": "README.md がありません。",
     "missing_meta": "DAKE_WEB_META が未整備です。",
+    "missing_description": "サイト説明が未整理です。",
+    "missing_category": "カテゴリが未整理です。",
     "missing_git": "Gitリポジトリではありません。",
     "missing_git_error": "Git状態を取得できません。",
     "missing_package": "package.json がありません。",
@@ -223,6 +247,8 @@ UI_TEXT = {
     "next_fix_front_direct": "フロント直叩きをFunctions経由へ移す",
     "next_add_readme": "README.md を整備する",
     "next_add_meta": "README.md に DAKE_WEB_META を追加する",
+    "next_add_description": "サイト説明をREADMEまたはDAKE_WEB_METAに追記する",
+    "next_add_category": "カテゴリをDAKE_WEB_METAに記録する",
     "next_git_commit": "Git未コミット変更の内容を確認する",
     "next_add_wrangler": "Cloudflare Pages構成として wrangler.toml を確認する",
     "next_add_health": "Functionsありサイトに /api/health を用意する",
@@ -244,15 +270,20 @@ UI_TEXT = {
     "reason_component_sitemap": "sitemap単体のためサイト本体ではない可能性",
     "reason_parent_site_component": "親フォルダがサイトの構成要素",
     "reason_low_signal": ".git / README.md / wrangler.toml がありません",
-    "reason_status_meta_missing": "DAKE_WEB_META が未整備",
+    "reason_status_meta_missing": "DAKE_WEB_META 未整備は補助情報の整理候補",
     "reason_status_readme_missing": "README.md がありません",
     "reason_status_git_error": "Git状態を取得できません",
+    "reason_status_active_url": "公開URLが見つかりました",
+    "reason_status_working": "制作中として扱います",
+    "reason_status_url_missing": "domain / production_url が未整理",
+    "reason_status_needs_organizing": "台帳情報の整理候補",
+    "reason_status_candidate": "サイト候補として検出",
     "reason_status_production_missing": "production_url が未設定",
     "reason_status_cloudflare_missing": "cloudflare_project が未設定",
     "reason_status_functions_health": "functions あり / health 未確認",
-    "reason_status_api_review": "OpenAI API確認が必要",
-    "reason_status_internal": "内部 / 凍結扱い",
-    "reason_status_clean": "主要な不足は見つかっていません",
+    "reason_status_api_review": "API構成があります",
+    "reason_status_internal": "休止 / 凍結扱い",
+    "reason_status_clean": "台帳として大きな整理候補は見つかっていません",
     "reason_api_key": "APIキー直書き疑い",
     "reason_api_front_direct": "フロントOpenAI直叩き疑い",
     "reason_api_env": "OPENAI_API_KEY参照あり",
@@ -276,7 +307,33 @@ UI_TEXT = {
     "dialog_missing_path": "対象が見つかりません。\n\n{path}",
     "dialog_url_missing": "URL が設定されていません。",
     "dialog_url_invalid": "安全に開ける http/https URL ではありません。",
+    "dialog_copy_failed": "クリップボードへコピーできませんでした。\n\n{error}",
     "notification_reloaded": "{folder} を再読込しました",
+    "notification_copied": "{item} をコピーしました",
+    "copy_item_codex": "Codex指示",
+    "copy_item_meta": "DAKE_WEB_META候補",
+    "url_source_meta": "DAKE_WEB_META",
+    "url_source_readme": "README",
+    "url_source_package": "package.json",
+    "url_source_known": "known domain map",
+    "url_source_folder": "フォルダ名候補",
+    "url_source_unknown": "未設定",
+    "codex_instruction_intro": "選択中サイトのREADMEを整えるためのCodex向け指示。",
+    "codex_label_target": "対象",
+    "codex_label_tasks": "やること",
+    "codex_task_readme": "README.md を確認",
+    "codex_task_meta": "サイト台帳用の DAKE_WEB_META を追記",
+    "codex_task_fields": "domain / production_url / cloudflare_project / site_type / status を整理",
+    "codex_task_preserve": "既存内容を壊さない",
+    "codex_task_no_secret": "APIキーやsecretは記載しない",
+    "codex_task_diff": "変更後、git diffを確認",
+    "codex_task_no_commit": "commit/pushは指示があるまでしない",
+    "codex_label_values": "推定値",
+    "codex_label_important": "重要",
+    "meta_status_active": "active",
+    "meta_status_working": "working",
+    "meta_status_paused": "archived",
+    "meta_status_candidate": "candidate",
     "footer_note": "内部用。一般公開・BOOTH登録・GitHub Release作成・dakeapp.com反映は行いません。",
 }
 
@@ -303,16 +360,17 @@ THEME = {
 }
 
 STATUS_THEME = {
-    "normal": ("#152A25", THEME["success"]),
-    "needs_review": ("#301B34", THEME["review"]),
-    "api_review": ("#32201B", THEME["warning"]),
-    "deploy_review": ("#1D213B", THEME["purple"]),
+    "active": ("#132622", "#98E0B5"),
+    "working": ("#162033", "#AFC5FF"),
+    "url_missing": ("#2A2418", "#E7C37D"),
+    "needs_organizing": ("#241D2B", "#D4B9E8"),
+    "api_available": ("#202736", "#E7C37D"),
     "candidate": ("#202736", THEME["muted"]),
-    "internal": ("#1B2333", THEME["muted"]),
+    "paused": ("#1B2333", THEME["muted"]),
 }
 
 FONT_CANDIDATES = ["BIZ UDPGothic", "Yu Gothic UI", "Meiryo", "MS Gothic"]
-FILTER_KEYS = ("all", "normal", "needs_review", "api_review", "deploy_review", "dirty", "candidate", "internal")
+FILTER_KEYS = ("all", "active", "working", "url_missing", "needs_organizing", "api", "dirty", "candidate", "paused")
 COMPONENT_DIR_NAMES = {"public", "functions", "sitemap"}
 EXCLUDED_DIR_NAMES = {
     ".git",
@@ -341,6 +399,40 @@ SK_KEY_PATTERN = re.compile(r"\bsk-[A-Za-z0-9_\-]{12,}")
 SECRET_URL_PATTERN = re.compile(r"(sk-[A-Za-z0-9_\-]{8,}|[?&](?:api[_-]?key|apikey|token|secret|key)=)", re.IGNORECASE)
 WRANGLER_NAME_PATTERN = re.compile(r"(?m)^\s*name\s*=\s*[\"']([^\"']+)[\"']")
 PAGES_OUTPUT_PATTERN = re.compile(r"(?m)^\s*pages_build_output_dir\s*=")
+
+KNOWN_DOMAIN_MAP = {
+    "dakeapp-site": "https://dakeapp.com",
+    "dake-ai-site": "https://ai.dakeapp.com",
+    "dake-gis-site": "https://gis.dakeapp.com",
+    "dake-tools-site": "https://tools.dakeapp.com",
+    "holiday-jinja-site": "https://holiday-jinja.com",
+    "holiday-side-site": "https://side.holiday-jinja.com",
+    "holiday-sky-site": "https://sky.holiday-jinja.com",
+    "holiday-blue-site": "https://blue.holiday-jinja.com",
+    "japanmemorylane-site": "https://japanmemorylane.com",
+    "soredake-site": "https://soredake.com",
+    "yukihikokikuta-site": "https://yukihikokikuta.com",
+    "yukizblog-site": "https://blog.yukihikokikuta.com",
+    "shimarisu-site": "https://shimarisu-fudosan.com",
+    "shimarisu-dakeapp-site": "https://shimarisu.dakeapp.com",
+    "peakheadz-site": "https://peakheadz.com",
+}
+KNOWN_DISPLAY_NAMES = {
+    "dakeapp-site": "DAKE Site",
+    "japanmemorylane-site": "Japan Memory Lane",
+}
+PAUSED_STATUS_VALUES = {"archived", "frozen", "paused", "inactive", "internal"}
+WORKING_STATUS_VALUES = {"draft", "working", "development", "develop", "wip"}
+GENERIC_URL_HOSTS = {
+    "accounts.google.com",
+    "docs.google.com",
+    "drive.google.com",
+    "forms.google.com",
+    "google.com",
+    "www.google.com",
+    "localhost",
+    "127.0.0.1",
+}
 
 
 @dataclass(frozen=True)
@@ -410,6 +502,9 @@ class SiteRecord:
     folder_path: Path
     display_name: str
     domain: str
+    category: str
+    description: str
+    url_source: str
     cloudflare_project: str
     site_type: str
     status_value: str
@@ -564,6 +659,49 @@ def readme_title(readme_path: Path) -> str:
     return ""
 
 
+def strip_markdown_inline(value: str) -> str:
+    text = re.sub(r"!\[[^\]]*\]\([^)]+\)", "", value)
+    text = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", text)
+    text = re.sub(r"`([^`]+)`", r"\1", text)
+    text = text.strip(" -*>\t")
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def readme_description(readme_path: Path) -> str:
+    if not readme_path.exists():
+        return ""
+    try:
+        lines = read_text(readme_path).splitlines()
+    except OSError:
+        return ""
+    in_code = False
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("```"):
+            in_code = not in_code
+            continue
+        if in_code or not stripped:
+            continue
+        if stripped.startswith("#") or stripped.startswith("|") or stripped.startswith("[!") or stripped.startswith("!["):
+            continue
+        if stripped.startswith(("-", "*", "+")):
+            continue
+        description = strip_markdown_inline(stripped)
+        if description:
+            return description[:180]
+    return ""
+
+
+def folder_display_name(folder_name: str) -> str:
+    lowered = folder_name.lower()
+    if lowered in KNOWN_DISPLAY_NAMES:
+        return KNOWN_DISPLAY_NAMES[lowered]
+    base = re.sub(r"[-_]?site$", "", folder_name, flags=re.IGNORECASE)
+    if base.lower() in KNOWN_DISPLAY_NAMES:
+        return KNOWN_DISPLAY_NAMES[base.lower()]
+    return base.replace("_", "-")
+
+
 def first_url_from_readme(readme_path: Path, prefer_github: bool = False) -> str:
     if not readme_path.exists():
         return ""
@@ -634,10 +772,63 @@ def first_safe_url(*values: str) -> str:
     return ""
 
 
+def url_host(url: str) -> str:
+    return domain_from_url(url).split(":", 1)[0].lower()
+
+
+def is_inventory_url(url: str) -> bool:
+    normalized = normalize_http_url(url)
+    if not normalized:
+        return False
+    host = url_host(normalized)
+    if not host:
+        return False
+    if host in GENERIC_URL_HOSTS or host.endswith(".google.com"):
+        return False
+    if host == "github.com" or host.endswith(".github.com"):
+        return False
+    if host == "dash.cloudflare.com":
+        return False
+    if host == "cloudflare.com" or host == "www.cloudflare.com":
+        return False
+    return True
+
+
+def first_inventory_url_from_readme(readme_path: Path) -> str:
+    if not readme_path.exists():
+        return ""
+    try:
+        text = read_text(readme_path)
+    except OSError:
+        return ""
+    for url in URL_PATTERN.findall(text):
+        cleaned = url.rstrip(".,")
+        if is_inventory_url(cleaned):
+            return cleaned
+    return ""
+
+
+def clean_domain_value(value: str) -> str:
+    text = str(value or "").strip().strip("/")
+    if not text or SECRET_URL_PATTERN.search(text):
+        return ""
+    if re.match(r"^https?://", text, flags=re.IGNORECASE):
+        return domain_from_url(text)
+    if re.match(r"^[A-Za-z0-9.-]+(?::\d+)?$", text):
+        return text
+    return ""
+
+
 def package_display_name(package_path: Path) -> str:
     data = load_json_file(package_path)
     name = safe_text(data.get("name", ""))
     return name
+
+
+def package_homepage(package_path: Path) -> str:
+    data = load_json_file(package_path)
+    homepage = normalize_http_url(safe_text(data.get("homepage", "")))
+    return homepage if is_inventory_url(homepage) else ""
 
 
 def wrangler_project_name(wrangler_path: Path) -> str:
@@ -649,6 +840,83 @@ def wrangler_project_name(wrangler_path: Path) -> str:
         return ""
     match = WRANGLER_NAME_PATTERN.search(text)
     return match.group(1).strip() if match else ""
+
+
+def known_domain_url(folder_name: str, cloudflare_project: str = "") -> str:
+    for key in (folder_name.lower(), cloudflare_project.lower()):
+        if key and key in KNOWN_DOMAIN_MAP:
+            return KNOWN_DOMAIN_MAP[key]
+    return ""
+
+
+def resolve_site_url(
+    meta: dict[str, object],
+    readme_path: Path,
+    package_path: Path,
+    folder: Path,
+    cloudflare_project: str,
+) -> tuple[str, str, str]:
+    meta_domain = clean_domain_value(safe_text(meta.get("domain", "")))
+    meta_production_raw = safe_text(meta.get("production_url", ""))
+    meta_production = normalize_http_url(meta_production_raw) or url_from_domain(meta_production_raw)
+    if meta_domain:
+        return meta_production or url_from_domain(meta_domain), meta_domain, "meta"
+    if meta_production:
+        return meta_production, domain_from_url(meta_production), "meta"
+
+    readme_url = first_inventory_url_from_readme(readme_path)
+    if readme_url:
+        return readme_url, domain_from_url(readme_url), "readme"
+
+    homepage_url = package_homepage(package_path) if package_path.exists() else ""
+    if homepage_url:
+        return homepage_url, domain_from_url(homepage_url), "package"
+
+    mapped_url = known_domain_url(folder.name, cloudflare_project)
+    if mapped_url:
+        return mapped_url, domain_from_url(mapped_url), "known"
+
+    return "", "", "unknown"
+
+
+def is_paused_status(status_value: str, show_on_dashboard: bool = True) -> bool:
+    lowered = str(status_value or "").strip().lower()
+    return lowered in PAUSED_STATUS_VALUES or not show_on_dashboard
+
+
+def is_working_status(status_value: str) -> bool:
+    return str(status_value or "").strip().lower() in WORKING_STATUS_VALUES
+
+
+def infer_category(
+    meta: dict[str, object],
+    folder_name: str,
+    display_name: str,
+    domain: str,
+    production_url: str,
+    site_type: str,
+) -> str:
+    explicit = safe_text(meta.get("category", "")) or safe_text(meta.get("site_category", ""))
+    if explicit:
+        return explicit
+    haystack = " ".join([folder_name, display_name, domain, production_url, site_type]).lower()
+    if "note.com" in haystack or " note" in f" {haystack}":
+        return "note"
+    if "shimarisu" in haystack:
+        return "SHIMARISU"
+    if "holiday" in haystack:
+        return "holiday"
+    if "borinef" in haystack:
+        return "BORINEF"
+    if "peakheadz" in haystack:
+        return "PEAKHEADZ"
+    if "brainz" in haystack or "oikawa" in haystack or "qpsc" in haystack:
+        return "QPSC"
+    if "blog" in haystack:
+        return "blog"
+    if "dake" in haystack:
+        return "DAKE"
+    return UI_TEXT["value_other"]
 
 
 def wrangler_has_pages_output(wrangler_path: Path) -> bool:
@@ -1050,50 +1318,30 @@ def build_cloudflare_info(folder: Path, files: FileChecks) -> CloudflareInfo:
     )
 
 
+def has_site_url_values(domain: str, production_url: str) -> bool:
+    return bool(clean_domain_value(domain) or normalize_http_url(production_url))
+
+
 def classify_record(
     files: FileChecks,
-    cloudflare: CloudflareInfo,
-    api: ApiInfo,
     git: GitInfo,
     status_value: str,
     show_on_dashboard: bool,
     domain: str,
     production_url: str,
-    cloudflare_project: str,
-    health_url: str,
+    candidate_type: str,
 ) -> str:
-    lowered_status = status_value.strip().lower()
-    if lowered_status in {"internal", "frozen", "archived"} or not show_on_dashboard:
-        return "internal"
-    if (
-        api.has_hardcoded_key_suspect
-        or api.has_frontend_openai_direct
-        or (
-            files.has_functions
-            and (api.has_openai_env_ref or api.has_functions_openai)
-            and (not health_url or not cloudflare.has_health_file or not cloudflare.has_routes_api)
-        )
-    ):
-        return "api_review"
-    if (
-        not files.has_readme
-        or not files.has_meta
-        or not git.is_repo
-        or bool(git.error)
-        or (files.has_functions and not files.has_wrangler)
-        or (cloudflare.likely_pages and not files.has_package)
-        or git.dirty_count >= 10
-    ):
-        return "needs_review"
-    if (
-        cloudflare.likely_pages
-        and not git.has_dirty
-        and (not (production_url or domain) or not cloudflare_project or git.ahead > 0 or git.behind > 0)
-    ):
-        return "deploy_review"
-    if files.has_readme and git.is_repo and files.has_wrangler and files.has_package and (production_url or domain) and not git.has_dirty:
-        return "normal"
-    return "needs_review"
+    if candidate_type == "candidate":
+        return "candidate"
+    if is_paused_status(status_value, show_on_dashboard):
+        return "paused"
+    if not files.has_readme or git.error:
+        return "needs_organizing"
+    if is_working_status(status_value):
+        return "working"
+    if not has_site_url_values(domain, production_url):
+        return "url_missing"
+    return "active"
 
 
 def build_missing_items(
@@ -1104,12 +1352,18 @@ def build_missing_items(
     domain: str,
     production_url: str,
     cloudflare_project: str,
+    description: str,
+    category: str,
 ) -> tuple[str, ...]:
     items: list[str] = []
     if not files.has_readme:
         items.append(UI_TEXT["missing_readme"])
     if not files.has_meta:
         items.append(UI_TEXT["missing_meta"])
+    if not description:
+        items.append(UI_TEXT["missing_description"])
+    if not category or category == UI_TEXT["value_other"]:
+        items.append(UI_TEXT["missing_category"])
     if not git.is_repo:
         items.append(UI_TEXT["missing_git"])
     elif git.error:
@@ -1142,6 +1396,8 @@ def build_next_items(
     git: GitInfo,
     domain: str,
     production_url: str,
+    description: str,
+    category: str,
 ) -> tuple[str, ...]:
     tasks: list[str] = []
     if api.has_hardcoded_key_suspect:
@@ -1152,6 +1408,10 @@ def build_next_items(
         tasks.append(UI_TEXT["next_add_readme"])
     if not files.has_meta:
         tasks.append(UI_TEXT["next_add_meta"])
+    if not description:
+        tasks.append(UI_TEXT["next_add_description"])
+    if not category or category == UI_TEXT["value_other"]:
+        tasks.append(UI_TEXT["next_add_category"])
     if git.has_dirty:
         tasks.append(UI_TEXT["next_git_commit"])
     if cloudflare.likely_pages and not files.has_wrangler:
@@ -1186,22 +1446,28 @@ def build_status_reasons(
     cloudflare_project: str,
 ) -> tuple[str, ...]:
     reasons: list[str] = []
+    if class_key == "candidate":
+        reasons.append(UI_TEXT["reason_status_candidate"])
+    if class_key == "paused" or is_paused_status(status_value, show_on_dashboard):
+        reasons.append(UI_TEXT["reason_status_internal"])
+    if class_key == "working" or is_working_status(status_value):
+        reasons.append(UI_TEXT["reason_status_working"])
+    if has_site_url_values(domain, production_url):
+        reasons.append(UI_TEXT["reason_status_active_url"])
+    else:
+        reasons.append(UI_TEXT["reason_status_url_missing"])
     if not files.has_readme:
         reasons.append(UI_TEXT["reason_status_readme_missing"])
     if not files.has_meta:
         reasons.append(UI_TEXT["reason_status_meta_missing"])
     if git.error:
         reasons.append(UI_TEXT["reason_status_git_error"])
-    if cloudflare.likely_pages and not (domain or production_url):
-        reasons.append(UI_TEXT["reason_status_production_missing"])
     if cloudflare.likely_pages and not cloudflare_project:
         reasons.append(UI_TEXT["reason_status_cloudflare_missing"])
     if files.has_functions and not cloudflare.has_health_file:
         reasons.append(UI_TEXT["reason_status_functions_health"])
-    if class_key == "api_review" or api.has_hardcoded_key_suspect or api.has_frontend_openai_direct:
+    if api.has_hardcoded_key_suspect or api.has_frontend_openai_direct or api.has_openai_env_ref or api.has_functions_openai:
         reasons.append(UI_TEXT["reason_status_api_review"])
-    if class_key == "internal" or status_value.lower() in {"internal", "frozen", "archived"} or not show_on_dashboard:
-        reasons.append(UI_TEXT["reason_status_internal"])
     if not reasons:
         reasons.append(UI_TEXT["reason_status_clean"])
     return unique_reasons(reasons)
@@ -1254,14 +1520,18 @@ def build_next_action_reasons(
     git_reasons: tuple[str, ...],
 ) -> tuple[str, ...]:
     reasons: list[str] = []
-    if class_key == "api_review":
-        reasons.append(f"{record_name}: {UI_TEXT['summary_api_review']}: {api_reasons[0]}")
-    if class_key == "needs_review":
-        reasons.append(f"{record_name}: {UI_TEXT['summary_needs_review']}: {status_reasons[0]}")
+    if class_key == "url_missing":
+        reasons.append(f"{record_name}: {UI_TEXT['summary_url_missing']}: {status_reasons[0]}")
+    if class_key == "needs_organizing":
+        reasons.append(f"{record_name}: {UI_TEXT['summary_needs_organizing']}: {status_reasons[0]}")
+    if class_key == "working":
+        reasons.append(f"{record_name}: {UI_TEXT['summary_working']}: {status_reasons[0]}")
+    if class_key == "paused":
+        reasons.append(f"{record_name}: {UI_TEXT['summary_paused']}: {status_reasons[0]}")
+    if api_reasons and api_reasons[0] != UI_TEXT["reason_api_none"]:
+        reasons.append(f"{record_name}: {UI_TEXT['filter_api']}: {api_reasons[0]}")
     if UI_TEXT["reason_git_dirty"] in git_reasons:
         reasons.append(f"{record_name}: {UI_TEXT['label_git']}: {UI_TEXT['reason_git_dirty']}")
-    if class_key == "deploy_review":
-        reasons.append(f"{record_name}: {UI_TEXT['summary_deploy_review']}: {status_reasons[0]}")
     if not reasons:
         reasons.append(f"{record_name}: {UI_TEXT['next_no_action']}")
     return tuple(reasons[:5])
@@ -1271,10 +1541,12 @@ def short_reason(record: SiteRecord) -> str:
     source: tuple[str, ...]
     if record.candidate_type == "candidate":
         source = record.detection_reasons
-    elif record.class_key == "api_review":
-        source = record.api_reasons
-    elif record.git.error or record.git.has_dirty:
+    elif record.git.error:
         source = record.git_reasons
+    elif record.missing_items != (UI_TEXT["missing_none"],):
+        source = record.missing_items
+    elif record.api_reasons != (UI_TEXT["reason_api_none"],):
+        source = record.api_reasons
     else:
         source = record.status_reasons
     return " / ".join(reason for reason in source[:2] if reason)
@@ -1291,14 +1563,23 @@ def scan_site(folder: Path, candidate_info: CandidateInfo | None = None) -> Site
     api = scan_openai_usage(folder)
     git = read_git_info(folder)
 
-    inferred_production = first_url_from_readme(readme_path)
-    production_url = safe_text(meta.get("production_url", "")) or inferred_production
-    health_url = safe_text(meta.get("health_url", ""))
-    domain = safe_text(meta.get("domain", "")) or domain_from_url(production_url)
     cloudflare_project = safe_text(meta.get("cloudflare_project", "")) or wrangler_project_name(wrangler_path)
+    production_url, domain, url_source = resolve_site_url(meta, readme_path, package_path, folder, cloudflare_project)
+    health_url = safe_text(meta.get("health_url", ""))
     package_name = package_display_name(package_path) if package_path.exists() else ""
-    display_name = safe_text(meta.get("display_name", "")) or readme_title(readme_path) or package_name or folder.name
-    site_type = safe_text(meta.get("site_type", "")) or (UI_TEXT["value_functions"] if files.has_functions else UI_TEXT["value_static"])
+    display_name = safe_text(meta.get("display_name", "")) or readme_title(readme_path) or package_name or folder_display_name(folder.name)
+    description = (
+        safe_text(meta.get("description", ""))
+        or safe_text(meta.get("site_description", ""))
+        or safe_text(meta.get("summary", ""))
+        or readme_description(readme_path)
+    )
+    site_type = safe_text(meta.get("site_type", ""))
+    if not site_type and "note.com" in f"{domain} {production_url}".lower():
+        site_type = "note"
+    if not site_type:
+        site_type = UI_TEXT["value_functions"] if files.has_functions else UI_TEXT["value_static"]
+    category = infer_category(meta, folder.name, display_name, domain, production_url, site_type)
     status_value = safe_text(meta.get("status", "")) or UI_TEXT["value_unknown"]
     show_on_dashboard = safe_bool(meta.get("show_on_dashboard", True), default=True)
     github_url = first_url_from_readme(readme_path, prefer_github=True)
@@ -1310,18 +1591,13 @@ def scan_site(folder: Path, candidate_info: CandidateInfo | None = None) -> Site
     )
     class_key = classify_record(
         files,
-        cloudflare,
-        api,
         git,
         status_value,
         show_on_dashboard,
         domain,
         production_url,
-        cloudflare_project,
-        health_url,
+        candidate_info.candidate_type,
     )
-    if candidate_info.candidate_type == "candidate":
-        class_key = "candidate"
     status_reasons = build_status_reasons(
         files,
         cloudflare,
@@ -1336,9 +1612,9 @@ def scan_site(folder: Path, candidate_info: CandidateInfo | None = None) -> Site
     )
     api_reasons = build_api_reasons(files, cloudflare, api, health_url)
     git_reasons = build_git_reasons(git)
-    missing_items = build_missing_items(files, cloudflare, api, git, domain, production_url, cloudflare_project)
+    missing_items = build_missing_items(files, cloudflare, api, git, domain, production_url, cloudflare_project, description, category)
     next_action_reasons = build_next_action_reasons(folder.name, class_key, status_reasons, api_reasons, git_reasons)
-    next_items = next_action_reasons or build_next_items(files, cloudflare, api, git, domain, production_url)
+    next_items = build_next_items(files, cloudflare, api, git, domain, production_url, description, category)
     last_modified = latest_mtime(
         [
             readme_path,
@@ -1356,6 +1632,9 @@ def scan_site(folder: Path, candidate_info: CandidateInfo | None = None) -> Site
         folder_path=folder,
         display_name=display_name,
         domain=domain,
+        category=category,
+        description=description,
+        url_source=url_source,
         cloudflare_project=cloudflare_project,
         site_type=site_type,
         status_value=status_value,
@@ -1405,6 +1684,9 @@ def error_site(folder: Path, exc: Exception) -> SiteRecord:
         folder_path=folder,
         display_name=folder.name,
         domain="",
+        category=UI_TEXT["value_other"],
+        description="",
+        url_source="unknown",
         cloudflare_project="",
         site_type=UI_TEXT["value_unknown"],
         status_value=UI_TEXT["value_unknown"],
@@ -1417,7 +1699,7 @@ def error_site(folder: Path, exc: Exception) -> SiteRecord:
         cloudflare=cloudflare,
         api=api,
         git=git,
-        class_key="needs_review",
+        class_key="needs_organizing",
         detection_score=candidate_info.score,
         detection_reasons=candidate_info.reasons,
         status_reasons=(str(exc),),
@@ -1458,10 +1740,10 @@ def api_label(record: SiteRecord) -> str:
         return UI_TEXT["value_direct_key"]
     if record.api.has_frontend_openai_direct:
         return UI_TEXT["value_front_direct"]
-    if record.class_key == "api_review":
-        return UI_TEXT["value_api_review"]
     if record.api.has_env_design:
         return UI_TEXT["value_env_design"]
+    if record.api.has_openai_env_ref or record.api.has_functions_openai or record.cloudflare.has_functions_api:
+        return UI_TEXT["value_api_available"]
     if record.files.has_functions:
         return UI_TEXT["value_functions"]
     return UI_TEXT["value_static"]
@@ -1473,6 +1755,125 @@ def functions_label(record: SiteRecord) -> str:
     if record.cloudflare.has_health_file:
         return f"{UI_TEXT['value_yes']} / health"
     return UI_TEXT["value_yes"]
+
+
+def record_has_public_url(record: SiteRecord) -> bool:
+    return has_site_url_values(record.domain, record.production_url)
+
+
+def record_has_api(record: SiteRecord) -> bool:
+    return bool(
+        record.api.has_openai_env_ref
+        or record.api.has_hardcoded_key_suspect
+        or record.api.has_frontend_openai_direct
+        or record.api.has_functions_openai
+        or record.cloudflare.has_functions_api
+    )
+
+
+def record_is_working(record: SiteRecord) -> bool:
+    return record.candidate_type == "site" and (
+        record.class_key == "working" or (not record_has_public_url(record) and record.files.has_readme)
+    )
+
+
+def record_needs_organizing(record: SiteRecord) -> bool:
+    return record.candidate_type == "site" and (
+        not record.files.has_readme
+        or not record.files.has_meta
+        or not record.description
+        or not record.category
+        or record.category == UI_TEXT["value_other"]
+        or not record.git.is_repo
+        or bool(record.git.error)
+    )
+
+
+def site_url_label(record: SiteRecord) -> str:
+    url = first_safe_url(record.production_url, url_from_domain(record.domain))
+    domain = record.domain or domain_from_url(url)
+    label = domain or url or UI_TEXT["value_unset"]
+    if label == UI_TEXT["value_unset"]:
+        return label
+    if record.url_source in {"readme", "package", "known"}:
+        return f"{label} ({UI_TEXT['value_inferred']})"
+    if record.url_source == "folder":
+        return f"{label} ({UI_TEXT['value_candidate']})"
+    return label
+
+
+def url_source_label(record: SiteRecord) -> str:
+    return UI_TEXT.get(f"url_source_{record.url_source}", UI_TEXT["url_source_unknown"])
+
+
+def inventory_note(record: SiteRecord) -> str:
+    return short_reason(record) or UI_TEXT["missing_none"]
+
+
+def meta_status_for_record(record: SiteRecord) -> str:
+    if record.class_key == "paused":
+        return UI_TEXT["meta_status_paused"]
+    if record.class_key == "candidate":
+        return UI_TEXT["meta_status_candidate"]
+    if record.class_key in {"working", "url_missing", "needs_organizing"}:
+        return UI_TEXT["meta_status_working"]
+    return UI_TEXT["meta_status_active"]
+
+
+def meta_candidate_for_record(record: SiteRecord) -> dict[str, object]:
+    production_url = first_safe_url(record.production_url, url_from_domain(record.domain))
+    domain = domain_from_url(production_url) or clean_domain_value(record.domain)
+    site_type = record.site_type
+    if site_type in {UI_TEXT["value_static"], UI_TEXT["value_functions"]}:
+        site_type = "static" if site_type == UI_TEXT["value_static"] else "functions"
+    return {
+        "site_key": record.folder_name,
+        "display_name": record.display_name,
+        "repo_name": record.folder_name,
+        "domain": domain,
+        "cloudflare_project": record.cloudflare_project,
+        "site_type": site_type or "static",
+        "has_functions": record.files.has_functions,
+        "has_openai_api": record_has_api(record),
+        "health_url": normalize_http_url(record.health_url),
+        "production_url": production_url,
+        "status": meta_status_for_record(record),
+        "category": record.category,
+        "show_on_dashboard": record.show_on_dashboard,
+    }
+
+
+def build_codex_instruction_text(record: SiteRecord) -> str:
+    values = meta_candidate_for_record(record)
+    lines = [
+        UI_TEXT["codex_instruction_intro"],
+        "",
+        f"{UI_TEXT['codex_label_target']}:",
+        str(record.folder_path),
+        "",
+        f"{UI_TEXT['codex_label_tasks']}:",
+        f"- {UI_TEXT['codex_task_readme']}",
+        f"- {UI_TEXT['codex_task_meta']}",
+        f"- {UI_TEXT['codex_task_fields']}",
+        f"- {UI_TEXT['codex_task_preserve']}",
+        f"- {UI_TEXT['codex_task_no_secret']}",
+        f"- {UI_TEXT['codex_task_diff']}",
+        f"- {UI_TEXT['codex_task_no_commit']}",
+        "",
+        f"{UI_TEXT['codex_label_values']}:",
+    ]
+    for key in ("domain", "production_url", "cloudflare_project", "category", "status"):
+        value = values.get(key, "")
+        if value:
+            lines.extend([f"{key}:", str(value), ""])
+    lines.extend(
+        [
+            f"{UI_TEXT['codex_label_important']}:",
+            f"- {UI_TEXT['codex_task_no_secret']}",
+            f"- {UI_TEXT['codex_task_no_commit']}",
+        ]
+    )
+    return "\n".join(lines).strip() + "\n"
 
 
 def record_key(record: SiteRecord) -> str:
@@ -1531,18 +1932,16 @@ class WebDashboardApp:
         self.detail_title_var = tk.StringVar(value=UI_TEXT["detail_empty"])
         self.detail_badge_var = tk.StringVar(value=UI_TEXT["value_unset"])
         self.notification_var = tk.StringVar(value="")
-        self.summary_vars = {key: tk.StringVar(value="0") for key in ("total", "normal", "needs_review", "api_review", "deploy_review", "dirty")}
+        self.summary_vars = {key: tk.StringVar(value="0") for key in ("total", "active", "working", "paused", "url_missing", "needs_organizing")}
         self.qpsc_vars = {
             key: tk.StringVar(value="0")
             for key in (
-                "new_sites",
+                "url_missing",
+                "description_missing",
+                "category_missing",
                 "readme_missing",
                 "meta_missing",
                 "api_review",
-                "cloudflare_review",
-                "git_dirty",
-                "git_error",
-                "candidate_components",
             )
         }
         self.git_vars = {key: tk.StringVar(value="0") for key in ("dirty_sites", "untracked_sites", "ahead_sites", "error_sites")}
@@ -1655,11 +2054,11 @@ class WebDashboardApp:
         row.pack(fill="x", pady=(0, 12))
         summary_items = [
             ("total", UI_TEXT["summary_total"]),
-            ("normal", UI_TEXT["summary_normal"]),
-            ("needs_review", UI_TEXT["summary_needs_review"]),
-            ("api_review", UI_TEXT["summary_api_review"]),
-            ("deploy_review", UI_TEXT["summary_deploy_review"]),
-            ("dirty", UI_TEXT["summary_dirty"]),
+            ("active", UI_TEXT["summary_active"]),
+            ("working", UI_TEXT["summary_working"]),
+            ("paused", UI_TEXT["summary_paused"]),
+            ("url_missing", UI_TEXT["summary_url_missing"]),
+            ("needs_organizing", UI_TEXT["summary_needs_organizing"]),
         ]
         for index, (key, label) in enumerate(summary_items):
             row.columnconfigure(index, weight=1)
@@ -1685,14 +2084,12 @@ class WebDashboardApp:
         body = tk.Frame(frame, bg=THEME["panel"])
         body.pack(fill="x", padx=14, pady=(10, 12))
         pairs = [
-            ("new_sites", UI_TEXT["qpsc_new_sites"]),
+            ("url_missing", UI_TEXT["qpsc_url_missing"]),
+            ("description_missing", UI_TEXT["qpsc_description_missing"]),
+            ("category_missing", UI_TEXT["qpsc_category_missing"]),
             ("readme_missing", UI_TEXT["qpsc_readme_missing"]),
             ("meta_missing", UI_TEXT["qpsc_meta_missing"], UI_TEXT["qpsc_hint_meta"]),
             ("api_review", UI_TEXT["qpsc_api_review"], UI_TEXT["qpsc_hint_api"]),
-            ("cloudflare_review", UI_TEXT["qpsc_cloudflare_review"]),
-            ("git_dirty", UI_TEXT["qpsc_git_dirty"]),
-            ("git_error", UI_TEXT["qpsc_git_error"], UI_TEXT["qpsc_hint_git"]),
-            ("candidate_components", UI_TEXT["qpsc_candidate_components"], UI_TEXT["qpsc_hint_candidate"]),
         ]
         self.compact_metrics(body, pairs, self.qpsc_vars)
         return frame
@@ -1765,35 +2162,35 @@ class WebDashboardApp:
 
         tree_frame = tk.Frame(list_panel, bg=THEME["panel"])
         tree_frame.pack(fill="both", expand=True, padx=14, pady=(0, 14))
-        columns = ("status", "folder", "display", "domain", "cloudflare", "git", "api", "functions", "reason", "updated")
+        columns = ("status", "display", "site_url", "category", "description", "folder", "updated", "note", "git", "api")
         self.tree = ttk.Treeview(tree_frame, columns=columns, show="headings", style="Dashboard.Treeview", selectmode="browse")
         headings = {
             "status": UI_TEXT["column_status"],
-            "folder": UI_TEXT["column_folder"],
             "display": UI_TEXT["column_display"],
-            "domain": UI_TEXT["column_domain"],
-            "cloudflare": UI_TEXT["column_cloudflare"],
+            "site_url": UI_TEXT["column_site_url"],
+            "category": UI_TEXT["column_category"],
+            "description": UI_TEXT["column_description"],
+            "folder": UI_TEXT["column_folder"],
+            "updated": UI_TEXT["column_updated"],
+            "note": UI_TEXT["column_inventory_note"],
             "git": UI_TEXT["column_git"],
             "api": UI_TEXT["column_api"],
-            "functions": UI_TEXT["column_functions"],
-            "reason": UI_TEXT["column_reason"],
-            "updated": UI_TEXT["column_updated"],
         }
         widths = {
             "status": 92,
-            "folder": 150,
             "display": 170,
-            "domain": 150,
-            "cloudflare": 135,
-            "git": 100,
-            "api": 92,
-            "functions": 88,
-            "reason": 180,
+            "site_url": 170,
+            "category": 100,
+            "description": 220,
+            "folder": 150,
             "updated": 118,
+            "note": 190,
+            "git": 92,
+            "api": 86,
         }
         for column in columns:
             self.tree.heading(column, text=headings[column])
-            self.tree.column(column, width=widths[column], minwidth=70, stretch=column in {"display", "domain"})
+            self.tree.column(column, width=widths[column], minwidth=70, stretch=column in {"display", "site_url", "description", "note"})
         for key, (bg, fg) in STATUS_THEME.items():
             self.tree.tag_configure(key, background=bg, foreground=fg)
         scrollbar = ttk.Scrollbar(tree_frame, orient="vertical", command=self.tree.yview, style="Vertical.TScrollbar")
@@ -1823,20 +2220,24 @@ class WebDashboardApp:
 
         buttons = tk.Frame(parent, bg=THEME["panel"])
         buttons.pack(fill="x", padx=14, pady=(0, 10))
+        self.open_production_button = self.make_button(buttons, UI_TEXT["button_open_site"], self.open_selected_production)
         self.open_folder_button = self.make_button(buttons, UI_TEXT["button_open_folder"], self.open_selected_folder)
         self.open_readme_button = self.make_button(buttons, UI_TEXT["button_open_readme"], self.open_selected_readme)
-        self.open_production_button = self.make_button(buttons, UI_TEXT["button_open_production"], self.open_selected_production)
-        self.open_health_button = self.make_button(buttons, UI_TEXT["button_open_health"], self.open_selected_health)
         self.open_github_button = self.make_button(buttons, UI_TEXT["button_open_github"], self.open_selected_github)
         self.open_cloudflare_button = self.make_button(buttons, UI_TEXT["button_open_cloudflare"], self.open_selected_cloudflare)
+        self.open_health_button = self.make_button(buttons, UI_TEXT["button_open_health"], self.open_selected_health)
+        self.copy_codex_button = self.make_button(buttons, UI_TEXT["button_copy_codex"], self.copy_selected_codex_instruction)
+        self.copy_meta_button = self.make_button(buttons, UI_TEXT["button_copy_meta"], self.copy_selected_meta_candidate)
         for index, button in enumerate(
             [
+                self.open_production_button,
                 self.open_folder_button,
                 self.open_readme_button,
-                self.open_production_button,
-                self.open_health_button,
                 self.open_github_button,
                 self.open_cloudflare_button,
+                self.open_health_button,
+                self.copy_codex_button,
+                self.copy_meta_button,
             ]
         ):
             button.grid(row=index // 2, column=index % 2, sticky="ew", padx=(0 if index % 2 == 0 else 8, 0), pady=(0, 7))
@@ -1989,25 +2390,27 @@ class WebDashboardApp:
     def update_summary(self, previous: dict[str, SiteRecord], current: dict[str, SiteRecord]) -> None:
         counts = {key: 0 for key in self.summary_vars}
         site_records = [record for record in self.records if record.candidate_type == "site"]
-        candidate_records = [record for record in self.records if record.candidate_type == "candidate"]
         counts["total"] = len(site_records)
         for record in site_records:
-            if record.class_key in counts:
-                counts[record.class_key] += 1
-            if record.git.has_dirty:
-                counts["dirty"] += 1
+            if record_has_public_url(record) and not is_paused_status(record.status_value, record.show_on_dashboard):
+                counts["active"] += 1
+            if record_is_working(record):
+                counts["working"] += 1
+            if is_paused_status(record.status_value, record.show_on_dashboard):
+                counts["paused"] += 1
+            if not record_has_public_url(record):
+                counts["url_missing"] += 1
+            if record_needs_organizing(record):
+                counts["needs_organizing"] += 1
         for key, value in counts.items():
             self.summary_vars[key].set(str(value))
 
-        new_sites = len(set(current) - set(previous)) if previous else 0
-        self.qpsc_vars["new_sites"].set(str(new_sites))
+        self.qpsc_vars["url_missing"].set(str(sum(1 for record in site_records if not record_has_public_url(record))))
+        self.qpsc_vars["description_missing"].set(str(sum(1 for record in site_records if not record.description)))
+        self.qpsc_vars["category_missing"].set(str(sum(1 for record in site_records if not record.category or record.category == UI_TEXT["value_other"])))
         self.qpsc_vars["readme_missing"].set(str(sum(1 for record in site_records if not record.files.has_readme)))
         self.qpsc_vars["meta_missing"].set(str(sum(1 for record in site_records if not record.files.has_meta)))
-        self.qpsc_vars["api_review"].set(str(sum(1 for record in site_records if record.class_key == "api_review")))
-        self.qpsc_vars["cloudflare_review"].set(str(sum(1 for record in site_records if record.class_key == "deploy_review")))
-        self.qpsc_vars["git_dirty"].set(str(sum(1 for record in site_records if record.git.has_dirty)))
-        self.qpsc_vars["git_error"].set(str(sum(1 for record in site_records if record.git.error)))
-        self.qpsc_vars["candidate_components"].set(str(len(candidate_records)))
+        self.qpsc_vars["api_review"].set(str(sum(1 for record in site_records if record_has_api(record))))
 
         self.git_vars["dirty_sites"].set(str(sum(1 for record in site_records if record.git.has_dirty)))
         self.git_vars["untracked_sites"].set(str(sum(1 for record in site_records if record.git.has_untracked)))
@@ -2141,6 +2544,18 @@ class WebDashboardApp:
             return False
         if self.filter_key == "dirty":
             return record.git.has_dirty
+        if self.filter_key == "active":
+            return record_has_public_url(record) and not is_paused_status(record.status_value, record.show_on_dashboard)
+        if self.filter_key == "working":
+            return record_is_working(record)
+        if self.filter_key == "url_missing":
+            return not record_has_public_url(record)
+        if self.filter_key == "needs_organizing":
+            return record_needs_organizing(record)
+        if self.filter_key == "api":
+            return record_has_api(record)
+        if self.filter_key == "paused":
+            return is_paused_status(record.status_value, record.show_on_dashboard)
         return record.class_key == self.filter_key
 
     def matches_query(self, record: SiteRecord, query: str) -> bool:
@@ -2148,7 +2563,10 @@ class WebDashboardApp:
             [
                 record.folder_name,
                 record.display_name,
+                record.category,
+                record.description,
                 record.domain,
+                site_url_label(record),
                 record.cloudflare_project,
                 record.site_type,
                 record.status_value,
@@ -2175,15 +2593,15 @@ class WebDashboardApp:
                 iid=iid,
                 values=(
                     record.class_text,
-                    record.folder_name,
                     record.display_name,
-                    record.domain or UI_TEXT["value_unset"],
-                    record.cloudflare_project or UI_TEXT["value_unset"],
+                    site_url_label(record),
+                    record.category or UI_TEXT["value_unset"],
+                    record.description or UI_TEXT["value_unset"],
+                    record.folder_name,
+                    format_datetime(record.last_modified),
+                    inventory_note(record),
                     git_status_label(record.git),
                     api_label(record),
-                    functions_label(record),
-                    short_reason(record),
-                    format_datetime(record.last_modified),
                 ),
                 tags=(record.class_key,),
             )
@@ -2206,10 +2624,8 @@ class WebDashboardApp:
         record = self.record_by_iid.get(row_id)
         if record is None:
             return
-        if column_id == "#4":
+        if column_id == "#3":
             self.open_url(first_safe_url(record.production_url, url_from_domain(record.domain)), quiet=True)
-        elif column_id == "#5":
-            self.open_url(record.cloudflare_url, quiet=True)
 
     def update_detail(self, record: SiteRecord | None) -> None:
         self.selected_record = record
@@ -2224,7 +2640,7 @@ class WebDashboardApp:
         badge_bg, badge_fg = STATUS_THEME.get(record.class_key, (THEME["panel_soft"], THEME["muted"]))
         self.detail_badge_var.set(record.class_text)
         self.detail_badge.configure(bg=badge_bg, fg=badge_fg)
-        self.detail_title_var.set(f"{record.folder_name}\n{record.display_name}")
+        self.detail_title_var.set(f"{record.display_name}\n{site_url_label(record)}")
         self.render_detail_text(record)
         self.set_text(self.next_text, "\n".join(f"- {item}" for item in record.next_items))
         self.set_detail_buttons_state(True)
@@ -2234,10 +2650,12 @@ class WebDashboardApp:
         self.open_folder_button.configure(state=state)
         record = self.selected_record if enabled else None
         self.open_readme_button.configure(state=state if record and (record.folder_path / README_NAME).exists() else "disabled")
-        self.open_production_button.configure(state=state if record and normalize_http_url(record.production_url) else "disabled")
+        self.open_production_button.configure(state=state if record and first_safe_url(record.production_url, url_from_domain(record.domain)) else "disabled")
         self.open_health_button.configure(state=state if record and normalize_http_url(record.health_url) else "disabled")
         self.open_github_button.configure(state=state if record and normalize_http_url(record.github_url) else "disabled")
         self.open_cloudflare_button.configure(state=state if record and normalize_http_url(record.cloudflare_url) else "disabled")
+        self.copy_codex_button.configure(state=state if record else "disabled")
+        self.copy_meta_button.configure(state=state if record else "disabled")
 
     def set_text(self, widget: tk.Text, value: str) -> None:
         widget.configure(state="normal")
@@ -2250,24 +2668,21 @@ class WebDashboardApp:
         self.detail_text.delete("1.0", "end")
         self.detail_link_counter = 0
         readme_path = record.folder_path / README_NAME
-        domain_url = url_from_domain(record.domain)
-        production_url = normalize_http_url(record.production_url)
-        health_url = normalize_http_url(record.health_url)
-        github_url = normalize_http_url(record.github_url)
-        cloudflare_url = normalize_http_url(record.cloudflare_url)
+        site_url = first_safe_url(record.production_url, url_from_domain(record.domain))
+        self.insert_detail_field(UI_TEXT["label_site_name"], record.display_name or UI_TEXT["value_unset"])
+        self.insert_detail_field(UI_TEXT["label_site_url"], site_url_label(record), (lambda url=site_url: self.open_url(url)) if site_url else None)
+        self.insert_detail_field(UI_TEXT["label_category"], record.category or UI_TEXT["value_unset"])
+        self.insert_detail_field(UI_TEXT["label_public_status"], record.class_text)
+        self.insert_detail_field(UI_TEXT["label_description"], record.description or UI_TEXT["value_unset"])
+        self.insert_detail_field(UI_TEXT["label_url_source"], url_source_label(record))
         self.insert_detail_field(UI_TEXT["label_folder_path"], str(record.folder_path), lambda: self.open_path(record.folder_path))
         self.insert_detail_field(
             UI_TEXT["label_readme_path"],
             str(readme_path) if readme_path.exists() else UI_TEXT["value_unset"],
             lambda: self.open_path(readme_path) if readme_path.exists() else None,
         )
-        self.insert_detail_field(UI_TEXT["label_domain"], record.domain or UI_TEXT["value_unset"], (lambda url=domain_url: self.open_url(url)) if domain_url else None)
-        self.insert_detail_field(UI_TEXT["label_production_url"], record.production_url or UI_TEXT["value_unset"], (lambda url=production_url: self.open_url(url)) if production_url else None)
-        self.insert_detail_field(UI_TEXT["label_health_url"], record.health_url or UI_TEXT["value_unset"], (lambda url=health_url: self.open_url(url)) if health_url else None)
-        self.insert_detail_field(UI_TEXT["label_repo_url"], record.github_url or UI_TEXT["value_unset"], (lambda url=github_url: self.open_url(url)) if github_url else None)
-        self.insert_detail_field(UI_TEXT["label_cloudflare_project"], record.cloudflare_project or UI_TEXT["value_unset"], (lambda url=cloudflare_url: self.open_url(url)) if cloudflare_url else None)
-        self.insert_detail_field(UI_TEXT["label_cloudflare_url"], record.cloudflare_url or UI_TEXT["value_unset"], (lambda url=cloudflare_url: self.open_url(url)) if cloudflare_url else None)
         self.detail_text.insert("end", "\n")
+        self.detail_text.insert("end", f"{UI_TEXT['label_development_info']}\n")
         self.detail_text.insert("end", self.build_detail_text(record))
         self.detail_text.configure(state="disabled")
 
@@ -2288,6 +2703,13 @@ class WebDashboardApp:
 
     def build_detail_text(self, record: SiteRecord) -> str:
         lines = [
+            f"{UI_TEXT['label_domain']}: {record.domain or UI_TEXT['value_unset']}",
+            f"{UI_TEXT['label_production_url']}: {record.production_url or UI_TEXT['value_unset']}",
+            f"{UI_TEXT['label_health_url']}: {record.health_url or UI_TEXT['value_unset']}",
+            f"{UI_TEXT['label_repo_url']}: {record.github_url or UI_TEXT['value_unset']}",
+            f"{UI_TEXT['label_cloudflare_project']}: {record.cloudflare_project or UI_TEXT['value_unset']}",
+            f"{UI_TEXT['label_cloudflare_url']}: {record.cloudflare_url or UI_TEXT['value_unset']}",
+            "",
             f"{UI_TEXT['label_detection_score']}: {record.detection_score}",
             f"{UI_TEXT['label_candidate_type']}: {UI_TEXT.get(f'candidate_type_{record.candidate_type}', record.candidate_type)}",
             f"{UI_TEXT['label_site_type']}: {record.site_type or UI_TEXT['value_unset']}",
@@ -2358,6 +2780,32 @@ class WebDashboardApp:
         lines.extend(f"- {item}" for item in record.missing_items)
         return "\n".join(lines)
 
+    def copy_to_clipboard(self, value: str, item_label: str) -> None:
+        try:
+            self.root.clipboard_clear()
+            self.root.clipboard_append(value)
+            self.root.update_idletasks()
+            self.notification_var.set(UI_TEXT["notification_copied"].format(item=item_label))
+            self.notification_frame.place(relx=1.0, rely=1.0, anchor="se", x=-22, y=-22)
+            self.root.after(NOTIFICATION_HIDE_MS, self.notification_frame.place_forget)
+        except tk.TclError as exc:
+            messagebox.showerror(
+                UI_TEXT["dialog_error_title"],
+                UI_TEXT["dialog_copy_failed"].format(error=exc),
+                parent=self.root,
+            )
+
+    def copy_selected_codex_instruction(self) -> None:
+        if not self.selected_record:
+            return
+        self.copy_to_clipboard(build_codex_instruction_text(self.selected_record), UI_TEXT["copy_item_codex"])
+
+    def copy_selected_meta_candidate(self) -> None:
+        if not self.selected_record:
+            return
+        value = json.dumps(meta_candidate_for_record(self.selected_record), ensure_ascii=False, indent=2)
+        self.copy_to_clipboard(value + "\n", UI_TEXT["copy_item_meta"])
+
     def open_selected_folder(self) -> None:
         if self.selected_record:
             self.open_path(self.selected_record.folder_path)
@@ -2368,7 +2816,7 @@ class WebDashboardApp:
 
     def open_selected_production(self) -> None:
         if self.selected_record:
-            self.open_url(self.selected_record.production_url)
+            self.open_url(first_safe_url(self.selected_record.production_url, url_from_domain(self.selected_record.domain)))
 
     def open_selected_health(self) -> None:
         if self.selected_record:
@@ -2434,12 +2882,16 @@ def run_launch_check() -> int:
     site_records = [record for record in records if record.candidate_type == "site"]
     candidate_count = sum(1 for record in records if record.candidate_type == "candidate")
     component_site_count = sum(1 for record in site_records if record.folder_name.lower() in COMPONENT_DIR_NAMES)
-    api_review_count = sum(1 for record in site_records if record.class_key == "api_review")
+    active_count = sum(1 for record in site_records if record_has_public_url(record))
+    url_missing_count = sum(1 for record in site_records if not record_has_public_url(record))
+    organizing_count = sum(1 for record in site_records if record_needs_organizing(record))
+    api_count = sum(1 for record in site_records if record_has_api(record))
     dirty_count = sum(1 for record in site_records if record.git.has_dirty)
     git_error_count = sum(1 for record in site_records if record.git.error)
     print(
         f"{UI_TEXT['status_launch_check_ok']}: sites={len(site_records)} candidates={candidate_count} component_sites={component_site_count} "
-        f"api_review={api_review_count} dirty_sites={dirty_count} git_errors={git_error_count}"
+        f"active={active_count} url_missing={url_missing_count} needs_organizing={organizing_count} api_sites={api_count} "
+        f"dirty_sites={dirty_count} git_errors={git_error_count}"
     )
     return 0
 
