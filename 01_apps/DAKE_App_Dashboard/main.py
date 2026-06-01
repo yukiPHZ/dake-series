@@ -258,6 +258,38 @@ UI_TEXT = {
     "watch_status_watchdog": "watchdog監視: ON",
     "watch_status_polling": "watchdog未導入 / 30秒自動読込: ON",
     "watch_status_error": "watchdog監視: 起動できませんでした",
+    "meta_app_type": "app_type",
+    "meta_completion_goal": "completion_goal",
+    "column_app_type": "種別",
+    "column_completion_goal": "完成条件",
+    "filter_market": "市場向け",
+    "filter_system": "QPSC系",
+    "filter_personal": "専用",
+    "filter_frozen": "凍結",
+    "app_type_market": "市場向け",
+    "app_type_system": "QPSC / 補助脳系",
+    "app_type_personal": "ユキズ専用",
+    "app_type_frozen": "凍結",
+    "app_type_archived": "保管",
+    "app_type_unknown": "未分類",
+    "completion_goal_formal_release": "正式出荷",
+    "completion_goal_local_ready": "ローカル運用",
+    "completion_goal_system_ready": "システム稼働",
+    "completion_goal_reference_ready": "正本提示",
+    "completion_goal_frozen_closed": "凍結完了",
+    "completion_goal_unknown": "未設定",
+    "qpsc_market": "市場向け",
+    "qpsc_system": "QPSC / 補助脳系",
+    "qpsc_personal": "ユキズ専用",
+    "qpsc_frozen": "凍結",
+    "status_system_ready": "システム稼働",
+    "status_local_ready": "ローカル運用",
+    "status_reference_ready": "正本提示",
+    "status_frozen_closed": "凍結完了",
+    "shipment_non_formal": "{app_type} / {goal}",
+    "shipment_non_formal_note": "正式出荷ラインではなく、この完成条件で判定します。",
+    "missing_non_formal": "この分類ではBOOTH / dakeapp.com素材不足を主警告にしません。",
+    "next_non_formal_goal": "完成条件: {goal}",
     "notification_reloaded": "{folder} を再読込しました",
     "footer_note": "一般公開・BOOTH登録・dakeapp.com掲載を行わない内部端末",
 }
@@ -290,6 +322,10 @@ STATUS_THEME = {
     "released": ("#152A25", THEME["success"]),
     "booth_ready": ("#1D213B", THEME["purple"]),
     "needs_review": ("#301B34", THEME["review"]),
+    "system_ready": ("#142337", THEME["accent_hover"]),
+    "local_ready": ("#1A2530", THEME["muted"]),
+    "reference_ready": ("#202538", THEME["purple"]),
+    "frozen_closed": ("#222531", THEME["quiet"]),
 }
 
 FONT_CANDIDATES = ["BIZ UDPGothic", "Yu Gothic UI", "Meiryo", "MS Gothic"]
@@ -305,10 +341,35 @@ META_FIELD_KEYS = (
     "release_url",
     "screenshot_path",
     "status",
+    "app_type",
+    "completion_goal",
     "show_in_launcher",
     "show_on_site",
 )
-FILTER_KEYS = ("all", "implementation", "distribution_ready", "released", "booth", "needs_review")
+APP_TYPE_DEFAULT = "market"
+COMPLETION_GOAL_DEFAULT = "formal_release"
+APP_TYPE_KEYS = ("market", "system", "personal", "frozen", "archived", "unknown")
+COMPLETION_GOAL_KEYS = (
+    "formal_release",
+    "local_ready",
+    "system_ready",
+    "reference_ready",
+    "frozen_closed",
+    "unknown",
+)
+NON_PUBLIC_STATUSES = {"internal", "frozen", "draft", "experimental", "private"}
+FILTER_KEYS = (
+    "all",
+    "implementation",
+    "distribution_ready",
+    "released",
+    "booth",
+    "needs_review",
+    "market",
+    "system",
+    "personal",
+    "frozen",
+)
 DAKE_META_PATTERN = re.compile(
     r"##\s*DAKE_META\s*```(?:json)?\s*(\{.*?\})\s*```",
     re.IGNORECASE | re.DOTALL,
@@ -393,6 +454,8 @@ class AppRecord:
     folder_path: Path
     meta_fields: dict[str, str]
     checks: FileChecks
+    app_type: str
+    completion_goal: str
     status_key: str
     missing_keys: tuple[str, ...]
     issue_messages: tuple[str, ...]
@@ -498,21 +561,59 @@ def meta_false(record: AppRecord, key: str) -> bool:
     return value in {"false", "0", "no", "off", UI_TEXT["value_no"].lower()}
 
 
+def normalized_choice(value: str, allowed: tuple[str, ...], default: str) -> str:
+    normalized = value.strip().lower()
+    return normalized if normalized in allowed else default
+
+
+def normalize_app_type(value: str) -> str:
+    return normalized_choice(value, APP_TYPE_KEYS, APP_TYPE_DEFAULT)
+
+
+def normalize_completion_goal(value: str) -> str:
+    return normalized_choice(value, COMPLETION_GOAL_KEYS, COMPLETION_GOAL_DEFAULT)
+
+
+def app_type_label(value: str) -> str:
+    key = normalize_app_type(value)
+    return UI_TEXT.get(f"app_type_{key}", UI_TEXT["app_type_unknown"])
+
+
+def completion_goal_label(value: str) -> str:
+    key = normalize_completion_goal(value)
+    return UI_TEXT.get(f"completion_goal_{key}", UI_TEXT["completion_goal_unknown"])
+
+
+def is_formal_release_meta(meta_fields: dict[str, str]) -> bool:
+    status = meta_fields.get("status", "").strip().lower()
+    if status in NON_PUBLIC_STATUSES:
+        return False
+    app_type = normalize_app_type(meta_fields.get("app_type", ""))
+    completion_goal = normalize_completion_goal(meta_fields.get("completion_goal", ""))
+    return app_type == "market" and completion_goal == "formal_release"
+
+
+def is_formal_release_app(record: AppRecord) -> bool:
+    return is_formal_release_meta(record.meta_fields)
+
+
 def is_internal_app(record: AppRecord) -> bool:
     status = record.meta_fields.get("status", "").strip().lower()
     if record.folder_name == APP_FOLDER_NAME or status == "internal":
+        return True
+    if record.app_type in {"system", "personal", "frozen", "archived"}:
         return True
     return meta_false(record, "show_on_site")
 
 
 def shipment_missing_keys(record: AppRecord) -> tuple[str, ...]:
-    if is_internal_app(record):
+    if not is_formal_release_app(record):
         return ()
     return tuple(key for key in SHIPMENT_MISSING_KEYS if key in record.missing_keys)
 
 
 def shipment_rate(record: AppRecord) -> int | None:
-    if is_internal_app(record):
+    if not is_formal_release_app(record):
         return None
     missing_count = len(shipment_missing_keys(record))
     done_count = len(SHIPMENT_MISSING_KEYS) - missing_count
@@ -675,6 +776,20 @@ def booth_label(checks: FileChecks) -> str:
     return f"{checks.booth_materials_count}/3"
 
 
+def booth_product_candidates(folder: Path) -> tuple[Path, ...]:
+    return (
+        folder / BOOTH_PRODUCT_NAME,
+        folder / BOOTH_READY_NAME / BOOTH_PRODUCT_NAME,
+    )
+
+
+def find_booth_product_path(folder: Path) -> Path | None:
+    for candidate in booth_product_candidates(folder):
+        if candidate.is_file():
+            return candidate
+    return None
+
+
 def booth_missing_keys(checks: FileChecks) -> tuple[str, ...]:
     missing: list[str] = []
     if not checks.has_booth_thumbnail:
@@ -700,12 +815,28 @@ def build_meta_fields(folder: Path, meta: dict[str, object]) -> dict[str, str]:
     fields["folder_name"] = fields["folder_name"] or folder.name
     if not fields["display_name"]:
         fields["display_name"] = fields["launcher_title"] or fields["site_title"] or folder.name
+    fields["app_type"] = normalize_app_type(fields.get("app_type", ""))
+    fields["completion_goal"] = normalize_completion_goal(fields.get("completion_goal", ""))
     return fields
 
 
 def classify_status(folder: Path, meta_fields: dict[str, str], checks: FileChecks, issues: tuple[str, ...]) -> str:
     if not checks.has_readme or issues:
         return "needs_review"
+
+    if not is_formal_release_meta(meta_fields):
+        goal = normalize_completion_goal(meta_fields.get("completion_goal", ""))
+        app_type = normalize_app_type(meta_fields.get("app_type", ""))
+        status = meta_fields.get("status", "").strip().lower()
+        if goal in {"system_ready", "local_ready", "reference_ready", "frozen_closed"}:
+            return goal
+        if app_type == "frozen" or status == "frozen":
+            return "frozen_closed"
+        if app_type == "system":
+            return "system_ready"
+        if app_type == "personal":
+            return "local_ready"
+        return "implementation"
 
     if checks.booth_materials_ready:
         return "booth_ready"
@@ -729,12 +860,18 @@ def classify_status(folder: Path, meta_fields: dict[str, str], checks: FileCheck
     return "needs_review"
 
 
-def build_missing_keys(checks: FileChecks, issues: tuple[str, ...]) -> tuple[str, ...]:
+def build_missing_keys(
+    checks: FileChecks,
+    issues: tuple[str, ...],
+    formal_release: bool,
+) -> tuple[str, ...]:
     missing: list[str] = []
     if not checks.has_readme:
         missing.append("readme")
     if issues and checks.has_readme:
         missing.append("dake_meta")
+    if not formal_release:
+        return tuple(missing)
     if not checks.has_release_body:
         missing.append("release_body")
     if not checks.has_screenshot:
@@ -758,19 +895,22 @@ def scan_folder(folder: Path) -> AppRecord:
     meta_fields = build_meta_fields(folder, meta)
     release_url = meta_fields.get("release_url", "").strip()
     dist_exes = existing_dist_exes(folder)
+    booth_product_path = find_booth_product_path(folder)
     checks = FileChecks(
         has_readme=readme_path.exists(),
         has_release_body=(folder / RELEASE_BODY_NAME).exists(),
         has_screenshot=(folder / SCREENSHOT_RELATIVE).exists(),
         has_booth_thumbnail=(folder / BOOTH_THUMBNAIL_RELATIVE).exists(),
-        has_booth_product=(folder / BOOTH_PRODUCT_NAME).exists(),
+        has_booth_product=booth_product_path is not None,
         has_booth_ready=(folder / BOOTH_READY_NAME).is_dir(),
         has_dist_exe=bool(dist_exes),
         has_release_url=bool(release_url),
         dist_exes=dist_exes,
     )
+    app_type = normalize_app_type(meta_fields.get("app_type", ""))
+    completion_goal = normalize_completion_goal(meta_fields.get("completion_goal", ""))
     status_key = classify_status(folder, meta_fields, checks, issues)
-    missing_keys = build_missing_keys(checks, issues)
+    missing_keys = build_missing_keys(checks, issues, is_formal_release_meta(meta_fields))
     last_modified = latest_mtime(
         [
             readme_path,
@@ -779,7 +919,7 @@ def scan_folder(folder: Path) -> AppRecord:
             folder / "build.bat",
             folder / SCREENSHOT_RELATIVE,
             folder / BOOTH_THUMBNAIL_RELATIVE,
-            folder / BOOTH_PRODUCT_NAME,
+            *booth_product_candidates(folder),
             *dist_exes,
         ],
         folder,
@@ -789,6 +929,8 @@ def scan_folder(folder: Path) -> AppRecord:
         folder_path=folder,
         meta_fields=meta_fields,
         checks=checks,
+        app_type=app_type,
+        completion_goal=completion_goal,
         status_key=status_key,
         missing_keys=missing_keys,
         issue_messages=issues,
@@ -815,8 +957,10 @@ def error_record(folder: Path, exc: Exception) -> AppRecord:
         folder_path=folder,
         meta_fields=meta_fields,
         checks=checks,
+        app_type=normalize_app_type(meta_fields.get("app_type", "")),
+        completion_goal=normalize_completion_goal(meta_fields.get("completion_goal", "")),
         status_key="needs_review",
-        missing_keys=build_missing_keys(checks, (issue,)),
+        missing_keys=build_missing_keys(checks, (issue,), is_formal_release_meta(meta_fields)),
         issue_messages=(issue,),
         last_modified=latest_mtime([folder / README_NAME], folder),
     )
@@ -841,7 +985,7 @@ def scan_apps(root: Path) -> list[AppRecord]:
 
 
 def formal_ship_line_reached(record: AppRecord) -> bool:
-    if is_internal_app(record):
+    if not is_formal_release_app(record):
         return False
     return (
         record.checks.has_release_url
@@ -852,7 +996,7 @@ def formal_ship_line_reached(record: AppRecord) -> bool:
 
 
 def is_booth_registration_target(record: AppRecord) -> bool:
-    if is_internal_app(record) or not meta_bool(record, "show_on_site"):
+    if not is_formal_release_app(record) or not meta_bool(record, "show_on_site"):
         return False
     return (
         record.checks.has_release_url
@@ -864,7 +1008,7 @@ def is_booth_registration_target(record: AppRecord) -> bool:
 
 
 def next_process_key(record: AppRecord) -> str:
-    if is_internal_app(record):
+    if not is_formal_release_app(record):
         return "internal"
     if record.status_key == "needs_review" or record.issue_messages or "dake_meta" in record.missing_keys:
         return "readme"
@@ -886,8 +1030,8 @@ def next_process_text(record: AppRecord) -> str:
 
 
 def next_step_label(record: AppRecord) -> str:
-    if is_internal_app(record):
-        return UI_TEXT["next_step_internal"]
+    if not is_formal_release_app(record):
+        return completion_goal_label(record.completion_goal)
     if record.status_key == "needs_review" or record.issue_messages or "dake_meta" in record.missing_keys:
         return UI_TEXT["next_step_review"]
 
@@ -974,19 +1118,24 @@ def next_candidate_for_record(record: AppRecord) -> tuple[int, str] | None:
         return 1, UI_TEXT["candidate_needs_review"]
     if record.issue_messages or "dake_meta" in record.missing_keys:
         return 2, UI_TEXT["candidate_meta_broken"]
-    if record.checks.has_dist_exe and not record.checks.has_release_url and not is_internal_app(record):
+    if record.checks.has_dist_exe and not record.checks.has_release_url and is_formal_release_app(record):
         return 3, UI_TEXT["candidate_release_missing"]
-    if record.checks.has_release_url and meta_bool(record, "show_on_site") and not record.checks.booth_materials_ready:
+    if (
+        is_formal_release_app(record)
+        and record.checks.has_release_url
+        and meta_bool(record, "show_on_site")
+        and not record.checks.booth_materials_ready
+    ):
         return 4, UI_TEXT["candidate_booth_missing"]
     if is_booth_registration_target(record):
         return 5, UI_TEXT["candidate_booth_registration"]
-    if record.checks.booth_materials_ready and meta_bool(record, "show_on_site"):
+    if is_formal_release_app(record) and record.checks.booth_materials_ready and meta_bool(record, "show_on_site"):
         return 6, UI_TEXT["candidate_site_unknown"]
-    if not record.checks.has_screenshot and not is_internal_app(record):
+    if not record.checks.has_screenshot and is_formal_release_app(record):
         return 7, UI_TEXT["candidate_screenshot_missing"]
-    if not record.checks.has_release_body and not is_internal_app(record):
+    if not record.checks.has_release_body and is_formal_release_app(record):
         return 8, UI_TEXT["candidate_release_body_missing"]
-    if is_internal_app(record):
+    if not is_formal_release_app(record):
         return 90, UI_TEXT["candidate_internal"]
     return None
 
@@ -1035,6 +1184,10 @@ class DashboardApp:
             "booth_product_missing": tk.StringVar(value="0"),
             "booth_ready_missing": tk.StringVar(value="0"),
             "booth_registration_ready": tk.StringVar(value="0"),
+            "market": tk.StringVar(value="0"),
+            "system": tk.StringVar(value="0"),
+            "personal": tk.StringVar(value="0"),
+            "frozen": tk.StringVar(value="0"),
         }
         self.qpsc_status_var = tk.StringVar(value=UI_TEXT["qpsc_card_subtitle"])
         self.git_vars = {
@@ -1263,10 +1416,14 @@ class DashboardApp:
             ("booth_product_missing", "qpsc_booth_product_missing"),
             ("booth_ready_missing", "qpsc_booth_ready_missing"),
             ("booth_registration_ready", "qpsc_booth_registration_ready"),
+            ("market", "qpsc_market"),
+            ("system", "qpsc_system"),
+            ("personal", "qpsc_personal"),
+            ("frozen", "qpsc_frozen"),
         ]
         for index, (key, label_key) in enumerate(items):
             item = tk.Frame(metrics, bg=THEME["panel_soft"], padx=12, pady=7)
-            item.grid(row=0, column=index, sticky="e", padx=(0 if index == 0 else 8, 0))
+            item.grid(row=index // 6, column=index % 6, sticky="e", padx=(0 if index % 6 == 0 else 8, 0), pady=(0 if index < 6 else 8, 0))
             tk.Label(
                 item,
                 text=UI_TEXT[label_key],
@@ -1404,7 +1561,19 @@ class DashboardApp:
         table_shell.grid_rowconfigure(0, weight=1)
         table_shell.grid_columnconfigure(0, weight=1)
 
-        columns = ("status", "folder", "display", "release", "booth", "screenshot", "exe", "next_step", "updated")
+        columns = (
+            "status",
+            "folder",
+            "display",
+            "app_type",
+            "completion_goal",
+            "release",
+            "booth",
+            "screenshot",
+            "exe",
+            "next_step",
+            "updated",
+        )
         self.tree = ttk.Treeview(
             table_shell,
             columns=columns,
@@ -1427,6 +1596,8 @@ class DashboardApp:
             "status": UI_TEXT["column_status"],
             "folder": UI_TEXT["column_folder"],
             "display": UI_TEXT["column_display"],
+            "app_type": UI_TEXT["column_app_type"],
+            "completion_goal": UI_TEXT["column_completion_goal"],
             "release": UI_TEXT["column_release"],
             "booth": UI_TEXT["column_booth"],
             "screenshot": UI_TEXT["column_screenshot"],
@@ -1438,6 +1609,8 @@ class DashboardApp:
             "status": 96,
             "folder": 150,
             "display": 150,
+            "app_type": 96,
+            "completion_goal": 92,
             "release": 70,
             "booth": 74,
             "screenshot": 82,
@@ -1447,7 +1620,7 @@ class DashboardApp:
         }
         for column in columns:
             self.tree.heading(column, text=headings[column])
-            anchor = "center" if column in {"status", "release", "booth", "screenshot", "exe", "next_step", "updated"} else "w"
+            anchor = "center" if column in {"status", "app_type", "completion_goal", "release", "booth", "screenshot", "exe", "next_step", "updated"} else "w"
             self.tree.column(column, width=widths[column], minwidth=54, stretch=column in {"folder", "display"}, anchor=anchor)
 
         for key, (_bg, fg) in STATUS_THEME.items():
@@ -1809,15 +1982,19 @@ class DashboardApp:
         previous_map = previous_map or {}
         current_map = current_map or record_map(self.records)
         new_app_count = len(set(current_map) - set(previous_map)) if previous_map else 0
-        public_records = [record for record in self.records if not is_internal_app(record)]
+        formal_records = [record for record in self.records if is_formal_release_app(record)]
         self.qpsc_vars["new_apps"].set(str(new_app_count))
         self.qpsc_vars["needs_review"].set(str(counts["needs_review"]))
         self.qpsc_vars["ship_line"].set(str(sum(1 for record in self.records if formal_ship_line_reached(record))))
-        self.qpsc_vars["booth_materials_missing"].set(str(sum(1 for record in public_records if not record.checks.booth_materials_ready)))
-        self.qpsc_vars["booth_thumbnail_missing"].set(str(sum(1 for record in public_records if not record.checks.has_booth_thumbnail)))
-        self.qpsc_vars["booth_product_missing"].set(str(sum(1 for record in public_records if not record.checks.has_booth_product)))
-        self.qpsc_vars["booth_ready_missing"].set(str(sum(1 for record in public_records if not record.checks.has_booth_ready)))
-        self.qpsc_vars["booth_registration_ready"].set(str(sum(1 for record in public_records if is_booth_registration_target(record))))
+        self.qpsc_vars["booth_materials_missing"].set(str(sum(1 for record in formal_records if not record.checks.booth_materials_ready)))
+        self.qpsc_vars["booth_thumbnail_missing"].set(str(sum(1 for record in formal_records if not record.checks.has_booth_thumbnail)))
+        self.qpsc_vars["booth_product_missing"].set(str(sum(1 for record in formal_records if not record.checks.has_booth_product)))
+        self.qpsc_vars["booth_ready_missing"].set(str(sum(1 for record in formal_records if not record.checks.has_booth_ready)))
+        self.qpsc_vars["booth_registration_ready"].set(str(sum(1 for record in formal_records if is_booth_registration_target(record))))
+        self.qpsc_vars["market"].set(str(sum(1 for record in self.records if record.app_type == "market")))
+        self.qpsc_vars["system"].set(str(sum(1 for record in self.records if record.app_type == "system")))
+        self.qpsc_vars["personal"].set(str(sum(1 for record in self.records if record.app_type == "personal")))
+        self.qpsc_vars["frozen"].set(str(sum(1 for record in self.records if record.app_type == "frozen")))
 
     def update_git_card(self, status: GitStatus) -> None:
         if status.error:
@@ -1958,6 +2135,10 @@ class DashboardApp:
             return True
         if self.filter_key == "booth":
             return record.status_key == "booth_ready"
+        if self.filter_key in {"market", "system", "personal"}:
+            return record.app_type == self.filter_key
+        if self.filter_key == "frozen":
+            return record.app_type == "frozen" or record.status_key == "frozen_closed"
         return record.status_key == self.filter_key
 
     def matches_query(self, record: AppRecord, query: str) -> bool:
@@ -1972,6 +2153,8 @@ class DashboardApp:
                 record.meta_fields.get("update_summary", ""),
                 record.meta_fields.get("exe_name", ""),
                 record.meta_fields.get("status", ""),
+                record.app_type,
+                record.completion_goal,
             ]
         ).lower()
         return query in haystack
@@ -1984,7 +2167,7 @@ class DashboardApp:
             iid = str(record.folder_path)
             self.record_by_iid[iid] = record
             tags = [record.status_key]
-            if is_internal_app(record):
+            if not is_formal_release_app(record):
                 tags.append("booth_internal")
             else:
                 tags.append(f"booth_count_{record.checks.booth_materials_count}")
@@ -1998,6 +2181,8 @@ class DashboardApp:
                     record.status_text,
                     record.folder_name,
                     record.display_name,
+                    app_type_label(record.app_type),
+                    completion_goal_label(record.completion_goal),
                     bool_label(record.checks.has_release_url),
                     booth_label(record.checks),
                     bool_label(record.checks.has_screenshot),
@@ -2104,7 +2289,7 @@ class DashboardApp:
             "screenshot_webp": record.folder_path / SCREENSHOT_RELATIVE,
             "screenshot_jpg": record.folder_path / SCREENSHOT_JPG_RELATIVE,
             "booth_thumbnail": record.folder_path / BOOTH_THUMBNAIL_RELATIVE,
-            "booth_product": record.folder_path / BOOTH_PRODUCT_NAME,
+            "booth_product": find_booth_product_path(record.folder_path) or record.folder_path / BOOTH_PRODUCT_NAME,
             "booth_ready": record.folder_path / BOOTH_READY_NAME,
             "dist": record.folder_path / DIST_DIR_NAME,
             "exe": first_dist_exe(record),
@@ -2131,6 +2316,10 @@ class DashboardApp:
         for key in META_FIELD_KEYS:
             label = UI_TEXT[f"meta_{key}"]
             value = record.meta_fields.get(key, "").strip() or UI_TEXT["value_unset"]
+            if key == "app_type":
+                value = f"{value} ({app_type_label(record.app_type)})"
+            elif key == "completion_goal":
+                value = f"{value} ({completion_goal_label(record.completion_goal)})"
             lines.append(f"{label}: {value}")
         if record.issue_messages:
             lines.append("")
@@ -2168,7 +2357,15 @@ class DashboardApp:
     def build_shipment_detail(self, record: AppRecord) -> str:
         rate = shipment_rate(record)
         if rate is None:
-            return UI_TEXT["shipment_internal"]
+            return "\n".join(
+                [
+                    UI_TEXT["shipment_non_formal"].format(
+                        app_type=app_type_label(record.app_type),
+                        goal=completion_goal_label(record.completion_goal),
+                    ),
+                    UI_TEXT["shipment_non_formal_note"],
+                ]
+            )
 
         lines = [UI_TEXT["shipment_rate"].format(percent=rate)]
         missing = shipment_missing_keys(record)
@@ -2182,6 +2379,8 @@ class DashboardApp:
 
     def build_missing_detail(self, record: AppRecord) -> str:
         if not record.missing_keys:
+            if not is_formal_release_app(record):
+                return UI_TEXT["missing_non_formal"]
             return UI_TEXT["missing_none"]
         return "\n".join(f"- {UI_TEXT[f'missing_{key}']}" for key in record.missing_keys)
 
@@ -2197,6 +2396,9 @@ class DashboardApp:
 
     def build_next_detail(self, record: AppRecord) -> str:
         tasks: list[str] = [next_process_text(record)]
+        if not is_formal_release_app(record) and record.status_key != "needs_review":
+            tasks.append(UI_TEXT["next_non_formal_goal"].format(goal=completion_goal_label(record.completion_goal)))
+            return "\n".join(f"- {task}" for task in tasks)
         if record.status_key == "needs_review":
             tasks.append(UI_TEXT["next_review_readme"])
             if "dake_meta" in record.missing_keys:
@@ -2244,7 +2446,9 @@ class DashboardApp:
         self.open_selected_relative_path(BOOTH_READY_NAME)
 
     def open_selected_booth_product(self) -> None:
-        self.open_selected_relative_path(BOOTH_PRODUCT_NAME)
+        if self.selected_record is not None:
+            path = find_booth_product_path(self.selected_record.folder_path) or self.selected_record.folder_path / BOOTH_PRODUCT_NAME
+            self.open_path(path, UI_TEXT["link_booth_product"])
 
     def open_selected_booth_thumbnail(self) -> None:
         self.open_selected_relative_path(BOOTH_THUMBNAIL_RELATIVE)
@@ -2313,7 +2517,7 @@ class DashboardApp:
         if process_key == "booth":
             self.launch_booth_assist(record)
             self.open_path(record.folder_path / BOOTH_READY_NAME, UI_TEXT["link_booth_ready"])
-            self.open_path(record.folder_path / BOOTH_PRODUCT_NAME, UI_TEXT["link_booth_product"])
+            self.open_path(find_booth_product_path(record.folder_path) or record.folder_path / BOOTH_PRODUCT_NAME, UI_TEXT["link_booth_product"])
         elif process_key == "release":
             self.open_path(record.folder_path / README_NAME, UI_TEXT["link_readme"])
             release_body = record.folder_path / RELEASE_BODY_NAME
@@ -2338,8 +2542,8 @@ class DashboardApp:
         elif process_key == "booth_materials":
             assets_dir = record.folder_path / "assets"
             self.open_path(assets_dir if assets_dir.exists() else record.folder_path, UI_TEXT["link_assets"])
-            booth_product = record.folder_path / BOOTH_PRODUCT_NAME
-            if booth_product.exists():
+            booth_product = find_booth_product_path(record.folder_path)
+            if booth_product is not None:
                 self.open_path(booth_product, UI_TEXT["link_booth_product"])
             booth_ready = record.folder_path / BOOTH_READY_NAME
             if booth_ready.exists():

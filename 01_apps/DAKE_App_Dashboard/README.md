@@ -100,6 +100,17 @@ git diff --check
 
 This app is a system/operations dashboard, not a market-facing standalone product. Its completion goal is `system_ready`: README, launch-check, build, and dashboard role are documented and working.
 
+## app_type / completion_goal 対応
+
+DAKE Dashboard は `DAKE_META` の `app_type` と `completion_goal` を読み取り、アプリの役割ごとに表示と不足判定を分けます。
+
+- `market` + `formal_release`: Release / BOOTH / dakeapp.com を含む正式出荷ラインで判定
+- `system` + `system_ready`: QPSC / 補助脳系として、BOOTH不足を主警告にしない
+- `personal` + `local_ready`: ローカル運用を完成条件として扱う
+- `frozen` + `frozen_closed`: 凍結完了として扱い、通常出荷不足に乗せない
+
+市場向けではないアプリを、正式出荷・BOOTH登録の未完了レーンに混ぜないための分類です。
+
 ## DAKE_META
 ```json
 {
@@ -109,7 +120,7 @@ This app is a system/operations dashboard, not a market-facing standalone produc
   "launcher_description": "DAKEアプリ群の正本状態を見る",
   "site_title": "",
   "site_description": "",
-  "update_summary": "README正本からDAKEアプリ群の状態を確認する開発アシスト",
+  "update_summary": "app_type / completion_goal による役割分類と完成条件別の判定に対応",
   "folder_name": "DAKE_App_Dashboard",
   "exe_name": "DakeApp_Dashboard.exe",
   "release_url": "",
