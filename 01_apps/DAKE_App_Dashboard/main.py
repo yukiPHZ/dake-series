@@ -111,6 +111,7 @@ UI_TEXT = {
     "column_booth": "BOOTH素材",
     "column_screenshot": "screenshot",
     "column_exe": "exe",
+    "column_next_step": "次工程",
     "column_updated": "最終更新",
     "status_implementation": "実装中",
     "status_distribution_ready": "配布準備",
@@ -159,6 +160,21 @@ UI_TEXT = {
     "file_booth_ready": "booth_ready/",
     "file_dist_exe": "dist/*.exe",
     "file_release_url": "release_url",
+    "booth_status_title": "BOOTH状況 {ready}/3",
+    "booth_status_ready": "✓ {label}",
+    "booth_status_missing": "✗ {label}",
+    "booth_missing_title": "不足:",
+    "booth_ready_label_thumbnail": "booth_thumbnail.jpg",
+    "booth_ready_label_product": "booth_product.txt",
+    "booth_ready_label_ready": "booth_ready/",
+    "next_step_review": "要確認",
+    "next_step_readme": "README整備",
+    "next_step_screenshot": "スクショ作成",
+    "next_step_release": "Release作成",
+    "next_step_booth_materials": "BOOTH素材作成",
+    "next_step_booth": "BOOTH登録",
+    "next_step_released": "配布中",
+    "next_step_internal": "内部",
     "issue_readme_missing": "README.md が見つかりません。",
     "issue_readme_read_error": "README.md を読み取れませんでした: {error}",
     "issue_meta_missing": "DAKE_META が見つかりません。",
@@ -188,6 +204,11 @@ UI_TEXT = {
     "qpsc_needs_review": "要確認",
     "qpsc_ship_line": "正式出荷ライン到達",
     "qpsc_unshipped": "未出荷",
+    "qpsc_booth_materials_missing": "BOOTH素材不足",
+    "qpsc_booth_thumbnail_missing": "thumbnail未作成",
+    "qpsc_booth_product_missing": "booth_product未作成",
+    "qpsc_booth_ready_missing": "booth_ready未作成",
+    "qpsc_booth_registration_ready": "BOOTH登録可能",
     "qpsc_booth_missing": "BOOTH未準備",
     "qpsc_release_missing": "Release未作成",
     "git_card_title": "Git状態",
@@ -311,6 +332,7 @@ SHIPMENT_MISSING_KEYS = (
     "dist_exe",
     "release_url",
 )
+BOOTH_MATERIAL_KEYS = ("booth_thumbnail", "booth_product", "booth_ready")
 WORKSPACE_LINK_KEYS = (
     "folder",
     "readme",
@@ -359,6 +381,10 @@ class FileChecks:
     @property
     def booth_materials_partial(self) -> bool:
         return self.has_booth_product or self.has_booth_thumbnail or self.has_booth_ready
+
+    @property
+    def booth_materials_count(self) -> int:
+        return sum((self.has_booth_thumbnail, self.has_booth_product, self.has_booth_ready))
 
 
 @dataclass(frozen=True)
@@ -646,11 +672,27 @@ def bool_label(value: bool) -> str:
 
 
 def booth_label(checks: FileChecks) -> str:
-    if checks.booth_materials_ready:
-        return UI_TEXT["value_yes"]
-    if checks.booth_materials_partial:
-        return UI_TEXT["value_partial"]
-    return UI_TEXT["value_no"]
+    return f"{checks.booth_materials_count}/3"
+
+
+def booth_missing_keys(checks: FileChecks) -> tuple[str, ...]:
+    missing: list[str] = []
+    if not checks.has_booth_thumbnail:
+        missing.append("booth_thumbnail")
+    if not checks.has_booth_product:
+        missing.append("booth_product")
+    if not checks.has_booth_ready:
+        missing.append("booth_ready")
+    return tuple(missing)
+
+
+def booth_item_label(key: str) -> str:
+    labels = {
+        "booth_thumbnail": UI_TEXT["booth_ready_label_thumbnail"],
+        "booth_product": UI_TEXT["booth_ready_label_product"],
+        "booth_ready": UI_TEXT["booth_ready_label_ready"],
+    }
+    return labels.get(key, key)
 
 
 def build_meta_fields(folder: Path, meta: dict[str, object]) -> dict[str, str]:
@@ -828,7 +870,7 @@ def next_process_key(record: AppRecord) -> str:
         return "readme"
     if record.checks.has_dist_exe and not record.checks.has_release_url:
         return "release"
-    if record.checks.has_release_url and not record.checks.booth_materials_ready:
+    if record.checks.has_release_url and meta_bool(record, "show_on_site") and not record.checks.booth_materials_ready:
         return "booth_materials"
     if not record.checks.has_screenshot:
         return "screenshot"
@@ -841,6 +883,26 @@ def next_process_key(record: AppRecord) -> str:
 
 def next_process_text(record: AppRecord) -> str:
     return UI_TEXT[f"next_process_{next_process_key(record)}"]
+
+
+def next_step_label(record: AppRecord) -> str:
+    if is_internal_app(record):
+        return UI_TEXT["next_step_internal"]
+    if record.status_key == "needs_review" or record.issue_messages or "dake_meta" in record.missing_keys:
+        return UI_TEXT["next_step_review"]
+
+    process_key = next_process_key(record)
+    if process_key == "readme":
+        return UI_TEXT["next_step_readme"]
+    if process_key == "screenshot":
+        return UI_TEXT["next_step_screenshot"]
+    if process_key == "release":
+        return UI_TEXT["next_step_release"]
+    if process_key == "booth_materials":
+        return UI_TEXT["next_step_booth_materials"]
+    if process_key == "booth":
+        return UI_TEXT["next_step_booth"]
+    return UI_TEXT["next_step_released"]
 
 
 def is_safe_url(url: str) -> bool:
@@ -914,7 +976,7 @@ def next_candidate_for_record(record: AppRecord) -> tuple[int, str] | None:
         return 2, UI_TEXT["candidate_meta_broken"]
     if record.checks.has_dist_exe and not record.checks.has_release_url and not is_internal_app(record):
         return 3, UI_TEXT["candidate_release_missing"]
-    if record.checks.has_release_url and not record.checks.booth_materials_ready and not is_internal_app(record):
+    if record.checks.has_release_url and meta_bool(record, "show_on_site") and not record.checks.booth_materials_ready:
         return 4, UI_TEXT["candidate_booth_missing"]
     if is_booth_registration_target(record):
         return 5, UI_TEXT["candidate_booth_registration"]
@@ -968,8 +1030,11 @@ class DashboardApp:
             "needs_review": tk.StringVar(value="0"),
             "ship_line": tk.StringVar(value="0"),
             "unshipped": tk.StringVar(value="0"),
-            "booth_missing": tk.StringVar(value="0"),
-            "release_missing": tk.StringVar(value="0"),
+            "booth_materials_missing": tk.StringVar(value="0"),
+            "booth_thumbnail_missing": tk.StringVar(value="0"),
+            "booth_product_missing": tk.StringVar(value="0"),
+            "booth_ready_missing": tk.StringVar(value="0"),
+            "booth_registration_ready": tk.StringVar(value="0"),
         }
         self.qpsc_status_var = tk.StringVar(value=UI_TEXT["qpsc_card_subtitle"])
         self.git_vars = {
@@ -1191,12 +1256,13 @@ class DashboardApp:
 
         items = [
             ("new_apps", "qpsc_new_apps"),
-            ("distribution_ready", "qpsc_distribution_ready"),
             ("needs_review", "qpsc_needs_review"),
             ("ship_line", "qpsc_ship_line"),
-            ("unshipped", "qpsc_unshipped"),
-            ("booth_missing", "qpsc_booth_missing"),
-            ("release_missing", "qpsc_release_missing"),
+            ("booth_materials_missing", "qpsc_booth_materials_missing"),
+            ("booth_thumbnail_missing", "qpsc_booth_thumbnail_missing"),
+            ("booth_product_missing", "qpsc_booth_product_missing"),
+            ("booth_ready_missing", "qpsc_booth_ready_missing"),
+            ("booth_registration_ready", "qpsc_booth_registration_ready"),
         ]
         for index, (key, label_key) in enumerate(items):
             item = tk.Frame(metrics, bg=THEME["panel_soft"], padx=12, pady=7)
@@ -1338,7 +1404,7 @@ class DashboardApp:
         table_shell.grid_rowconfigure(0, weight=1)
         table_shell.grid_columnconfigure(0, weight=1)
 
-        columns = ("status", "folder", "display", "release", "booth", "screenshot", "exe", "updated")
+        columns = ("status", "folder", "display", "release", "booth", "screenshot", "exe", "next_step", "updated")
         self.tree = ttk.Treeview(
             table_shell,
             columns=columns,
@@ -1365,26 +1431,33 @@ class DashboardApp:
             "booth": UI_TEXT["column_booth"],
             "screenshot": UI_TEXT["column_screenshot"],
             "exe": UI_TEXT["column_exe"],
+            "next_step": UI_TEXT["column_next_step"],
             "updated": UI_TEXT["column_updated"],
         }
         widths = {
-            "status": 110,
-            "folder": 170,
-            "display": 170,
-            "release": 76,
-            "booth": 86,
-            "screenshot": 88,
-            "exe": 64,
-            "updated": 126,
+            "status": 96,
+            "folder": 150,
+            "display": 150,
+            "release": 70,
+            "booth": 74,
+            "screenshot": 82,
+            "exe": 58,
+            "next_step": 116,
+            "updated": 122,
         }
         for column in columns:
             self.tree.heading(column, text=headings[column])
-            anchor = "center" if column in {"status", "release", "booth", "screenshot", "exe", "updated"} else "w"
+            anchor = "center" if column in {"status", "release", "booth", "screenshot", "exe", "next_step", "updated"} else "w"
             self.tree.column(column, width=widths[column], minwidth=54, stretch=column in {"folder", "display"}, anchor=anchor)
 
         for key, (_bg, fg) in STATUS_THEME.items():
             self.tree.tag_configure(key, foreground=fg)
         self.tree.tag_configure("booth_working", background=THEME["accent_soft"], foreground=THEME["text"])
+        self.tree.tag_configure("booth_count_0", foreground=THEME["muted"])
+        self.tree.tag_configure("booth_count_1", foreground=THEME["warning"])
+        self.tree.tag_configure("booth_count_2", foreground=THEME["warning"])
+        self.tree.tag_configure("booth_count_3", foreground=THEME["success"])
+        self.tree.tag_configure("booth_internal", foreground=THEME["purple"])
 
         self.tree.bind("<<TreeviewSelect>>", self.on_tree_select)
 
@@ -1459,7 +1532,7 @@ class DashboardApp:
 
         self.meta_text = self.create_detail_text(detail_area, 0, UI_TEXT["detail_meta_title"], height=3)
         self.shipment_text = self.create_detail_text(detail_area, 2, UI_TEXT["shipment_title"], height=3)
-        self.files_text = self.create_detail_text(detail_area, 4, UI_TEXT["detail_files_title"], height=3)
+        self.files_text = self.create_detail_text(detail_area, 4, UI_TEXT["detail_files_title"], height=5)
         self.missing_text = self.create_detail_text(detail_area, 6, UI_TEXT["detail_missing_title"], height=3)
         self.next_text = self.create_detail_text(detail_area, 8, UI_TEXT["detail_next_title"], height=3)
         self.next_candidates_text = self.create_detail_text(detail_area, 10, UI_TEXT["next_candidates_title"], height=4)
@@ -1736,17 +1809,15 @@ class DashboardApp:
         previous_map = previous_map or {}
         current_map = current_map or record_map(self.records)
         new_app_count = len(set(current_map) - set(previous_map)) if previous_map else 0
+        public_records = [record for record in self.records if not is_internal_app(record)]
         self.qpsc_vars["new_apps"].set(str(new_app_count))
-        self.qpsc_vars["distribution_ready"].set(str(counts["distribution_ready"]))
         self.qpsc_vars["needs_review"].set(str(counts["needs_review"]))
         self.qpsc_vars["ship_line"].set(str(sum(1 for record in self.records if formal_ship_line_reached(record))))
-        self.qpsc_vars["unshipped"].set(str(sum(1 for record in self.records if shipment_rate(record) not in {None, 100})))
-        self.qpsc_vars["booth_missing"].set(
-            str(sum(1 for record in self.records if not is_internal_app(record) and not record.checks.booth_materials_ready))
-        )
-        self.qpsc_vars["release_missing"].set(
-            str(sum(1 for record in self.records if not is_internal_app(record) and not record.checks.has_release_url))
-        )
+        self.qpsc_vars["booth_materials_missing"].set(str(sum(1 for record in public_records if not record.checks.booth_materials_ready)))
+        self.qpsc_vars["booth_thumbnail_missing"].set(str(sum(1 for record in public_records if not record.checks.has_booth_thumbnail)))
+        self.qpsc_vars["booth_product_missing"].set(str(sum(1 for record in public_records if not record.checks.has_booth_product)))
+        self.qpsc_vars["booth_ready_missing"].set(str(sum(1 for record in public_records if not record.checks.has_booth_ready)))
+        self.qpsc_vars["booth_registration_ready"].set(str(sum(1 for record in public_records if is_booth_registration_target(record))))
 
     def update_git_card(self, status: GitStatus) -> None:
         if status.error:
@@ -1913,6 +1984,10 @@ class DashboardApp:
             iid = str(record.folder_path)
             self.record_by_iid[iid] = record
             tags = [record.status_key]
+            if is_internal_app(record):
+                tags.append("booth_internal")
+            else:
+                tags.append(f"booth_count_{record.checks.booth_materials_count}")
             if record.folder_name == self.booth_working_folder:
                 tags.append("booth_working")
             self.tree.insert(
@@ -1927,6 +2002,7 @@ class DashboardApp:
                     booth_label(record.checks),
                     bool_label(record.checks.has_screenshot),
                     bool_label(record.checks.has_dist_exe),
+                    next_step_label(record),
                     format_datetime(record.last_modified),
                 ),
                 tags=tuple(tags),
@@ -2063,6 +2139,16 @@ class DashboardApp:
 
     def build_file_detail(self, record: AppRecord) -> str:
         checks = record.checks
+        booth_missing = booth_missing_keys(checks)
+        booth_lines = [UI_TEXT["booth_status_title"].format(ready=checks.booth_materials_count)]
+        for key in BOOTH_MATERIAL_KEYS:
+            template = UI_TEXT["booth_status_missing"] if key in booth_missing else UI_TEXT["booth_status_ready"]
+            booth_lines.append(template.format(label=booth_item_label(key)))
+        if booth_missing:
+            booth_lines.append("")
+            booth_lines.append(UI_TEXT["booth_missing_title"])
+            booth_lines.extend(f"- {booth_item_label(key)}" for key in booth_missing)
+
         rows = [
             ("file_readme", checks.has_readme),
             ("file_release_body", checks.has_release_body),
@@ -2073,7 +2159,7 @@ class DashboardApp:
             ("file_dist_exe", checks.has_dist_exe),
             ("file_release_url", checks.has_release_url),
         ]
-        lines = [f"{UI_TEXT[label_key]}: {bool_label(value)}" for label_key, value in rows]
+        lines = [*booth_lines, "", *[f"{UI_TEXT[label_key]}: {bool_label(value)}" for label_key, value in rows]]
         if checks.dist_exes:
             lines.append("")
             lines.extend(path.name for path in checks.dist_exes)

@@ -76,6 +76,14 @@ C:\Users\yukiz\devlop\DAKE_series\01_apps
 - 次の作業へボタンが、BOOTH登録、Release作成、スクショ作成、README整備、BOOTH素材作成に応じて作業対象を開く
 - exeは直接実行せず、エクスプローラーで場所表示のみ行う
 
+## Phase6 BOOTH状態表示の精密化
+
+- BOOTH素材を `assets/booth_thumbnail.jpg`、`booth_product.txt`、`booth_ready/` の3点セットで判定
+- アプリ一覧で BOOTH 0/3〜3/3 を表示
+- 詳細ペインでBOOTH素材の有無と不足項目を表示
+- 次工程判定で BOOTH素材作成 と BOOTH登録 を分離
+- show_on_site=false の内部アプリはBOOTH未準備集計から除外
+
 このアプリ自身は内部アプリです。一般公開、BOOTH素材作成、dakeapp.com掲載、GitHub Release作成は行いません。
 
 ## 品質チェック
