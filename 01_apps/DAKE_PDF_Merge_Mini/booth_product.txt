@@ -1,19 +1,18 @@
 商品名
-アプリどこ
+DakePDF結合mini
 
 概要
-どこに置いたか忘れたDAKE系アプリを探して、起動やフォルダ表示まで行う探索アプリです。
+PDFを最大5ファイルまで選択し、表示順に1つのPDFへ結合できるWindows向けminiアプリです。
 
 できること
-- アプリどこ
-- PC内のDAKE系exeを探します
-- README正本を読み取って表示します
-- 忘れていたアプリを発掘できます
+- PDF結合miniアプリ
+- 最大5ファイルまで対応
+- サムネイル並べ替え対応
 - Windows向けexe
 
 使い方
 1. ZIPを解凍します。
-2. DakeApp_Doko.exe を起動します。
+2. DakePDF_Merge_Mini.exe を起動します。
 3. 画面の案内に従って処理します。
 
 注意事項
@@ -25,7 +24,7 @@
 日々の実務を少し早く、少し静かに進めたい方向けです。
 
 配布物
-- DakeApp_Doko.exe
+- DakePDF_Merge_Mini.exe
 - README.txt
 - 注意事項.txt
 

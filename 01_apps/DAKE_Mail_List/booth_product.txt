@@ -1,19 +1,18 @@
 商品名
-アプリどこ
+Dakeメールリスト
 
 概要
-どこに置いたか忘れたDAKE系アプリを探して、起動やフォルダ表示まで行う探索アプリです。
+Outlookの.msgメールから、会社名・お名前・メールアドレスだけをCSVにする小さな実務ツールです。
 
 できること
-- アプリどこ
-- PC内のDAKE系exeを探します
-- README正本を読み取って表示します
-- 忘れていたアプリを発掘できます
-- Windows向けexe
+- Dakeメールリスト
+- Outlookの.msgメールをCSV化
+- 会社名・お名前・メールアドレスだけ抽出
+- ローカル完結のWindows向けexe
 
 使い方
 1. ZIPを解凍します。
-2. DakeApp_Doko.exe を起動します。
+2. DakeMail_List.exe を起動します。
 3. 画面の案内に従って処理します。
 
 注意事項
@@ -25,7 +24,7 @@
 日々の実務を少し早く、少し静かに進めたい方向けです。
 
 配布物
-- DakeApp_Doko.exe
+- DakeMail_List.exe
 - README.txt
 - 注意事項.txt
 
