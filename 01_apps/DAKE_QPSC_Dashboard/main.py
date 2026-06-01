@@ -45,7 +45,7 @@ UI_TEXT = {
     "window_title": "Quiet Personal Cognitive System",
     "app_title": "Quiet Personal Cognitive System",
     "header_title": "Quiet Personal Cognitive System",
-    "header_kicker": "QPSC",
+    "header_kicker": "QPCS",
     "header_subtitle": "正本を読み、次にやることだけを静かに表示します。",
     "section_current_title": "現在地",
     "button_reload": "再確認",
@@ -67,7 +67,7 @@ UI_TEXT = {
     "label_readme_missing": "README不足",
     "label_role_attention": "分類別 要確認",
     "label_market_count": "市場向け",
-    "label_system_count": "QPSC / 補助脳系",
+    "label_system_count": "QPCS系",
     "label_personal_count": "ユキズ専用",
     "label_frozen_count": "凍結",
     "label_site_total": "サイト総数",
@@ -134,7 +134,7 @@ UI_TEXT = {
     "reason_role_missing_items": "不足: {items}",
     "target_app_detail": "{detail} / {app_type} / {completion_goal}",
     "app_type_market": "市場向け",
-    "app_type_system": "QPSC / 補助脳系",
+    "app_type_qpcs": "QPCS系",
     "app_type_personal": "ユキズ専用",
     "app_type_frozen": "凍結",
     "app_type_archived": "保管",
@@ -186,9 +186,9 @@ FONT_CANDIDATES = ["BIZ UDPGothic", "Yu Gothic UI", "Meiryo", "MS Gothic"]
 EXCLUDED_APP_STATUS = {"internal", "frozen", "deprecated", "archived", "draft", "experimental", "private"}
 APP_TYPE_DEFAULT = "market"
 COMPLETION_GOAL_DEFAULT = "formal_release"
-APP_TYPE_KEYS = ("market", "system", "personal", "frozen", "archived", "unknown")
+APP_TYPE_KEYS = ("market", "qpcs", "personal", "frozen", "archived", "unknown")
 COMPLETION_GOAL_KEYS = ("formal_release", "system_ready", "reference_ready", "local_ready", "frozen_closed", "unknown")
-LATER_APP_NAMES = {"qpsc", "brainz", "oikawa", "orbit"}
+LATER_APP_NAMES = {"qpcs", "qpsc", "brainz", "oikawa", "orbit"}
 LATER_SITE_STATUS = {"internal", "draft", "archived", "frozen", "deprecated"}
 PRIORITY_URGENT = "urgent"
 PRIORITY_ACTIVE = "active"
@@ -487,8 +487,15 @@ def meta_or_record_field(record: object, meta: dict[str, object], key: str) -> s
     return ""
 
 
+def normalize_app_type_value(value: str) -> str:
+    normalized = value.strip().lower()
+    if normalized == "system":
+        normalized = "qpcs"
+    return normalized_choice(normalized, APP_TYPE_KEYS, APP_TYPE_DEFAULT)
+
+
 def app_type_value(record: object, meta: dict[str, object]) -> str:
-    return normalized_choice(meta_or_record_field(record, meta, "app_type"), APP_TYPE_KEYS, APP_TYPE_DEFAULT)
+    return normalize_app_type_value(meta_or_record_field(record, meta, "app_type"))
 
 
 def completion_goal_value(record: object, meta: dict[str, object]) -> str:
@@ -496,7 +503,7 @@ def completion_goal_value(record: object, meta: dict[str, object]) -> str:
 
 
 def app_type_label(value: str) -> str:
-    key = normalized_choice(value, APP_TYPE_KEYS, "unknown")
+    key = normalize_app_type_value(value)
     return UI_TEXT.get(f"app_type_{key}", UI_TEXT["app_type_unknown"])
 
 
@@ -692,7 +699,7 @@ def app_booth_missing(record: object, meta: dict[str, object]) -> bool:
 
 def app_role_family(record: object, meta: dict[str, object]) -> str:
     app_type = app_type_value(record, meta)
-    if app_type in {"market", "system", "personal", "frozen"}:
+    if app_type in {"market", "qpcs", "personal", "frozen"}:
         return app_type
     return "frozen" if app_type == "archived" else "unknown"
 
@@ -717,7 +724,7 @@ def app_role_attention(record: object, meta: dict[str, object], readme_text: str
         return UI_TEXT["reason_role_unknown"], PRIORITY_ACTIVE
 
     expected_goals = {
-        "system": {"system_ready", "reference_ready"},
+        "qpcs": {"system_ready", "reference_ready"},
         "personal": {"local_ready"},
         "frozen": {"frozen_closed"},
         "archived": {"frozen_closed", "reference_ready"},
@@ -726,7 +733,7 @@ def app_role_attention(record: object, meta: dict[str, object], readme_text: str
         return f"{UI_TEXT['reason_role_goal_mismatch']} ({' / '.join(detail_bits)})", PRIORITY_ACTIVE
 
     missing: list[str] = []
-    if app_type == "system" and goal == "system_ready":
+    if app_type == "qpcs" and goal == "system_ready":
         if not (folder / "build.bat").exists():
             missing.append("build.bat")
         main_text = read_optional_text(folder / "main.py")
@@ -736,7 +743,7 @@ def app_role_attention(record: object, meta: dict[str, object], readme_text: str
             missing.append("role docs")
         if missing:
             return f"{UI_TEXT['reason_system_ready_attention']} {UI_TEXT['reason_role_missing_items'].format(items=', '.join(missing))}", PRIORITY_ACTIVE
-    elif app_type == "system" and goal == "reference_ready":
+    elif app_type == "qpcs" and goal == "reference_ready":
         if "reference_ready" not in readme_text and "正本" not in readme_text:
             return UI_TEXT["reason_reference_ready_attention"], PRIORITY_ACTIVE
     elif app_type == "personal" and goal == "local_ready":
@@ -761,7 +768,7 @@ def collect_app_radar() -> tuple[AppRadar, GitRadar, tuple[str, ...]]:
         screenshot_missing: list[TargetItem] = []
         readme_missing: list[TargetItem] = []
         role_attention: list[TargetItem] = []
-        role_counts = {"market": 0, "system": 0, "personal": 0, "frozen": 0}
+        role_counts = {"market": 0, "qpcs": 0, "personal": 0, "frozen": 0}
         for record in records:
             record_folder = Path(getattr(record, "folder_path", ""))
             meta, issue_key = extract_meta(record_folder / README_NAME, DAKE_META_PATTERN)
@@ -792,7 +799,7 @@ def collect_app_radar() -> tuple[AppRadar, GitRadar, tuple[str, ...]]:
             AppRadar(
                 total=len(records),
                 market_count=role_counts["market"],
-                system_count=role_counts["system"],
+                system_count=role_counts["qpcs"],
                 personal_count=role_counts["personal"],
                 frozen_count=role_counts["frozen"],
                 booth_missing=tuple(booth_missing),

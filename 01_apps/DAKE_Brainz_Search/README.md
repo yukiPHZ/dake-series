@@ -6,9 +6,9 @@
 
 BRAINZはChatGPTやCodexの代替AIではありません。記録そのものが目的でもありません。Slack断片、Codexログ、ChatGPT export、note、README、Git、実務メモ、BORINEF断片を、未来の自分が再接続できる点として保存する層です。
 
-## QPSC正本ルート: PEAKHEADZ_ROOT
+## QPCS正本ルート: PEAKHEADZ_ROOT
 
-BRAINZは、今後のQPSC正本ルートとして `C:\Users\yukiz\Documents\PEAKHEADZ_ROOT` を扱います。
+BRAINZは、今後のQPCS正本ルートとして `C:\Users\yukiz\Documents\PEAKHEADZ_ROOT` を扱います。
 
 - 未設定時の推奨保存先は `PEAKHEADZ_ROOT` です
 - 既存configに `memory_folder` がある場合は、その保存先を勝手に変更しません
@@ -49,9 +49,9 @@ Obsidianでは `PEAKHEADZ_ROOT` を保管庫として開きます。Obsidianは�
 
 BRAINZの役割は、忘れない、探せる、関連づく、再投入できる、ChatGPT / Codex / Claude / Gemini の橋渡しをすることです。
 
-## QPSCでの役割
+## QPCSでの役割
 
-QPSC（Quiet Personal Cognitive System）では、BRAINZを「見るアプリ」ではなく、深層記憶・取り込み・index・設定を担う記憶庫として扱います。
+QPCS（Quiet Personal Cognitive System）では、BRAINZを「見るアプリ」ではなく、深層記憶・取り込み・index・設定を担う記憶庫として扱います。
 
 BRAINZ側で管理するもの:
 
@@ -66,9 +66,9 @@ BRAINZ側で管理するもの:
 
 起動時には `data/config/qpsc_brainz_status.json` に `brainz_awake`、`started_at`、`last_heartbeat_at`、`status_message` を記録します。起動中は一定間隔で heartbeat を更新し、OIKAWAやDAKE_Wake_Brainzが状態確認に使える導線にします。
 
-## QPSC v0.1 正本
+## QPCS v0.1 正本
 
-BRAINZはQPSC v0.1で、前面の読む場所ではなく、記憶庫 / 取り込み母艦として固定します。
+BRAINZはQPCS v0.1で、前面の読む場所ではなく、記憶庫 / 取り込み母艦として固定します。
 
 - 記憶フォルダ、取り込み、index、接続/設定、awake/heartbeatを担います
 - ペースト投稿、Slack、ChatGPT export、Codex報告を取り込みます
@@ -79,7 +79,7 @@ BRAINZはQPSC v0.1で、前面の読む場所ではなく、記憶庫 / 取り�
 
 v0.1では、BRAINZが判断するのではなく、原本と状態を静かに残します。OIKAWAがそれを前面へ戻し、最後に菊田が選びます。
 
-## QPSC v0.2 現在地
+## QPCS v0.2 現在地
 
 BRAINZはv0.2でも、読む前面ではなく記憶庫 / 取り込み母艦です。検索、原本表示、熾火、ORBIT、巡回、側に在る表示はOIKAWA側へ寄せます。
 
@@ -90,7 +90,7 @@ BRAINZはv0.2でも、読む前面ではなく記憶庫 / 取り込み母艦で�
 - BRAINZは取り込み、index、通知保存、awake/heartbeat、設定、OIKAWA起動導線に集中します
 - OpenClaw GatewayとSlack通知本格化はまだ先です
 
-## QPSC Phase 2: 取り込み通知
+## QPCS Phase 2: 取り込み通知
 
 Phase 2では、BRAINZで発生した取り込みをOIKAWA側の通知・提案欄へ静かに渡す導線を追加しました。
 
@@ -113,7 +113,7 @@ Phase 16以降、「静かに浮く」表示もOIKAWA側で扱います。BRAINZ
 
 Phase 19以降、時間を跨いだ熱と静かだった記憶の浮上もOIKAWA側で扱います。BRAINZは原本を保持し、OIKAWAが巡回ログから長期間後の再訪、深夜巡回、巡回増加を静かに表示します。
 
-## QPSC Phase 8: 静かな母艦UI
+## QPCS Phase 8: 静かな母艦UI
 
 Phase 8では、BRAINZを「見るアプリ」ではなく、記憶庫・取り込み母艦として静かに扱うトップ画面へ整理しました。
 
@@ -133,7 +133,7 @@ exeがない開発中の状態では、`DAKE_Brainz_OIKAWA/main.py` を `python 
 
 exeと `main.py` のどちらも見つからない場合は、削除や強制終了はせず、OIKAWAのbuildまたは配置確認を促す静かな状態表示だけにします。BRAINZ Logには探索した候補パスを短く残します。
 
-## QPSC Phase 11: ChatGPT export取り込み導線
+## QPCS Phase 11: ChatGPT export取り込み導線
 
 Phase 11では、BRAINZの取り込み入口にChatGPT export専用カードを追加しました。
 
@@ -161,16 +161,16 @@ ChatGPT exportの基本手順:
 - ChatGPT export zip
 - 展開済みChatGPT exportフォルダ
 
-## QPSC UI表示方針
+## QPCS UI表示方針
 
-QPSCのBRAINZ / OIKAWAは黒基調の静かなUIを基本にします。
+QPCSのBRAINZ / OIKAWAは黒基調の静かなUIを基本にします。
 
 - 背景は黒〜ダークグレーを優先します
 - 日本語本文は `Yu Gothic UI` / `Meiryo` を優先します
 - 小さすぎる日本語や太字の多用は避けます
 - 原本、通知、取り込み状態は読みやすさを優先します
 
-## QPSC Phase 12: Slack通知文の整流
+## QPCS Phase 12: Slack通知文の整流
 
 Phase 12では、Slack取り込み通知をログではなく、記憶へ戻る入口として整流しました。
 
@@ -179,7 +179,7 @@ Phase 12では、Slack取り込み通知をログではなく、記憶へ戻る�
 - `handoff_codex`、`note:`、`search:`、`import:` は軽く分類して通知タイトルへ反映します
 - 原本主義を維持し、通知の `related_path` から保存済みMarkdownへ戻れます
 
-## QPSC Phase 13: Codex報告の正本入口化
+## QPCS Phase 13: Codex報告の正本入口化
 
 Phase 13では、Codex結果・Codex報告の通知を、正本へ戻る入口として整流しました。
 
@@ -188,9 +188,9 @@ Phase 13では、Codex結果・Codex報告の通知を、正本へ戻る入口�
 - commit、push、修正ファイル、確認が必要な報告は軽く分類してmessageへ反映します
 - OIKAWAではCodex報告通知、熾火、ORBITから原本へ戻れます
 
-## QPSC Phase 18: Slack静かな通知導線
+## QPCS Phase 18: Slack静かな通知導線
 
-Phase 18では、QPSC内部で静かに浮いた記憶をSlackへ小さく置くための設定を追加しました。
+Phase 18では、QPCS内部で静かに浮いた記憶をSlackへ小さく置くための設定を追加しました。
 
 - 設定は `data/config/brainz_config.json` の `slack_notify_enabled`、`slack_webhook_url`、`slack_notify_max_per_day`、`slack_notify_quiet_hours` で扱います
 - Webhook URLはローカルconfigに保存し、Git管理しません
@@ -198,7 +198,7 @@ Phase 18では、QPSC内部で静かに浮いた記憶をSlackへ小さく置く
 - 大量通知は避け、初期値では1日最大3件に抑えます
 - OpenClaw本格導入前の軽い外部導線です
 
-## QPSC Phase 20: BRAINZ母艦UIと保存地形
+## QPCS Phase 20: BRAINZ母艦UIと保存地形
 
 Phase 20では、BRAINZを検索や原本表示の前面から外し、Slack / ChatGPT export / CodexログをローカルPCへ保存する母艦UIへ寄せます。
 
@@ -235,7 +235,7 @@ PEAKHEADZ_ROOT/
 
 OpenClawはまだ本格導入しません。現時点では、BRAINZが保存母艦、OIKAWAが巡回 / 熾火 / 正本ニュース、Obsidianが観測UIという役割をREADME上で固定します。
 
-## QPSC Phase 20: BORINEF note循環
+## QPCS Phase 20: BORINEF note循環
 
 Phase 20では、SlackへnoteタイトルとURLを投げるだけで、公開済noteをBRAINZへ戻す循環を追加しました。
 
@@ -261,7 +261,7 @@ Phase 20では、SlackへnoteタイトルとURLを投げるだけで、公開済
 - ChatGPTに貼る用まとめ生成
 - Codexに貼る用指示素材生成
 - index更新ログ保存
-- QPSC起床状態ファイルの記録
+- QPCS起床状態ファイルの記録
 
 ## Phase 1でやらないこと
 
@@ -619,7 +619,7 @@ Aru Inbox は、既存の Slack Inbox とは別の「在る」専用取り込み
 
 ## Positioning
 
-This app is a system/reference app for local documentation and assistive brain workflows. Its completion goal is `reference_ready`: README explains its role and local/reference use. It is not treated as a market-facing formal_release app.
+This app is a QPCS/reference app for local documentation and assistive brain workflows. Its completion goal is `reference_ready`: README explains its role and local/reference use. It is not treated as a market-facing formal_release app.
 
 ## DAKE_META
 ```json
@@ -630,13 +630,13 @@ This app is a system/reference app for local documentation and assistive brain w
   "launcher_description": "ローカルの会話・仕様・メモを忘れず探すための記憶検索アプリです。",
   "site_title": "補助脳BRAINZ",
   "site_description": "ChatGPT、Codex、Claude、Geminiのやり取りをローカル記憶として再接続する検索補助脳です。",
-  "update_summary": "QPSC v0.1として記憶庫・取り込み母艦の現在地を正本化しました。",
+  "update_summary": "QPCS v0.1として記憶庫・取り込み母艦の現在地を正本化しました。",
   "folder_name": "DAKE_Brainz_Search",
   "exe_name": "DakeBrainz_Search.exe",
   "release_url": "",
   "screenshot_path": "assets/screenshot.webp",
   "status": "draft",
-  "app_type": "system",
+  "app_type": "qpcs",
   "completion_goal": "reference_ready",
   "show_in_launcher": false,
   "show_on_site": false
@@ -685,7 +685,7 @@ This app is a system/reference app for local documentation and assistive brain w
 
 Remote Queue の具体例も [使い方.md](使い方.md) に追記しています。
 
-## QPSC Phase 22: 通常運用UI
+## QPCS Phase 22: 通常運用UI
 
 BRAINZは、検索や原本表示の前面ではなく、設定 / 保存 / 監視の母艦UIへ寄せます。
 
@@ -747,7 +747,7 @@ https://...
 - 新規Slack保存は `PEAKHEADZ_ROOT/10_slack/*` に寄せ、legacyの `PEAKHEADZ_ROOT/slack/` は新規保存先にしない。
 - Slack Markdownはfrontmatter、H1、本文、permalinkを残す正本形式で扱う。
 
-## QPSC読み取り補助
+## QPCS読み取り補助
 
 BRAINZはSlackやnoteから保存したMarkdown正本に、弱い読み取り補助メタを追記します。
 
@@ -757,7 +757,7 @@ BRAINZはSlackやnoteから保存したMarkdown正本に、弱い読み取り補
 - BORINEF / 在る / 実務 / Codex / note URLのキーワードは、決定ではなく戻るための補助として扱います。
 - 自動熱判定は `low` または `medium` までで、`high` は自動付与しません。
 
-## QPSC v0.4: BRAINZは熱が戻れるように残す場所
+## QPCS v0.4: BRAINZは熱が戻れるように残す場所
 
 BRAINZは「記録」ではなく、熱が戻れるように残しておく場所です。
 

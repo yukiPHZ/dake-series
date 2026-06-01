@@ -46,6 +46,7 @@ DIST_DIR_NAME = "dist"
 BOOTH_ASSIST_FOLDER_NAME = "DAKE_BOOTH_Assist"
 BOOTH_ASSIST_EXE_NAME = "DakeBOOTH_Assist.exe"
 URL_BLOCKLIST = ("javascript:", "file:", "data:", "sk-", "token", "secret", "api_key")
+UTF8_BOM = b"\xef\xbb\xbf"
 
 UI_TEXT = {
     "header_title": "DAKE Dashboard",
@@ -62,6 +63,7 @@ UI_TEXT = {
     "button_open_booth_ready": "booth_readyを開く",
     "button_open_booth_product": "booth_product.txtを開く",
     "button_open_booth_thumbnail": "booth_thumbnailを開く",
+    "button_save_classification": "分類を保存",
     "button_open_screenshot_jpg": "screenshot.jpgを開く",
     "button_open_screenshot_webp": "screenshot.webpを開く",
     "button_missing": "未作成",
@@ -104,6 +106,11 @@ UI_TEXT = {
     "detail_missing_title": "不足しているもの",
     "detail_next_title": "次に必要そうな作業",
     "detail_files_title": "実在チェック",
+    "detail_classification_title": "分類編集",
+    "classification_help": "市場向け=一般配布 / QPCS系=QPCS構成 / ユキズ専用=ローカル運用 / 凍結=出荷対象外",
+    "classification_save_failed": "分類を保存できませんでした: {error}",
+    "status_classification_saving": "分類を保存中",
+    "status_classification_saved": "分類を保存しました",
     "column_status": "状態",
     "column_folder": "フォルダ名",
     "column_display": "表示名",
@@ -196,13 +203,16 @@ UI_TEXT = {
     "dialog_open_failed": "開けませんでした。\n\n{path}\n\n{error}",
     "dialog_missing_path": "対象が見つかりません。\n\n{path}",
     "dialog_release_missing": "Release URL が設定されていません。",
-    "qpsc_card_title": "QPSC通知カード",
+    "qpsc_card_title": "QPCS通知カード",
     "qpsc_card_subtitle": "README正本の動きを監視中",
     "qpsc_booth_working": "BOOTH作業中: {folder}",
     "qpsc_new_apps": "新規アプリ検出",
     "qpsc_distribution_ready": "配布準備",
     "qpsc_needs_review": "要確認",
     "qpsc_ship_line": "正式出荷ライン到達",
+    "qpsc_readme_missing": "README不足",
+    "qpsc_card_classification_title": "分類",
+    "qpsc_card_unresolved_title": "未処理",
     "qpsc_unshipped": "未出荷",
     "qpsc_booth_materials_missing": "BOOTH素材不足",
     "qpsc_booth_thumbnail_missing": "thumbnail未作成",
@@ -263,11 +273,11 @@ UI_TEXT = {
     "column_app_type": "種別",
     "column_completion_goal": "完成条件",
     "filter_market": "市場向け",
-    "filter_system": "QPSC系",
+    "filter_qpcs": "QPCS系",
     "filter_personal": "専用",
     "filter_frozen": "凍結",
     "app_type_market": "市場向け",
-    "app_type_system": "QPSC / 補助脳系",
+    "app_type_qpcs": "QPCS系",
     "app_type_personal": "ユキズ専用",
     "app_type_frozen": "凍結",
     "app_type_archived": "保管",
@@ -279,7 +289,7 @@ UI_TEXT = {
     "completion_goal_frozen_closed": "凍結完了",
     "completion_goal_unknown": "未設定",
     "qpsc_market": "市場向け",
-    "qpsc_system": "QPSC / 補助脳系",
+    "qpsc_qpcs": "QPCS系",
     "qpsc_personal": "ユキズ専用",
     "qpsc_frozen": "凍結",
     "status_system_ready": "システム稼働",
@@ -348,15 +358,30 @@ META_FIELD_KEYS = (
 )
 APP_TYPE_DEFAULT = "market"
 COMPLETION_GOAL_DEFAULT = "formal_release"
-APP_TYPE_KEYS = ("market", "system", "personal", "frozen", "archived", "unknown")
+APP_TYPE_KEYS = ("market", "qpcs", "personal", "frozen", "archived", "unknown")
+APP_TYPE_EDIT_KEYS = ("market", "qpcs", "personal", "frozen", "archived")
 COMPLETION_GOAL_KEYS = (
     "formal_release",
-    "local_ready",
     "system_ready",
     "reference_ready",
+    "local_ready",
     "frozen_closed",
     "unknown",
 )
+COMPLETION_GOAL_EDIT_KEYS = (
+    "formal_release",
+    "system_ready",
+    "reference_ready",
+    "local_ready",
+    "frozen_closed",
+)
+DEFAULT_COMPLETION_BY_APP_TYPE = {
+    "market": "formal_release",
+    "qpcs": "system_ready",
+    "personal": "local_ready",
+    "frozen": "frozen_closed",
+    "archived": "frozen_closed",
+}
 NON_PUBLIC_STATUSES = {"internal", "frozen", "draft", "experimental", "private"}
 FILTER_KEYS = (
     "all",
@@ -366,7 +391,7 @@ FILTER_KEYS = (
     "booth",
     "needs_review",
     "market",
-    "system",
+    "qpcs",
     "personal",
     "frozen",
 )
@@ -567,7 +592,10 @@ def normalized_choice(value: str, allowed: tuple[str, ...], default: str) -> str
 
 
 def normalize_app_type(value: str) -> str:
-    return normalized_choice(value, APP_TYPE_KEYS, APP_TYPE_DEFAULT)
+    normalized = value.strip().lower()
+    if normalized == "system":
+        normalized = "qpcs"
+    return normalized_choice(normalized, APP_TYPE_KEYS, APP_TYPE_DEFAULT)
 
 
 def normalize_completion_goal(value: str) -> str:
@@ -582,6 +610,28 @@ def app_type_label(value: str) -> str:
 def completion_goal_label(value: str) -> str:
     key = normalize_completion_goal(value)
     return UI_TEXT.get(f"completion_goal_{key}", UI_TEXT["completion_goal_unknown"])
+
+
+def app_type_edit_labels() -> tuple[str, ...]:
+    return tuple(app_type_label(key) for key in APP_TYPE_EDIT_KEYS)
+
+
+def completion_goal_edit_labels() -> tuple[str, ...]:
+    return tuple(completion_goal_label(key) for key in COMPLETION_GOAL_EDIT_KEYS)
+
+
+def app_type_key_from_label(label: str) -> str:
+    for key in APP_TYPE_EDIT_KEYS:
+        if app_type_label(key) == label:
+            return key
+    return normalize_app_type(label)
+
+
+def completion_goal_key_from_label(label: str) -> str:
+    for key in COMPLETION_GOAL_EDIT_KEYS:
+        if completion_goal_label(key) == label:
+            return key
+    return normalize_completion_goal(label)
 
 
 def is_formal_release_meta(meta_fields: dict[str, str]) -> bool:
@@ -601,7 +651,7 @@ def is_internal_app(record: AppRecord) -> bool:
     status = record.meta_fields.get("status", "").strip().lower()
     if record.folder_name == APP_FOLDER_NAME or status == "internal":
         return True
-    if record.app_type in {"system", "personal", "frozen", "archived"}:
+    if record.app_type in {"qpcs", "personal", "frozen", "archived"}:
         return True
     return meta_false(record, "show_on_site")
 
@@ -737,6 +787,55 @@ def extract_dake_meta(readme_path: Path) -> tuple[dict[str, object], tuple[str, 
     return loaded, ()
 
 
+def read_text_utf8_preserve(path: Path) -> tuple[str, bool]:
+    data = path.read_bytes()
+    has_bom = data.startswith(UTF8_BOM)
+    if has_bom:
+        data = data[len(UTF8_BOM):]
+    try:
+        return data.decode("utf-8"), has_bom
+    except UnicodeDecodeError:
+        return data.decode("utf-8", errors="replace"), has_bom
+
+
+def write_text_utf8_preserve(path: Path, text: str, has_bom: bool) -> None:
+    data = text.encode("utf-8")
+    if has_bom:
+        data = UTF8_BOM + data
+    path.write_bytes(data)
+
+
+def update_dake_meta_classification(readme_path: Path, app_type: str, completion_goal: str) -> tuple[bool, str]:
+    if not readme_path.exists():
+        return False, UI_TEXT["issue_readme_missing"]
+    app_type = normalize_app_type(app_type)
+    completion_goal = normalize_completion_goal(completion_goal)
+    if app_type not in APP_TYPE_EDIT_KEYS or completion_goal not in COMPLETION_GOAL_EDIT_KEYS:
+        return False, UI_TEXT["value_unknown"]
+    try:
+        content, has_bom = read_text_utf8_preserve(readme_path)
+    except OSError as exc:
+        return False, UI_TEXT["issue_readme_read_error"].format(error=exc)
+    match = DAKE_META_PATTERN.search(content)
+    if not match:
+        return False, UI_TEXT["issue_meta_missing"]
+    try:
+        loaded = json.loads(match.group(1))
+    except json.JSONDecodeError as exc:
+        return False, UI_TEXT["issue_meta_json_error"].format(error=exc)
+    if not isinstance(loaded, dict):
+        return False, UI_TEXT["issue_meta_type_error"]
+    loaded["app_type"] = app_type
+    loaded["completion_goal"] = completion_goal
+    updated_json = json.dumps(loaded, ensure_ascii=False, indent=2)
+    updated = f"{content[:match.start(1)]}{updated_json}{content[match.end(1):]}"
+    try:
+        write_text_utf8_preserve(readme_path, updated, has_bom)
+    except OSError as exc:
+        return False, str(exc)
+    return True, ""
+
+
 def existing_dist_exes(folder: Path) -> tuple[Path, ...]:
     dist_dir = folder / DIST_DIR_NAME
     if not dist_dir.exists() or not dist_dir.is_dir():
@@ -832,7 +931,7 @@ def classify_status(folder: Path, meta_fields: dict[str, str], checks: FileCheck
             return goal
         if app_type == "frozen" or status == "frozen":
             return "frozen_closed"
-        if app_type == "system":
+        if app_type == "qpcs":
             return "system_ready"
         if app_type == "personal":
             return "local_ready"
@@ -1184,8 +1283,9 @@ class DashboardApp:
             "booth_product_missing": tk.StringVar(value="0"),
             "booth_ready_missing": tk.StringVar(value="0"),
             "booth_registration_ready": tk.StringVar(value="0"),
+            "readme_missing": tk.StringVar(value="0"),
             "market": tk.StringVar(value="0"),
-            "system": tk.StringVar(value="0"),
+            "qpcs": tk.StringVar(value="0"),
             "personal": tk.StringVar(value="0"),
             "frozen": tk.StringVar(value="0"),
         }
@@ -1199,6 +1299,8 @@ class DashboardApp:
             "dashboard": tk.StringVar(value=UI_TEXT["git_dashboard"].format(value=UI_TEXT["value_unknown"])),
         }
         self.search_var = tk.StringVar()
+        self.app_type_var = tk.StringVar()
+        self.completion_goal_var = tk.StringVar()
         self.last_loaded_var = tk.StringVar(value=UI_TEXT["last_loaded_waiting"])
         self.status_var = tk.StringVar(value=UI_TEXT["last_loaded_waiting"])
         self.watch_status_var = tk.StringVar(value=UI_TEXT["watch_status_polling"])
@@ -1407,37 +1509,53 @@ class DashboardApp:
         metrics = tk.Frame(card, bg=THEME["panel"])
         metrics.grid(row=0, column=1, sticky="e", padx=(0, 16), pady=10)
 
-        items = [
-            ("new_apps", "qpsc_new_apps"),
-            ("needs_review", "qpsc_needs_review"),
-            ("ship_line", "qpsc_ship_line"),
-            ("booth_materials_missing", "qpsc_booth_materials_missing"),
-            ("booth_thumbnail_missing", "qpsc_booth_thumbnail_missing"),
-            ("booth_product_missing", "qpsc_booth_product_missing"),
-            ("booth_ready_missing", "qpsc_booth_ready_missing"),
-            ("booth_registration_ready", "qpsc_booth_registration_ready"),
-            ("market", "qpsc_market"),
-            ("system", "qpsc_system"),
-            ("personal", "qpsc_personal"),
-            ("frozen", "qpsc_frozen"),
+        sections = [
+            (
+                "qpsc_card_classification_title",
+                [
+                    ("market", "qpsc_market"),
+                    ("qpcs", "qpsc_qpcs"),
+                    ("personal", "qpsc_personal"),
+                    ("frozen", "qpsc_frozen"),
+                ],
+            ),
+            (
+                "qpsc_card_unresolved_title",
+                [
+                    ("ship_line", "qpsc_ship_line"),
+                    ("booth_registration_ready", "qpsc_booth_registration_ready"),
+                    ("booth_materials_missing", "qpsc_booth_materials_missing"),
+                    ("readme_missing", "qpsc_readme_missing"),
+                ],
+            ),
         ]
-        for index, (key, label_key) in enumerate(items):
-            item = tk.Frame(metrics, bg=THEME["panel_soft"], padx=12, pady=7)
-            item.grid(row=index // 6, column=index % 6, sticky="e", padx=(0 if index % 6 == 0 else 8, 0), pady=(0 if index < 6 else 8, 0))
+        for section_index, (title_key, items) in enumerate(sections):
+            section = tk.Frame(metrics, bg=THEME["panel"], padx=0, pady=0)
+            section.grid(row=0, column=section_index, sticky="e", padx=(0 if section_index == 0 else 16, 0))
             tk.Label(
-                item,
-                text=UI_TEXT[label_key],
-                bg=THEME["panel_soft"],
-                fg=THEME["muted"],
-                font=(self.font_family, 8, "bold"),
-            ).pack(anchor="w")
-            tk.Label(
-                item,
-                textvariable=self.qpsc_vars[key],
-                bg=THEME["panel_soft"],
-                fg=THEME["accent_hover"],
-                font=(self.font_family, 16, "bold"),
-            ).pack(anchor="w")
+                section,
+                text=UI_TEXT[title_key],
+                bg=THEME["panel"],
+                fg=THEME["text"],
+                font=(self.font_family, 9, "bold"),
+            ).grid(row=0, column=0, columnspan=len(items), sticky="w", pady=(0, 5))
+            for index, (key, label_key) in enumerate(items):
+                item = tk.Frame(section, bg=THEME["panel_soft"], padx=12, pady=7)
+                item.grid(row=1, column=index, sticky="e", padx=(0 if index == 0 else 8, 0))
+                tk.Label(
+                    item,
+                    text=UI_TEXT[label_key],
+                    bg=THEME["panel_soft"],
+                    fg=THEME["muted"],
+                    font=(self.font_family, 8, "bold"),
+                ).pack(anchor="w")
+                tk.Label(
+                    item,
+                    textvariable=self.qpsc_vars[key],
+                    bg=THEME["panel_soft"],
+                    fg=THEME["accent_hover"],
+                    font=(self.font_family, 16, "bold"),
+                ).pack(anchor="w")
 
     def build_git_card(self, parent: tk.Frame) -> None:
         card = tk.Frame(
@@ -1638,7 +1756,7 @@ class DashboardApp:
         container = tk.Frame(parent, bg=THEME["panel"])
         container.pack(fill="both", expand=True, padx=16, pady=14)
         container.grid_columnconfigure(0, weight=1)
-        container.grid_rowconfigure(6, weight=1)
+        container.grid_rowconfigure(7, weight=1)
 
         tk.Label(
             container,
@@ -1691,10 +1809,11 @@ class DashboardApp:
         )
         self.open_booth_assist_button.pack(side="left")
 
-        self.build_workspace_links(container, 5)
+        self.build_classification_editor(container, 5)
+        self.build_workspace_links(container, 6)
 
         detail_area = tk.Frame(container, bg=THEME["panel"])
-        detail_area.grid(row=6, column=0, sticky="nsew")
+        detail_area.grid(row=7, column=0, sticky="nsew")
         detail_area.grid_columnconfigure(0, weight=1)
         detail_area.grid_rowconfigure(1, weight=1)
         detail_area.grid_rowconfigure(3, weight=1)
@@ -1710,6 +1829,77 @@ class DashboardApp:
         self.next_text = self.create_detail_text(detail_area, 8, UI_TEXT["detail_next_title"], height=3)
         self.next_candidates_text = self.create_detail_text(detail_area, 10, UI_TEXT["next_candidates_title"], height=4)
         self.update_detail(None)
+
+    def build_classification_editor(self, parent: tk.Frame, row: int) -> None:
+        editor = tk.Frame(
+            parent,
+            bg=THEME["panel_soft"],
+            highlightbackground=THEME["border"],
+            highlightthickness=1,
+            bd=0,
+        )
+        editor.grid(row=row, column=0, sticky="ew", pady=(0, 12))
+        editor.grid_columnconfigure(1, weight=1)
+        editor.grid_columnconfigure(3, weight=1)
+
+        tk.Label(
+            editor,
+            text=UI_TEXT["detail_classification_title"],
+            bg=THEME["panel_soft"],
+            fg=THEME["text"],
+            font=(self.font_family, 9, "bold"),
+        ).grid(row=0, column=0, columnspan=5, sticky="w", padx=10, pady=(8, 2))
+        tk.Label(
+            editor,
+            text=UI_TEXT["classification_help"],
+            bg=THEME["panel_soft"],
+            fg=THEME["muted"],
+            font=(self.font_family, 8),
+            anchor="w",
+            justify="left",
+            wraplength=380,
+        ).grid(row=1, column=0, columnspan=5, sticky="ew", padx=10, pady=(0, 7))
+        tk.Label(
+            editor,
+            text=UI_TEXT["column_app_type"],
+            bg=THEME["panel_soft"],
+            fg=THEME["muted"],
+            font=(self.font_family, 8, "bold"),
+        ).grid(row=2, column=0, sticky="w", padx=(10, 6), pady=(0, 9))
+        self.app_type_combo = ttk.Combobox(
+            editor,
+            textvariable=self.app_type_var,
+            values=app_type_edit_labels(),
+            state="readonly",
+            width=12,
+            font=(self.font_family, 9),
+        )
+        self.app_type_combo.grid(row=2, column=1, sticky="ew", padx=(0, 10), pady=(0, 9))
+        self.app_type_combo.bind("<<ComboboxSelected>>", self.on_app_type_selected)
+        tk.Label(
+            editor,
+            text=UI_TEXT["column_completion_goal"],
+            bg=THEME["panel_soft"],
+            fg=THEME["muted"],
+            font=(self.font_family, 8, "bold"),
+        ).grid(row=2, column=2, sticky="w", padx=(0, 6), pady=(0, 9))
+        self.completion_goal_combo = ttk.Combobox(
+            editor,
+            textvariable=self.completion_goal_var,
+            values=completion_goal_edit_labels(),
+            state="readonly",
+            width=12,
+            font=(self.font_family, 9),
+        )
+        self.completion_goal_combo.grid(row=2, column=3, sticky="ew", padx=(0, 10), pady=(0, 9))
+        self.save_classification_button = self.make_button(
+            editor,
+            UI_TEXT["button_save_classification"],
+            self.save_selected_classification,
+            primary=True,
+            compact=True,
+        )
+        self.save_classification_button.grid(row=2, column=4, sticky="e", padx=(0, 10), pady=(0, 9))
 
     def build_workspace_links(self, parent: tk.Frame, row: int) -> None:
         links_area = tk.Frame(parent, bg=THEME["panel"])
@@ -1918,6 +2108,10 @@ class DashboardApp:
                     self.show_action_notification(str(payload))
                 elif event == "link_notice":
                     self.show_action_notification(str(payload))
+                elif event == "classification_saved":
+                    self.handle_classification_saved(payload)
+                elif event == "classification_save_error":
+                    self.handle_classification_save_error(payload)
         except queue.Empty:
             pass
         self.root.after(WORKER_POLL_MS, self.poll_worker)
@@ -1950,7 +2144,9 @@ class DashboardApp:
             if refreshed_record is not None:
                 self.update_detail(refreshed_record)
         self.previous_record_map = current_map
-        if source == "watch" and isinstance(changed_folder, str) and changed_folder:
+        if source == "classification_save":
+            self.show_action_notification(UI_TEXT["status_classification_saved"])
+        elif source == "watch" and isinstance(changed_folder, str) and changed_folder:
             self.show_reload_notification(changed_folder)
         if self.pending_reload_folder:
             folder = self.pending_reload_folder
@@ -1991,8 +2187,9 @@ class DashboardApp:
         self.qpsc_vars["booth_product_missing"].set(str(sum(1 for record in formal_records if not record.checks.has_booth_product)))
         self.qpsc_vars["booth_ready_missing"].set(str(sum(1 for record in formal_records if not record.checks.has_booth_ready)))
         self.qpsc_vars["booth_registration_ready"].set(str(sum(1 for record in formal_records if is_booth_registration_target(record))))
+        self.qpsc_vars["readme_missing"].set(str(sum(1 for record in formal_records if {"readme", "dake_meta"} & set(record.missing_keys))))
         self.qpsc_vars["market"].set(str(sum(1 for record in self.records if record.app_type == "market")))
-        self.qpsc_vars["system"].set(str(sum(1 for record in self.records if record.app_type == "system")))
+        self.qpsc_vars["qpcs"].set(str(sum(1 for record in self.records if record.app_type == "qpcs")))
         self.qpsc_vars["personal"].set(str(sum(1 for record in self.records if record.app_type == "personal")))
         self.qpsc_vars["frozen"].set(str(sum(1 for record in self.records if record.app_type == "frozen")))
 
@@ -2135,7 +2332,7 @@ class DashboardApp:
             return True
         if self.filter_key == "booth":
             return record.status_key == "booth_ready"
-        if self.filter_key in {"market", "system", "personal"}:
+        if self.filter_key in {"market", "qpcs", "personal"}:
             return record.app_type == self.filter_key
         if self.filter_key == "frozen":
             return record.app_type == "frozen" or record.status_key == "frozen_closed"
@@ -2215,6 +2412,7 @@ class DashboardApp:
             self.set_text(self.missing_text, UI_TEXT["detail_empty"])
             self.set_text(self.next_text, UI_TEXT["detail_empty"])
             self.set_text(self.next_candidates_text, self.build_next_candidates_detail())
+            self.set_classification_editor_state(None)
             self.set_detail_buttons_state(False)
             return
 
@@ -2228,7 +2426,24 @@ class DashboardApp:
         self.set_text(self.missing_text, self.build_missing_detail(record))
         self.set_text(self.next_text, self.build_next_detail(record))
         self.set_text(self.next_candidates_text, self.build_next_candidates_detail())
+        self.set_classification_editor_state(record)
         self.set_detail_buttons_state(True)
+
+    def set_classification_editor_state(self, record: AppRecord | None) -> None:
+        if not hasattr(self, "app_type_combo"):
+            return
+        if record is None:
+            self.app_type_var.set("")
+            self.completion_goal_var.set("")
+            self.app_type_combo.configure(state="disabled")
+            self.completion_goal_combo.configure(state="disabled")
+            self.save_classification_button.configure(state="disabled")
+            return
+        self.app_type_var.set(app_type_label(record.app_type))
+        self.completion_goal_var.set(completion_goal_label(record.completion_goal))
+        self.app_type_combo.configure(state="readonly")
+        self.completion_goal_combo.configure(state="readonly")
+        self.save_classification_button.configure(state="normal")
 
     def set_detail_buttons_state(self, enabled: bool) -> None:
         record = self.selected_record if enabled else None
@@ -2246,6 +2461,48 @@ class DashboardApp:
         else:
             self.open_release_button.configure(text=UI_TEXT["button_open_release"])
         self.update_workspace_links(record)
+
+    def on_app_type_selected(self, _event=None) -> None:
+        app_type = app_type_key_from_label(self.app_type_var.get())
+        recommended = DEFAULT_COMPLETION_BY_APP_TYPE.get(app_type)
+        if recommended:
+            self.completion_goal_var.set(completion_goal_label(recommended))
+
+    def save_selected_classification(self) -> None:
+        record = self.selected_record
+        if record is None:
+            return
+        app_type = app_type_key_from_label(self.app_type_var.get())
+        completion_goal = completion_goal_key_from_label(self.completion_goal_var.get())
+        self.save_classification_button.configure(state="disabled")
+        self.status_var.set(UI_TEXT["status_classification_saving"])
+        thread = threading.Thread(
+            target=self.save_classification_worker,
+            args=(record.folder_name, record.folder_path / README_NAME, app_type, completion_goal),
+            daemon=True,
+        )
+        thread.start()
+
+    def save_classification_worker(self, folder_name: str, readme_path: Path, app_type: str, completion_goal: str) -> None:
+        ok, message = update_dake_meta_classification(readme_path, app_type, completion_goal)
+        if ok:
+            self.worker_queue.put(("classification_saved", {"folder": folder_name}))
+        else:
+            self.worker_queue.put(("classification_save_error", {"error": message}))
+
+    def handle_classification_saved(self, payload: object) -> None:
+        folder = ""
+        if isinstance(payload, dict):
+            folder = str(payload.get("folder", ""))
+        self.reload_data(source="classification_save", changed_folder=folder or None)
+
+    def handle_classification_save_error(self, payload: object) -> None:
+        error = UI_TEXT["value_unknown"]
+        if isinstance(payload, dict):
+            error = str(payload.get("error", error))
+        if self.selected_record is not None:
+            self.save_classification_button.configure(state="normal")
+        self.show_action_notification(UI_TEXT["classification_save_failed"].format(error=error))
 
     def set_path_button_state(self, button: tk.Button, path: Path | None) -> None:
         button.configure(state="normal" if path is not None and path.exists() else "disabled")

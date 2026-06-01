@@ -7,7 +7,7 @@ DAKE Dashboard は、DAKEシリーズ配下のアプリフォルダを読み取�
 ## 役割
 
 - DAKEシリーズ管理端末
-- 補助脳BRAINZ / QPSC系の開発支援アプリ
+- 補助脳BRAINZ / QPCS系の開発支援アプリ
 - README正本可視化アプリ
 - Notion手管理からの移行補助
 
@@ -58,7 +58,7 @@ C:\Users\yukiz\devlop\DAKE_series\01_apps
 - show_on_site=false の内部アプリは「内部アプリ」として出荷率の対象外にする
 - Git状態カードで branch、latest、未コミット、未追跡、push/pull待ち、Dashboard状態を表示
 - 次にやる候補を最大5件表示
-- 要確認、未出荷、BOOTH未準備、Release未作成をQPSC通知カードで浮上
+- 要確認、未出荷、BOOTH未準備、Release未作成をQPCS通知カードで浮上
 
 ## Phase4 BOOTH作業導線
 
@@ -98,18 +98,24 @@ git diff --check
 
 ## Positioning
 
-This app is a system/operations dashboard, not a market-facing standalone product. Its completion goal is `system_ready`: README, launch-check, build, and dashboard role are documented and working.
+This app is a QPCS/operations dashboard, not a market-facing standalone product. Its completion goal is `system_ready`: README, launch-check, build, and dashboard role are documented and working.
 
 ## app_type / completion_goal 対応
 
 DAKE Dashboard は `DAKE_META` の `app_type` と `completion_goal` を読み取り、アプリの役割ごとに表示と不足判定を分けます。
 
 - `market` + `formal_release`: Release / BOOTH / dakeapp.com を含む正式出荷ラインで判定
-- `system` + `system_ready`: QPSC / 補助脳系として、BOOTH不足を主警告にしない
+- `qpcs` + `system_ready`: QPCS系として、BOOTH不足を主警告にしない
 - `personal` + `local_ready`: ローカル運用を完成条件として扱う
 - `frozen` + `frozen_closed`: 凍結完了として扱い、通常出荷不足に乗せない
 
 市場向けではないアプリを、正式出荷・BOOTH登録の未完了レーンに混ぜないための分類です。
+
+分類判断の目安:
+- 市場向け = 一般配布する単体アプリ
+- QPCS系 = Quiet Personal Cognitive Systemを構成するアプリ
+- ユキズ専用 = 作者本人のローカル運用に強く依存するアプリ
+- 凍結 = 開発・出荷対象外として閉じたアプリ
 
 ## DAKE_META
 ```json
@@ -126,7 +132,7 @@ DAKE Dashboard は `DAKE_META` の `app_type` と `completion_goal` を読み取
   "release_url": "",
   "screenshot_path": "",
   "status": "internal",
-  "app_type": "system",
+  "app_type": "qpcs",
   "completion_goal": "system_ready",
   "show_in_launcher": false,
   "show_on_site": false

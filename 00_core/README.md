@@ -108,7 +108,7 @@ Only `available` apps are normal formal shipping check targets.
 
 DAKE app README files also carry role and completion metadata:
 
-- `app_type`: role classification such as `market`, `personal`, `system`, `frozen`, or `archived`.
+- `app_type`: role classification such as `market`, `qpcs`, `personal`, `frozen`, or `archived`.
 - `completion_goal`: the correct done condition such as `formal_release`, `local_ready`, `system_ready`, `reference_ready`, or `frozen_closed`.
 
-Dashboards should read these fields from README instead of assuming every app must reach BOOTH / dakeapp.com formal release. Market apps use `formal_release`; QPSC / BRAINZ / Dashboard / Wake apps generally use `system_ready` or `reference_ready`.
+Dashboards should read these fields from README instead of assuming every app must reach BOOTH / dakeapp.com formal release. Market apps use `formal_release`; QPCS / BRAINZ / Dashboard / Wake apps generally use `system_ready` or `reference_ready`.

@@ -6,7 +6,7 @@ DAKE Web Dashboard は、菊田さん本人の開発アシスト専用に作成�
 
 ## 役割
 
-- DAKE / QPSC / PEAKHEADZ / BORINEF / holiday-jinja / JapanMemoryLane / SHIMARISU などのサイト群を一覧で見るサイト台帳
+- DAKE / QPCS / PEAKHEADZ / BORINEF / holiday-jinja / JapanMemoryLane / SHIMARISU などのサイト群を一覧で見るサイト台帳
 - サイト名、ドメイン / URL、カテゴリ、公開状態、説明、フォルダ、最終更新の確認
 - Notionや記憶頼みの管理から、リポジトリ内のREADME / DAKE_WEB_METAを読む運用への移行補助
 - Cloudflare Pages / Functions / Git状態 / OpenAI API構成は、詳細ペインで確認する補助情報
@@ -62,7 +62,7 @@ Phase3では、画面の主役を監査情報からサイト一覧・サイト�
 - Git / API / Functions / Cloudflare構成は補助情報として右側列または詳細ペインへ移動
 - domain / production_url は DAKE_WEB_META、README、package.json、known domain map の順で推定
 - GitHub URL、Cloudflare管理画面URL、google.com系URLは本番URLとして誤検出しない
-- カテゴリは DAKE、SHIMARISU、PEAKHEADZ、BORINEF、holiday、QPSC、blog、note、other に分類
+- カテゴリは DAKE、SHIMARISU、PEAKHEADZ、BORINEF、holiday、QPCS、blog、note、other に分類
 - 「Codex指示をコピー」で、選択中サイトのREADME / DAKE_WEB_META整備指示をクリップボードへコピー
 - 「META候補をコピー」で、選択中サイト用の DAKE_WEB_META JSON 候補をクリップボードへコピー
 - DAKE_WEB_META未整備は強い警告ではなく、補助情報を整える候補として扱う
@@ -75,7 +75,7 @@ Phase2.5 では、状態名だけでなく「なぜその判定になったか�
 - サイト検出スコア
 - `site` / `candidate` / `ignored_component` の分類
 - `public` / `functions` / `sitemap` の誤検出抑制
-- QPSC通知カードの理由表示
+- QPCS通知カードの理由表示
 - 次にやる候補の理由表示
 
 通常の「全部」フィルタには `site` のみを表示し、`candidate` は「候補」フィルタで確認します。`ignored_component` は一覧に出さず、サイト本体の構成要素として扱います。
@@ -117,7 +117,7 @@ python main.py --launch-check
 
 ## Positioning
 
-This app is a system/operations dashboard, not a market-facing standalone product. Its completion goal is `system_ready`: README, launch-check, build, and dashboard role are documented and working.
+This app is a QPCS/operations dashboard, not a market-facing standalone product. Its completion goal is `system_ready`: README, launch-check, build, and dashboard role are documented and working.
 
 ## DAKE_META
 ```json
@@ -134,7 +134,7 @@ This app is a system/operations dashboard, not a market-facing standalone produc
   "release_url": "",
   "screenshot_path": "",
   "status": "internal",
-  "app_type": "system",
+  "app_type": "qpcs",
   "completion_goal": "system_ready",
   "show_in_launcher": false,
   "show_on_site": false

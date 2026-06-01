@@ -194,7 +194,7 @@ Add these fields to `DAKE_META`:
 
 - `market`: public DAKE app for GitHub Release / BOOTH / dakeapp.com.
 - `personal`: Yukiz/local-purpose app. Public release is optional, but the primary goal is local use or reference.
-- `system`: QPSC / BRAINZ / OIKAWA / Dashboard / Wake / operations app. Not treated as a standalone market product.
+- `qpcs`: QPCS / BRAINZ / OIKAWA / Dashboard / Wake / operations app. Not treated as a standalone market product.
 - `frozen`: frozen app preserved as history or experiment.
 - `archived`: archived or legacy app, excluded from normal unresolved lanes.
 
@@ -202,8 +202,8 @@ Add these fields to `DAKE_META`:
 
 - `formal_release`: README, release body, screenshots, BOOTH assets, build, dist exe, GitHub Release, BOOTH, dakeapp.com, and Cloudflare confirmation.
 - `local_ready`: README, launch-check, build, local operation notes, and safe config handling.
-- `system_ready`: README, launch-check, build, system role, source/read target notes, and dashboard relationship are documented.
+- `system_ready`: README, launch-check, build, QPCS role, source/read target notes, and dashboard relationship are documented.
 - `reference_ready`: README explains the reference/sample/local-document role and public-use cautions.
 - `frozen_closed`: README explains frozen reason, current state, reopen conditions, and exclusion from shipping.
 
-Dashboards should use `completion_goal` to choose the correct completion lane. Do not place `system`, `personal`, `frozen`, or `archived` apps in the same unresolved lane as `market` apps waiting for `formal_release`.
+Dashboards should use `completion_goal` to choose the correct completion lane. Do not place `qpcs`, `personal`, `frozen`, or `archived` apps in the same unresolved lane as `market` apps waiting for `formal_release`.

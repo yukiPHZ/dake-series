@@ -2,9 +2,9 @@
 
 LIVA Z 常時ON機で動かす、3070Ti メインPC用の小さな補助脳 GATE です。Android スマホのブラウザから LAN/Tailscale 経由でアクセスし、Phase 1 では Wake on LAN と状態確認だけを行います。
 
-## QPSCでの役割
+## QPCSでの役割
 
-QPSC（Quiet Personal Cognitive System）では、DAKE_Wake_Brainzを起床・遠隔起動・状態確認レイヤーとして扱います。
+QPCS（Quiet Personal Cognitive System）では、DAKE_Wake_Brainzを起床・遠隔起動・状態確認レイヤーとして扱います。
 
 - BRAINZ = 深層記憶・取り込み・index・設定
 - OIKAWA = 検索・原本表示・熾火・熱提案・通知
@@ -14,9 +14,9 @@ QPSC（Quiet Personal Cognitive System）では、DAKE_Wake_Brainzを起床・�
 
 Phase 1ではBRAINZ本体を操作せず、PC起床と状態確認を担います。BRAINZの起床状態はBRAINZ側のローカル状態ファイル、前面通知はOIKAWA側へ寄せます。
 
-## QPSC v0.1 正本
+## QPCS v0.1 正本
 
-DAKE_Wake_BrainzはQPSC v0.1で、起床 / 状態確認レイヤーとして固定します。
+DAKE_Wake_BrainzはQPCS v0.1で、起床 / 状態確認レイヤーとして固定します。
 
 - LIVA Z 常時ON機から3070Ti PCをWake on LANで起こします
 - LAN / Tailscale上のブラウザから状態を確認します
@@ -24,16 +24,16 @@ DAKE_Wake_BrainzはQPSC v0.1で、起床 / 状態確認レイヤーとして固�
 - BRAINZ awake状態はBRAINZ側の `qpsc_brainz_status.json` を正とします
 - OIKAWAが前面UI、BRAINZが記憶庫、Wakeが起床確認という分担を保ちます
 
-WakeはQPSCの判断層ではありません。起こす、見る、止めないための入口です。
+WakeはQPCSの判断層ではありません。起こす、見る、止めないための入口です。
 
-## QPSC v0.2 現在地
+## QPCS v0.2 現在地
 
 DAKE_Wake_Brainzはv0.2時点でも、起床 / 状態確認レイヤーです。BRAINZやOIKAWAの前面UIではありません。
 
 - LIVA Zやスマホ起点で、3070Ti PCの起床と状態確認を担います
 - BRAINZの取り込み、保存、検索、原本表示には踏み込みません
 - OIKAWAの通知、熾火、ORBIT、巡回、側に在る表示には踏み込みません
-- 将来、スマホ起点のQPSC起動導線として整理する候補です
+- 将来、スマホ起点のQPCS起動導線として整理する候補です
 
 ## 起動
 
@@ -141,7 +141,7 @@ Sleep、Queue、Codex 監視、Slack bridge は将来フェーズで追加しま
 
 ## Positioning
 
-This app is a system/operations app, not a market-facing standalone product. Its completion goal is `system_ready`: README, launch-check, build, and its role in the local workflow are documented and working.
+This app is a QPCS/operations app, not a market-facing standalone product. Its completion goal is `system_ready`: README, launch-check, build, and its role in the local workflow are documented and working.
 
 ## DAKE_META
 ```json
@@ -152,13 +152,13 @@ This app is a system/operations app, not a market-facing standalone product. Its
   "launcher_description": "LIVA Z から 3070Ti PC を Wake / 状態確認する補助脳 GATE。",
   "site_title": "DAKE_Wake_Brainz",
   "site_description": "Android ブラウザから 3070Ti PC を Wake / 状態確認する LAN 用 DAKE GATE。",
-  "update_summary": "QPSC v0.1として起床 / 状態確認レイヤーの役割を正本化しました。",
+  "update_summary": "QPCS v0.1として起床 / 状態確認レイヤーの役割を正本化しました。",
   "folder_name": "DAKE_Wake_Brainz",
   "exe_name": "DAKE_Wake_Brainz.exe",
   "release_url": "",
   "screenshot_path": "assets/screenshot.webp",
   "status": "draft",
-  "app_type": "system",
+  "app_type": "qpcs",
   "completion_goal": "system_ready",
   "show_in_launcher": false,
   "show_on_site": false
