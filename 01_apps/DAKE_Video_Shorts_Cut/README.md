@@ -12,7 +12,8 @@ YouTube URL取得や投稿機能は持たせず、MP4を入れてショート候
 - 9:16 / 1080x1920 のMP4を出力
 - サムネ画像とタイトル案テキストを出力
 - `ショートごとに文字起こし` をONにすると、生成したショート候補ごとの文字起こしを出力
-- ショート候補ごとに簡易評価を行い、使えそう度・タイトル案・サムネ文言案を出力
+- ショート候補ごとに評価を行い、使えそう度・タイトル案・サムネ文言案を出力
+- `Ollamaで候補評価` をONにすると、Ollama起動時だけローカルAI評価を試行
 - QRコードで同じWi-Fi内のスマホから保存できるページを表示
 
 ## 使い方
@@ -20,9 +21,10 @@ YouTube URL取得や投稿機能は持たせず、MP4を入れてショート候
 1. `python main.py` で起動
 2. MP4をドラッグ＆ドロップ、または `MP4を選ぶ` から選択
 3. 必要に応じて `ショートごとに文字起こし` をON/OFF
-4. `ショートを作成` を押す
-5. 生成後、保存先フォルダとQRコードを確認
-6. スマホでQRコードを読み取り、ブラウザから必要なファイルを保存
+4. 必要に応じて `Ollamaで候補評価` をON
+5. `ショートを作成` を押す
+6. 生成後、保存先フォルダとQRコードを確認
+7. スマホでQRコードを読み取り、ブラウザから必要なファイルを保存
 
 出力フォルダは入力動画と同じ階層に作成されます。入力動画が `dake_shorts_output_...` フォルダ内にある場合は、出力フォルダの入れ子を避けるため一段上に作成します。
 
@@ -60,15 +62,27 @@ v0.3では、長尺元動画全体ではなく、生成したショート動画�
 
 ## 候補評価
 
-v0.4では、生成したショート候補ごとにローカルのルールベース評価を行います。
+v0.5では、通常のルールベース評価に加えて、Ollamaが起動している場合だけローカルAI評価を使えます。
 
 - `short_01_transcript.txt` などを読み、0〜100点の使えそう度を付けます。
 - `shorts_review.txt` と `shorts_review.json` を出力します。
 - `title_01.txt` 〜 `title_03.txt` は評価結果のタイトル案で更新されます。
 - QR転送ページにも候補ごとの score / title / thumbnail_text / reason を表示します。
-- v0.4はルールベース評価です。
-- Ollama/OpenAIによる高精度判定は次工程です。
-- 熱量判定、OpenAI API判定、Ollama判定は未実装です。
+- `Ollamaで候補評価` は初期OFFです。
+- Ollamaの既定モデルは `qwen2.5:7b` です。
+- Ollama未導入・未起動・モデル未取得の場合でも、通常評価へ戻って動作します。
+- OpenAI APIはまだ未使用です。
+- 熱量判定、OpenAI API判定は未実装です。
+
+設定は `DakeVideo_Shorts_Cut_config.json` に保存されます。このファイルはGit管理しません。
+
+```json
+{
+  "use_ollama_review": false,
+  "ollama_model": "qwen2.5:7b",
+  "ollama_url": "http://localhost:11434/api/generate"
+}
+```
 
 ## 必要なもの
 
@@ -129,6 +143,12 @@ python main.py --launch-check
 python main.py --process-check "C:\path\to\sample.mp4"
 ```
 
+Ollama評価をCLIで確認する場合:
+
+```powershell
+python main.py --process-check "C:\path\to\sample.mp4" --ollama-review
+```
+
 ## DAKE_META
 
 ```json
@@ -139,7 +159,7 @@ python main.py --process-check "C:\path\to\sample.mp4"
   "launcher_description": "MP4からショート候補とサムネを作成します。",
   "site_title": "Dakeショート切り出し",
   "site_description": "MP4を入れるだけで、ショート動画候補・サムネ・タイトル案を作成します。",
-  "update_summary": "生成したショート候補ごとに使えそう度・タイトル案・サムネ文言案を出力できるように更新",
+  "update_summary": "Ollama起動時にショート候補をローカルAI評価できるように更新",
   "folder_name": "DAKE_Video_Shorts_Cut",
   "exe_name": "DakeVideo_Shorts_Cut.exe",
   "release_url": "",

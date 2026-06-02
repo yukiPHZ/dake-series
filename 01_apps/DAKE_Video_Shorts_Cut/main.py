@@ -61,6 +61,7 @@ UI_TEXT = {
     "status_transcript_failed": "文字起こしに失敗しました",
     "status_reviewing": "候補を評価しています",
     "status_review_done": "候補評価を作成しました",
+    "status_ollama_fallback": "Ollama失敗。通常評価で完了しました",
     "status_preparing_transfer": "スマホ転送を準備しています",
     "status_complete": "完了しました",
     "status_error": "エラーが発生しました",
@@ -74,8 +75,14 @@ UI_TEXT = {
     "result_transcript_missing": "未作成",
     "result_score": "score",
     "recommend_waiting": "おすすめ: 未作成",
-    "recommend_template": "おすすめ: 候補 {number}（{score}点）",
+    "recommend_template": "おすすめ: 候補 {number}（{score}点） / {method}",
     "checkbox_transcribe": "ショートごとに文字起こし",
+    "checkbox_ollama_review": "Ollamaで候補評価",
+    "ollama_review_note": "Ollama起動中のみ使用できます。失敗時は通常評価に戻ります。",
+    "review_method_label": "評価方法",
+    "review_method_local": "通常評価",
+    "review_method_ollama": "Ollama",
+    "review_method_local_fallback": "通常評価（Ollama失敗）",
     "result_exists": "あり",
     "result_missing": "なし",
     "qr_title": "スマホ転送",
@@ -158,6 +165,9 @@ FONT_CANDIDATES = ("BIZ UDPGothic", "Yu Gothic UI", "Meiryo", "Segoe UI")
 OUTPUT_FOLDER_PREFIX = "dake_shorts_output"
 REVIEW_TEXT_FILE = "shorts_review.txt"
 REVIEW_JSON_FILE = "shorts_review.json"
+APP_CONFIG_FILE = "DakeVideo_Shorts_Cut_config.json"
+DEFAULT_OLLAMA_MODEL = "qwen2.5:7b"
+DEFAULT_OLLAMA_URL = "http://localhost:11434/api/generate"
 TRANSFER_START_PORT = 8765
 TRANSFER_PORT_SCAN = 80
 SHORT_COUNT = 3
@@ -250,6 +260,9 @@ class ReviewOutput:
     text_path: Path
     json_path: Path
     reviews: list[CandidateReview]
+    review_method: str
+    best_candidate: int | None = None
+    ollama_error: str = ""
 
 
 @dataclass(frozen=True)
@@ -266,6 +279,52 @@ def get_app_dir() -> Path:
     if getattr(sys, "frozen", False):
         return Path(sys.executable).resolve().parent
     return Path(__file__).resolve().parent
+
+
+def get_config_path() -> Path:
+    return get_app_dir() / APP_CONFIG_FILE
+
+
+def default_app_config() -> dict[str, object]:
+    return {
+        "use_ollama_review": False,
+        "ollama_model": DEFAULT_OLLAMA_MODEL,
+        "ollama_url": DEFAULT_OLLAMA_URL,
+    }
+
+
+def load_app_config() -> dict[str, object]:
+    config = default_app_config()
+    path = get_config_path()
+    if not path.exists():
+        return config
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return config
+    if not isinstance(payload, dict):
+        return config
+    config["use_ollama_review"] = bool(payload.get("use_ollama_review", config["use_ollama_review"]))
+    model = str(payload.get("ollama_model") or "").strip()
+    url = str(payload.get("ollama_url") or "").strip()
+    if model:
+        config["ollama_model"] = model
+    if url:
+        config["ollama_url"] = url
+    return config
+
+
+def save_app_config(config: dict[str, object]) -> None:
+    path = get_config_path()
+    payload = {
+        "use_ollama_review": bool(config.get("use_ollama_review", False)),
+        "ollama_model": str(config.get("ollama_model") or DEFAULT_OLLAMA_MODEL),
+        "ollama_url": str(config.get("ollama_url") or DEFAULT_OLLAMA_URL),
+    }
+    try:
+        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    except OSError:
+        return
 
 
 def get_common_icon_candidates() -> list[Path]:
@@ -716,15 +775,249 @@ def review_to_dict(review: CandidateReview) -> dict[str, object]:
     }
 
 
-def write_review_files(output_dir: Path, candidates: list[GeneratedCandidate]) -> ReviewOutput:
+def review_method_label(method: str) -> str:
+    if method == "ollama":
+        return UI_TEXT["review_method_ollama"]
+    if method == "local_fallback":
+        return UI_TEXT["review_method_local_fallback"]
+    return UI_TEXT["review_method_local"]
+
+
+def short_error_message(exc: Exception) -> str:
+    message = str(exc).strip() or exc.__class__.__name__
+    message = " ".join(message.splitlines())
+    return message[:180]
+
+
+def best_candidate_from_reviews(reviews: list[CandidateReview]) -> int | None:
+    if not reviews:
+        return None
+    return max(reviews, key=lambda review: (review.score, -review.candidate)).candidate
+
+
+def build_ollama_review_prompt(candidates: list[GeneratedCandidate]) -> str:
+    blocks: list[str] = []
+    for candidate in candidates:
+        text = read_candidate_transcript(candidate) or "（文字起こしなし）"
+        blocks.append(f"候補{candidate.index}:\n{text[:4000]}")
+    return """あなたは「ユキズ稼働中」向けのショート動画候補を選ぶ編集者です。
+以下の3候補を、ショート動画として切り出す価値で評価してください。
+
+評価基準:
+- 一言で伝わるか
+- 見た人が続きを見たくなるか
+- ユキズ稼働中らしさがあるか
+- 静かな制作感があるか
+- 人格・思想・作る姿勢が出ているか
+- 誇張したタイトルにしない
+- サムネ文言は短く、強く、静かに
+- 弱い候補でも、タイトルとサムネ文言で候補を貶さない
+- 理由は率直に、ただし攻撃的にしない
+
+必ずJSONだけを返してください。説明文やMarkdownは不要です。
+形式:
+{
+  "reviews": [
+    {
+      "candidate": 1,
+      "score": 72,
+      "title": "静かに作る時間",
+      "thumbnail_text": "ただ作る。",
+      "reason": "作業の空気が伝わり、短尺でも雰囲気がある"
+    }
+  ],
+  "best_candidate": 1
+}
+
+""" + "\n\n".join(blocks)
+
+
+def extract_json_payload(text: str) -> dict[str, object]:
+    value = text.strip()
+    try:
+        payload = json.loads(value)
+        if isinstance(payload, dict):
+            return payload
+    except json.JSONDecodeError:
+        pass
+    start = value.find("{")
+    end = value.rfind("}")
+    if start < 0 or end <= start:
+        raise ValueError("Ollama response did not contain JSON")
+    payload = json.loads(value[start : end + 1])
+    if not isinstance(payload, dict):
+        raise ValueError("Ollama response JSON was not an object")
+    return payload
+
+
+def coerce_score(value: object) -> int:
+    try:
+        return clamp_score(int(round(float(value))))
+    except (TypeError, ValueError):
+        raise ValueError("Ollama score was invalid")
+
+
+def sanitize_ollama_field(value: object, fallback: str, max_length: int) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return fallback
+    noisy_words = (
+        "弱すぎ",
+        "無駄",
+        "意味不明",
+        "言ってること何",
+        "ではない",
+        "欠け",
+        "違う",
+        "低め",
+        "単調",
+        "FQUE",
+        "ENERGY",
+    )
+    if any(word.casefold() in text.casefold() for word in noisy_words):
+        return fallback
+    latin_words = re.findall(r"[A-Za-z]{4,}", text)
+    allowed = {"dake"}
+    if any(word.casefold() not in allowed for word in latin_words):
+        return fallback
+    return text.replace(".", "。")[:max_length] or fallback
+
+
+def parse_ollama_reviews(payload: dict[str, object], candidates: list[GeneratedCandidate]) -> tuple[list[CandidateReview], int | None]:
+    raw_reviews = payload.get("reviews")
+    if not isinstance(raw_reviews, list):
+        raise ValueError("Ollama response did not include reviews")
+
+    by_candidate: dict[int, dict[str, object]] = {}
+    for item in raw_reviews:
+        if not isinstance(item, dict):
+            continue
+        try:
+            candidate_number = int(item.get("candidate", 0) or 0)
+        except (TypeError, ValueError):
+            continue
+        by_candidate[candidate_number] = item
+
     reviews: list[CandidateReview] = []
     for candidate in candidates:
-        review = evaluate_candidate(candidate)
-        candidate.review = review
-        candidate.title_path.write_text(review.title + "\n", encoding="utf-8")
+        raw = by_candidate.get(candidate.index)
+        if raw is None:
+            raise ValueError("Ollama response missed a candidate")
+        local = evaluate_candidate(candidate)
+        title = sanitize_ollama_field(raw.get("title"), local.title, 80)
+        thumbnail_text = sanitize_ollama_field(raw.get("thumbnail_text"), local.thumbnail_text, 40)
+        reason = sanitize_ollama_field(raw.get("reason"), local.reason, 180)
+        review = CandidateReview(
+            candidate=candidate.index,
+            score=coerce_score(raw.get("score")),
+            title=title or local.title,
+            thumbnail_text=thumbnail_text or local.thumbnail_text,
+            reason=reason or local.reason,
+            transcript_file=candidate.transcript_path.name,
+        )
         reviews.append(review)
 
+    best_candidate = payload.get("best_candidate")
+    try:
+        best_number = int(best_candidate) if best_candidate is not None else None
+    except (TypeError, ValueError):
+        best_number = None
+    valid_numbers = {candidate.index for candidate in candidates}
+    if best_number not in valid_numbers:
+        best_number = best_candidate_from_reviews(reviews)
+    return reviews, best_number
+
+
+def request_ollama_reviews(
+    candidates: list[GeneratedCandidate],
+    model: str = DEFAULT_OLLAMA_MODEL,
+    url: str = DEFAULT_OLLAMA_URL,
+) -> tuple[list[CandidateReview], int | None]:
+    import urllib.error
+    import urllib.request
+
+    prompt = build_ollama_review_prompt(candidates)
+    request_body = json.dumps(
+        {
+            "model": model,
+            "prompt": prompt,
+            "stream": False,
+            "format": "json",
+        },
+        ensure_ascii=False,
+    ).encode("utf-8")
+    request = urllib.request.Request(
+        url,
+        data=request_body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=75) as response:
+            response_text = response.read().decode("utf-8", errors="replace")
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")[:180]
+        raise RuntimeError(detail or f"Ollama HTTP {exc.code}") from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(str(exc.reason)) from exc
+    response_payload = json.loads(response_text)
+    if not isinstance(response_payload, dict):
+        raise ValueError("Ollama API response was not an object")
+    if "error" in response_payload:
+        raise RuntimeError(str(response_payload.get("error") or "Ollama error"))
+    if "reviews" in response_payload:
+        review_payload = response_payload
+    else:
+        raw_review = str(response_payload.get("response") or "")
+        review_payload = extract_json_payload(raw_review)
+    return parse_ollama_reviews(review_payload, candidates)
+
+
+def write_review_files(
+    output_dir: Path,
+    candidates: list[GeneratedCandidate],
+    use_ollama_review: bool = False,
+    ollama_model: str = DEFAULT_OLLAMA_MODEL,
+    ollama_url: str = DEFAULT_OLLAMA_URL,
+) -> ReviewOutput:
+    review_method = "local"
+    ollama_error = ""
+    best_candidate: int | None = None
+    if use_ollama_review:
+        try:
+            reviews, best_candidate = request_ollama_reviews(candidates, model=ollama_model, url=ollama_url)
+            review_method = "ollama"
+        except Exception as exc:
+            ollama_error = short_error_message(exc)
+            review_method = "local_fallback"
+            reviews = [evaluate_candidate(candidate) for candidate in candidates]
+    else:
+        reviews = [evaluate_candidate(candidate) for candidate in candidates]
+
+    for candidate, review in zip(candidates, reviews):
+        candidate.review = review
+        candidate.title_path.write_text(review.title + "\n", encoding="utf-8")
+
+    if best_candidate is None:
+        best_candidate = best_candidate_from_reviews(reviews)
+
     text_blocks = []
+    method_label = review_method_label(review_method)
+    if best_candidate is None:
+        text_blocks.append(f"{UI_TEXT['review_method_label']}：{method_label}")
+    else:
+        best_review = next((review for review in reviews if review.candidate == best_candidate), None)
+        best_score = best_review.score if best_review is not None else 0
+        text_blocks.append(
+            "\n".join(
+                [
+                    f"{UI_TEXT['review_method_label']}：{method_label}",
+                    f"おすすめ：候補{best_candidate}（{best_score}点）",
+                ]
+            )
+        )
+    if ollama_error:
+        text_blocks.append(f"Ollamaエラー：{ollama_error}")
     for review in reviews:
         text_blocks.append(
             "\n".join(
@@ -739,24 +1032,68 @@ def write_review_files(output_dir: Path, candidates: list[GeneratedCandidate]) -
     text_path = output_dir / REVIEW_TEXT_FILE
     json_path = output_dir / REVIEW_JSON_FILE
     text_path.write_text("\n\n".join(text_blocks) + ("\n" if text_blocks else ""), encoding="utf-8")
+    payload: dict[str, object] = {
+        "review_method": review_method,
+        "best_candidate": best_candidate,
+        "reviews": [review_to_dict(review) for review in reviews],
+    }
+    if ollama_error:
+        payload["ollama_error"] = ollama_error
     json_path.write_text(
-        json.dumps([review_to_dict(review) for review in reviews], ensure_ascii=False, indent=2) + "\n",
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
-    return ReviewOutput(text_path=text_path, json_path=json_path, reviews=reviews)
+    return ReviewOutput(
+        text_path=text_path,
+        json_path=json_path,
+        reviews=reviews,
+        review_method=review_method,
+        best_candidate=best_candidate,
+        ollama_error=ollama_error,
+    )
 
 
-def load_review_dicts(output_dir: Path) -> list[dict[str, object]]:
+def load_review_payload(output_dir: Path) -> dict[str, object]:
     path = output_dir / REVIEW_JSON_FILE
     if not path.exists():
-        return []
+        return {}
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
+        return {}
+    if isinstance(payload, list):
+        reviews = [item for item in payload if isinstance(item, dict)]
+        return {
+            "review_method": "local",
+            "best_candidate": best_candidate_from_review_dicts(reviews),
+            "reviews": reviews,
+        }
+    if isinstance(payload, dict):
+        return payload
+    return {}
+
+
+def best_candidate_from_review_dicts(reviews: list[dict[str, object]]) -> int | None:
+    best_number: int | None = None
+    best_score = -1
+    for item in reviews:
+        try:
+            candidate_number = int(item.get("candidate", 0) or 0)
+            score = int(item.get("score", 0) or 0)
+        except (TypeError, ValueError):
+            continue
+        if score > best_score:
+            best_number = candidate_number
+            best_score = score
+    return best_number
+
+
+def load_review_dicts(output_dir: Path) -> list[dict[str, object]]:
+    payload = load_review_payload(output_dir)
+    raw_reviews = payload.get("reviews")
+    if not isinstance(raw_reviews, list):
         return []
-    if not isinstance(payload, list):
-        return []
-    return [item for item in payload if isinstance(item, dict)]
+    return [item for item in raw_reviews if isinstance(item, dict)]
 
 
 def get_best_review(candidates: list[GeneratedCandidate]) -> CandidateReview | None:
@@ -794,19 +1131,30 @@ def find_available_port(start_port: int = TRANSFER_START_PORT) -> int:
 
 def build_transfer_html(output_dir: Path) -> str:
     rows: list[str] = []
+    review_payload = load_review_payload(output_dir)
+    method = str(review_payload.get("review_method") or "local")
+    method_label = review_method_label(method)
     review_items = [output_dir / REVIEW_TEXT_FILE, output_dir / REVIEW_JSON_FILE]
     review_links = []
+    review_header = (
+        "<p class=\"review-method\">"
+        + html.escape(UI_TEXT["review_method_label"])
+        + "："
+        + html.escape(method_label)
+        + "</p>"
+    )
     for item in review_items:
         if not item.exists():
             continue
         href = f"/files/{html.escape(item.name)}"
         label = html.escape(item.name)
         review_links.append(f"<a href=\"{href}\" download>{label}<span>{html.escape(UI_TEXT['mobile_download'])}</span></a>")
-    if review_links:
+    if review_links or review_payload:
         rows.append(
             "<section><h2>"
             + html.escape(UI_TEXT["mobile_review_section"])
             + "</h2>"
+            + review_header
             + "\n".join(review_links)
             + "</section>"
         )
@@ -953,12 +1301,17 @@ a span {{
 }}
 .title-preview,
 .review-summary,
+.review-method,
 .missing {{
   display: block;
   color: var(--muted);
   font-size: 13px;
   line-height: 1.7;
   margin: 8px 0 0;
+}}
+.review-method {{
+  margin: 0 0 10px;
+  font-weight: 700;
 }}
 .review-summary {{
   background: #F8FAFD;
@@ -1084,6 +1437,9 @@ def process_video(
     status_callback=None,
     transfer_server: TransferServer | None = None,
     create_transcript: bool = True,
+    use_ollama_review: bool = False,
+    ollama_model: str = DEFAULT_OLLAMA_MODEL,
+    ollama_url: str = DEFAULT_OLLAMA_URL,
 ) -> ProcessResult:
     input_path = validate_mp4_path(input_path)
     ffmpeg_path, ffprobe_path = ensure_required_tools()
@@ -1140,7 +1496,13 @@ def process_video(
 
     if status_callback:
         status_callback(UI_TEXT["status_reviewing"])
-    review = write_review_files(output_dir, candidates)
+    review = write_review_files(
+        output_dir,
+        candidates,
+        use_ollama_review=use_ollama_review,
+        ollama_model=ollama_model,
+        ollama_url=ollama_url,
+    )
     if status_callback:
         status_callback(UI_TEXT["status_review_done"])
 
@@ -1184,12 +1546,14 @@ class DakeVideoShortsCutApp:
         self.busy = False
         self.qr_photo = None
         self.footer_compact: bool | None = None
+        self.app_config = load_app_config()
 
         self.status_var = tk.StringVar(value=UI_TEXT["status_ready"])
         self.selected_var = tk.StringVar(value=UI_TEXT["selected_file_empty"])
         self.video_info_var = tk.StringVar(value=UI_TEXT["video_info_empty"])
         self.transfer_url_var = tk.StringVar(value="")
         self.transcript_enabled_var = tk.BooleanVar(value=True)
+        self.ollama_review_var = tk.BooleanVar(value=bool(self.app_config.get("use_ollama_review", False)))
         self.recommend_var = tk.StringVar(value=UI_TEXT["recommend_waiting"])
         self.result_vars = [
             tk.StringVar(value=UI_TEXT["result_waiting"]),
@@ -1313,6 +1677,30 @@ class DakeVideoShortsCutApp:
             cursor="hand2",
         )
         self.transcript_check.pack(anchor="w", pady=(6, 0))
+        self.ollama_review_check = tk.Checkbutton(
+            info,
+            text=UI_TEXT["checkbox_ollama_review"],
+            variable=self.ollama_review_var,
+            bg=THEME["panel"],
+            fg=THEME["text"],
+            activebackground=THEME["panel"],
+            activeforeground=THEME["text"],
+            selectcolor=THEME["panel"],
+            font=(self.font_family, 9, "bold"),
+            anchor="w",
+            cursor="hand2",
+        )
+        self.ollama_review_check.pack(anchor="w", pady=(8, 0))
+        tk.Label(
+            info,
+            text=UI_TEXT["ollama_review_note"],
+            bg=THEME["panel"],
+            fg=THEME["muted"],
+            font=(self.font_family, 8),
+            anchor="w",
+            justify="left",
+            wraplength=560,
+        ).pack(fill="x", pady=(3, 0))
 
     def _info_row(self, parent: tk.Frame, label: str, value_var: tk.StringVar) -> None:
         row = tk.Frame(parent, bg=THEME["panel"])
@@ -1648,16 +2036,26 @@ class DakeVideoShortsCutApp:
         self._clear_results()
         self._set_status(UI_TEXT["status_checking"])
         create_transcript = bool(self.transcript_enabled_var.get())
-        worker = threading.Thread(target=self._process_worker, args=(self.input_path, create_transcript), daemon=True)
+        use_ollama_review = bool(self.ollama_review_var.get())
+        self.app_config["use_ollama_review"] = use_ollama_review
+        save_app_config(self.app_config)
+        worker = threading.Thread(
+            target=self._process_worker,
+            args=(self.input_path, create_transcript, use_ollama_review),
+            daemon=True,
+        )
         worker.start()
 
-    def _process_worker(self, path: Path, create_transcript: bool) -> None:
+    def _process_worker(self, path: Path, create_transcript: bool, use_ollama_review: bool) -> None:
         try:
             result = process_video(
                 path,
                 self._queue_status,
                 self.transfer_server,
                 create_transcript=create_transcript,
+                use_ollama_review=use_ollama_review,
+                ollama_model=str(self.app_config.get("ollama_model") or DEFAULT_OLLAMA_MODEL),
+                ollama_url=str(self.app_config.get("ollama_url") or DEFAULT_OLLAMA_URL),
             )
             self.work_queue.put(("process_done", result))
         except Exception as exc:
@@ -1699,6 +2097,8 @@ class DakeVideoShortsCutApp:
         self._show_qr(result.transfer_url)
         if result.transcript_error:
             self._set_status(UI_TEXT["status_transcript_failed"], error=True)
+        elif result.review is not None and result.review.review_method == "local_fallback":
+            self._set_status(UI_TEXT["status_ollama_fallback"], success=True)
         else:
             self._set_status(UI_TEXT["status_complete"], success=True)
         self._set_button_states()
@@ -1725,7 +2125,14 @@ class DakeVideoShortsCutApp:
         if best is None:
             self.recommend_var.set(UI_TEXT["recommend_waiting"])
         else:
-            self.recommend_var.set(UI_TEXT["recommend_template"].format(number=best.candidate, score=best.score))
+            method = result.review.review_method if result.review is not None else "local"
+            self.recommend_var.set(
+                UI_TEXT["recommend_template"].format(
+                    number=best.candidate,
+                    score=best.score,
+                    method=review_method_label(method),
+                )
+            )
         for index, candidate in enumerate(result.candidates):
             score = candidate.review.score if candidate.review is not None else "--"
             values = [
@@ -1790,8 +2197,11 @@ class DakeVideoShortsCutApp:
         state = tk.DISABLED if self.busy else tk.NORMAL
         self.create_button.configure(state=state, bg="#A9C0F7" if self.busy else THEME["accent"])
         self.transcript_check.configure(state=state)
+        self.ollama_review_check.configure(state=state)
 
     def _on_close(self) -> None:
+        self.app_config["use_ollama_review"] = bool(self.ollama_review_var.get())
+        save_app_config(self.app_config)
         self.transfer_server.shutdown()
         self.root.destroy()
 
@@ -1853,11 +2263,15 @@ def run_launch_check() -> int:
         review = write_review_files(output_dir, candidates)
         if not review.text_path.exists() or not review.json_path.exists() or not get_best_review(candidates):
             raise RuntimeError("review fixture failed")
+        review_payload = load_review_payload(output_dir)
+        if review_payload.get("review_method") != "local" or "reviews" not in review_payload:
+            raise RuntimeError("review payload fixture failed")
         page = build_transfer_html(output_dir)
         if (
             "short_01.mp4" not in page
             or short_transcript_text_name(1) not in page
             or REVIEW_TEXT_FILE not in page
+            or UI_TEXT["review_method_label"] not in page
             or UI_TEXT["mobile_score"] not in page
             or UI_TEXT["mobile_title"] not in page
         ):
@@ -1882,10 +2296,15 @@ def run_launch_check() -> int:
     return 0
 
 
-def run_process_check(input_file: str, create_transcript: bool = True) -> int:
+def run_process_check(input_file: str, create_transcript: bool = True, use_ollama_review: bool = False) -> int:
     server = TransferServer()
     try:
-        result = process_video(Path(input_file), transfer_server=server, create_transcript=create_transcript)
+        result = process_video(
+            Path(input_file),
+            transfer_server=server,
+            create_transcript=create_transcript,
+            use_ollama_review=use_ollama_review,
+        )
         print(UI_TEXT["process_check_done"].format(output_dir=result.output_dir))
         print(result.transfer_url)
         try:
@@ -1924,6 +2343,8 @@ def run_process_check(input_file: str, create_transcript: bool = True) -> int:
         print(f"global_transcript={(result.output_dir / 'transcript.txt').exists()}")
         print(UI_TEXT["process_check_transcript"].format(status="created" if transcript_ok else "missing"))
         print(UI_TEXT["process_check_review"].format(status="created" if review_ok else "missing"))
+        print(f"review_method={result.review.review_method if result.review else 'missing'}")
+        print(f"ollama_error={result.review.ollama_error if result.review and result.review.ollama_error else ''}")
         print(f"shorts_review.txt={(result.output_dir / REVIEW_TEXT_FILE).exists()}")
         print(f"shorts_review.json={(result.output_dir / REVIEW_JSON_FILE).exists()}")
         print(f"review_best={best.candidate if best else 'missing'}")
@@ -1940,11 +2361,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--launch-check", action="store_true")
     parser.add_argument("--process-check", metavar="MP4")
     parser.add_argument("--skip-transcript", action="store_true")
+    parser.add_argument("--ollama-review", action="store_true")
     args = parser.parse_args(argv)
     if args.launch_check:
         return run_launch_check()
     if args.process_check:
-        return run_process_check(args.process_check, create_transcript=not args.skip_transcript)
+        return run_process_check(
+            args.process_check,
+            create_transcript=not args.skip_transcript,
+            use_ollama_review=args.ollama_review,
+        )
     app = DakeVideoShortsCutApp()
     app.run()
     return 0
