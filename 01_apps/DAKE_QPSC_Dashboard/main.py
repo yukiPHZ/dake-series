@@ -84,12 +84,9 @@ UI_TEXT = {
     "label_frozen_count": "凍結",
     "label_series_uncommitted": "DAKE_series 未commit件数",
     "label_series_untracked": "DAKE_series 未追跡件数",
-    "label_git_attention": "Git確認",
     "value_waiting": "確認待ち",
     "value_none": "なし",
     "value_yes": "あり",
-    "value_git_ok": "なし",
-    "value_git_attention": "確認あり",
     "priority_urgent": "先に見る",
     "priority_active": "通常",
     "priority_later": "保留",
@@ -99,7 +96,7 @@ UI_TEXT = {
     "priority_header": "【{label}】",
     "status_checking": "確認中…",
     "status_ready": "確認完了",
-    "status_attention": "確認あり",
+    "status_attention": "未処理あり",
     "status_launch_check_ok": "LAUNCH CHECK OK",
     "last_loaded_waiting": "未確認",
     "last_loaded_value": "確認: {time}",
@@ -111,10 +108,10 @@ UI_TEXT = {
     "dialog_screenshot_title": "スクショ未作成アプリ",
     "dialog_readme_title": "README不足アプリ",
     "dialog_role_title": "分類別 要確認アプリ",
-    "dialog_series_git_title": "DAKE_series Git要確認",
+    "dialog_series_git_title": "DAKE_series Git状態",
     "dialog_select_notice": "一覧から対象を選択してください。",
     "dialog_booth_notice": "BOOTH素材が存在し、\nbooth_url が未設定のアプリです。",
-    "booth_waiting_items": "登録前確認あり: {items}",
+    "booth_waiting_items": "登録前チェック: {items}",
     "booth_wait_release": "release_urlなし",
     "booth_wait_screenshot": "スクショ不足",
     "booth_wait_readme": "補足説明不足",
@@ -156,7 +153,7 @@ UI_TEXT = {
     "completion_goal_local_ready": "ローカル運用",
     "completion_goal_frozen_closed": "凍結完了",
     "completion_goal_unknown": "未設定",
-    "reason_series_git": "DAKE_seriesのGit状態を確認してください",
+    "reason_series_git": "DAKE_seriesのGit状態",
     "source_app": "App Dashboard",
     "source_web_index": "DAKE_Web_Index",
     "source_git": "DAKE_series",
@@ -987,7 +984,6 @@ class QpscDashboardApp:
         self.git_vars = {
             "series_uncommitted": tk.StringVar(value=UI_TEXT["value_waiting"]),
             "series_untracked": tk.StringVar(value=UI_TEXT["value_waiting"]),
-            "attention": tk.StringVar(value=UI_TEXT["value_waiting"]),
         }
         self.summary_var = tk.StringVar(value=UI_TEXT["last_loaded_waiting"])
         self.status_var = tk.StringVar(value=UI_TEXT["status_checking"])
@@ -1130,8 +1126,7 @@ class QpscDashboardApp:
         body = tk.Frame(frame, bg=THEME["panel"])
         body.pack(fill="x", padx=16, pady=(2, 16))
         self.metric_row(body, UI_TEXT["label_series_uncommitted"], self.git_vars["series_uncommitted"], lambda: self.show_targets("series_git")).pack(fill="x", pady=(0, 8))
-        self.metric_row(body, UI_TEXT["label_series_untracked"], self.git_vars["series_untracked"], lambda: self.show_targets("series_git")).pack(fill="x", pady=(0, 8))
-        self.metric_row(body, UI_TEXT["label_git_attention"], self.git_vars["attention"], lambda: self.show_targets("series_git")).pack(fill="x")
+        self.metric_row(body, UI_TEXT["label_series_untracked"], self.git_vars["series_untracked"], lambda: self.show_targets("series_git")).pack(fill="x")
         return frame
 
     def build_next_card(self, parent: tk.Misc) -> tk.Frame:
@@ -1239,7 +1234,6 @@ class QpscDashboardApp:
             row_vars[2].set(item.updated_text if item else "")
         self.git_vars["series_uncommitted"].set(str(summary.git.series_uncommitted))
         self.git_vars["series_untracked"].set(str(summary.git.series_untracked))
-        self.git_vars["attention"].set(UI_TEXT["value_git_attention"] if summary.git.error or summary.git.series_uncommitted or summary.git.series_untracked else UI_TEXT["value_git_ok"])
         self.summary_var.set(UI_TEXT["summary_template"].format(total=summary.action_total, apps=summary.app.total, sites=summary.site.total))
         self.status_var.set(UI_TEXT["status_attention"] if summary.urgent_total else UI_TEXT["status_ready"])
         self.render_next_actions(summary)
