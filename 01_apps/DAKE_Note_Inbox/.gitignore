@@ -1,0 +1,8 @@
+data/note_inbox_config.json
+data/*.tmp
+build/
+dist/
+*.spec
+version_info.txt
+__pycache__/
+*.pyc
