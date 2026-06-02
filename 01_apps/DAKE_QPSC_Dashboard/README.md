@@ -27,7 +27,7 @@ QPCS Dashboard は正本を読み、
 
 - App Dashboard の状態を取得する
 - Web Dashboard の状態を取得する
-- BOOTH未登録、Release未作成、スクショ未作成、README不足を表示する
+- BOOTH登録候補、Release未作成、スクショ未作成、README不足を表示する
 - Cloudflare未確認、health未確認、Git未反映を表示する
 - 次にやる候補を優先順位順に表示する
 - 必要な時だけ詳細ノードや対象フォルダを開く
@@ -99,6 +99,11 @@ QPCS系はシステム稼働または正本提示を完成ゴールとします�
 ユキズ専用アプリはローカル運用を完成ゴールとします。
 凍結アプリは凍結理由と再開条件が正本化されていれば、凍結完了として扱います。
 
+## レイアウト整理
+
+QPCS Dashboardは、分類と未処理を分けて表示します。
+市場向け、QPCS系、ユキズ専用、凍結といった分類情報と、BOOTH登録候補やCloudflare確認などの未処理情報を混在させず、現在地を一画面で確認できるようにしています。
+
 ## DAKE_META
 ```json
 {
@@ -108,7 +113,7 @@ QPCS系はシステム稼働または正本提示を完成ゴールとします�
   "launcher_description": "QPCS全体の現在地を束ねて確認する司令塔",
   "site_title": "",
   "site_description": "",
-  "update_summary": "app_type / completion_goal を読み取り、市場向け・QPCS系・専用・凍結を分けた未処理レーダーに対応しました。",
+  "update_summary": "分類と未処理を分けて表示し、QPCS Dashboardの現在地表示を整理しました。",
   "folder_name": "DAKE_QPSC_Dashboard",
   "exe_name": "QPSC_Dashboard.exe",
   "release_url": "",

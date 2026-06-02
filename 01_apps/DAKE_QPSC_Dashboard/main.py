@@ -39,7 +39,7 @@ RELEASE_BODY_NAME = "release_body.md"
 DEFAULT_SERIES_ROOT = Path(os.environ.get("DAKE_SERIES_ROOT", r"C:\Users\yukiz\devlop\DAKE_series"))
 DEFAULT_APPS_ROOT = Path(os.environ.get("QPSC_SERIES_APPS_ROOT", str(DEFAULT_SERIES_ROOT / "01_apps")))
 WORKER_POLL_MS = 80
-MAX_NEXT_ACTIONS = 5
+MAX_NEXT_ACTIONS = 3
 
 UI_TEXT = {
     "window_title": "Quiet Personal Cognitive System",
@@ -60,8 +60,11 @@ UI_TEXT = {
     "card_site_title": "サイト",
     "card_git_title": "Git",
     "card_next_title": "いま見るもの",
+    "section_unresolved_title": "未処理",
+    "section_classification_title": "分類",
     "label_app_total": "アプリ総数",
-    "label_booth_missing": "BOOTH未登録",
+    "label_booth_missing": "BOOTH登録候補",
+    "label_booth_materials_missing": "BOOTH素材不足",
     "label_release_missing": "Release未作成",
     "label_screenshot_missing": "スクショ未作成",
     "label_readme_missing": "README不足",
@@ -86,6 +89,7 @@ UI_TEXT = {
     "priority_active": "通常",
     "priority_later": "保留",
     "priority_summary": "優先 {urgent} / 全体 {total}\n通常 {active} / 保留 {later}",
+    "priority_brief": "{urgent}/{total}",
     "priority_header": "【{label}】",
     "status_checking": "確認中…",
     "status_ready": "確認完了",
@@ -95,7 +99,8 @@ UI_TEXT = {
     "last_loaded_value": "確認: {time}",
     "summary_template": "優先 {urgent}件 / 未処理全体 {total}件 / アプリ {apps}件 / サイト {sites}件",
     "dialog_empty": "対象はありません。",
-    "dialog_booth_title": "BOOTH未登録アプリ",
+    "dialog_booth_title": "BOOTH登録候補アプリ",
+    "dialog_booth_materials_title": "BOOTH素材不足アプリ",
     "dialog_release_title": "Release未作成アプリ",
     "dialog_screenshot_title": "スクショ未作成アプリ",
     "dialog_readme_title": "README不足アプリ",
@@ -106,7 +111,7 @@ UI_TEXT = {
     "dialog_series_git_title": "DAKE_series Git要確認",
     "dialog_select_notice": "一覧から対象を選択してください。",
     "next_none": "現時点で明確な候補はありません。",
-    "next_booth": "BOOTH登録が必要な正式出荷候補",
+    "next_booth": "市場向けアプリのBOOTH登録候補",
     "next_screenshot": "スクショ作成が必要な公開アプリ",
     "next_release": "Release作成が必要な出荷候補",
     "next_readme": "README不足のアプリ",
@@ -116,7 +121,8 @@ UI_TEXT = {
     "next_site_git": "サイト系Git未反映を確認",
     "next_series_git": "DAKE_seriesの未commitを確認",
     "next_line": "{index}. {label}（{count}件）",
-    "reason_booth_missing": "BOOTH素材またはbooth_urlが未整備",
+    "reason_booth_missing": "BOOTH素材あり / booth_url未設定",
+    "reason_booth_materials_missing": "BOOTH登録前の素材が不足",
     "reason_release_missing": "release_urlが未設定",
     "reason_screenshot_missing": "screenshot_pathまたは実ファイルが未整備",
     "reason_readme_missing": "README.mdがありません",
@@ -219,6 +225,7 @@ class AppRadar:
     personal_count: int = 0
     frozen_count: int = 0
     booth_missing: tuple[TargetItem, ...] = ()
+    booth_materials_missing: tuple[TargetItem, ...] = ()
     release_missing: tuple[TargetItem, ...] = ()
     screenshot_missing: tuple[TargetItem, ...] = ()
     readme_missing: tuple[TargetItem, ...] = ()
@@ -254,6 +261,7 @@ class RadarSummary:
     def urgent_total(self) -> int:
         return (
             priority_count(self.app.booth_missing, PRIORITY_URGENT)
+            + priority_count(self.app.booth_materials_missing, PRIORITY_URGENT)
             + priority_count(self.app.release_missing, PRIORITY_URGENT)
             + priority_count(self.app.screenshot_missing, PRIORITY_URGENT)
             + priority_count(self.app.readme_missing, PRIORITY_URGENT)
@@ -269,6 +277,7 @@ class RadarSummary:
     def action_total(self) -> int:
         return (
             len(self.app.booth_missing)
+            + len(self.app.booth_materials_missing)
             + len(self.app.release_missing)
             + len(self.app.screenshot_missing)
             + len(self.app.readme_missing)
@@ -426,6 +435,16 @@ def priority_summary(items: tuple[TargetItem, ...]) -> str:
         active=priority_count(items, PRIORITY_ACTIVE),
         later=priority_count(items, PRIORITY_LATER),
     )
+
+
+def priority_brief(items: tuple[TargetItem, ...]) -> str:
+    total = len(items)
+    if total == 0:
+        return "0"
+    urgent = priority_count(items, PRIORITY_URGENT)
+    if urgent == total:
+        return str(total)
+    return UI_TEXT["priority_brief"].format(urgent=urgent, total=total)
 
 
 def priority_items(items: tuple[TargetItem, ...], priority: str) -> tuple[TargetItem, ...]:
@@ -683,18 +702,37 @@ def classify_screenshot_priority(record: object, meta: dict[str, object]) -> str
     return PRIORITY_LATER
 
 
-def app_booth_missing(record: object, meta: dict[str, object]) -> bool:
+def app_booth_materials_complete(record: object) -> bool:
+    has_booth_product, _has_ready_product, has_booth_ready, has_booth_thumbnail = app_booth_material_flags(record)
+    return has_booth_product and has_booth_ready and has_booth_thumbnail
+
+
+def app_booth_registration_candidate(record: object, meta: dict[str, object]) -> bool:
     if not is_market_formal_app(record, meta):
         return False
-    booth_url = safe_text(meta.get("booth_url", ""))
-    has_booth_product, _has_ready_product, has_booth_ready, has_booth_thumbnail = app_booth_material_flags(record)
+    if app_is_later_market_target(record, meta):
+        return False
+    if safe_text(meta.get("booth_url", "")):
+        return False
+    if not app_booth_materials_complete(record):
+        return False
     status = meta_status(record, meta)
-    materials_missing = not has_booth_product or not has_booth_ready or not has_booth_thumbnail
-    return (
-        not has_booth_product
-        or not booth_url
-        or (status == "available" and materials_missing)
-    )
+    has_release = bool(app_release_url(record, meta))
+    has_distribution = app_has_dist(record) or has_release
+    visible = meta_show_on_site(meta) or meta_show_in_launcher(record, meta)
+    return status == "available" and has_distribution and visible
+
+
+def app_booth_materials_missing(record: object, meta: dict[str, object]) -> bool:
+    if not is_market_formal_app(record, meta):
+        return False
+    if app_is_later_market_target(record, meta):
+        return False
+    return not app_booth_materials_complete(record)
+
+
+def app_booth_missing(record: object, meta: dict[str, object]) -> bool:
+    return app_booth_registration_candidate(record, meta)
 
 
 def app_role_family(record: object, meta: dict[str, object]) -> str:
@@ -764,6 +802,7 @@ def collect_app_radar() -> tuple[AppRadar, GitRadar, tuple[str, ...]]:
             raise AttributeError(UI_TEXT["error_missing_function"])
         records = list(module.scan_apps(folder.parent))
         booth_missing: list[TargetItem] = []
+        booth_materials_missing: list[TargetItem] = []
         release_missing: list[TargetItem] = []
         screenshot_missing: list[TargetItem] = []
         readme_missing: list[TargetItem] = []
@@ -784,8 +823,10 @@ def collect_app_radar() -> tuple[AppRadar, GitRadar, tuple[str, ...]]:
                 else:
                     role_attention.append(target)
             if is_market_formal_app(record, meta):
-                if app_booth_missing(record, meta):
-                    booth_missing.append(target_for_app(record, meta, "reason_booth_missing", priority=classify_booth_priority(record, meta)))
+                if app_booth_registration_candidate(record, meta):
+                    booth_missing.append(target_for_app(record, meta, "reason_booth_missing", priority=PRIORITY_URGENT))
+                if app_booth_materials_missing(record, meta):
+                    booth_materials_missing.append(target_for_app(record, meta, "reason_booth_materials_missing", priority=PRIORITY_ACTIVE))
                 if not app_release_url(record, meta):
                     release_priority = classify_release_priority(record, meta, bool(reason))
                     release_missing.append(target_for_app(record, meta, "reason_release_missing", priority=release_priority))
@@ -803,6 +844,7 @@ def collect_app_radar() -> tuple[AppRadar, GitRadar, tuple[str, ...]]:
                 personal_count=role_counts["personal"],
                 frozen_count=role_counts["frozen"],
                 booth_missing=tuple(booth_missing),
+                booth_materials_missing=tuple(booth_materials_missing),
                 release_missing=tuple(release_missing),
                 screenshot_missing=tuple(screenshot_missing),
                 readme_missing=tuple(readme_missing),
@@ -1012,6 +1054,7 @@ class QpscDashboardApp:
         self.app_vars = {
             "total": tk.StringVar(value=UI_TEXT["value_waiting"]),
             "booth": tk.StringVar(value=UI_TEXT["value_waiting"]),
+            "booth_materials": tk.StringVar(value=UI_TEXT["value_waiting"]),
             "release": tk.StringVar(value=UI_TEXT["value_waiting"]),
             "screenshot": tk.StringVar(value=UI_TEXT["value_waiting"]),
             "readme": tk.StringVar(value=UI_TEXT["value_waiting"]),
@@ -1041,8 +1084,8 @@ class QpscDashboardApp:
 
     def configure_root(self) -> None:
         self.root.title(UI_TEXT["window_title"])
-        self.root.geometry("1200x800")
-        self.root.minsize(1080, 720)
+        self.root.geometry("1240x840")
+        self.root.minsize(1120, 760)
         self.root.configure(bg=THEME["bg"])
         apply_window_icon(self.root)
 
@@ -1075,6 +1118,7 @@ class QpscDashboardApp:
         lower.pack(fill="both", expand=True)
         lower.grid_columnconfigure(0, weight=3, uniform="lower")
         lower.grid_columnconfigure(1, weight=2, uniform="lower")
+        lower.grid_rowconfigure(0, weight=1, minsize=220)
         self.build_next_card(lower).grid(row=0, column=0, sticky="nsew", padx=(0, 10))
         self.build_git_card(lower).grid(row=0, column=1, sticky="nsew", padx=(10, 0))
 
@@ -1096,28 +1140,58 @@ class QpscDashboardApp:
         frame = self.make_card(parent)
         self.card_title(frame, UI_TEXT["card_app_title"])
         body = tk.Frame(frame, bg=THEME["panel"])
-        body.pack(fill="x", padx=16, pady=(2, 16))
-        self.metric_row(body, UI_TEXT["label_app_total"], self.app_vars["total"], None).pack(fill="x", pady=(0, 8))
-        self.metric_row(body, UI_TEXT["label_booth_missing"], self.app_vars["booth"], lambda: self.show_targets("booth")).pack(fill="x", pady=(0, 8))
-        self.metric_row(body, UI_TEXT["label_release_missing"], self.app_vars["release"], lambda: self.show_targets("release")).pack(fill="x", pady=(0, 8))
-        self.metric_row(body, UI_TEXT["label_screenshot_missing"], self.app_vars["screenshot"], lambda: self.show_targets("screenshot")).pack(fill="x", pady=(0, 8))
-        self.metric_row(body, UI_TEXT["label_readme_missing"], self.app_vars["readme"], lambda: self.show_targets("readme")).pack(fill="x", pady=(0, 8))
-        self.metric_row(body, UI_TEXT["label_role_attention"], self.app_vars["role"], lambda: self.show_targets("role")).pack(fill="x", pady=(0, 8))
-        self.metric_row(body, UI_TEXT["label_market_count"], self.app_vars["market"], None).pack(fill="x", pady=(0, 8))
-        self.metric_row(body, UI_TEXT["label_system_count"], self.app_vars["system"], None).pack(fill="x", pady=(0, 8))
-        self.metric_row(body, UI_TEXT["label_personal_count"], self.app_vars["personal"], None).pack(fill="x", pady=(0, 8))
-        self.metric_row(body, UI_TEXT["label_frozen_count"], self.app_vars["frozen"], None).pack(fill="x")
+        body.pack(fill="both", expand=True, padx=16, pady=(2, 16))
+        self.metric_row(body, UI_TEXT["label_app_total"], self.app_vars["total"], None).pack(fill="x", pady=(0, 10))
+
+        sections = tk.Frame(body, bg=THEME["panel"])
+        sections.pack(fill="both", expand=True)
+        sections.grid_columnconfigure(0, weight=3, uniform="app_sections")
+        sections.grid_columnconfigure(1, weight=2, uniform="app_sections")
+
+        unresolved = tk.Frame(sections, bg=THEME["panel"])
+        unresolved.grid(row=0, column=0, sticky="nsew", padx=(0, 12))
+        self.section_title(unresolved, UI_TEXT["section_unresolved_title"])
+        self.metric_grid(
+            unresolved,
+            (
+                (UI_TEXT["label_booth_missing"], self.app_vars["booth"], lambda: self.show_targets("booth")),
+                (UI_TEXT["label_booth_materials_missing"], self.app_vars["booth_materials"], lambda: self.show_targets("booth_materials")),
+                (UI_TEXT["label_release_missing"], self.app_vars["release"], lambda: self.show_targets("release")),
+                (UI_TEXT["label_screenshot_missing"], self.app_vars["screenshot"], lambda: self.show_targets("screenshot")),
+                (UI_TEXT["label_readme_missing"], self.app_vars["readme"], lambda: self.show_targets("readme")),
+                (UI_TEXT["label_role_attention"], self.app_vars["role"], lambda: self.show_targets("role")),
+            ),
+        )
+
+        classification = tk.Frame(sections, bg=THEME["panel"])
+        classification.grid(row=0, column=1, sticky="nsew")
+        self.section_title(classification, UI_TEXT["section_classification_title"])
+        self.metric_grid(
+            classification,
+            (
+                (UI_TEXT["label_market_count"], self.app_vars["market"], None),
+                (UI_TEXT["label_system_count"], self.app_vars["system"], None),
+                (UI_TEXT["label_personal_count"], self.app_vars["personal"], None),
+                (UI_TEXT["label_frozen_count"], self.app_vars["frozen"], None),
+            ),
+        )
         return frame
 
     def build_site_card(self, parent: tk.Misc) -> tk.Frame:
         frame = self.make_card(parent)
         self.card_title(frame, UI_TEXT["card_site_title"])
         body = tk.Frame(frame, bg=THEME["panel"])
-        body.pack(fill="x", padx=16, pady=(2, 16))
-        self.metric_row(body, UI_TEXT["label_site_total"], self.site_vars["total"], None).pack(fill="x", pady=(0, 8))
-        self.metric_row(body, UI_TEXT["label_cloudflare_unchecked"], self.site_vars["cloudflare"], lambda: self.show_targets("cloudflare")).pack(fill="x", pady=(0, 8))
-        self.metric_row(body, UI_TEXT["label_health_attention"], self.site_vars["health"], lambda: self.show_targets("health")).pack(fill="x", pady=(0, 8))
-        self.metric_row(body, UI_TEXT["label_site_git_uncommitted"], self.site_vars["git"], lambda: self.show_targets("site_git")).pack(fill="x")
+        body.pack(fill="both", expand=True, padx=16, pady=(2, 16))
+        self.metric_row(body, UI_TEXT["label_site_total"], self.site_vars["total"], None).pack(fill="x", pady=(0, 10))
+        self.section_title(body, UI_TEXT["section_unresolved_title"])
+        self.metric_grid(
+            body,
+            (
+                (UI_TEXT["label_cloudflare_unchecked"], self.site_vars["cloudflare"], lambda: self.show_targets("cloudflare")),
+                (UI_TEXT["label_health_attention"], self.site_vars["health"], lambda: self.show_targets("health")),
+                (UI_TEXT["label_site_git_uncommitted"], self.site_vars["git"], lambda: self.show_targets("site_git")),
+            ),
+        )
         return frame
 
     def build_git_card(self, parent: tk.Misc) -> tk.Frame:
@@ -1140,6 +1214,36 @@ class QpscDashboardApp:
 
     def card_title(self, parent: tk.Misc, text: str) -> None:
         tk.Label(parent, text=text, bg=THEME["panel"], fg=THEME["text"], font=(self.font_family, 14, "bold")).pack(anchor="w", padx=16, pady=(14, 10))
+
+    def section_title(self, parent: tk.Misc, text: str) -> None:
+        tk.Label(parent, text=text, bg=THEME["panel"], fg=THEME["text"], font=(self.font_family, 9, "bold")).pack(anchor="w", pady=(0, 6))
+
+    def metric_grid(self, parent: tk.Misc, items: tuple[tuple[str, tk.StringVar, object], ...]) -> None:
+        grid = tk.Frame(parent, bg=THEME["panel"])
+        grid.pack(fill="both", expand=True)
+        for column in range(2):
+            grid.grid_columnconfigure(column, weight=1, uniform="metric_grid")
+        for index, (label, value_var, command) in enumerate(items):
+            self.compact_metric_row(grid, label, value_var, command).grid(
+                row=index // 2,
+                column=index % 2,
+                sticky="ew",
+                padx=(0 if index % 2 == 0 else 8, 0),
+                pady=(0, 7),
+            )
+
+    def compact_metric_row(self, parent: tk.Misc, label: str, value_var: tk.StringVar, command) -> tk.Frame:
+        frame = tk.Frame(parent, bg=THEME["panel_alt"], highlightthickness=1, highlightbackground=THEME["shadow"])
+        cursor = "hand2" if command else ""
+        label_widget = tk.Label(frame, text=label, bg=THEME["panel_alt"], fg=THEME["muted"], font=(self.font_family, 8), cursor=cursor)
+        label_widget.pack(side="left", padx=10, pady=7)
+        value_widget = tk.Label(frame, textvariable=value_var, bg=THEME["panel_alt"], fg=THEME["text"], justify="right", font=(self.font_family, 11, "bold"), cursor=cursor)
+        value_widget.pack(side="right", padx=10, pady=6)
+        if command:
+            frame.configure(cursor="hand2")
+            for widget in (frame, label_widget, value_widget):
+                widget.bind("<Button-1>", lambda _event, action=command: action())
+        return frame
 
     def metric_row(self, parent: tk.Misc, label: str, value_var: tk.StringVar, command) -> tk.Frame:
         frame = tk.Frame(parent, bg=THEME["panel_alt"], highlightthickness=1, highlightbackground=THEME["shadow"])
@@ -1187,19 +1291,20 @@ class QpscDashboardApp:
     def apply_summary(self, summary: RadarSummary) -> None:
         self.summary = summary
         self.app_vars["total"].set(str(summary.app.total))
-        self.app_vars["booth"].set(priority_summary(summary.app.booth_missing))
-        self.app_vars["release"].set(priority_summary(summary.app.release_missing))
-        self.app_vars["screenshot"].set(priority_summary(summary.app.screenshot_missing))
-        self.app_vars["readme"].set(priority_summary(summary.app.readme_missing))
-        self.app_vars["role"].set(priority_summary(summary.app.role_attention))
+        self.app_vars["booth"].set(priority_brief(summary.app.booth_missing))
+        self.app_vars["booth_materials"].set(priority_brief(summary.app.booth_materials_missing))
+        self.app_vars["release"].set(priority_brief(summary.app.release_missing))
+        self.app_vars["screenshot"].set(priority_brief(summary.app.screenshot_missing))
+        self.app_vars["readme"].set(priority_brief(summary.app.readme_missing))
+        self.app_vars["role"].set(str(len(summary.app.role_attention)))
         self.app_vars["market"].set(str(summary.app.market_count))
         self.app_vars["system"].set(str(summary.app.system_count))
         self.app_vars["personal"].set(str(summary.app.personal_count))
         self.app_vars["frozen"].set(str(summary.app.frozen_count))
         self.site_vars["total"].set(str(summary.site.total))
-        self.site_vars["cloudflare"].set(priority_summary(summary.site.cloudflare_unchecked))
-        self.site_vars["health"].set(priority_summary(summary.site.health_attention))
-        self.site_vars["git"].set(priority_summary(summary.site.git_uncommitted))
+        self.site_vars["cloudflare"].set(priority_brief(summary.site.cloudflare_unchecked))
+        self.site_vars["health"].set(priority_brief(summary.site.health_attention))
+        self.site_vars["git"].set(priority_brief(summary.site.git_uncommitted))
         self.git_vars["series_uncommitted"].set(str(summary.git.series_uncommitted))
         self.git_vars["series_untracked"].set(str(summary.git.series_untracked))
         self.git_vars["attention"].set(UI_TEXT["value_git_attention"] if summary.git.error or summary.git.series_uncommitted else UI_TEXT["value_git_ok"])
@@ -1226,9 +1331,6 @@ class QpscDashboardApp:
             return []
         candidates = [
             ("next_booth", priority_count(summary.app.booth_missing, PRIORITY_URGENT), "booth"),
-            ("next_screenshot", priority_count(summary.app.screenshot_missing, PRIORITY_URGENT), "screenshot"),
-            ("next_release", priority_count(summary.app.release_missing, PRIORITY_URGENT), "release"),
-            ("next_readme", priority_count(summary.app.readme_missing, PRIORITY_URGENT), "readme"),
             ("next_role", len(summary.app.role_attention), "role"),
             ("next_cloudflare", priority_count(summary.site.cloudflare_unchecked, PRIORITY_URGENT), "cloudflare"),
             ("next_health", priority_count(summary.site.health_attention, PRIORITY_URGENT), "health"),
@@ -1243,6 +1345,8 @@ class QpscDashboardApp:
             return UI_TEXT["dialog_select_notice"], ()
         if key == "booth":
             return UI_TEXT["dialog_booth_title"], summary.app.booth_missing
+        if key == "booth_materials":
+            return UI_TEXT["dialog_booth_materials_title"], summary.app.booth_materials_missing
         if key == "release":
             return UI_TEXT["dialog_release_title"], summary.app.release_missing
         if key == "screenshot":
