@@ -71,11 +71,13 @@ UI_TEXT = {
     "result_short": "short",
     "result_thumb": "thumb",
     "result_title_file": "title",
+    "result_thumb_text": "thumb_text",
     "result_transcript": "transcript",
     "result_transcript_missing": "未作成",
     "result_score": "score",
     "recommend_waiting": "おすすめ: 未作成",
     "recommend_template": "おすすめ: 候補 {number}（{score}点） / {method}",
+    "recommend_card_template": "おすすめ：候補{number}（{score}点） / {method}\nタイトル案：{title}\nサムネ文言：{thumbnail_text}\n理由：{reason}",
     "checkbox_transcribe": "ショートごとに文字起こし",
     "checkbox_ollama_review": "Ollamaで候補評価",
     "ollama_review_note": "Ollama起動中のみ使用できます。失敗時は通常評価に戻ります。",
@@ -114,6 +116,8 @@ UI_TEXT = {
     "mobile_download": "ダウンロード",
     "mobile_title_preview": "タイトル案",
     "mobile_review_section": "候補評価",
+    "mobile_recommend_section": "おすすめ候補",
+    "mobile_development_section": "開発用ファイル",
     "mobile_score": "score",
     "mobile_thumbnail_text": "サムネ文言",
     "mobile_reason": "理由",
@@ -243,6 +247,7 @@ class GeneratedCandidate:
     short_path: Path
     thumb_path: Path
     title_path: Path
+    thumb_text_path: Path
     transcript_path: Path
     segments_path: Path
     review: CandidateReview | None = None
@@ -587,6 +592,10 @@ def short_transcript_text_name(index: int) -> str:
     return f"short_{index:02d}_transcript.txt"
 
 
+def thumb_text_name(index: int) -> str:
+    return f"thumb_text_{index:02d}.txt"
+
+
 def short_segments_json_name(index: int) -> str:
     return f"short_{index:02d}_segments.json"
 
@@ -770,6 +779,7 @@ def review_to_dict(review: CandidateReview) -> dict[str, object]:
         "score": review.score,
         "title": review.title,
         "thumbnail_text": review.thumbnail_text,
+        "thumbnail_text_file": thumb_text_name(review.candidate),
         "reason": review.reason,
         "transcript_file": review.transcript_file,
     }
@@ -997,6 +1007,7 @@ def write_review_files(
     for candidate, review in zip(candidates, reviews):
         candidate.review = review
         candidate.title_path.write_text(review.title + "\n", encoding="utf-8")
+        candidate.thumb_text_path.write_text(review.thumbnail_text + "\n", encoding="utf-8")
 
     if best_candidate is None:
         best_candidate = best_candidate_from_reviews(reviews)
@@ -1103,6 +1114,14 @@ def get_best_review(candidates: list[GeneratedCandidate]) -> CandidateReview | N
     return max(reviews, key=lambda review: (review.score, -review.candidate))
 
 
+def get_recommended_review(candidates: list[GeneratedCandidate], review_output: ReviewOutput | None = None) -> CandidateReview | None:
+    if review_output is not None and review_output.best_candidate is not None:
+        for candidate in candidates:
+            if candidate.review is not None and candidate.index == review_output.best_candidate:
+                return candidate.review
+    return get_best_review(candidates)
+
+
 def get_local_ip() -> str:
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
@@ -1129,13 +1148,57 @@ def find_available_port(start_port: int = TRANSFER_START_PORT) -> int:
     raise UserFacingError(UI_TEXT["error_open_transfer"])
 
 
+def mobile_file_link(item: Path) -> str:
+    if not item.exists():
+        return f"<span class=\"missing\">{html.escape(item.name)} / {html.escape(UI_TEXT['mobile_empty'])}</span>"
+    href = f"/files/{html.escape(item.name)}"
+    label = html.escape(item.name)
+    return f"<a href=\"{href}\" download>{label}<span>{html.escape(UI_TEXT['mobile_download'])}</span></a>"
+
+
+def mobile_text_preview(item: Path, label: str) -> str:
+    if not item.exists() or item.suffix.lower() != ".txt":
+        return ""
+    try:
+        text = item.read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
+    if not text:
+        return ""
+    return "<p class=\"title-preview\">" + html.escape(label) + ": " + html.escape(text) + "</p>"
+
+
+def review_summary_html(review: dict[str, object]) -> str:
+    return (
+        "<div class=\"review-summary\">"
+        + "<p><strong>"
+        + html.escape(UI_TEXT["mobile_score"])
+        + f": {html.escape(str(review.get('score', '')))}"
+        + "</strong></p>"
+        + "<p>"
+        + html.escape(UI_TEXT["mobile_title_preview"])
+        + ": "
+        + html.escape(str(review.get("title", "")))
+        + "</p>"
+        + "<p>"
+        + html.escape(UI_TEXT["mobile_thumbnail_text"])
+        + ": "
+        + html.escape(str(review.get("thumbnail_text", "")))
+        + "</p>"
+        + "<p>"
+        + html.escape(UI_TEXT["mobile_reason"])
+        + ": "
+        + html.escape(str(review.get("reason", "")))
+        + "</p>"
+        + "</div>"
+    )
+
+
 def build_transfer_html(output_dir: Path) -> str:
     rows: list[str] = []
     review_payload = load_review_payload(output_dir)
     method = str(review_payload.get("review_method") or "local")
     method_label = review_method_label(method)
-    review_items = [output_dir / REVIEW_TEXT_FILE, output_dir / REVIEW_JSON_FILE]
-    review_links = []
     review_header = (
         "<p class=\"review-method\">"
         + html.escape(UI_TEXT["review_method_label"])
@@ -1143,22 +1206,6 @@ def build_transfer_html(output_dir: Path) -> str:
         + html.escape(method_label)
         + "</p>"
     )
-    for item in review_items:
-        if not item.exists():
-            continue
-        href = f"/files/{html.escape(item.name)}"
-        label = html.escape(item.name)
-        review_links.append(f"<a href=\"{href}\" download>{label}<span>{html.escape(UI_TEXT['mobile_download'])}</span></a>")
-    if review_links or review_payload:
-        rows.append(
-            "<section><h2>"
-            + html.escape(UI_TEXT["mobile_review_section"])
-            + "</h2>"
-            + review_header
-            + "\n".join(review_links)
-            + "</section>"
-        )
-
     reviews = load_review_dicts(output_dir)
     review_map: dict[int, dict[str, object]] = {}
     for item in reviews:
@@ -1167,65 +1214,73 @@ def build_transfer_html(output_dir: Path) -> str:
         except (TypeError, ValueError):
             continue
         review_map[candidate_number] = item
+
+    try:
+        best_candidate = int(review_payload.get("best_candidate", 0) or 0)
+    except (TypeError, ValueError):
+        best_candidate = 0
+    if best_candidate <= 0:
+        best_candidate = best_candidate_from_review_dicts(reviews) or 0
+    best_review = review_map.get(best_candidate)
+    if best_candidate > 0:
+        best_items = [
+            output_dir / f"short_{best_candidate:02d}.mp4",
+            output_dir / f"thumb_{best_candidate:02d}.jpg",
+            output_dir / f"title_{best_candidate:02d}.txt",
+            output_dir / thumb_text_name(best_candidate),
+            output_dir / short_transcript_text_name(best_candidate),
+        ]
+        best_links = [mobile_file_link(item) for item in best_items]
+        review_text = output_dir / REVIEW_TEXT_FILE
+        if review_text.exists():
+            best_links.append(mobile_file_link(review_text))
+        best_summary = review_summary_html(best_review) if best_review else ""
+        rows.append(
+            "<section class=\"recommend-section\"><h2>"
+            + html.escape(UI_TEXT["mobile_recommend_section"])
+            + "</h2>"
+            + review_header
+            + best_summary
+            + "\n".join(best_links)
+            + "</section>"
+        )
+
     for index in range(1, SHORT_COUNT + 1):
         items = [
             output_dir / f"short_{index:02d}.mp4",
             output_dir / f"thumb_{index:02d}.jpg",
             output_dir / f"title_{index:02d}.txt",
+            output_dir / thumb_text_name(index),
             output_dir / short_transcript_text_name(index),
-            output_dir / short_segments_json_name(index),
         ]
         links = []
         review = review_map.get(index)
         if review:
-            links.append(
-                "<div class=\"review-summary\">"
-                + "<p><strong>"
-                + html.escape(UI_TEXT["mobile_score"])
-                + f": {html.escape(str(review.get('score', '')))}"
-                + "</strong></p>"
-                + "<p>"
-                + html.escape(UI_TEXT["mobile_title_preview"])
-                + ": "
-                + html.escape(str(review.get("title", "")))
-                + "</p>"
-                + "<p>"
-                + html.escape(UI_TEXT["mobile_thumbnail_text"])
-                + ": "
-                + html.escape(str(review.get("thumbnail_text", "")))
-                + "</p>"
-                + "<p>"
-                + html.escape(UI_TEXT["mobile_reason"])
-                + ": "
-                + html.escape(str(review.get("reason", "")))
-                + "</p>"
-                + "</div>"
-            )
+            links.append(review_summary_html(review))
         for item in items:
-            if not item.exists():
-                links.append(f"<span class=\"missing\">{html.escape(item.name)} / {html.escape(UI_TEXT['mobile_empty'])}</span>")
-                continue
-            href = f"/files/{html.escape(item.name)}"
-            label = html.escape(item.name)
-            links.append(f"<a href=\"{href}\" download>{label}<span>{html.escape(UI_TEXT['mobile_download'])}</span></a>")
+            links.append(mobile_file_link(item))
             if item.name.startswith("title_") and item.suffix.lower() == ".txt":
-                try:
-                    title_text = item.read_text(encoding="utf-8").strip()
-                except OSError:
-                    title_text = ""
-                if title_text:
-                    links.append(
-                        "<p class=\"title-preview\">"
-                        + html.escape(UI_TEXT["mobile_title_preview"])
-                        + ": "
-                        + html.escape(title_text)
-                        + "</p>"
-                    )
+                links.append(mobile_text_preview(item, UI_TEXT["mobile_title_preview"]))
+            if item.name.startswith("thumb_text_") and item.suffix.lower() == ".txt":
+                links.append(mobile_text_preview(item, UI_TEXT["mobile_thumbnail_text"]))
         rows.append(
             "<section><h2>"
             + html.escape(UI_TEXT["candidate_label"].format(number=index))
             + "</h2>"
             + "\n".join(links)
+            + "</section>"
+        )
+
+    development_items = [output_dir / REVIEW_JSON_FILE] + [
+        output_dir / short_segments_json_name(index) for index in range(1, SHORT_COUNT + 1)
+    ]
+    development_links = [mobile_file_link(item) for item in development_items if item.exists()]
+    if development_links:
+        rows.append(
+            "<section><h2>"
+            + html.escape(UI_TEXT["mobile_development_section"])
+            + "</h2>"
+            + "\n".join(development_links)
             + "</section>"
         )
 
@@ -1275,6 +1330,10 @@ section {{
   border-radius: 8px;
   padding: 16px;
   margin: 0 0 14px;
+}}
+.recommend-section {{
+  background: #F8FAFD;
+  border-left: 4px solid var(--accent);
 }}
 h2 {{
   margin: 0 0 12px;
@@ -1461,6 +1520,7 @@ def process_video(
                 short_path=short_path,
                 thumb_path=output_dir / f"thumb_{segment.index:02d}.jpg",
                 title_path=output_dir / f"title_{segment.index:02d}.txt",
+                thumb_text_path=output_dir / thumb_text_name(segment.index),
                 transcript_path=output_dir / short_transcript_text_name(segment.index),
                 segments_path=output_dir / short_segments_json_name(segment.index),
             )
@@ -1793,14 +1853,20 @@ class DakeVideoShortsCutApp:
             font=(self.font_family, 13, "bold"),
             anchor="w",
         ).pack(fill="x", padx=18, pady=(16, 8))
+        recommend_box = tk.Frame(panel, bg="#F8FAFD", highlightbackground=THEME["border"], highlightthickness=1)
+        recommend_box.pack(fill="x", padx=18, pady=(0, 10))
         tk.Label(
-            panel,
+            recommend_box,
             textvariable=self.recommend_var,
-            bg=THEME["panel"],
-            fg=THEME["accent"],
-            font=(self.font_family, 10, "bold"),
+            bg="#F8FAFD",
+            fg=THEME["text"],
+            font=(self.font_family, 9, "bold"),
             anchor="w",
-        ).pack(fill="x", padx=18, pady=(0, 10))
+            justify="left",
+            wraplength=620,
+            padx=10,
+            pady=9,
+        ).pack(fill="x")
         for index, var in enumerate(self.result_vars, start=1):
             row = tk.Frame(panel, bg=THEME["panel"], highlightbackground=THEME["border"], highlightthickness=1)
             row.pack(fill="x", padx=18, pady=(0, 8))
@@ -2121,16 +2187,19 @@ class DakeVideoShortsCutApp:
         self.qr_label.configure(image="", text=UI_TEXT["qr_waiting"], fg=THEME["muted"])
 
     def _refresh_results(self, result: ProcessResult) -> None:
-        best = get_best_review(result.candidates)
+        best = get_recommended_review(result.candidates, result.review)
         if best is None:
             self.recommend_var.set(UI_TEXT["recommend_waiting"])
         else:
             method = result.review.review_method if result.review is not None else "local"
             self.recommend_var.set(
-                UI_TEXT["recommend_template"].format(
+                UI_TEXT["recommend_card_template"].format(
                     number=best.candidate,
                     score=best.score,
                     method=review_method_label(method),
+                    title=best.title,
+                    thumbnail_text=best.thumbnail_text,
+                    reason=best.reason,
                 )
             )
         for index, candidate in enumerate(result.candidates):
@@ -2140,6 +2209,7 @@ class DakeVideoShortsCutApp:
                 f"{UI_TEXT['result_short']}: {self._exists_text(candidate.short_path)}",
                 f"{UI_TEXT['result_thumb']}: {self._exists_text(candidate.thumb_path)}",
                 f"{UI_TEXT['result_title_file']}: {self._exists_text(candidate.title_path)}",
+                f"{UI_TEXT['result_thumb_text']}: {self._exists_text(candidate.thumb_text_path)}",
                 f"{UI_TEXT['result_transcript']}: {self._transcript_exists_text(candidate)}",
             ]
             self.result_vars[index].set(" / ".join(values))
@@ -2231,6 +2301,7 @@ def run_launch_check() -> int:
                 short_path=output_dir / f"short_{index:02d}.mp4",
                 thumb_path=output_dir / f"thumb_{index:02d}.jpg",
                 title_path=output_dir / f"title_{index:02d}.txt",
+                thumb_text_path=output_dir / thumb_text_name(index),
                 transcript_path=output_dir / short_transcript_text_name(index),
                 segments_path=output_dir / short_segments_json_name(index),
             )
@@ -2263,15 +2334,20 @@ def run_launch_check() -> int:
         review = write_review_files(output_dir, candidates)
         if not review.text_path.exists() or not review.json_path.exists() or not get_best_review(candidates):
             raise RuntimeError("review fixture failed")
+        if not all(candidate.thumb_text_path.exists() for candidate in candidates):
+            raise RuntimeError("thumb text fixture failed")
         review_payload = load_review_payload(output_dir)
         if review_payload.get("review_method") != "local" or "reviews" not in review_payload:
             raise RuntimeError("review payload fixture failed")
         page = build_transfer_html(output_dir)
         if (
             "short_01.mp4" not in page
+            or thumb_text_name(1) not in page
             or short_transcript_text_name(1) not in page
             or REVIEW_TEXT_FILE not in page
             or UI_TEXT["review_method_label"] not in page
+            or UI_TEXT["mobile_recommend_section"] not in page
+            or UI_TEXT["mobile_development_section"] not in page
             or UI_TEXT["mobile_score"] not in page
             or UI_TEXT["mobile_title"] not in page
         ):
@@ -2323,14 +2399,17 @@ def run_process_check(input_file: str, create_transcript: bool = True, use_ollam
             print(f"transfer_transcript={transfer_has_transcript}")
             transfer_has_review = REVIEW_TEXT_FILE in body and UI_TEXT["mobile_score"] in body
             print(f"transfer_review={transfer_has_review}")
+            print(f"transfer_thumb_text={thumb_text_name(1) in body}")
         except Exception:
             print("transfer_page=False")
             print("transfer_transcript=False")
             print("transfer_review=False")
+            print("transfer_thumb_text=False")
         for candidate in result.candidates:
             print(candidate.short_path.name, candidate.short_path.exists())
             print(candidate.thumb_path.name, candidate.thumb_path.exists())
             print(candidate.title_path.name, candidate.title_path.exists())
+            print(candidate.thumb_text_path.name, candidate.thumb_text_path.exists())
             print(candidate.transcript_path.name, candidate.transcript_path.exists())
             print(candidate.segments_path.name, candidate.segments_path.exists())
             print(f"review_score_{candidate.index}={candidate.review.score if candidate.review else 'missing'}")
@@ -2339,7 +2418,8 @@ def run_process_check(input_file: str, create_transcript: bool = True, use_ollam
             for candidate in result.candidates
         )
         review_ok = result.review is not None and result.review.text_path.exists() and result.review.json_path.exists()
-        best = get_best_review(result.candidates)
+        thumb_text_ok = all(candidate.thumb_text_path.exists() for candidate in result.candidates)
+        best = get_recommended_review(result.candidates, result.review)
         print(f"global_transcript={(result.output_dir / 'transcript.txt').exists()}")
         print(UI_TEXT["process_check_transcript"].format(status="created" if transcript_ok else "missing"))
         print(UI_TEXT["process_check_review"].format(status="created" if review_ok else "missing"))
@@ -2347,6 +2427,7 @@ def run_process_check(input_file: str, create_transcript: bool = True, use_ollam
         print(f"ollama_error={result.review.ollama_error if result.review and result.review.ollama_error else ''}")
         print(f"shorts_review.txt={(result.output_dir / REVIEW_TEXT_FILE).exists()}")
         print(f"shorts_review.json={(result.output_dir / REVIEW_JSON_FILE).exists()}")
+        print(f"thumb_text={thumb_text_ok}")
         print(f"review_best={best.candidate if best else 'missing'}")
         print(f"nested_output={not result.output_dir.parent.name.startswith(OUTPUT_FOLDER_PREFIX)}")
         if result.transcript_error:

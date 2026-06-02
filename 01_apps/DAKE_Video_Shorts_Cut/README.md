@@ -14,6 +14,7 @@ YouTube URL取得や投稿機能は持たせず、MP4を入れてショート候
 - `ショートごとに文字起こし` をONにすると、生成したショート候補ごとの文字起こしを出力
 - ショート候補ごとに評価を行い、使えそう度・タイトル案・サムネ文言案を出力
 - `Ollamaで候補評価` をONにすると、Ollama起動時だけローカルAI評価を試行
+- おすすめ候補を上部に表示し、タイトル案・サムネ文言・理由を確認
 - QRコードで同じWi-Fi内のスマホから保存できるページを表示
 
 ## 使い方
@@ -39,6 +40,9 @@ dake_shorts_output_YYYYMMDD_HHMMSS/
   title_01.txt
   title_02.txt
   title_03.txt
+  thumb_text_01.txt
+  thumb_text_02.txt
+  thumb_text_03.txt
   short_01_transcript.txt
   short_01_segments.json
   short_02_transcript.txt
@@ -62,11 +66,12 @@ v0.3では、長尺元動画全体ではなく、生成したショート動画�
 
 ## 候補評価
 
-v0.5では、通常のルールベース評価に加えて、Ollamaが起動している場合だけローカルAI評価を使えます。
+v0.6では、通常のルールベース評価に加えて、Ollamaが起動している場合だけローカルAI評価を使えます。
 
 - `short_01_transcript.txt` などを読み、0〜100点の使えそう度を付けます。
 - `shorts_review.txt` と `shorts_review.json` を出力します。
 - `title_01.txt` 〜 `title_03.txt` は評価結果のタイトル案で更新されます。
+- `thumb_text_01.txt` 〜 `thumb_text_03.txt` は評価結果のサムネ文言で作成されます。
 - QR転送ページにも候補ごとの score / title / thumbnail_text / reason を表示します。
 - `Ollamaで候補評価` は初期OFFです。
 - Ollamaの既定モデルは `qwen2.5:7b` です。
@@ -83,6 +88,17 @@ v0.5では、通常のルールベース評価に加えて、Ollamaが起動し�
   "ollama_url": "http://localhost:11434/api/generate"
 }
 ```
+
+## v0.6 実用表示
+
+- 生成結果欄の上部におすすめ候補カードを表示します。
+- おすすめカードには score / title / thumbnail_text / reason をまとめて表示します。
+- QR転送ページの上部におすすめ候補を表示します。
+- QR転送ページでは、スマホ投稿素材として `short_01.mp4` / `thumb_01.jpg` / `title_01.txt` / `thumb_text_01.txt` / `short_01_transcript.txt` にすぐ移動できます。
+- 候補一覧にも `thumb_text_01.txt` などを表示します。
+- JSON系ファイルは下部の開発用ファイルにまとめています。
+- OpenAI APIは未使用です。
+- Ollamaは任意機能です。
 
 ## 必要なもの
 
@@ -159,7 +175,7 @@ python main.py --process-check "C:\path\to\sample.mp4" --ollama-review
   "launcher_description": "MP4からショート候補とサムネを作成します。",
   "site_title": "Dakeショート切り出し",
   "site_description": "MP4を入れるだけで、ショート動画候補・サムネ・タイトル案を作成します。",
-  "update_summary": "Ollama起動時にショート候補をローカルAI評価できるように更新",
+  "update_summary": "おすすめ候補表示とサムネ文言出力を追加し、スマホ転送ページを改善",
   "folder_name": "DAKE_Video_Shorts_Cut",
   "exe_name": "DakeVideo_Shorts_Cut.exe",
   "release_url": "",
