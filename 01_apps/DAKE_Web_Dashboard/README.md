@@ -4,6 +4,15 @@ DAKE Web Dashboard は、菊田さん本人の開発アシスト専用に作成�
 
 一般公開、BOOTH販売、dakeapp.com掲載、GitHub Release作成は行いません。
 
+## 凍結
+
+DAKE Web Dashboard は凍結しました。
+
+理由は、Dashboard化し過ぎたためです。本来の目的は、サイト群を管理することではなく、サイト群を俯瞰することでした。
+
+後継は `DAKE_Web_Index` です。
+
+
 ## 役割
 
 - DAKE / QPCS / PEAKHEADZ / BORINEF / holiday-jinja / JapanMemoryLane / SHIMARISU などのサイト群を一覧で見るサイト台帳
@@ -128,12 +137,12 @@ This app is a QPCS/operations dashboard, not a market-facing standalone product.
   "launcher_description": "Internal dashboard for DAKE related sites",
   "site_title": "",
   "site_description": "",
-  "update_summary": "Internal tool to review site status from README metadata",
+  "update_summary": "Dashboard化し過ぎたため凍結。後継はDAKE_Web_Index。",
   "folder_name": "DAKE_Web_Dashboard",
   "exe_name": "DakeWeb_Dashboard.exe",
   "release_url": "",
   "screenshot_path": "",
-  "status": "internal",
+  "status": "frozen",
   "app_type": "qpcs",
   "completion_goal": "system_ready",
   "show_in_launcher": false,
