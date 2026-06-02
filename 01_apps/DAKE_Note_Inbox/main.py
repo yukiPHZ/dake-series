@@ -3,6 +3,7 @@ from __future__ import annotations
 import ctypes
 import ctypes.wintypes
 import datetime as dt
+import hashlib
 import json
 import math
 import os
@@ -34,6 +35,9 @@ UI_TEXT = {
     "sync_count": "同期件数",
     "save_to": "保存先",
     "today_count": "今日の同期件数",
+    "tag_count": "札付け件数",
+    "ollama_status": "Ollama接続状態",
+    "last_tagged_at": "最終札付け日時",
     "not_connected": "未接続",
     "ready": "待機中",
     "syncing": "同期中",
@@ -45,6 +49,7 @@ UI_TEXT = {
     "button_open_inbox": "INBOXを開く",
     "button_open_notes": "NOTESを開く",
     "button_open_articles": "ARTICLESを開く",
+    "button_tag_materials": "札付けする",
     "button_save_settings": "設定保存",
     "button_browse": "参照",
     "label_token": "Slack Bot Token",
@@ -52,17 +57,33 @@ UI_TEXT = {
     "label_root": "PEAKHEADZ_ROOT",
     "label_obsidian": "Obsidian実行ファイル",
     "label_interval": "同期間隔（秒）",
+    "label_ollama_enabled": "Ollama使用",
+    "label_ollama_model": "Ollamaモデル名",
     "settings_saved": "設定を保存しました。",
     "missing_slack": "Slack Bot Token と Slack Channel ID を設定してください。",
     "missing_root": "PEAKHEADZ_ROOT を設定してください。",
     "sync_done": "{count}件を保存しました。",
     "sync_none": "新しいSlack素材はありません。",
+    "tagging": "札付け中",
+    "tag_done": "{count}件をNOTESへ保存しました。",
+    "tag_none": "未処理のINBOX素材はありません。",
+    "missing_inbox": "INBOXが見つかりません。",
     "open_failed": "開けませんでした: {path}",
     "obsidian_failed": "Obsidianを開けませんでした。設定を確認してください。",
     "obsidian_browse_title": "Obsidian.exeを選択",
     "soft_error": "処理に失敗しました。",
     "filetype_executable": "実行ファイル",
     "markdown_heading": "Slack原文",
+    "material_original_heading": "原文",
+    "material_tag_heading": "札付け",
+    "material_tags_heading": "タグ",
+    "material_links_heading": "Obsidianリンク",
+    "material_hint_heading": "記事化メモ",
+    "tag_note_material": "note素材",
+    "fallback_article_hint": "この断片は、note記事の素材として後から読み返せる。",
+    "ollama_ok": "ok",
+    "ollama_fallback": "fallback",
+    "ollama_disabled": "disabled",
     "tray_open": "開く",
     "tray_sync": "今すぐ同期",
     "tray_obsidian": "Obsidianを開く",
@@ -76,6 +97,9 @@ APP_NAME = "DAKE_Note_Inbox"
 APP_DIR = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
 DEFAULT_PEAKHEADZ_ROOT = Path.home() / "Documents" / "PEAKHEADZ_ROOT"
 SLACK_HISTORY_URL = "https://slack.com/api/conversations.history"
+OLLAMA_GENERATE_URL = "http://127.0.0.1:11434/api/generate"
+DEFAULT_OLLAMA_MODEL = "qwen2.5:7b"
+OBSIDIAN_LINK_CANDIDATES = ["在る", "握らない強さ", "側に", "BORINEF", "熾火", "線", "ワー", "DAKE", "Codex", "Slack", "Obsidian", "note"]
 
 
 def appdata_dir() -> Path:
@@ -114,6 +138,11 @@ class AppConfig:
     last_sync_count: int = 0
     today_sync_date: str = ""
     today_sync_count: int = 0
+    ollama_enabled: bool = True
+    ollama_model: str = DEFAULT_OLLAMA_MODEL
+    last_tagged_at: str = ""
+    last_tag_count: int = 0
+    ollama_status: str = "unknown"
 
 
 @dataclass
@@ -146,6 +175,10 @@ class ConfigStore:
         base.sync_interval_seconds = normalize_interval(base.sync_interval_seconds)
         base.last_sync_count = safe_int(base.last_sync_count, 0)
         base.today_sync_count = safe_int(base.today_sync_count, 0)
+        base.ollama_enabled = safe_bool(base.ollama_enabled, True)
+        base.ollama_model = str(base.ollama_model or DEFAULT_OLLAMA_MODEL)
+        base.last_tag_count = safe_int(base.last_tag_count, 0)
+        base.ollama_status = str(base.ollama_status or "unknown")
         if source_path != self.path:
             self.save(base)
         return base
@@ -163,6 +196,20 @@ def safe_int(value: object, default: int) -> int:
         return int(value)
     except (TypeError, ValueError):
         return default
+
+
+def safe_bool(value: object, default: bool) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"1", "true", "yes", "on"}:
+            return True
+        if normalized in {"0", "false", "no", "off"}:
+            return False
+    if isinstance(value, int):
+        return value != 0
+    return default
 
 
 def normalize_interval(value: object) -> int:
@@ -275,6 +322,10 @@ def target_inbox(root_path: str) -> Path:
     return Path(root_path).expanduser() / "INBOX"
 
 
+def target_notes(root_path: str) -> Path:
+    return Path(root_path).expanduser() / "NOTES"
+
+
 def unique_path(path: Path) -> Path:
     if not path.exists():
         return path
@@ -286,6 +337,268 @@ def unique_path(path: Path) -> Path:
         if not candidate.exists():
             return candidate
     raise RuntimeError("filename collision limit reached")
+
+
+def strip_yaml_scalar(value: str) -> str:
+    value = value.strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {'"', "'"}:
+        return value[1:-1]
+    return value
+
+
+def split_markdown_frontmatter(content: str) -> tuple[dict[str, str], str]:
+    if not content.startswith("---"):
+        return {}, content
+    lines = content.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return {}, content
+    end_index = None
+    for index in range(1, len(lines)):
+        if lines[index].strip() == "---":
+            end_index = index
+            break
+    if end_index is None:
+        return {}, content
+    meta: dict[str, str] = {}
+    for line in lines[1:end_index]:
+        if ":" not in line:
+            continue
+        key, value = line.split(":", 1)
+        meta[key.strip()] = strip_yaml_scalar(value)
+    body = "\n".join(lines[end_index + 1 :]).lstrip("\n")
+    return meta, body
+
+
+def extract_original_text(body: str) -> str:
+    lines = body.splitlines()
+    headings = {f"# {UI_TEXT['markdown_heading']}", f"# {UI_TEXT['material_original_heading']}"}
+    for index, line in enumerate(lines):
+        if line.strip() in headings:
+            return "\n".join(lines[index + 1 :]).lstrip("\n")
+    return body.strip()
+
+
+def yaml_list(items: list[str]) -> list[str]:
+    return [f"  - {yaml_quote(item)}" for item in items]
+
+
+def normalize_tag(value: str) -> str:
+    return value.strip().lstrip("#").replace(" ", "")
+
+
+def normalize_link(value: str) -> str:
+    value = value.strip()
+    if value.startswith("[[") and value.endswith("]]"):
+        return value
+    name = value.strip("[]")
+    return f"[[{name}]]" if name else ""
+
+
+def heuristic_labels(text: str, status: str = "fallback") -> dict[str, object]:
+    lowered = text.lower()
+    tags = [UI_TEXT["tag_note_material"]]
+    selected: list[str] = []
+    for candidate in OBSIDIAN_LINK_CANDIDATES:
+        if candidate.lower() in lowered or candidate in text:
+            selected.append(candidate)
+    if "凍結" in text or "作らない" in text or "削る" in text:
+        selected.extend(["在る", "握らない強さ"])
+    if not selected:
+        selected.append("note")
+    links: list[str] = []
+    for candidate in selected:
+        link = f"[[{candidate}]]"
+        if link not in links:
+            links.append(link)
+        if len(links) >= 4:
+            break
+    for link in links:
+        tag = link.strip("[]")
+        if tag and tag not in tags:
+            tags.append(tag)
+        if len(tags) >= 5:
+            break
+    return {
+        "tags": tags,
+        "links": links,
+        "article_hint": UI_TEXT["fallback_article_hint"],
+        "ollama_status": status,
+    }
+
+
+def material_prompt(text: str) -> str:
+    candidates = ", ".join(OBSIDIAN_LINK_CANDIDATES)
+    trimmed = text[:2400]
+    return (
+        "あなたはSlack原文に札を貼る係です。記事本文は生成しません。"
+        "本文を要約しすぎず、Obsidianで巡るための最小JSONだけを返してください。"
+        f"候補リンク: {candidates}\n"
+        "必ず次のJSON形式のみで返してください: "
+        '{"tags":["note素材"],"links":["[[在る]]"],"article_hint":"短い記事化メモ"}\n'
+        f"原文:\n{trimmed}"
+    )
+
+
+def extract_json_object(text: str) -> dict:
+    start = text.find("{")
+    end = text.rfind("}")
+    if start < 0 or end <= start:
+        raise ValueError("json object not found")
+    return json.loads(text[start : end + 1])
+
+
+def call_ollama_for_labels(text: str, model: str) -> dict:
+    payload = {
+        "model": model or DEFAULT_OLLAMA_MODEL,
+        "prompt": material_prompt(text),
+        "stream": False,
+        "options": {"temperature": 0.2},
+    }
+    request = urllib.request.Request(
+        OLLAMA_GENERATE_URL,
+        data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(request, timeout=30) as response:
+        data = json.loads(response.read().decode("utf-8"))
+    return extract_json_object(str(data.get("response", "")))
+
+
+def normalize_label_result(result: dict, status: str) -> dict[str, object]:
+    tags = [UI_TEXT["tag_note_material"]]
+    for item in result.get("tags", []):
+        if not isinstance(item, str):
+            continue
+        tag = normalize_tag(item)
+        if tag and tag not in tags:
+            tags.append(tag)
+        if len(tags) >= 6:
+            break
+    links: list[str] = []
+    for item in result.get("links", []):
+        if not isinstance(item, str):
+            continue
+        link = normalize_link(item)
+        name = link.strip("[]")
+        if link and name in OBSIDIAN_LINK_CANDIDATES and link not in links:
+            links.append(link)
+        if len(links) >= 5:
+            break
+    if not links:
+        links = [str(item) for item in heuristic_labels("", status)["links"]]
+    hint = str(result.get("article_hint", "")).strip()
+    if not hint:
+        hint = UI_TEXT["fallback_article_hint"]
+    return {
+        "tags": tags,
+        "links": links,
+        "article_hint": hint[:180],
+        "ollama_status": status,
+    }
+
+
+def labels_for_text(text: str, config: AppConfig) -> dict[str, object]:
+    if not config.ollama_enabled:
+        return heuristic_labels(text, UI_TEXT["ollama_disabled"])
+    try:
+        return normalize_label_result(call_ollama_for_labels(text, config.ollama_model), UI_TEXT["ollama_ok"])
+    except Exception:
+        return heuristic_labels(text, UI_TEXT["ollama_fallback"])
+
+
+def material_output_path(notes: Path, raw_path: Path) -> Path:
+    source_id = hashlib.sha1(str(raw_path).encode("utf-8")).hexdigest()[:8]
+    return notes / f"{safe_filename(raw_path.stem)}_{source_id}_material.md"
+
+
+def markdown_for_material(raw_path: Path, meta: dict[str, str], original_text: str, labels: dict[str, object]) -> str:
+    tags = [str(item) for item in labels.get("tags", [UI_TEXT["tag_note_material"]])]
+    links = [str(item) for item in labels.get("links", [])]
+    hint = str(labels.get("article_hint", UI_TEXT["fallback_article_hint"]))
+    ollama_status = str(labels.get("ollama_status", UI_TEXT["ollama_fallback"]))
+    source = meta.get("source", "slack") or "slack"
+    slack_ts = meta.get("slack_ts", meta.get("timestamp", ""))
+    tag_line = " ".join(f"#{normalize_tag(tag)}" for tag in tags if normalize_tag(tag))
+    return "\n".join(
+        [
+            "---",
+            f"source: {yaml_quote(source)}",
+            "status: material",
+            f"original_path: {yaml_quote(str(raw_path))}",
+            f"slack_ts: {yaml_quote(slack_ts)}",
+            "tags:",
+            *yaml_list(tags),
+            "links:",
+            *yaml_list(links),
+            f"article_hint: {yaml_quote(hint)}",
+            f"ollama_status: {yaml_quote(ollama_status)}",
+            "---",
+            "",
+            f"# {UI_TEXT['material_original_heading']}",
+            "",
+            original_text.rstrip(),
+            "",
+            "---",
+            "",
+            f"# {UI_TEXT['material_tag_heading']}",
+            "",
+            f"## {UI_TEXT['material_tags_heading']}",
+            "",
+            tag_line,
+            "",
+            f"## {UI_TEXT['material_links_heading']}",
+            "",
+            "\n".join(links),
+            "",
+            f"## {UI_TEXT['material_hint_heading']}",
+            "",
+            hint,
+            "",
+        ]
+    )
+
+
+def is_raw_markdown(meta: dict[str, str]) -> bool:
+    return meta.get("status", "").strip().lower() == "raw"
+
+
+def save_material_from_raw(raw_path: Path, notes: Path, config: AppConfig) -> tuple[Path | None, str]:
+    target = material_output_path(notes, raw_path)
+    if target.exists():
+        return None, "skipped"
+    content = raw_path.read_text(encoding="utf-8")
+    meta, body = split_markdown_frontmatter(content)
+    if not is_raw_markdown(meta):
+        return None, "skipped"
+    original_text = extract_original_text(body)
+    labels = labels_for_text(original_text, config)
+    notes.mkdir(parents=True, exist_ok=True)
+    target.write_text(markdown_for_material(raw_path, meta, original_text, labels), encoding="utf-8", newline="\n")
+    return target, str(labels.get("ollama_status", UI_TEXT["ollama_fallback"]))
+
+
+def tag_inbox_materials(config: AppConfig, limit: int = 100) -> tuple[int, str]:
+    inbox = target_inbox(config.peakheadz_root)
+    if not inbox.exists():
+        raise FileNotFoundError(UI_TEXT["missing_inbox"])
+    notes = target_notes(config.peakheadz_root)
+    count = 0
+    statuses: list[str] = []
+    for raw_path in sorted(inbox.rglob("*.md")):
+        if count >= limit:
+            break
+        saved, status = save_material_from_raw(raw_path, notes, config)
+        if saved:
+            count += 1
+            statuses.append(status)
+    if not statuses:
+        return 0, config.ollama_status or "unknown"
+    if UI_TEXT["ollama_ok"] in statuses:
+        return count, UI_TEXT["ollama_ok"]
+    if UI_TEXT["ollama_fallback"] in statuses:
+        return count, UI_TEXT["ollama_fallback"]
+    return count, statuses[-1]
 
 
 def markdown_for_slack_message(message: SlackMessage, channel_id: str) -> str:
@@ -663,8 +976,11 @@ class NoteInboxApp:
             if launcher and launcher.suffix.lower() == ".exe":
                 self.config.obsidian_path = str(launcher)
         self.sync_lock = threading.Lock()
+        self.tag_lock = threading.Lock()
         self.status_vars: dict[str, StringVar] = {}
         self.entry_vars: dict[str, StringVar] = {}
+        self.check_vars: dict[str, StringVar] = {}
+        self.form_row = 0
         self.buttons: list[ttk.Button] = []
         self.tray = WindowsTrayIcon(self)
         self.auto_sync_after_id: str | None = None
@@ -756,6 +1072,9 @@ class NoteInboxApp:
             ("last_synced_at", UI_TEXT["last_synced_at"]),
             ("sync_count", UI_TEXT["sync_count"]),
             ("today_count", UI_TEXT["today_count"]),
+            ("tag_count", UI_TEXT["tag_count"]),
+            ("ollama_status", UI_TEXT["ollama_status"]),
+            ("last_tagged_at", UI_TEXT["last_tagged_at"]),
             ("save_to", UI_TEXT["save_to"]),
         ]
         for row, (key, label_text) in enumerate(status_items):
@@ -768,6 +1087,7 @@ class NoteInboxApp:
         button_panel = Frame(frame, bg=COLORS["bg"])
         button_panel.pack(anchor="center", pady=(0, 14))
         self._add_button(button_panel, UI_TEXT["button_sync"], self.sync_now, "Accent.TButton")
+        self._add_button(button_panel, UI_TEXT["button_tag_materials"], self.tag_materials_now)
         self._add_button(button_panel, UI_TEXT["button_open_obsidian"], self.open_obsidian)
         self._add_button(button_panel, UI_TEXT["button_open_inbox"], self.open_inbox)
         self._add_button(button_panel, UI_TEXT["button_open_notes"], self.open_notes)
@@ -784,6 +1104,8 @@ class NoteInboxApp:
         self._add_entry(form, "peakheadz_root", UI_TEXT["label_root"], self.config.peakheadz_root)
         self._add_entry(form, "obsidian_path", UI_TEXT["label_obsidian"], self.config.obsidian_path, browse_command=self.browse_obsidian_exe)
         self._add_entry(form, "sync_interval_seconds", UI_TEXT["label_interval"], str(self.config.sync_interval_seconds))
+        self._add_check(form, "ollama_enabled", UI_TEXT["label_ollama_enabled"], self.config.ollama_enabled)
+        self._add_entry(form, "ollama_model", UI_TEXT["label_ollama_model"], self.config.ollama_model)
         form.columnconfigure(1, weight=1)
 
         save_row = Frame(settings_panel, bg=COLORS["panel"])
@@ -796,7 +1118,8 @@ class NoteInboxApp:
         self.buttons.append(button)
 
     def _add_entry(self, parent: Frame, key: str, label_text: str, value: str, show: str | None = None, browse_command=None) -> None:
-        row = len(self.entry_vars)
+        row = self.form_row
+        self.form_row += 1
         Label(parent, text=label_text, bg=COLORS["panel"], fg=COLORS["muted"], font=("Yu Gothic UI", 9)).grid(row=row, column=0, sticky="w", pady=5)
         var = StringVar(value=value)
         self.entry_vars[key] = var
@@ -819,12 +1142,24 @@ class NoteInboxApp:
             button.grid(row=row, column=2, sticky="e", padx=(8, 0), pady=5)
             self.buttons.append(button)
 
+    def _add_check(self, parent: Frame, key: str, label_text: str, value: bool) -> None:
+        row = self.form_row
+        self.form_row += 1
+        Label(parent, text=label_text, bg=COLORS["panel"], fg=COLORS["muted"], font=("Yu Gothic UI", 9)).grid(row=row, column=0, sticky="w", pady=5)
+        var = StringVar(value="1" if value else "0")
+        self.check_vars[key] = var
+        check = ttk.Checkbutton(parent, variable=var, onvalue="1", offvalue="0")
+        check.grid(row=row, column=1, sticky="w", padx=(18, 0), pady=5)
+
     def _refresh_status(self) -> None:
         connected = UI_TEXT["connected"] if self.config.slack_bot_token and self.config.slack_channel_id else UI_TEXT["not_connected"]
         self.status_vars["slack_status"].set(connected)
         self.status_vars["last_synced_at"].set(self.config.last_synced_at or UI_TEXT["never"])
         self.status_vars["sync_count"].set(str(self.config.last_sync_count))
         self.status_vars["today_count"].set(str(self.config.today_sync_count))
+        self.status_vars["tag_count"].set(str(self.config.last_tag_count))
+        self.status_vars["ollama_status"].set(self.config.ollama_status or "unknown")
+        self.status_vars["last_tagged_at"].set(self.config.last_tagged_at or UI_TEXT["never"])
         self.status_vars["save_to"].set(str(target_inbox(self.config.peakheadz_root)))
 
     def _set_buttons(self, state: str) -> None:
@@ -857,7 +1192,10 @@ class NoteInboxApp:
         self.config.peakheadz_root = self.entry_vars["peakheadz_root"].get().strip()
         self.config.obsidian_path = self.entry_vars["obsidian_path"].get().strip()
         self.config.sync_interval_seconds = normalize_interval(self.entry_vars["sync_interval_seconds"].get().strip())
+        self.config.ollama_enabled = self.check_vars["ollama_enabled"].get() == "1"
+        self.config.ollama_model = self.entry_vars["ollama_model"].get().strip() or DEFAULT_OLLAMA_MODEL
         self.entry_vars["sync_interval_seconds"].set(str(self.config.sync_interval_seconds))
+        self.entry_vars["ollama_model"].set(self.config.ollama_model)
         self.store.save(self.config)
         self._refresh_status()
         self._schedule_auto_sync()
@@ -885,6 +1223,8 @@ class NoteInboxApp:
         self.config.peakheadz_root = self.entry_vars["peakheadz_root"].get().strip()
         self.config.obsidian_path = self.entry_vars["obsidian_path"].get().strip()
         self.config.sync_interval_seconds = normalize_interval(self.entry_vars["sync_interval_seconds"].get().strip())
+        self.config.ollama_enabled = self.check_vars["ollama_enabled"].get() == "1"
+        self.config.ollama_model = self.entry_vars["ollama_model"].get().strip() or DEFAULT_OLLAMA_MODEL
         self.store.save(self.config)
 
     def _sync_worker(self, show_dialog: bool) -> None:
@@ -920,6 +1260,43 @@ class NoteInboxApp:
             message = UI_TEXT["sync_done"].format(count=count) if count else UI_TEXT["sync_none"]
             if show_dialog:
                 messagebox.showinfo(UI_TEXT["app_name"], message)
+        self._refresh_status()
+
+    def tag_materials_now(self) -> None:
+        self.save_settings_without_dialog()
+        if not self.config.peakheadz_root:
+            messagebox.showwarning(UI_TEXT["app_name"], UI_TEXT["missing_root"])
+            return
+        if not self.tag_lock.acquire(blocking=False):
+            return
+        self.status_vars["ollama_status"].set(UI_TEXT["tagging"])
+        self._set_buttons(DISABLED)
+        threading.Thread(target=self._tag_worker, name="note-inbox-tagging", daemon=True).start()
+
+    def _tag_worker(self) -> None:
+        try:
+            count, status = tag_inbox_materials(self.config)
+            self.config.last_tag_count = count
+            self.config.ollama_status = status
+            self.config.last_tagged_at = now_iso()
+            self.store.save(self.config)
+            self.root.after(0, lambda: self._tag_complete(count, status, None))
+        except Exception as exc:
+            self.config.ollama_status = UI_TEXT["ollama_fallback"]
+            self.store.save(self.config)
+            self.root.after(0, lambda: self._tag_complete(0, UI_TEXT["ollama_fallback"], str(exc)))
+        finally:
+            self.tag_lock.release()
+
+    def _tag_complete(self, count: int, status: str, error: str | None) -> None:
+        self._set_buttons(NORMAL)
+        if error:
+            self.status_vars["ollama_status"].set(status)
+            messagebox.showerror(UI_TEXT["app_name"], f"{UI_TEXT['soft_error']}\n{error}")
+        else:
+            self.status_vars["ollama_status"].set(status)
+            message = UI_TEXT["tag_done"].format(count=count) if count else UI_TEXT["tag_none"]
+            messagebox.showinfo(UI_TEXT["app_name"], message)
         self._refresh_status()
 
     def _schedule_auto_sync(self) -> None:
@@ -1005,6 +1382,25 @@ def run_self_test() -> int:
         body = saved.read_text(encoding="utf-8")
         if "source: slack" not in body or "hello from slack" not in body:
             raise AssertionError("markdown save failed")
+        raw_before = saved.read_text(encoding="utf-8")
+        original_call = globals()["call_ollama_for_labels"]
+        try:
+            globals()["call_ollama_for_labels"] = lambda _text, _model: (_ for _ in ()).throw(RuntimeError("offline"))
+            loaded.ollama_enabled = True
+            loaded.ollama_model = DEFAULT_OLLAMA_MODEL
+            count, status = tag_inbox_materials(loaded)
+        finally:
+            globals()["call_ollama_for_labels"] = original_call
+        if count != 1 or status != UI_TEXT["ollama_fallback"]:
+            raise AssertionError("fallback tagging failed")
+        if saved.read_text(encoding="utf-8") != raw_before:
+            raise AssertionError("raw markdown changed")
+        material_files = list(target_notes(loaded.peakheadz_root).glob("*_material.md"))
+        if len(material_files) != 1:
+            raise AssertionError("material markdown not created")
+        material = material_files[0].read_text(encoding="utf-8")
+        if "status: material" not in material or "ollama_status" not in material or "[[" not in material:
+            raise AssertionError("material markdown format failed")
     print(UI_TEXT["self_test_ok"])
     return 0
 

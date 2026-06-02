@@ -3,7 +3,7 @@ DAKE_META:
   id: DAKE_Note_Inbox
   name: DAKE_Note_Inbox
   display_name: note素材受信箱
-  version: 0.1.2
+  version: 0.2.0
   status: active
   app_type: desktop
   exe_name: DakeNote_Inbox.exe
@@ -20,7 +20,7 @@ DAKE_META:
 
 ## RELEASE_BODY
 
-DAKE_Note_Inbox v0.1.2 は、Slackから素材を差分取得し、Markdownとして `PEAKHEADZ_ROOT\INBOX` に保存する初期版のUX改善版です。
+DAKE_Note_Inbox v0.2.0 は、Slackから素材を差分取得して `PEAKHEADZ_ROOT\INBOX` に保存し、Ollamaで軽い札付けを行って `PEAKHEADZ_ROOT\NOTES` に素材Markdownを作る版です。
 
 - Slack Bot Token / Channel ID を設定して差分同期
 - `last_ts` を `data/note_inbox_config.json` に保存
@@ -30,12 +30,16 @@ DAKE_Note_Inbox v0.1.2 は、Slackから素材を差分取得し、Markdownと�
 - Obsidian.exeの参照ボタン
 - 未設定時のObsidian自動探索
 - 設定は `%APPDATA%\DAKE_Note_Inbox\note_inbox_config.json` に保存
+- Ollama使用ON/OFF
+- Ollamaモデル名設定
+- INBOX raw MarkdownからNOTES material Markdownを生成
+- Obsidian内部リンクと記事化メモを付与
 - 起動時は最大化
 - 最小化からタスクトレイ常駐、ダブルクリックで復帰
 - 手動同期は完了ダイアログを表示し、自動同期は状態表示だけを更新
 - 軽量なコネクティングドッツ背景
 
-Ollama、記事候補、Codex素材生成、Embedding、Semantic Search、通知、承認、遠隔操作、Wake機能は含みません。
+記事候補、記事本文生成、Codex素材生成、Embedding、Semantic Search、通知、承認、遠隔操作、Wake機能は含みません。
 
 ## 目的
 
@@ -57,9 +61,11 @@ v0.1では、Slackから素材を受信して `INBOX` に保存するところ�
 
 1. `DakeNote_Inbox.exe` または `python main.py` で起動します。
 2. Slack Bot Token、Slack Channel ID、PEAKHEADZ_ROOT、Obsidian実行ファイル、同期間隔を入力します。
-3. `設定保存` を押します。
-4. `今すぐ同期` を押すと、Slackの差分がMarkdownで保存されます。
-5. `Obsidianを開く`、`INBOXを開く`、`NOTESを開く`、`ARTICLESを開く` から確認先を開けます。
+3. Ollama使用ON/OFFとOllamaモデル名を設定します。
+4. `設定保存` を押します。
+5. `今すぐ同期` を押すと、Slackの差分がMarkdownで保存されます。
+6. `札付けする` を押すと、INBOXの未処理MarkdownからNOTESへ素材Markdownが作られます。
+7. `Obsidianを開く`、`INBOXを開く`、`NOTESを開く`、`ARTICLESを開く` から確認先を開けます。
 
 設定はユーザー領域に保存されます。このファイルはGit管理しません。
 
@@ -93,6 +99,77 @@ C:\Users\yukiz\AppData\Local\Programs\Obsidian\Obsidian.exe
 手動同期では完了またはエラーのダイアログを表示します。
 
 自動同期ではダイアログを表示せず、画面上の状態表示だけを更新します。
+
+## Ollama札付け
+
+Ollamaは記事を書く係ではありません。Slack原文にタグ、Obsidianリンク、短い記事化メモを付ける係です。
+
+接続先:
+
+```text
+http://127.0.0.1:11434/api/generate
+```
+
+初期モデル:
+
+```text
+qwen2.5:7b
+```
+
+Ollamaが未起動、またはモデル応答に失敗した場合もアプリは落ちません。fallback札付けで `ollama_status: fallback` の素材Markdownを保存します。Ollama使用をOFFにした場合は `ollama_status: disabled` として保存します。
+
+raw Markdownは改変しません。material Markdownは `PEAKHEADZ_ROOT\NOTES` に新規保存されます。
+
+付与する項目:
+
+- `tags`
+- `links`
+- `article_hint`
+- `ollama_status`
+
+付与しない項目:
+
+- score
+- ranking
+- article_candidate
+- article_type
+
+## material保存形式
+
+```markdown
+---
+source: "slack"
+status: material
+original_path: ""
+slack_ts: ""
+tags:
+  - "note素材"
+links:
+  - "[[在る]]"
+article_hint: "この断片は、note記事の素材として後から読み返せる。"
+ollama_status: "fallback"
+---
+
+# 原文
+
+Slack本文
+
+---
+
+# 札付け
+
+## タグ
+
+#note素材 #在る
+
+## Obsidianリンク
+
+[[在る]]
+
+## 記事化メモ
+
+この断片は、note記事の素材として後から読み返せる。
+```
 
 ## Slack設定方法
 
@@ -133,9 +210,8 @@ cd C:\Users\yukiz\devlop\DAKE_series\01_apps\DAKE_Note_Inbox
 
 ## 実装しないもの
 
-- Ollama
 - 記事候補
-- article_candidate / article_type / article_hint
+- article_candidate / article_type
 - Codex素材生成
 - Embedding
 - Semantic Search
