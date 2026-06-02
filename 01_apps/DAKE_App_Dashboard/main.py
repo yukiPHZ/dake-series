@@ -70,6 +70,9 @@ UI_TEXT = {
     "button_open": "開く",
     "button_show_location": "場所を表示",
     "workspace_links_title": "作業リンク",
+    "workspace_group_basic": "基本",
+    "workspace_group_shipment": "出荷素材",
+    "workspace_group_build": "ビルド",
     "link_folder": "フォルダ",
     "link_readme": "README",
     "link_release_body": "release_body",
@@ -419,21 +422,37 @@ SHIPMENT_MISSING_KEYS = (
     "release_url",
 )
 BOOTH_MATERIAL_KEYS = ("booth_thumbnail", "booth_product", "booth_ready")
-WORKSPACE_LINK_KEYS = (
-    "folder",
-    "readme",
-    "release_body",
-    "assets",
-    "screenshot_webp",
-    "screenshot_jpg",
-    "booth_thumbnail",
-    "booth_product",
-    "booth_ready",
-    "dist",
-    "exe",
-    "release_url",
-    "github_url",
+WORKSPACE_LINK_GROUPS = (
+    (
+        "workspace_group_basic",
+        (
+            "folder",
+            "readme",
+            "release_url",
+            "github_url",
+        ),
+    ),
+    (
+        "workspace_group_shipment",
+        (
+            "release_body",
+            "assets",
+            "screenshot_webp",
+            "screenshot_jpg",
+            "booth_thumbnail",
+            "booth_product",
+            "booth_ready",
+        ),
+    ),
+    (
+        "workspace_group_build",
+        (
+            "dist",
+            "exe",
+        ),
+    ),
 )
+WORKSPACE_LINK_KEYS = tuple(key for _title_key, keys in WORKSPACE_LINK_GROUPS for key in keys)
 
 
 @dataclass(frozen=True)
@@ -1440,7 +1459,7 @@ class DashboardApp:
 
     def build_summary(self, parent: tk.Frame) -> None:
         summary = tk.Frame(parent, bg=THEME["bg"])
-        summary.pack(fill="x", pady=(0, 16))
+        summary.pack(fill="x", pady=(0, 12))
         for index in range(6):
             summary.grid_columnconfigure(index, weight=1, uniform="summary")
 
@@ -1460,21 +1479,21 @@ class DashboardApp:
                 highlightthickness=1,
                 bd=0,
             )
-            card.grid(row=0, column=index, sticky="ew", padx=(0 if index == 0 else 8, 0), ipady=3)
+            card.grid(row=0, column=index, sticky="ew", padx=(0 if index == 0 else 8, 0))
             tk.Label(
                 card,
                 text=UI_TEXT[label_key],
                 bg=THEME["panel_alt"],
                 fg=THEME["muted"],
-                font=(self.font_family, 9),
-            ).pack(anchor="w", padx=14, pady=(10, 2))
+                font=(self.font_family, 8),
+            ).pack(anchor="w", padx=12, pady=(8, 0))
             tk.Label(
                 card,
                 textvariable=self.summary_vars[key],
                 bg=THEME["panel_alt"],
                 fg=THEME["text"],
-                font=(self.font_family, 22, "bold"),
-            ).pack(anchor="w", padx=14, pady=(0, 10))
+                font=(self.font_family, 20, "bold"),
+            ).pack(anchor="w", padx=12, pady=(0, 8))
 
     def build_qpsc_card(self, parent: tk.Frame) -> None:
         card = tk.Frame(
@@ -1484,18 +1503,18 @@ class DashboardApp:
             highlightthickness=1,
             bd=0,
         )
-        card.pack(fill="x", pady=(0, 16))
+        card.pack(fill="x", pady=(0, 12))
         card.grid_columnconfigure(1, weight=1)
 
         title_area = tk.Frame(card, bg=THEME["panel"])
-        title_area.grid(row=0, column=0, sticky="w", padx=16, pady=13)
+        title_area.grid(row=0, column=0, sticky="w", padx=14, pady=9)
 
         tk.Label(
             title_area,
             text=UI_TEXT["qpsc_card_title"],
             bg=THEME["panel"],
             fg=THEME["text"],
-            font=(self.font_family, 12, "bold"),
+            font=(self.font_family, 11, "bold"),
         ).pack(anchor="w")
 
         tk.Label(
@@ -1503,11 +1522,11 @@ class DashboardApp:
             textvariable=self.qpsc_status_var,
             bg=THEME["panel"],
             fg=THEME["muted"],
-            font=(self.font_family, 9),
-        ).pack(anchor="w", pady=(3, 0))
+            font=(self.font_family, 8),
+        ).pack(anchor="w", pady=(2, 0))
 
         metrics = tk.Frame(card, bg=THEME["panel"])
-        metrics.grid(row=0, column=1, sticky="e", padx=(0, 16), pady=10)
+        metrics.grid(row=0, column=1, sticky="e", padx=(0, 14), pady=8)
 
         sections = [
             (
@@ -1531,30 +1550,30 @@ class DashboardApp:
         ]
         for section_index, (title_key, items) in enumerate(sections):
             section = tk.Frame(metrics, bg=THEME["panel"], padx=0, pady=0)
-            section.grid(row=0, column=section_index, sticky="e", padx=(0 if section_index == 0 else 16, 0))
+            section.grid(row=0, column=section_index, sticky="e", padx=(0 if section_index == 0 else 14, 0))
             tk.Label(
                 section,
                 text=UI_TEXT[title_key],
                 bg=THEME["panel"],
-                fg=THEME["text"],
-                font=(self.font_family, 9, "bold"),
-            ).grid(row=0, column=0, columnspan=len(items), sticky="w", pady=(0, 5))
+                fg=THEME["muted"],
+                font=(self.font_family, 8, "bold"),
+            ).grid(row=0, column=0, sticky="w", padx=(0, 6))
             for index, (key, label_key) in enumerate(items):
-                item = tk.Frame(section, bg=THEME["panel_soft"], padx=12, pady=7)
-                item.grid(row=1, column=index, sticky="e", padx=(0 if index == 0 else 8, 0))
+                item = tk.Frame(section, bg=THEME["panel_soft"], padx=8, pady=5)
+                item.grid(row=0, column=index + 1, sticky="e", padx=(0 if index == 0 else 7, 0))
                 tk.Label(
                     item,
                     text=UI_TEXT[label_key],
                     bg=THEME["panel_soft"],
                     fg=THEME["muted"],
-                    font=(self.font_family, 8, "bold"),
+                    font=(self.font_family, 7, "bold"),
                 ).pack(anchor="w")
                 tk.Label(
                     item,
                     textvariable=self.qpsc_vars[key],
                     bg=THEME["panel_soft"],
                     fg=THEME["accent_hover"],
-                    font=(self.font_family, 16, "bold"),
+                    font=(self.font_family, 14, "bold"),
                 ).pack(anchor="w")
 
     def build_git_card(self, parent: tk.Frame) -> None:
@@ -1653,6 +1672,62 @@ class DashboardApp:
 
         self.build_list(left)
         self.build_detail(right)
+
+    def create_scrollable_detail_frame(self, parent: tk.Frame) -> tk.Frame:
+        parent.grid_rowconfigure(0, weight=1)
+        parent.grid_columnconfigure(0, weight=1)
+
+        canvas = tk.Canvas(
+            parent,
+            bg=THEME["panel"],
+            bd=0,
+            highlightthickness=0,
+            yscrollincrement=24,
+        )
+        scrollbar = ttk.Scrollbar(
+            parent,
+            orient="vertical",
+            command=canvas.yview,
+            style="Dashboard.Vertical.TScrollbar",
+        )
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.grid(row=0, column=0, sticky="nsew")
+        scrollbar.grid(row=0, column=1, sticky="ns", padx=(8, 0))
+
+        content = tk.Frame(canvas, bg=THEME["panel"])
+        window_id = canvas.create_window((0, 0), window=content, anchor="nw")
+
+        def resize_content(_event=None) -> None:
+            canvas.configure(scrollregion=canvas.bbox("all"))
+
+        def fit_content_width(event) -> None:
+            canvas.itemconfigure(window_id, width=event.width)
+
+        def pointer_is_inside() -> bool:
+            x = canvas.winfo_pointerx() - canvas.winfo_rootx()
+            y = canvas.winfo_pointery() - canvas.winfo_rooty()
+            return 0 <= x <= canvas.winfo_width() and 0 <= y <= canvas.winfo_height()
+
+        def on_mousewheel(event) -> str | None:
+            if not pointer_is_inside():
+                return None
+            if getattr(event, "num", None) == 4:
+                units = -3
+            elif getattr(event, "num", None) == 5:
+                units = 3
+            else:
+                units = int(-event.delta / 120) if event.delta else 0
+            if units:
+                canvas.yview_scroll(units, "units")
+            return "break"
+
+        content.bind("<Configure>", resize_content)
+        canvas.bind("<Configure>", fit_content_width)
+        self.root.bind_all("<MouseWheel>", on_mousewheel, add="+")
+        self.root.bind_all("<Button-4>", on_mousewheel, add="+")
+        self.root.bind_all("<Button-5>", on_mousewheel, add="+")
+        self.detail_canvas = canvas
+        return content
 
     def build_list(self, parent: tk.Frame) -> None:
         header = tk.Frame(parent, bg=THEME["panel"])
@@ -1753,10 +1828,10 @@ class DashboardApp:
         self.tree.bind("<<TreeviewSelect>>", self.on_tree_select)
 
     def build_detail(self, parent: tk.Frame) -> None:
-        container = tk.Frame(parent, bg=THEME["panel"])
-        container.pack(fill="both", expand=True, padx=16, pady=14)
+        scroll_shell = tk.Frame(parent, bg=THEME["panel"])
+        scroll_shell.pack(fill="both", expand=True, padx=16, pady=14)
+        container = self.create_scrollable_detail_frame(scroll_shell)
         container.grid_columnconfigure(0, weight=1)
-        container.grid_rowconfigure(7, weight=1)
 
         tk.Label(
             container,
@@ -1777,7 +1852,6 @@ class DashboardApp:
             padx=10,
             pady=5,
         )
-        self.detail_badge.grid(row=1, column=0, sticky="w", pady=(12, 7))
 
         tk.Label(
             container,
@@ -1787,47 +1861,46 @@ class DashboardApp:
             font=(self.font_family, 12, "bold"),
             wraplength=360,
             justify="left",
-        ).grid(row=2, column=0, sticky="ew", pady=(0, 10))
+        ).grid(row=1, column=0, sticky="ew", pady=(10, 8))
+        self.detail_badge.grid(row=2, column=0, sticky="w", pady=(0, 10))
+
+        self.build_classification_editor(container, 3)
+
+        priority_area = tk.Frame(container, bg=THEME["panel"])
+        priority_area.grid(row=4, column=0, sticky="ew")
+        priority_area.grid_columnconfigure(0, weight=1)
+        self.next_text = self.create_detail_text(priority_area, 0, UI_TEXT["detail_next_title"], height=3)
 
         button_row = tk.Frame(container, bg=THEME["panel"])
-        button_row.grid(row=3, column=0, sticky="ew", pady=(0, 12))
+        button_row.grid(row=5, column=0, sticky="ew", pady=(10, 12))
         self.open_folder_button = self.make_button(button_row, UI_TEXT["button_open_folder"], self.open_selected_folder)
         self.open_folder_button.pack(side="left", padx=(0, 8))
         self.open_readme_button = self.make_button(button_row, UI_TEXT["button_open_readme"], self.open_selected_readme)
         self.open_readme_button.pack(side="left", padx=(0, 8))
-        self.open_release_button = self.make_button(button_row, UI_TEXT["button_open_release"], self.open_selected_release)
-        self.open_release_button.pack(side="left")
+        self.next_work_button = self.make_button(button_row, UI_TEXT["button_next_work"], self.open_next_work, primary=True)
+        self.next_work_button.pack(side="left")
 
-        work_row = tk.Frame(container, bg=THEME["panel"])
-        work_row.grid(row=4, column=0, sticky="ew", pady=(0, 10))
-        self.next_work_button = self.make_button(work_row, UI_TEXT["button_next_work"], self.open_next_work, primary=True)
-        self.next_work_button.pack(side="left", padx=(0, 8))
+        self.build_workspace_links(container, 6)
+
+        booth_row = tk.Frame(container, bg=THEME["panel"])
+        booth_row.grid(row=7, column=0, sticky="ew", pady=(0, 12))
         self.open_booth_assist_button = self.make_button(
-            work_row,
+            booth_row,
             UI_TEXT["button_open_booth_assist"],
             self.open_selected_booth_assist,
+            compact=True,
         )
         self.open_booth_assist_button.pack(side="left")
 
-        self.build_classification_editor(container, 5)
-        self.build_workspace_links(container, 6)
-
         detail_area = tk.Frame(container, bg=THEME["panel"])
-        detail_area.grid(row=7, column=0, sticky="nsew")
+        detail_area.grid(row=8, column=0, sticky="ew")
         detail_area.grid_columnconfigure(0, weight=1)
-        detail_area.grid_rowconfigure(1, weight=1)
-        detail_area.grid_rowconfigure(3, weight=1)
-        detail_area.grid_rowconfigure(5, weight=1)
-        detail_area.grid_rowconfigure(7, weight=1)
-        detail_area.grid_rowconfigure(9, weight=1)
-        detail_area.grid_rowconfigure(11, weight=1)
 
-        self.meta_text = self.create_detail_text(detail_area, 0, UI_TEXT["detail_meta_title"], height=3)
-        self.shipment_text = self.create_detail_text(detail_area, 2, UI_TEXT["shipment_title"], height=3)
-        self.files_text = self.create_detail_text(detail_area, 4, UI_TEXT["detail_files_title"], height=5)
-        self.missing_text = self.create_detail_text(detail_area, 6, UI_TEXT["detail_missing_title"], height=3)
-        self.next_text = self.create_detail_text(detail_area, 8, UI_TEXT["detail_next_title"], height=3)
-        self.next_candidates_text = self.create_detail_text(detail_area, 10, UI_TEXT["next_candidates_title"], height=4)
+        self.shipment_text = self.create_detail_text(detail_area, 0, UI_TEXT["shipment_title"], height=3)
+        self.files_text = self.create_detail_text(detail_area, 2, UI_TEXT["detail_files_title"], height=5)
+        self.missing_text = self.create_detail_text(detail_area, 4, UI_TEXT["detail_missing_title"], height=3)
+        self.meta_text = self.create_detail_text(detail_area, 6, UI_TEXT["detail_meta_title"], height=3)
+        self.next_candidates_text = self.create_detail_text(detail_area, 8, UI_TEXT["next_candidates_title"], height=4)
         self.update_detail(None)
 
     def build_classification_editor(self, parent: tk.Frame, row: int) -> None:
@@ -1848,24 +1921,14 @@ class DashboardApp:
             bg=THEME["panel_soft"],
             fg=THEME["text"],
             font=(self.font_family, 9, "bold"),
-        ).grid(row=0, column=0, columnspan=5, sticky="w", padx=10, pady=(8, 2))
-        tk.Label(
-            editor,
-            text=UI_TEXT["classification_help"],
-            bg=THEME["panel_soft"],
-            fg=THEME["muted"],
-            font=(self.font_family, 8),
-            anchor="w",
-            justify="left",
-            wraplength=380,
-        ).grid(row=1, column=0, columnspan=5, sticky="ew", padx=10, pady=(0, 7))
+        ).grid(row=0, column=0, columnspan=5, sticky="w", padx=10, pady=(8, 6))
         tk.Label(
             editor,
             text=UI_TEXT["column_app_type"],
             bg=THEME["panel_soft"],
             fg=THEME["muted"],
             font=(self.font_family, 8, "bold"),
-        ).grid(row=2, column=0, sticky="w", padx=(10, 6), pady=(0, 9))
+        ).grid(row=1, column=0, sticky="w", padx=(10, 6), pady=(0, 9))
         self.app_type_combo = ttk.Combobox(
             editor,
             textvariable=self.app_type_var,
@@ -1874,7 +1937,7 @@ class DashboardApp:
             width=12,
             font=(self.font_family, 9),
         )
-        self.app_type_combo.grid(row=2, column=1, sticky="ew", padx=(0, 10), pady=(0, 9))
+        self.app_type_combo.grid(row=1, column=1, sticky="ew", padx=(0, 10), pady=(0, 9))
         self.app_type_combo.bind("<<ComboboxSelected>>", self.on_app_type_selected)
         tk.Label(
             editor,
@@ -1882,7 +1945,7 @@ class DashboardApp:
             bg=THEME["panel_soft"],
             fg=THEME["muted"],
             font=(self.font_family, 8, "bold"),
-        ).grid(row=2, column=2, sticky="w", padx=(0, 6), pady=(0, 9))
+        ).grid(row=1, column=2, sticky="w", padx=(0, 6), pady=(0, 9))
         self.completion_goal_combo = ttk.Combobox(
             editor,
             textvariable=self.completion_goal_var,
@@ -1891,7 +1954,7 @@ class DashboardApp:
             width=12,
             font=(self.font_family, 9),
         )
-        self.completion_goal_combo.grid(row=2, column=3, sticky="ew", padx=(0, 10), pady=(0, 9))
+        self.completion_goal_combo.grid(row=1, column=3, sticky="ew", padx=(0, 10), pady=(0, 9))
         self.save_classification_button = self.make_button(
             editor,
             UI_TEXT["button_save_classification"],
@@ -1899,7 +1962,7 @@ class DashboardApp:
             primary=True,
             compact=True,
         )
-        self.save_classification_button.grid(row=2, column=4, sticky="e", padx=(0, 10), pady=(0, 9))
+        self.save_classification_button.grid(row=1, column=4, sticky="e", padx=(0, 10), pady=(0, 9))
 
     def build_workspace_links(self, parent: tk.Frame, row: int) -> None:
         links_area = tk.Frame(parent, bg=THEME["panel"])
@@ -1915,42 +1978,61 @@ class DashboardApp:
             font=(self.font_family, 9, "bold"),
         ).grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 6))
 
-        for index, key in enumerate(WORKSPACE_LINK_KEYS):
-            cell = tk.Frame(
+        current_row = 1
+        for title_key, keys in WORKSPACE_LINK_GROUPS:
+            tk.Label(
                 links_area,
-                bg=THEME["panel_soft"],
-                highlightbackground=THEME["border"],
-                highlightthickness=1,
-                bd=0,
-            )
-            cell.grid(row=1 + index // 2, column=index % 2, sticky="ew", padx=(0 if index % 2 == 0 else 8, 0), pady=(0, 6))
-            cell.grid_columnconfigure(0, weight=1)
-
-            label_var = tk.StringVar(value=UI_TEXT[f"link_{key}"])
-            value_var = tk.StringVar(value=UI_TEXT["link_missing"])
-            tk.Label(
-                cell,
-                textvariable=label_var,
-                bg=THEME["panel_soft"],
-                fg=THEME["text"],
+                text=UI_TEXT[title_key],
+                bg=THEME["panel"],
+                fg=THEME["quiet"],
                 font=(self.font_family, 8, "bold"),
-            ).grid(row=0, column=0, sticky="w", padx=(8, 6), pady=(5, 0))
-            tk.Label(
-                cell,
-                textvariable=value_var,
-                bg=THEME["panel_soft"],
-                fg=THEME["muted"],
-                font=(self.font_family, 8),
-                anchor="w",
-            ).grid(row=1, column=0, sticky="ew", padx=(8, 6), pady=(0, 5))
-            button = self.make_button(
-                cell,
-                UI_TEXT["button_show_location"] if key == "exe" else UI_TEXT["button_open"],
-                lambda value=key: self.open_workspace_link(value),
-                compact=True,
-            )
-            button.grid(row=0, column=1, rowspan=2, sticky="e", padx=(0, 6), pady=5)
-            self.link_rows[key] = {"value": value_var, "button": button}
+            ).grid(row=current_row, column=0, columnspan=2, sticky="w", pady=(2, 4))
+            current_row += 1
+
+            for index, key in enumerate(keys):
+                cell = tk.Frame(
+                    links_area,
+                    bg=THEME["panel_soft"],
+                    highlightbackground=THEME["border"],
+                    highlightthickness=1,
+                    bd=0,
+                )
+                cell.grid(
+                    row=current_row + index // 2,
+                    column=index % 2,
+                    sticky="ew",
+                    padx=(0 if index % 2 == 0 else 8, 0),
+                    pady=(0, 5),
+                )
+                cell.grid_columnconfigure(0, weight=1)
+
+                label_var = tk.StringVar(value=UI_TEXT[f"link_{key}"])
+                value_var = tk.StringVar(value=UI_TEXT["link_missing"])
+                tk.Label(
+                    cell,
+                    textvariable=label_var,
+                    bg=THEME["panel_soft"],
+                    fg=THEME["text"],
+                    font=(self.font_family, 8, "bold"),
+                ).grid(row=0, column=0, sticky="w", padx=(7, 5), pady=(4, 0))
+                tk.Label(
+                    cell,
+                    textvariable=value_var,
+                    bg=THEME["panel_soft"],
+                    fg=THEME["muted"],
+                    font=(self.font_family, 7),
+                    anchor="w",
+                ).grid(row=1, column=0, sticky="ew", padx=(7, 5), pady=(0, 4))
+                button = self.make_button(
+                    cell,
+                    UI_TEXT["button_show_location"] if key == "exe" else UI_TEXT["button_open"],
+                    lambda value=key: self.open_workspace_link(value),
+                    compact=True,
+                )
+                button.grid(row=0, column=1, rowspan=2, sticky="e", padx=(0, 5), pady=4)
+                self.link_rows[key] = {"value": value_var, "button": button}
+
+            current_row += (len(keys) + 1) // 2 + 1
 
         self.open_booth_ready_button = self.link_rows["booth_ready"]["button"]
         self.open_booth_product_button = self.link_rows["booth_product"]["button"]
@@ -2414,6 +2496,7 @@ class DashboardApp:
             self.set_text(self.next_candidates_text, self.build_next_candidates_detail())
             self.set_classification_editor_state(None)
             self.set_detail_buttons_state(False)
+            self.scroll_detail_to_top()
             return
 
         badge_bg, badge_fg = STATUS_THEME.get(record.status_key, (THEME["panel_soft"], THEME["muted"]))
@@ -2428,6 +2511,13 @@ class DashboardApp:
         self.set_text(self.next_candidates_text, self.build_next_candidates_detail())
         self.set_classification_editor_state(record)
         self.set_detail_buttons_state(True)
+        self.scroll_detail_to_top()
+
+    def scroll_detail_to_top(self) -> None:
+        canvas = getattr(self, "detail_canvas", None)
+        if not isinstance(canvas, tk.Canvas):
+            return
+        self.root.after_idle(lambda: canvas.yview_moveto(0))
 
     def set_classification_editor_state(self, record: AppRecord | None) -> None:
         if not hasattr(self, "app_type_combo"):
@@ -2453,13 +2543,6 @@ class DashboardApp:
         self.next_work_button.configure(state=state)
         booth_assist_state = "normal" if record is not None and is_booth_registration_target(record) else "disabled"
         self.open_booth_assist_button.configure(state=booth_assist_state)
-
-        release_state = "normal" if record is not None and record.release_url else "disabled"
-        self.open_release_button.configure(state=release_state)
-        if release_state == "disabled":
-            self.open_release_button.configure(text=UI_TEXT["button_release_missing"])
-        else:
-            self.open_release_button.configure(text=UI_TEXT["button_open_release"])
         self.update_workspace_links(record)
 
     def on_app_type_selected(self, _event=None) -> None:
