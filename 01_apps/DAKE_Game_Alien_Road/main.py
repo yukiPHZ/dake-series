@@ -48,9 +48,23 @@ LANE_COUNT = 5
 HORIZON_Y = 126
 ROAD_BOTTOM_Y = 598
 PLAYER_Y = 552
-BASE_SPEED = 0.42
-SPEED_GROWTH = 0.006
+BASE_SPEED = 0.34
+SPEED_GROWTH = 0.0052
 STAGE_SECONDS = 18.0
+ROAD_TOP_HALF_WIDTH = 20
+ROAD_BOTTOM_HALF_WIDTH = 236
+ROAD_SPREAD_POWER = 2.25
+ROAD_SAMPLE_STEPS = 24
+ROAD_BAND_COUNT = 15
+PLAYER_LANE_EASE_RATE = 16.0
+PLAYER_VISUAL_WIDTH = 62.0
+PLAYER_VISUAL_HEIGHT = 64.0
+PLAYER_HITBOX_WIDTH_SCALE = 0.60
+PLAYER_HITBOX_HEIGHT_SCALE = 0.60
+BLOCK_HITBOX_WIDTH_SCALE = 0.66
+BLOCK_HITBOX_HEIGHT_SCALE = 0.68
+ALIEN_HITBOX_WIDTH_SCALE = 0.64
+ALIEN_HITBOX_HEIGHT_SCALE = 0.64
 
 COLORS = {
     "lcd_bg": "#9fb77a",
@@ -156,11 +170,12 @@ class AlienRoadApp(tk.Tk):
         self.status_message = UI_TEXT["ready_hint"]
         self.state = "ready"
         self.player_lane = LANE_COUNT // 2
+        self.player_lane_pos = float(self.player_lane)
         self.score = 0
         self.stage = 1
         self.elapsed = 0.0
         self.current_speed = BASE_SPEED
-        self.spawn_timer = 0.8
+        self.spawn_timer = 1.0
         self.road_phase = 0.0
         self.obstacles: list[Obstacle] = []
         self.last_time = time.perf_counter()
@@ -205,11 +220,12 @@ class AlienRoadApp(tk.Tk):
     def start_game(self) -> None:
         self.state = "running"
         self.player_lane = LANE_COUNT // 2
+        self.player_lane_pos = float(self.player_lane)
         self.score = 0
         self.stage = 1
         self.elapsed = 0.0
         self.current_speed = BASE_SPEED
-        self.spawn_timer = 0.5
+        self.spawn_timer = 0.95
         self.road_phase = 0.0
         self.obstacles.clear()
         self.status_message = UI_TEXT["running_status"]
@@ -220,6 +236,10 @@ class AlienRoadApp(tk.Tk):
         if self.state not in {"ready", "running"}:
             return
         self.player_lane = clamp_lane(self.player_lane + direction)
+        if self.state == "running":
+            self._ease_player_lane(1 / 28)
+        else:
+            self.player_lane_pos = float(self.player_lane)
         self._draw()
 
     def _handle_click(self, event: tk.Event) -> None:
@@ -258,11 +278,12 @@ class AlienRoadApp(tk.Tk):
         self.current_speed = BASE_SPEED + (self.elapsed * SPEED_GROWTH) + ((self.stage - 1) * 0.025)
         self.score += int((52 + self.current_speed * 110) * dt)
         self.road_phase = (self.road_phase + self.current_speed * dt * 1.8) % 1.0
+        self._ease_player_lane(dt)
 
         for obstacle in self.obstacles:
             obstacle.z += self.current_speed * dt
             if obstacle.kind == "alien" and obstacle.z > 0.12:
-                obstacle.lane += obstacle.move_dir * dt * (0.55 + self.stage * 0.04)
+                obstacle.lane += obstacle.move_dir * dt * (0.38 + min(self.stage, 9) * 0.035)
                 if obstacle.lane <= 0:
                     obstacle.lane = 0
                     obstacle.move_dir = 1
@@ -278,18 +299,25 @@ class AlienRoadApp(tk.Tk):
         if self._check_collision():
             self._game_over()
 
+    def _ease_player_lane(self, dt: float) -> None:
+        target = float(self.player_lane)
+        alpha = min(1.0, dt * PLAYER_LANE_EASE_RATE)
+        self.player_lane_pos += (target - self.player_lane_pos) * alpha
+        if abs(target - self.player_lane_pos) < 0.015:
+            self.player_lane_pos = target
+
     def _spawn_obstacles(self) -> None:
         lanes = list(range(LANE_COUNT))
         self.random.shuffle(lanes)
-        count = 2 if self.stage >= 4 and self.random.random() < 0.26 else 1
+        count = 2 if self.stage >= 5 and self.random.random() < 0.18 else 1
         for lane in lanes[:count]:
-            alien_chance = min(0.28 + self.stage * 0.035, 0.55)
+            alien_chance = min(0.18 + self.stage * 0.035, 0.48)
             kind = "alien" if self.random.random() < alien_chance else "block"
             move_dir = self.random.choice([-1, 1]) if kind == "alien" else 0
             self.obstacles.append(Obstacle(lane=float(lane), z=-0.02, kind=kind, move_dir=move_dir))
 
-        interval = max(0.45, 1.05 - self.stage * 0.045 - self.elapsed * 0.002)
-        self.spawn_timer = interval + self.random.uniform(-0.12, 0.18)
+        interval = max(0.56, 1.28 - self.stage * 0.04 - self.elapsed * 0.0018)
+        self.spawn_timer = interval + self.random.uniform(-0.08, 0.18)
 
     def _check_collision(self) -> bool:
         player_bounds = self._player_bounds()
@@ -326,29 +354,46 @@ class AlienRoadApp(tk.Tk):
         return max(1, int(round(self.current_speed * 10)))
 
     def _lane_center(self, lane: float, y: float) -> float:
+        return self._lane_boundary_x(lane + 0.5, y)
+
+    def _lane_boundary_x(self, boundary: float, y: float) -> float:
         left, right = self._road_edges(y)
-        lane_width = (right - left) / LANE_COUNT
-        return left + lane_width * (lane + 0.5)
+        return left + (right - left) * boundary / LANE_COUNT
+
+    def _road_progress(self, y: float) -> float:
+        raw = max(0.0, min(1.0, (y - HORIZON_Y) / (ROAD_BOTTOM_Y - HORIZON_Y)))
+        return raw**ROAD_SPREAD_POWER
 
     def _road_edges(self, y: float) -> tuple[float, float]:
-        progress = max(0.0, min(1.0, (y - HORIZON_Y) / (ROAD_BOTTOM_Y - HORIZON_Y)))
-        half_width = 40 + (218 - 40) * (progress**1.35)
+        progress = self._road_progress(y)
+        half_width = ROAD_TOP_HALF_WIDTH + (ROAD_BOTTOM_HALF_WIDTH - ROAD_TOP_HALF_WIDTH) * progress
         return WINDOW_WIDTH / 2 - half_width, WINDOW_WIDTH / 2 + half_width
 
     def _y_from_z(self, z: float) -> float:
         progress = max(0.0, min(1.0, z))
-        return HORIZON_Y + (ROAD_BOTTOM_Y - HORIZON_Y) * (progress**1.24)
+        return HORIZON_Y + (ROAD_BOTTOM_Y - HORIZON_Y) * (progress**1.34)
+
+    def _obstacle_visual_size(self, obstacle: Obstacle) -> tuple[float, float]:
+        progress = max(0.18, min(1.0, obstacle.z))
+        return 18 + 48 * progress, 18 + 54 * progress
 
     def _player_bounds(self) -> tuple[float, float, float, float]:
-        x = self._lane_center(float(self.player_lane), PLAYER_Y)
-        return x - 26, PLAYER_Y - 31, x + 26, PLAYER_Y + 24
+        x = self._lane_center(self.player_lane_pos, PLAYER_Y)
+        width = PLAYER_VISUAL_WIDTH * PLAYER_HITBOX_WIDTH_SCALE
+        height = PLAYER_VISUAL_HEIGHT * PLAYER_HITBOX_HEIGHT_SCALE
+        center_y = PLAYER_Y - 1
+        return x - width / 2, center_y - height / 2, x + width / 2, center_y + height / 2
 
     def _obstacle_bounds(self, obstacle: Obstacle) -> tuple[float, float, float, float]:
         y = self._y_from_z(obstacle.z)
         x = self._lane_center(obstacle.lane, y)
-        progress = max(0.18, min(1.0, obstacle.z))
-        width = 18 + 48 * progress
-        height = 18 + 54 * progress
+        width, height = self._obstacle_visual_size(obstacle)
+        if obstacle.kind == "alien":
+            width *= ALIEN_HITBOX_WIDTH_SCALE
+            height *= ALIEN_HITBOX_HEIGHT_SCALE
+        else:
+            width *= BLOCK_HITBOX_WIDTH_SCALE
+            height *= BLOCK_HITBOX_HEIGHT_SCALE
         return x - width / 2, y - height / 2, x + width / 2, y + height / 2
 
     def _draw(self) -> None:
@@ -388,43 +433,47 @@ class AlienRoadApp(tk.Tk):
                 self.canvas.create_line(x - 8, 20, x - 8, 70, fill=COLORS["road_line"], width=1)
 
     def _draw_road(self) -> None:
-        top_left, top_right = self._road_edges(HORIZON_Y)
-        bottom_left, bottom_right = self._road_edges(ROAD_BOTTOM_Y)
-        self.canvas.create_polygon(
-            top_left,
-            HORIZON_Y,
-            top_right,
-            HORIZON_Y,
-            bottom_right,
-            ROAD_BOTTOM_Y,
-            bottom_left,
-            ROAD_BOTTOM_Y,
-            fill=COLORS["road"],
-            outline=COLORS["ink"],
-            width=2,
-        )
+        edge_samples = self._road_sample_points()
+        polygon_points = edge_samples["left"] + list(reversed(edge_samples["right"]))
+        self.canvas.create_polygon(*self._flatten_points(polygon_points), fill=COLORS["road"], outline="")
 
         for lane_index in range(1, LANE_COUNT):
-            top_x = top_left + (top_right - top_left) * lane_index / LANE_COUNT
-            bottom_x = bottom_left + (bottom_right - bottom_left) * lane_index / LANE_COUNT
-            self.canvas.create_line(top_x, HORIZON_Y, bottom_x, ROAD_BOTTOM_Y, fill=COLORS["road_line"], width=2)
+            points = []
+            for step in range(ROAD_SAMPLE_STEPS + 1):
+                y = HORIZON_Y + (ROAD_BOTTOM_Y - HORIZON_Y) * step / ROAD_SAMPLE_STEPS
+                points.append((self._lane_boundary_x(float(lane_index), y), y))
+            self.canvas.create_line(*self._flatten_points(points), fill=COLORS["road_line"], width=2, smooth=True)
 
-        for band in range(13):
-            progress = ((band + self.road_phase) / 13) ** 1.45
+        for band in range(ROAD_BAND_COUNT):
+            progress = ((band + self.road_phase) / ROAD_BAND_COUNT) ** 2.05
             y = HORIZON_Y + (ROAD_BOTTOM_Y - HORIZON_Y) * progress
             left, right = self._road_edges(y)
             self.canvas.create_line(left, y, right, y, fill=COLORS["road_line"], width=1)
 
-        self.canvas.create_line(top_left, HORIZON_Y, bottom_left, ROAD_BOTTOM_Y, fill=COLORS["ink"], width=3)
-        self.canvas.create_line(top_right, HORIZON_Y, bottom_right, ROAD_BOTTOM_Y, fill=COLORS["ink"], width=3)
+        self.canvas.create_line(*self._flatten_points(edge_samples["left"]), fill=COLORS["ink"], width=3, smooth=True)
+        self.canvas.create_line(*self._flatten_points(edge_samples["right"]), fill=COLORS["ink"], width=3, smooth=True)
+
+    def _road_sample_points(self) -> dict[str, list[tuple[float, float]]]:
+        left_points = []
+        right_points = []
+        for step in range(ROAD_SAMPLE_STEPS + 1):
+            y = HORIZON_Y + (ROAD_BOTTOM_Y - HORIZON_Y) * step / ROAD_SAMPLE_STEPS
+            left, right = self._road_edges(y)
+            left_points.append((left, y))
+            right_points.append((right, y))
+        return {"left": left_points, "right": right_points}
+
+    def _flatten_points(self, points: list[tuple[float, float]]) -> list[float]:
+        flattened = []
+        for x, y in points:
+            flattened.extend([x, y])
+        return flattened
 
     def _draw_obstacles(self) -> None:
         for obstacle in sorted(self.obstacles, key=lambda item: item.z):
             y = self._y_from_z(obstacle.z)
             x = self._lane_center(obstacle.lane, y)
-            progress = max(0.18, min(1.0, obstacle.z))
-            width = 18 + 48 * progress
-            height = 18 + 54 * progress
+            width, height = self._obstacle_visual_size(obstacle)
             if obstacle.kind == "alien":
                 self._draw_alien(x, y, width, height)
             else:
@@ -463,7 +512,7 @@ class AlienRoadApp(tk.Tk):
         self.canvas.create_oval(x + width * 0.18 - eye_size, y - eye_size, x + width * 0.18, y + eye_size, fill=COLORS["highlight"], outline="")
 
     def _draw_player(self) -> None:
-        x = self._lane_center(float(self.player_lane), PLAYER_Y)
+        x = self._lane_center(self.player_lane_pos, PLAYER_Y)
         y = PLAYER_Y
         self.canvas.create_polygon(
             x,
@@ -542,6 +591,9 @@ def run_launch_check() -> None:
         assert app.player_lane == 1
 
         app.player_lane = 2
+        app.player_lane_pos = 2.0
+        app.obstacles = [Obstacle(lane=2.65, z=0.92, kind="block")]
+        assert not app._check_collision()
         app.obstacles = [Obstacle(lane=2.0, z=0.92, kind="block")]
         assert app._check_collision()
         app._game_over()
