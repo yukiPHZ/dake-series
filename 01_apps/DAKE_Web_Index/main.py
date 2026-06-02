@@ -41,6 +41,7 @@ UI_TEXT = {
     "header_title": "Webサイト索引",
     "header_subtitle": "README正本から自動生成します",
     "button_reload": "再読込",
+    "column_folder_name": "フォルダ名",
     "column_site_name": "サイト名",
     "column_url": "URL",
     "column_github": "GitHub",
@@ -52,6 +53,8 @@ UI_TEXT = {
     "status_error": "読込できませんでした",
     "status_no_selection": "行を選択してください",
     "auto_reload_interval": "自動更新: 5分ごと",
+    "status_folder_missing": "フォルダを開けません: {path}",
+    "status_folder_opened": "フォルダを開きました: {folder}",
     "value_unset": "未設定",
     "value_readme": "README.md",
     "dialog_error_title": "エラー",
@@ -73,6 +76,8 @@ THEME = {
     "accent": "#2657B8",
     "accent_hover": "#1F4CA6",
     "selection": "#E8EEF9",
+    "scrollbar": "#C8CDD6",
+    "scrollbar_hover": "#B8BFCA",
 }
 
 FONT_CANDIDATES = ["BIZ UDPGothic", "Yu Gothic UI", "Meiryo", "MS Gothic"]
@@ -98,6 +103,7 @@ GITHUB_PATTERN = re.compile(r"https?://github\.com/[^\s)>\]\"']+", re.IGNORECASE
 
 @dataclass(frozen=True)
 class SiteRecord:
+    folder_name: str
     site_name: str
     url: str
     github_url: str
@@ -110,6 +116,7 @@ class SiteRecord:
 
     def to_json(self) -> dict[str, str]:
         return {
+            "folder_name": self.folder_name,
             "site_name": self.site_name,
             "url": self.url,
             "github": self.github_url,
@@ -380,6 +387,7 @@ def build_record(folder: Path) -> SiteRecord | None:
     if not has_site_signal(folder, meta, readme_text):
         return None
     return SiteRecord(
+        folder_name=folder.name,
         site_name=site_name_from_meta(meta, folder),
         url=url_from_meta(meta, readme_text),
         github_url=github_from_meta(meta, readme_text, folder),
@@ -400,7 +408,7 @@ def scan_sites(root: Path) -> list[SiteRecord]:
         record = build_record(folder)
         if record is not None:
             records.append(record)
-    records.sort(key=lambda item: (item.site_name.lower(), str(item.folder_path).lower()))
+    records.sort(key=lambda item: (item.folder_name.lower(), item.site_name.lower()))
     return records
 
 
@@ -425,6 +433,15 @@ def open_path_external(path: Path, starter=None) -> bool:
     return True
 
 
+class AutoHideScrollbar(ttk.Scrollbar):
+    def set(self, first: str, last: str) -> None:
+        if float(first) <= 0.0 and float(last) >= 1.0:
+            self.grid_remove()
+        else:
+            self.grid()
+        super().set(first, last)
+
+
 class WebIndexApp:
     def __init__(self, root: tk.Tk, root_path: Path) -> None:
         self.root = root
@@ -435,6 +452,8 @@ class WebIndexApp:
         self.worker_queue: queue.Queue[tuple[str, object]] = queue.Queue()
         self.worker_thread: threading.Thread | None = None
         self.auto_reload_job: str | None = None
+        self.sort_column = "folder_name"
+        self.sort_reverse = False
         self.status_var = tk.StringVar(value=UI_TEXT["status_waiting"])
         self.auto_status_var = tk.StringVar(value=UI_TEXT["auto_reload_interval"])
 
@@ -458,7 +477,7 @@ class WebIndexApp:
             background=THEME["surface"],
             fieldbackground=THEME["surface"],
             foreground=THEME["text"],
-            rowheight=30,
+            rowheight=29,
             borderwidth=0,
             font=(self.font_family, 10),
         )
@@ -470,6 +489,23 @@ class WebIndexApp:
             font=(self.font_family, 9, "bold"),
         )
         style.map("Index.Treeview", background=[("selected", THEME["selection"])], foreground=[("selected", THEME["text"])])
+        style.configure(
+            "Index.Vertical.TScrollbar",
+            gripcount=0,
+            width=10,
+            background=THEME["scrollbar"],
+            darkcolor=THEME["scrollbar"],
+            lightcolor=THEME["scrollbar"],
+            bordercolor=THEME["bg"],
+            troughcolor=THEME["bg"],
+            arrowcolor=THEME["muted"],
+            relief="flat",
+        )
+        style.map(
+            "Index.Vertical.TScrollbar",
+            background=[("active", THEME["scrollbar_hover"])],
+            arrowcolor=[("active", THEME["muted"])],
+        )
 
     def build_ui(self) -> None:
         outer = tk.Frame(self.root, bg=THEME["bg"])
@@ -485,16 +521,15 @@ class WebIndexApp:
         table_wrap.grid_columnconfigure(0, weight=1)
         table_wrap.grid_rowconfigure(0, weight=1)
 
-        columns = ("site_name", "url", "github", "readme", "updated")
+        columns = ("folder_name", "site_name", "url", "github", "readme", "updated")
         self.tree = ttk.Treeview(table_wrap, columns=columns, show="headings", selectmode="browse", style="Index.Treeview")
         self.tree.grid(row=0, column=0, sticky="nsew")
-        y_scroll = ttk.Scrollbar(table_wrap, orient="vertical", command=self.tree.yview)
+        y_scroll = AutoHideScrollbar(table_wrap, orient="vertical", command=self.tree.yview, style="Index.Vertical.TScrollbar")
         y_scroll.grid(row=0, column=1, sticky="ns")
-        x_scroll = ttk.Scrollbar(table_wrap, orient="horizontal", command=self.tree.xview)
-        x_scroll.grid(row=1, column=0, sticky="ew")
-        self.tree.configure(yscrollcommand=y_scroll.set, xscrollcommand=x_scroll.set)
+        self.tree.configure(yscrollcommand=y_scroll.set)
 
         headings = {
+            "folder_name": UI_TEXT["column_folder_name"],
             "site_name": UI_TEXT["column_site_name"],
             "url": UI_TEXT["column_url"],
             "github": UI_TEXT["column_github"],
@@ -502,17 +537,24 @@ class WebIndexApp:
             "updated": UI_TEXT["column_updated"],
         }
         widths = {
+            "folder_name": 220,
             "site_name": 220,
-            "url": 300,
-            "github": 270,
-            "readme": 110,
-            "updated": 140,
+            "url": 340,
+            "github": 340,
+            "readme": 100,
+            "updated": 150,
         }
+        self.column_headings = headings
         for column in columns:
-            self.tree.heading(column, text=headings[column])
-            self.tree.column(column, width=widths[column], minwidth=90, stretch=column in {"site_name", "url", "github"}, anchor="w")
+            if column in {"folder_name", "site_name", "updated"}:
+                self.tree.heading(column, text=headings[column], command=lambda key=column: self.sort_by_column(key))
+            else:
+                self.tree.heading(column, text=headings[column])
+            self.tree.column(column, width=widths[column], minwidth=80, stretch=False, anchor="w")
         self.tree.bind("<Double-Button-1>", self.on_tree_double_click)
         self.tree.bind("<Return>", self.open_selected_url)
+        self.tree.bind("<Configure>", self.on_tree_configure)
+        self.root.after_idle(self.adjust_column_widths)
 
         footer = tk.Frame(outer, bg=THEME["bg"])
         footer.pack(fill="x", pady=(12, 0))
@@ -534,6 +576,51 @@ class WebIndexApp:
         )
         self.reload_button.pack(side="right")
         tk.Label(footer, textvariable=self.auto_status_var, bg=THEME["bg"], fg=THEME["muted"], font=(self.font_family, 9)).pack(side="right", padx=(0, 14))
+
+    def on_tree_configure(self, _event=None) -> None:
+        self.adjust_column_widths()
+
+    def adjust_column_widths(self) -> None:
+        available = max(self.tree.winfo_width() - 4, 820)
+        updated_width = 150
+        readme_width = 92
+        folder_width = 200
+        site_width = 200
+        flex_width = available - updated_width - readme_width - folder_width - site_width
+        if flex_width < 340:
+            deficit = 340 - flex_width
+            folder_reduce = min(50, deficit // 2)
+            site_reduce = min(50, deficit - folder_reduce)
+            folder_width -= folder_reduce
+            site_width -= site_reduce
+            flex_width = available - updated_width - readme_width - folder_width - site_width
+        url_width = max(170, flex_width // 2)
+        github_width = max(170, flex_width - url_width)
+        widths = {
+            "folder_name": max(150, folder_width),
+            "site_name": max(150, site_width),
+            "url": url_width,
+            "github": github_width,
+            "readme": readme_width,
+            "updated": updated_width,
+        }
+        for column, width in widths.items():
+            self.tree.column(column, width=int(width))
+
+    def sort_by_column(self, column: str) -> None:
+        if column == self.sort_column:
+            self.sort_reverse = not self.sort_reverse
+        else:
+            self.sort_column = column
+            self.sort_reverse = column == "updated"
+        self.render_records()
+
+    def sorted_records(self, records: list[SiteRecord]) -> list[SiteRecord]:
+        if self.sort_column == "updated":
+            return sorted(records, key=lambda record: record.last_modified, reverse=self.sort_reverse)
+        if self.sort_column == "site_name":
+            return sorted(records, key=lambda record: (record.site_name.lower(), record.folder_name.lower()), reverse=self.sort_reverse)
+        return sorted(records, key=lambda record: (record.folder_name.lower(), record.site_name.lower()), reverse=self.sort_reverse)
 
     def schedule_auto_reload(self) -> None:
         if self.auto_reload_job is not None:
@@ -580,9 +667,13 @@ class WebIndexApp:
 
     def apply_records(self, records: list[SiteRecord]) -> None:
         self.records = records
+        self.render_records()
+        self.status_var.set(UI_TEXT["status_loaded"].format(count=len(records), time=datetime.now().strftime("%Y-%m-%d %H:%M")))
+
+    def render_records(self) -> None:
         self.record_by_iid.clear()
         self.tree.delete(*self.tree.get_children())
-        for index, record in enumerate(records):
+        for index, record in enumerate(self.sorted_records(self.records)):
             iid = str(index)
             self.record_by_iid[iid] = record
             self.tree.insert(
@@ -590,6 +681,7 @@ class WebIndexApp:
                 "end",
                 iid=iid,
                 values=(
+                    record.folder_name,
                     record.site_name,
                     record.url or UI_TEXT["value_unset"],
                     record.github_url or UI_TEXT["value_unset"],
@@ -597,7 +689,6 @@ class WebIndexApp:
                     record.updated_text(),
                 ),
             )
-        self.status_var.set(UI_TEXT["status_loaded"].format(count=len(records), time=datetime.now().strftime("%Y-%m-%d %H:%M")))
 
     def selected_record(self) -> SiteRecord | None:
         selection = self.tree.selection()
@@ -614,11 +705,13 @@ class WebIndexApp:
         record = self.record_by_iid.get(row_id)
         if record is None:
             return
-        if column_id == "#2":
-            self.open_url(record.url)
+        if column_id == "#1":
+            self.open_folder(record.folder_path)
         elif column_id == "#3":
-            self.open_url(record.github_url)
+            self.open_url(record.url)
         elif column_id == "#4":
+            self.open_url(record.github_url)
+        elif column_id == "#5":
             self.open_path(record.readme_path)
 
     def open_selected_url(self, _event=None) -> None:
@@ -644,6 +737,18 @@ class WebIndexApp:
             open_path_external(path)
         except Exception as exc:
             messagebox.showerror(UI_TEXT["dialog_error_title"], UI_TEXT["dialog_open_error"].format(target=path, error=exc), parent=self.root)
+
+    def open_folder(self, path: Path) -> None:
+        if not path.exists():
+            self.status_var.set(UI_TEXT["status_folder_missing"].format(path=path))
+            return
+        try:
+            if open_path_external(path):
+                self.status_var.set(UI_TEXT["status_folder_opened"].format(folder=path.name))
+            else:
+                self.status_var.set(UI_TEXT["status_folder_missing"].format(path=path))
+        except Exception:
+            self.status_var.set(UI_TEXT["status_folder_missing"].format(path=path))
 
 
 def records_to_payload(records: list[SiteRecord], root_path: Path) -> dict[str, object]:

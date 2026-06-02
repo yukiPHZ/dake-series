@@ -15,6 +15,7 @@ DAKE Web Index は、サイト群を俯瞰するための静かな索引です�
 
 ## 表示項目
 
+- フォルダ名
 - サイト名
 - URL
 - GitHub
@@ -42,7 +43,7 @@ C:\Users\yukiz\devlop
 
 各サイトフォルダの `README.md` を正本として読み、`DAKE_WEB_META` を収集します。`DAKE_WEB_META` は README 内の `## DAKE_WEB_META` セクション、または同名ファイルから読み取れます。
 
-取得する値は、サイト名、URL、GitHub URL、README パス、最終更新日のみです。
+取得する値は、フォルダ名、サイト名、URL、GitHub URL、README パス、最終更新日のみです。
 
 ## UI方針
 
@@ -68,6 +69,8 @@ python main.py --qpsc-reload
 
 - 再読込
 - 5分ごとの裏側自動更新
+- フォルダ名列をダブルクリックしてローカルフォルダを開く
+- フォルダ名、サイト名、最終更新日のヘッダークリックで並び替える
 - URL列をダブルクリックしてURLを開く
 - GitHub列をダブルクリックしてGitHubを開く
 - README列をダブルクリックしてREADMEを開く
@@ -99,7 +102,7 @@ python main.py --open-check
   "launcher_description": "README正本からWebサイト索引を自動生成します。",
   "site_title": "",
   "site_description": "",
-  "update_summary": "GitHub URL補完の外部コマンドを非表示化し、5分ごとの裏側自動更新を追加しました。",
+  "update_summary": "フォルダ名列、ヘッダー並び替え、静かなスクロール表示を追加しました。",
   "folder_name": "DAKE_Web_Index",
   "exe_name": "DakeWeb_Index.exe",
   "release_url": "",
