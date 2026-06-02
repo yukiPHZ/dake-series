@@ -16,10 +16,9 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-import webbrowser
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from tkinter import BOTH, DISABLED, END, NORMAL, Canvas, Entry, Frame, Label, StringVar, Tk, messagebox, ttk
+from tkinter import BOTH, DISABLED, NORMAL, Canvas, Entry, Frame, Label, StringVar, Tk, messagebox, ttk
 
 
 UI_TEXT = {
@@ -40,13 +39,14 @@ UI_TEXT = {
     "never": "未実行",
     "button_sync": "今すぐ同期",
     "button_open_obsidian": "Obsidianを開く",
+    "button_open_inbox": "INBOXを開く",
     "button_open_notes": "NOTESを開く",
     "button_open_articles": "ARTICLESを開く",
     "button_save_settings": "設定保存",
     "label_token": "Slack Bot Token",
     "label_channel": "Slack Channel ID",
     "label_root": "PEAKHEADZ_ROOT",
-    "label_obsidian": "Obsidian起動パス",
+    "label_obsidian": "Obsidian実行ファイル",
     "label_interval": "同期間隔（秒）",
     "settings_saved": "設定を保存しました。",
     "missing_slack": "Slack Bot Token と Slack Channel ID を設定してください。",
@@ -97,6 +97,7 @@ class AppConfig:
     sync_interval_seconds: int = 300
     slack_last_ts: str = ""
     last_synced_at: str = ""
+    last_sync_count: int = 0
     today_sync_date: str = ""
     today_sync_count: int = 0
 
@@ -124,6 +125,7 @@ class ConfigStore:
             if key in data:
                 setattr(base, key, data[key])
         base.sync_interval_seconds = normalize_interval(base.sync_interval_seconds)
+        base.last_sync_count = safe_int(base.last_sync_count, 0)
         base.today_sync_count = safe_int(base.today_sync_count, 0)
         return base
 
@@ -325,8 +327,26 @@ class WindowsTrayIcon:
         kernel32 = ctypes.windll.kernel32
         kernel32.GetModuleHandleW.restype = ctypes.c_void_p
         user32.CreateWindowExW.restype = ctypes.c_void_p
+        user32.CreateWindowExW.argtypes = [
+            ctypes.wintypes.DWORD,
+            ctypes.wintypes.LPCWSTR,
+            ctypes.wintypes.LPCWSTR,
+            ctypes.wintypes.DWORD,
+            ctypes.c_int,
+            ctypes.c_int,
+            ctypes.c_int,
+            ctypes.c_int,
+            ctypes.c_void_p,
+            ctypes.c_void_p,
+            ctypes.c_void_p,
+            ctypes.c_void_p,
+        ]
+        user32.DefWindowProcW.restype = ctypes.c_ssize_t
+        user32.DefWindowProcW.argtypes = [ctypes.c_void_p, ctypes.c_uint, ctypes.c_size_t, ctypes.c_size_t]
+        user32.RegisterClassW.restype = ctypes.c_ushort
+        user32.TrackPopupMenu.restype = ctypes.c_uint
 
-        WNDPROC = ctypes.WINFUNCTYPE(ctypes.c_longlong, ctypes.c_void_p, ctypes.c_uint, ctypes.c_size_t, ctypes.c_ssize_t)
+        WNDPROC = ctypes.WINFUNCTYPE(ctypes.c_ssize_t, ctypes.c_void_p, ctypes.c_uint, ctypes.c_size_t, ctypes.c_size_t)
 
         class WNDCLASS(ctypes.Structure):
             _fields_ = [
@@ -413,7 +433,7 @@ class WindowsTrayIcon:
         icon_handle = None
         icon_path = app_icon_path()
         if icon_path:
-            icon_handle = user32.LoadImageW(None, str(icon_path), 1, 0, 0, 0x00000010)
+            icon_handle = user32.LoadImageW(None, str(icon_path), 1, 0, 0, 0x00000010 | 0x00000040)
         if not icon_handle:
             icon_handle = user32.LoadIconW(None, 32512)
         data = NOTIFYICONDATA()
@@ -464,13 +484,19 @@ class StarField:
         self.count = count
         self.items: list[tuple[int, float, float]] = []
         self.running = True
+        self.resize_after_id: str | None = None
+        self.canvas.bind("<Configure>", self._on_resize, add="+")
         self._create_stars()
         self._tick()
 
     def _create_stars(self) -> None:
+        self.resize_after_id = None
         self.canvas.update_idletasks()
         width = max(self.canvas.winfo_width(), 920)
         height = max(self.canvas.winfo_height(), 620)
+        for item, _phase, _speed in self.items:
+            self.canvas.delete(item)
+        self.items.clear()
         for _index in range(self.count):
             x = random.randint(12, width - 12)
             y = random.randint(12, height - 12)
@@ -479,6 +505,11 @@ class StarField:
             speed = random.uniform(0.25, 0.55)
             item = self.canvas.create_oval(x, y, x + size, y + size, fill="#53667f", outline="")
             self.items.append((item, phase, speed))
+
+    def _on_resize(self, _event) -> None:
+        if self.resize_after_id:
+            self.canvas.after_cancel(self.resize_after_id)
+        self.resize_after_id = self.canvas.after(350, self._create_stars)
 
     def _tick(self) -> None:
         if not self.running:
@@ -510,7 +541,7 @@ class NoteInboxApp:
 
     def _setup_window(self) -> None:
         self.root.title(UI_TEXT["window_title"])
-        self.root.geometry("760x560")
+        self.root.geometry("980x720")
         self.root.minsize(680, 500)
         icon_path = app_icon_path()
         if icon_path:
@@ -521,6 +552,13 @@ class NoteInboxApp:
         self.root.configure(bg=COLORS["bg"])
         self.root.protocol("WM_DELETE_WINDOW", self.hide_to_tray)
         self.root.bind("<Unmap>", self._on_unmap)
+        self.root.after(80, self._maximize_window)
+
+    def _maximize_window(self) -> None:
+        try:
+            self.root.state("zoomed")
+        except Exception:
+            self.root.attributes("-zoomed", True)
 
     def _build_ui(self) -> None:
         style = ttk.Style()
@@ -533,14 +571,20 @@ class NoteInboxApp:
         StarField(canvas)
 
         frame = Frame(canvas, bg=COLORS["bg"])
-        window = canvas.create_window(0, 0, anchor="nw", window=frame)
-        canvas.bind("<Configure>", lambda event: canvas.itemconfigure(window, width=event.width, height=event.height))
+        window = canvas.create_window(0, 18, anchor="n", window=frame)
+
+        def resize_content(event) -> None:
+            content_width = min(max(event.width - 72, 680), 980)
+            canvas.itemconfigure(window, width=content_width)
+            canvas.coords(window, event.width / 2, 18)
+
+        canvas.bind("<Configure>", resize_content, add="+")
 
         title = Label(frame, text=UI_TEXT["app_name"], bg=COLORS["bg"], fg=COLORS["text"], font=("Yu Gothic UI", 20, "bold"))
-        title.pack(anchor="w", padx=28, pady=(24, 8))
+        title.pack(anchor="center", pady=(24, 8))
 
         status_panel = Frame(frame, bg=COLORS["panel"], highlightbackground=COLORS["line"], highlightthickness=1)
-        status_panel.pack(fill="x", padx=28, pady=(8, 14))
+        status_panel.pack(fill="x", pady=(8, 14))
         Label(status_panel, text=UI_TEXT["section_status"], bg=COLORS["panel"], fg=COLORS["accent"], font=("Yu Gothic UI", 12, "bold")).pack(anchor="w", padx=18, pady=(14, 8))
 
         grid = Frame(status_panel, bg=COLORS["panel"])
@@ -560,14 +604,15 @@ class NoteInboxApp:
         grid.columnconfigure(1, weight=1)
 
         button_panel = Frame(frame, bg=COLORS["bg"])
-        button_panel.pack(fill="x", padx=28, pady=(0, 14))
+        button_panel.pack(anchor="center", pady=(0, 14))
         self._add_button(button_panel, UI_TEXT["button_sync"], self.sync_now, "Accent.TButton")
         self._add_button(button_panel, UI_TEXT["button_open_obsidian"], self.open_obsidian)
+        self._add_button(button_panel, UI_TEXT["button_open_inbox"], self.open_inbox)
         self._add_button(button_panel, UI_TEXT["button_open_notes"], self.open_notes)
         self._add_button(button_panel, UI_TEXT["button_open_articles"], self.open_articles)
 
         settings_panel = Frame(frame, bg=COLORS["panel"], highlightbackground=COLORS["line"], highlightthickness=1)
-        settings_panel.pack(fill="both", expand=True, padx=28, pady=(0, 24))
+        settings_panel.pack(fill="x", pady=(0, 24))
         Label(settings_panel, text=UI_TEXT["section_settings"], bg=COLORS["panel"], fg=COLORS["accent_2"], font=("Yu Gothic UI", 12, "bold")).pack(anchor="w", padx=18, pady=(14, 8))
 
         form = Frame(settings_panel, bg=COLORS["panel"])
@@ -580,7 +625,7 @@ class NoteInboxApp:
         form.columnconfigure(1, weight=1)
 
         save_row = Frame(settings_panel, bg=COLORS["panel"])
-        save_row.pack(fill="x", padx=18, pady=(0, 16))
+        save_row.pack(anchor="center", pady=(0, 16))
         self._add_button(save_row, UI_TEXT["button_save_settings"], self.save_settings, "Accent.TButton")
 
     def _add_button(self, parent: Frame, text: str, command, style_name: str = "TButton") -> None:
@@ -612,7 +657,7 @@ class NoteInboxApp:
         connected = UI_TEXT["connected"] if self.config.slack_bot_token and self.config.slack_channel_id else UI_TEXT["not_connected"]
         self.status_vars["slack_status"].set(connected)
         self.status_vars["last_synced_at"].set(self.config.last_synced_at or UI_TEXT["never"])
-        self.status_vars["sync_count"].set(str(self.config.today_sync_count))
+        self.status_vars["sync_count"].set(str(self.config.last_sync_count))
         self.status_vars["today_count"].set(str(self.config.today_sync_count))
         self.status_vars["save_to"].set(str(target_inbox(self.config.peakheadz_root)))
 
@@ -629,7 +674,7 @@ class NoteInboxApp:
 
     def show_window(self) -> None:
         self.root.deiconify()
-        self.root.state("normal")
+        self._maximize_window()
         self.root.lift()
         self.root.focus_force()
 
@@ -652,19 +697,21 @@ class NoteInboxApp:
         self._schedule_auto_sync()
         messagebox.showinfo(UI_TEXT["app_name"], UI_TEXT["settings_saved"])
 
-    def sync_now(self) -> None:
+    def sync_now(self, show_dialog: bool = True) -> None:
         self.save_settings_without_dialog()
         if not self.config.slack_bot_token or not self.config.slack_channel_id:
-            messagebox.showwarning(UI_TEXT["app_name"], UI_TEXT["missing_slack"])
+            if show_dialog:
+                messagebox.showwarning(UI_TEXT["app_name"], UI_TEXT["missing_slack"])
             return
         if not self.config.peakheadz_root:
-            messagebox.showwarning(UI_TEXT["app_name"], UI_TEXT["missing_root"])
+            if show_dialog:
+                messagebox.showwarning(UI_TEXT["app_name"], UI_TEXT["missing_root"])
             return
         if not self.sync_lock.acquire(blocking=False):
             return
         self.status_vars["slack_status"].set(UI_TEXT["syncing"])
         self._set_buttons(DISABLED)
-        threading.Thread(target=self._sync_worker, name="note-inbox-sync", daemon=True).start()
+        threading.Thread(target=self._sync_worker, args=(show_dialog,), name="note-inbox-sync", daemon=True).start()
 
     def save_settings_without_dialog(self) -> None:
         self.config.slack_bot_token = self.entry_vars["slack_bot_token"].get().strip()
@@ -674,7 +721,7 @@ class NoteInboxApp:
         self.config.sync_interval_seconds = normalize_interval(self.entry_vars["sync_interval_seconds"].get().strip())
         self.store.save(self.config)
 
-    def _sync_worker(self) -> None:
+    def _sync_worker(self, show_dialog: bool) -> None:
         try:
             messages = fetch_slack_messages(self.config)
             saved_paths: list[Path] = []
@@ -686,24 +733,27 @@ class NoteInboxApp:
             if self.config.today_sync_date != today_key():
                 self.config.today_sync_date = today_key()
                 self.config.today_sync_count = 0
+            self.config.last_sync_count = len(saved_paths)
             self.config.today_sync_count += len(saved_paths)
             self.config.last_synced_at = now
             self.store.save(self.config)
-            self.root.after(0, lambda: self._sync_complete(len(saved_paths), None))
+            self.root.after(0, lambda: self._sync_complete(len(saved_paths), None, show_dialog))
         except Exception as exc:
-            self.root.after(0, lambda: self._sync_complete(0, str(exc)))
+            self.root.after(0, lambda: self._sync_complete(0, str(exc), show_dialog))
         finally:
             self.sync_lock.release()
 
-    def _sync_complete(self, count: int, error: str | None) -> None:
+    def _sync_complete(self, count: int, error: str | None, show_dialog: bool) -> None:
         self._set_buttons(NORMAL)
         if error:
             self.status_vars["slack_status"].set(UI_TEXT["failed"])
-            messagebox.showerror(UI_TEXT["app_name"], f"{UI_TEXT['soft_error']}\n{error}")
+            if show_dialog:
+                messagebox.showerror(UI_TEXT["app_name"], f"{UI_TEXT['soft_error']}\n{error}")
         else:
             self.status_vars["slack_status"].set(UI_TEXT["connected"])
             message = UI_TEXT["sync_done"].format(count=count) if count else UI_TEXT["sync_none"]
-            messagebox.showinfo(UI_TEXT["app_name"], message)
+            if show_dialog:
+                messagebox.showinfo(UI_TEXT["app_name"], message)
         self._refresh_status()
 
     def _schedule_auto_sync(self) -> None:
@@ -718,7 +768,7 @@ class NoteInboxApp:
     def _auto_sync(self) -> None:
         self.auto_sync_after_id = None
         if self.config.slack_bot_token and self.config.slack_channel_id:
-            self.sync_now()
+            self.sync_now(show_dialog=False)
         self._schedule_auto_sync()
 
     def open_obsidian(self) -> None:
@@ -728,13 +778,13 @@ class NoteInboxApp:
         try:
             if obsidian and obsidian.exists() and obsidian.is_file():
                 subprocess.Popen([str(obsidian), str(root_path)])
-            elif obsidian and obsidian.exists():
-                open_path(obsidian)
             else:
-                uri = "obsidian://open?path=" + urllib.parse.quote(str(root_path))
-                webbrowser.open(uri)
+                raise FileNotFoundError(str(obsidian or ""))
         except Exception:
             messagebox.showerror(UI_TEXT["app_name"], UI_TEXT["obsidian_failed"])
+
+    def open_inbox(self) -> None:
+        self._open_root_child("INBOX")
 
     def open_notes(self) -> None:
         self._open_root_child("NOTES")
