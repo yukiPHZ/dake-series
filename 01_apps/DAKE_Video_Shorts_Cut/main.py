@@ -76,8 +76,8 @@ UI_TEXT = {
     "result_transcript_missing": "未作成",
     "result_score": "score",
     "recommend_waiting": "おすすめ: 未作成",
-    "recommend_template": "おすすめ: 候補 {number}（{score}点） / {method}",
-    "recommend_card_template": "おすすめ：候補{number}（{score}点） / {method}\nタイトル案：{title}\nサムネ文言：{thumbnail_text}\n理由：{reason}",
+    "recommend_template": "おすすめ: 候補 {number}（{score}点） {clip_range} / {method}",
+    "recommend_card_template": "おすすめ：候補{number}（{score}点） {clip_range} / {method}\nタイトル案：{title}\nサムネ文言：{thumbnail_text}\n理由：{reason}",
     "display_mode_full": "全体表示（おすすめ）",
     "checkbox_transcribe": "ショートごとに文字起こし",
     "checkbox_ollama_review": "Ollamaで候補評価",
@@ -120,6 +120,7 @@ UI_TEXT = {
     "mobile_recommend_section": "おすすめ候補",
     "mobile_development_section": "開発用ファイル",
     "mobile_score": "score",
+    "mobile_clip_range": "切り出し位置",
     "mobile_thumbnail_text": "サムネ文言",
     "mobile_reason": "理由",
     "mobile_empty": "ファイルが見つかりません。",
@@ -240,11 +241,17 @@ class CandidateReview:
     thumbnail_text: str
     reason: str
     transcript_file: str
+    start: float = 0.0
+    end: float = 0.0
+    start_text: str = ""
+    end_text: str = ""
 
 
 @dataclass
 class GeneratedCandidate:
     index: int
+    start: float
+    duration: float
     short_path: Path
     thumb_path: Path
     title_path: Path
@@ -253,6 +260,10 @@ class GeneratedCandidate:
     segments_path: Path
     review: CandidateReview | None = None
     transcript_error: str = ""
+
+    @property
+    def end(self) -> float:
+        return self.start + self.duration
 
 
 @dataclass(frozen=True)
@@ -342,7 +353,9 @@ def get_common_icon_candidates() -> list[Path]:
     return [
         source / COMMON_ICON_RELATIVE,
         base / COMMON_ICON_RELATIVE,
+        base.parent / COMMON_ICON_RELATIVE,
         base.parent.parent / "02_assets" / "dake_icon.ico",
+        base.parent.parent.parent / "02_assets" / "dake_icon.ico",
         base / "dake_icon.ico",
     ]
 
@@ -388,6 +401,19 @@ def format_timestamp(seconds: float) -> str:
     if hours <= 0:
         return f"{minutes:02d}:{remain:02d}"
     return f"{hours:02d}:{minutes:02d}:{remain:02d}"
+
+
+def format_timeline_timestamp(seconds: float) -> str:
+    seconds = max(0.0, seconds)
+    total_seconds = int(seconds)
+    hours = total_seconds // 3600
+    minutes = (total_seconds % 3600) // 60
+    remain = total_seconds % 60
+    return f"{hours:02d}:{minutes:02d}:{remain:02d}"
+
+
+def format_clip_range(start: float, end: float) -> str:
+    return f"{format_timestamp(start)}〜{format_timestamp(end)}"
 
 
 def parse_fps(value: str) -> float:
@@ -488,6 +514,35 @@ def probe_video(input_path: Path, ffprobe_path: str) -> VideoInfo:
     return VideoInfo(duration=duration, width=width, height=height, fps=fps, has_audio=audio_stream is not None)
 
 
+def plan_clip_starts(duration_sec: float, clip_count: int = SHORT_COUNT, clip_length: int = 60) -> list[float]:
+    if duration_sec <= 0 or clip_count <= 0:
+        return []
+    duration = float(duration_sec)
+    clip_duration = min(max(1.0, float(clip_length)), duration)
+    max_start = max(0.0, duration - clip_duration)
+    if max_start <= 0:
+        return [0.0 for _ in range(clip_count)]
+
+    if duration >= clip_duration + 180.0:
+        safe_start = min(60.0, max_start)
+        safe_end = max(safe_start, max_start - min(60.0, max_start))
+    else:
+        safe_start = 0.0
+        safe_end = max_start
+
+    if safe_end <= safe_start:
+        safe_start = 0.0
+        safe_end = max_start
+
+    if clip_count == 1:
+        return [round((safe_start + safe_end) / 2, 3)]
+
+    span = safe_end - safe_start
+    fractions = [0.1 + (0.7 * index / (clip_count - 1)) for index in range(clip_count)]
+    starts = [safe_start + span * fraction for fraction in fractions]
+    return [round(min(max(start, 0.0), max_start), 3) for start in starts]
+
+
 def build_segments(duration: float) -> list[ShortSegment]:
     if duration <= 0:
         return []
@@ -497,12 +552,11 @@ def build_segments(duration: float) -> list[ShortSegment]:
     else:
         clip_duration = max(1.0, third)
     clip_duration = min(clip_duration, duration)
-    max_start = max(0.0, duration - clip_duration)
-    segments: list[ShortSegment] = []
-    for index in range(SHORT_COUNT):
-        start = min(index * third, max_start)
-        segments.append(ShortSegment(index=index + 1, start=start, duration=clip_duration))
-    return segments
+    starts = plan_clip_starts(duration, SHORT_COUNT, int(round(clip_duration)))
+    return [
+        ShortSegment(index=index + 1, start=start, duration=clip_duration)
+        for index, start in enumerate(starts[:SHORT_COUNT])
+    ]
 
 
 def create_output_dir(input_path: Path, now: datetime | None = None) -> Path:
@@ -806,6 +860,10 @@ def evaluate_candidate(candidate: GeneratedCandidate) -> CandidateReview:
         thumbnail_text=pick_short_phrase(text, fallback),
         reason=build_review_reason(length, keyword_hits, strong_hits, score),
         transcript_file=candidate.transcript_path.name,
+        start=candidate.start,
+        end=candidate.end,
+        start_text=format_timeline_timestamp(candidate.start),
+        end_text=format_timeline_timestamp(candidate.end),
     )
 
 
@@ -818,7 +876,30 @@ def review_to_dict(review: CandidateReview) -> dict[str, object]:
         "thumbnail_text_file": thumb_text_name(review.candidate),
         "reason": review.reason,
         "transcript_file": review.transcript_file,
+        "start": round(review.start, 3),
+        "end": round(review.end, 3),
+        "start_text": review.start_text,
+        "end_text": review.end_text,
     }
+
+
+def review_clip_range(review: CandidateReview) -> str:
+    return format_clip_range(review.start, review.end)
+
+
+def review_dict_clip_range(review: dict[str, object]) -> str:
+    start_text = str(review.get("start_text") or "").strip()
+    end_text = str(review.get("end_text") or "").strip()
+    if start_text and end_text:
+        return f"{start_text}〜{end_text}"
+    try:
+        start = float(review.get("start", 0.0) or 0.0)
+        end = float(review.get("end", 0.0) or 0.0)
+    except (TypeError, ValueError):
+        return ""
+    if end <= 0:
+        return ""
+    return format_clip_range(start, end)
 
 
 def review_method_label(method: str) -> str:
@@ -845,7 +926,7 @@ def build_ollama_review_prompt(candidates: list[GeneratedCandidate]) -> str:
     blocks: list[str] = []
     for candidate in candidates:
         text = read_candidate_transcript(candidate) or "（文字起こしなし）"
-        blocks.append(f"候補{candidate.index}:\n{text[:4000]}")
+        blocks.append(f"候補{candidate.index}（{format_clip_range(candidate.start, candidate.end)}）:\n{text[:4000]}")
     return """あなたは「ユキズ稼働中」向けのショート動画候補を選ぶ編集者です。
 以下の3候補を、ショート動画として切り出す価値で評価してください。
 
@@ -960,6 +1041,10 @@ def parse_ollama_reviews(payload: dict[str, object], candidates: list[GeneratedC
             thumbnail_text=thumbnail_text or local.thumbnail_text,
             reason=reason or local.reason,
             transcript_file=candidate.transcript_path.name,
+            start=candidate.start,
+            end=candidate.end,
+            start_text=format_timeline_timestamp(candidate.start),
+            end_text=format_timeline_timestamp(candidate.end),
         )
         reviews.append(review)
 
@@ -1059,7 +1144,7 @@ def write_review_files(
             "\n".join(
                 [
                     f"{UI_TEXT['review_method_label']}：{method_label}",
-                    f"おすすめ：候補{best_candidate}（{best_score}点）",
+                    f"おすすめ：候補{best_candidate}（{best_score}点） {review_clip_range(best_review) if best_review else ''}",
                 ]
             )
         )
@@ -1069,7 +1154,7 @@ def write_review_files(
         text_blocks.append(
             "\n".join(
                 [
-                    f"候補{review.candidate}：{review.score}点",
+                    f"候補{review.candidate}：{review.score}点 {review_clip_range(review)}",
                     f"タイトル案：{review.title}",
                     f"サムネ文言：{review.thumbnail_text}",
                     f"理由：{review.reason}",
@@ -1205,12 +1290,23 @@ def mobile_text_preview(item: Path, label: str) -> str:
 
 
 def review_summary_html(review: dict[str, object]) -> str:
+    clip_range = review_dict_clip_range(review)
+    clip_html = ""
+    if clip_range:
+        clip_html = (
+            "<p>"
+            + html.escape(UI_TEXT["mobile_clip_range"])
+            + ": "
+            + html.escape(clip_range)
+            + "</p>"
+        )
     return (
         "<div class=\"review-summary\">"
         + "<p><strong>"
         + html.escape(UI_TEXT["mobile_score"])
         + f": {html.escape(str(review.get('score', '')))}"
         + "</strong></p>"
+        + clip_html
         + "<p>"
         + html.escape(UI_TEXT["mobile_title_preview"])
         + ": "
@@ -1554,6 +1650,8 @@ def process_video(
         candidates.append(
             GeneratedCandidate(
                 index=segment.index,
+                start=segment.start,
+                duration=segment.duration,
                 short_path=short_path,
                 thumb_path=output_dir / f"thumb_{segment.index:02d}.jpg",
                 title_path=output_dir / f"title_{segment.index:02d}.txt",
@@ -1642,6 +1740,7 @@ class DakeVideoShortsCutApp:
         self.result: ProcessResult | None = None
         self.busy = False
         self.qr_photo = None
+        self.window_icon_photo = None
         self.footer_compact: bool | None = None
         self.app_config = load_app_config()
 
@@ -2079,11 +2178,31 @@ class DakeVideoShortsCutApp:
                 resolved = icon_path
             if not resolved.exists():
                 continue
+            applied = False
             try:
                 self.root.iconbitmap(str(resolved))
+                applied = True
             except tk.TclError:
                 pass
-            return
+            try:
+                photo = tk.PhotoImage(file=str(resolved), master=self.root)
+                self.root.iconphoto(True, photo)
+                self.window_icon_photo = photo
+                applied = True
+            except tk.TclError:
+                try:
+                    from PIL import Image, ImageTk
+
+                    with Image.open(resolved) as image:
+                        image = image.convert("RGBA")
+                        photo = ImageTk.PhotoImage(image, master=self.root)
+                    self.root.iconphoto(True, photo)
+                    self.window_icon_photo = photo
+                    applied = True
+                except Exception:
+                    pass
+            if applied:
+                return
 
     def _register_drop_targets(self) -> None:
         if DND_FILES is None:
@@ -2257,6 +2376,7 @@ class DakeVideoShortsCutApp:
                 UI_TEXT["recommend_card_template"].format(
                     number=best.candidate,
                     score=best.score,
+                    clip_range=review_clip_range(best),
                     method=review_method_label(method),
                     title=best.title,
                     thumbnail_text=best.thumbnail_text,
@@ -2266,6 +2386,7 @@ class DakeVideoShortsCutApp:
         for index, candidate in enumerate(result.candidates):
             score = candidate.review.score if candidate.review is not None else "--"
             values = [
+                format_clip_range(candidate.start, candidate.end),
                 f"{UI_TEXT['result_score']}: {score}",
                 f"{UI_TEXT['result_short']}: {self._exists_text(candidate.short_path)}",
                 f"{UI_TEXT['result_thumb']}: {self._exists_text(candidate.thumb_path)}",
@@ -2355,6 +2476,12 @@ def run_launch_check() -> int:
     short_segments = build_segments(30.0)
     if len(short_segments) != SHORT_COUNT or any(segment.duration <= 0 for segment in short_segments):
         raise RuntimeError("short segment fixture failed")
+    spread_segments = build_segments(2500.0)
+    spread_starts = [segment.start for segment in spread_segments]
+    if len(spread_starts) != SHORT_COUNT or not (250 <= spread_starts[0] <= 330 and 1050 <= spread_starts[1] <= 1150 and 1850 <= spread_starts[2] <= 2000):
+        raise RuntimeError("clip start planning fixture failed")
+    if len({round(start) for start in spread_starts}) != SHORT_COUNT:
+        raise RuntimeError("clip start spacing fixture failed")
     if "gblur" not in full_display_video_filter() or "force_original_aspect_ratio=decrease" not in full_display_video_filter():
         raise RuntimeError("full display filter fixture failed")
     if "crop=1080:1920" not in crop_video_filter():
@@ -2365,6 +2492,8 @@ def run_launch_check() -> int:
         for index in range(1, SHORT_COUNT + 1):
             candidate = GeneratedCandidate(
                 index=index,
+                start=float(index * 60),
+                duration=60.0,
                 short_path=output_dir / f"short_{index:02d}.mp4",
                 thumb_path=output_dir / f"thumb_{index:02d}.jpg",
                 title_path=output_dir / f"title_{index:02d}.txt",
@@ -2401,11 +2530,16 @@ def run_launch_check() -> int:
         review = write_review_files(output_dir, candidates)
         if not review.text_path.exists() or not review.json_path.exists() or not get_best_review(candidates):
             raise RuntimeError("review fixture failed")
+        if not all(candidate.review and candidate.review.start_text for candidate in candidates):
+            raise RuntimeError("review timing fixture failed")
         if not all(candidate.thumb_text_path.exists() for candidate in candidates):
             raise RuntimeError("thumb text fixture failed")
         review_payload = load_review_payload(output_dir)
         if review_payload.get("review_method") != "local" or "reviews" not in review_payload:
             raise RuntimeError("review payload fixture failed")
+        review_dicts = load_review_dicts(output_dir)
+        if not review_dicts or "start_text" not in review_dicts[0] or "end_text" not in review_dicts[0]:
+            raise RuntimeError("review timing payload fixture failed")
         page = build_transfer_html(output_dir)
         if (
             "short_01.mp4" not in page
@@ -2413,6 +2547,7 @@ def run_launch_check() -> int:
             or short_transcript_text_name(1) not in page
             or REVIEW_TEXT_FILE not in page
             or UI_TEXT["review_method_label"] not in page
+            or UI_TEXT["mobile_clip_range"] not in page
             or UI_TEXT["mobile_recommend_section"] not in page
             or UI_TEXT["mobile_development_section"] not in page
             or UI_TEXT["mobile_score"] not in page
@@ -2480,6 +2615,7 @@ def run_process_check(
             print("transfer_review=False")
             print("transfer_thumb_text=False")
         for candidate in result.candidates:
+            print(f"clip_{candidate.index}_range={format_clip_range(candidate.start, candidate.end)}")
             print(candidate.short_path.name, candidate.short_path.exists())
             print(candidate.thumb_path.name, candidate.thumb_path.exists())
             print(candidate.title_path.name, candidate.title_path.exists())
