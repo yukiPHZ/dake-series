@@ -12,6 +12,7 @@ YouTube URL取得や投稿機能は持たせず、MP4を入れてショート候
 - 9:16 / 1080x1920 のMP4を出力
 - サムネ画像とタイトル案テキストを出力
 - `ショートごとに文字起こし` をONにすると、生成したショート候補ごとの文字起こしを出力
+- ショート候補ごとに簡易評価を行い、使えそう度・タイトル案・サムネ文言案を出力
 - QRコードで同じWi-Fi内のスマホから保存できるページを表示
 
 ## 使い方
@@ -23,7 +24,7 @@ YouTube URL取得や投稿機能は持たせず、MP4を入れてショート候
 5. 生成後、保存先フォルダとQRコードを確認
 6. スマホでQRコードを読み取り、ブラウザから必要なファイルを保存
 
-出力フォルダは入力動画と同じ階層に作成されます。
+出力フォルダは入力動画と同じ階層に作成されます。入力動画が `dake_shorts_output_...` フォルダ内にある場合は、出力フォルダの入れ子を避けるため一段上に作成します。
 
 ```text
 dake_shorts_output_YYYYMMDD_HHMMSS/
@@ -42,6 +43,8 @@ dake_shorts_output_YYYYMMDD_HHMMSS/
   short_02_segments.json
   short_03_transcript.txt
   short_03_segments.json
+  shorts_review.txt
+  shorts_review.json
 ```
 
 ## 文字起こし
@@ -53,8 +56,19 @@ v0.3では、長尺元動画全体ではなく、生成したショート動画�
 - 初回実行時や音声の長いショートでは時間がかかります。
 - 文字起こしには `faster-whisper` が必要です。
 - 環境により `faster-whisper` の導入やモデル取得ができない場合があります。その場合でもショート動画・サムネ・タイトル案の生成は継続します。
-- 候補ごとの文字起こしは、今後Ollama/OpenAIで候補評価するための前段階です。
-- v0.3では熱量判定、OpenAI API判定、Ollama判定は未実装です。
+- 候補ごとの文字起こしは、簡易評価と今後のOllama/OpenAI評価に使います。
+
+## 候補評価
+
+v0.4では、生成したショート候補ごとにローカルのルールベース評価を行います。
+
+- `short_01_transcript.txt` などを読み、0〜100点の使えそう度を付けます。
+- `shorts_review.txt` と `shorts_review.json` を出力します。
+- `title_01.txt` 〜 `title_03.txt` は評価結果のタイトル案で更新されます。
+- QR転送ページにも候補ごとの score / title / thumbnail_text / reason を表示します。
+- v0.4はルールベース評価です。
+- Ollama/OpenAIによる高精度判定は次工程です。
+- 熱量判定、OpenAI API判定、Ollama判定は未実装です。
 
 ## 必要なもの
 
@@ -125,7 +139,7 @@ python main.py --process-check "C:\path\to\sample.mp4"
   "launcher_description": "MP4からショート候補とサムネを作成します。",
   "site_title": "Dakeショート切り出し",
   "site_description": "MP4を入れるだけで、ショート動画候補・サムネ・タイトル案を作成します。",
-  "update_summary": "生成したショート候補ごとに文字起こしを出力できるように更新",
+  "update_summary": "生成したショート候補ごとに使えそう度・タイトル案・サムネ文言案を出力できるように更新",
   "folder_name": "DAKE_Video_Shorts_Cut",
   "exe_name": "DakeVideo_Shorts_Cut.exe",
   "release_url": "",

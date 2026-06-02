@@ -7,6 +7,7 @@ import json
 import mimetypes
 import os
 import queue
+import re
 import shutil
 import socket
 import subprocess
@@ -58,6 +59,8 @@ UI_TEXT = {
     "status_transcript_done": "文字起こしを作成しました",
     "status_transcript_skipped": "文字起こしはスキップしました",
     "status_transcript_failed": "文字起こしに失敗しました",
+    "status_reviewing": "候補を評価しています",
+    "status_review_done": "候補評価を作成しました",
     "status_preparing_transfer": "スマホ転送を準備しています",
     "status_complete": "完了しました",
     "status_error": "エラーが発生しました",
@@ -69,6 +72,9 @@ UI_TEXT = {
     "result_title_file": "title",
     "result_transcript": "transcript",
     "result_transcript_missing": "未作成",
+    "result_score": "score",
+    "recommend_waiting": "おすすめ: 未作成",
+    "recommend_template": "おすすめ: 候補 {number}（{score}点）",
     "checkbox_transcribe": "ショートごとに文字起こし",
     "result_exists": "あり",
     "result_missing": "なし",
@@ -100,6 +106,10 @@ UI_TEXT = {
     "mobile_description": "PCで作成したショート動画・サムネ・タイトル案を保存できます。",
     "mobile_download": "ダウンロード",
     "mobile_title_preview": "タイトル案",
+    "mobile_review_section": "候補評価",
+    "mobile_score": "score",
+    "mobile_thumbnail_text": "サムネ文言",
+    "mobile_reason": "理由",
     "mobile_empty": "ファイルが見つかりません。",
     "footer_left": "シンプルそれDAKEシリーズ",
     "footer_tagline": "止まらない、迷わない、すぐ終わる。",
@@ -113,9 +123,11 @@ UI_TEXT = {
     "launch_check_segments": "segments=OK",
     "launch_check_html": "transfer_html=OK",
     "launch_check_transcript": "transcript_format=OK",
+    "launch_check_review": "review=OK",
     "launch_check_qr": "qr_dependency={status}",
     "process_check_done": "process-check OK: {output_dir}",
     "process_check_transcript": "transcript={status}",
+    "process_check_review": "review={status}",
 }
 
 THEME = {
@@ -144,6 +156,8 @@ WINDOW_SIZE = "940x820"
 WINDOW_MIN_SIZE = (820, 720)
 FONT_CANDIDATES = ("BIZ UDPGothic", "Yu Gothic UI", "Meiryo", "Segoe UI")
 OUTPUT_FOLDER_PREFIX = "dake_shorts_output"
+REVIEW_TEXT_FILE = "shorts_review.txt"
+REVIEW_JSON_FILE = "shorts_review.json"
 TRANSFER_START_PORT = 8765
 TRANSFER_PORT_SCAN = 80
 SHORT_COUNT = 3
@@ -155,6 +169,32 @@ WHISPER_MODEL_SIZE = "base"
 WHISPER_DEVICE = "cpu"
 WHISPER_COMPUTE_TYPE = "int8"
 WHISPER_LANGUAGE = "ja"
+REVIEW_KEYWORDS = (
+    "作る",
+    "AI",
+    "DAKE",
+    "稼働中",
+    "お金",
+    "遊び",
+    "人格",
+    "情報商材",
+    "いいね",
+    "これだ",
+)
+REVIEW_STRONG_WORDS = (
+    "いい",
+    "すごい",
+    "やばい",
+    "強い",
+    "大事",
+    "必要",
+    "本当",
+    "絶対",
+    "できる",
+    "したい",
+    "なりたい",
+    "なりたくない",
+)
 
 
 class UserFacingError(RuntimeError):
@@ -177,6 +217,16 @@ class ShortSegment:
     duration: float
 
 
+@dataclass(frozen=True)
+class CandidateReview:
+    candidate: int
+    score: int
+    title: str
+    thumbnail_text: str
+    reason: str
+    transcript_file: str
+
+
 @dataclass
 class GeneratedCandidate:
     index: int
@@ -185,6 +235,7 @@ class GeneratedCandidate:
     title_path: Path
     transcript_path: Path
     segments_path: Path
+    review: CandidateReview | None = None
     transcript_error: str = ""
 
 
@@ -195,11 +246,19 @@ class TranscriptOutput:
 
 
 @dataclass(frozen=True)
+class ReviewOutput:
+    text_path: Path
+    json_path: Path
+    reviews: list[CandidateReview]
+
+
+@dataclass(frozen=True)
 class ProcessResult:
     output_dir: Path
     video_info: VideoInfo
     candidates: list[GeneratedCandidate]
     transfer_url: str
+    review: ReviewOutput | None = None
     transcript_error: str = ""
 
 
@@ -380,14 +439,22 @@ def build_segments(duration: float) -> list[ShortSegment]:
 
 def create_output_dir(input_path: Path, now: datetime | None = None) -> Path:
     timestamp = (now or datetime.now()).strftime("%Y%m%d_%H%M%S")
-    base = input_path.parent / f"{OUTPUT_FOLDER_PREFIX}_{timestamp}"
+    output_parent = choose_output_parent(input_path)
+    base = output_parent / f"{OUTPUT_FOLDER_PREFIX}_{timestamp}"
     candidate = base
     serial = 2
     while candidate.exists():
-        candidate = input_path.parent / f"{OUTPUT_FOLDER_PREFIX}_{timestamp}_{serial:02d}"
+        candidate = output_parent / f"{OUTPUT_FOLDER_PREFIX}_{timestamp}_{serial:02d}"
         serial += 1
     candidate.mkdir(parents=True, exist_ok=False)
     return candidate
+
+
+def choose_output_parent(input_path: Path) -> Path:
+    parent = input_path.parent
+    while parent.name.startswith(OUTPUT_FOLDER_PREFIX) and parent.parent != parent:
+        parent = parent.parent
+    return parent
 
 
 def video_filter() -> str:
@@ -512,6 +579,193 @@ def transcribe_video(input_path: Path, text_path: Path, segments_path: Path) -> 
     return write_transcript_files(text_path, segments_path, transcript_segments)
 
 
+def clean_transcript_for_review(raw_text: str) -> str:
+    lines: list[str] = []
+    for line in raw_text.splitlines():
+        value = line.strip()
+        if not value:
+            continue
+        if value.startswith("[") and "]" in value:
+            continue
+        lines.append(value)
+    return " ".join(lines).strip()
+
+
+def read_candidate_transcript(candidate: GeneratedCandidate) -> str:
+    if not candidate.transcript_path.exists():
+        return ""
+    try:
+        return clean_transcript_for_review(candidate.transcript_path.read_text(encoding="utf-8"))
+    except OSError:
+        return ""
+
+
+def count_review_hits(text: str, words: tuple[str, ...]) -> list[str]:
+    lowered = text.casefold()
+    hits: list[str] = []
+    for word in words:
+        needle = word.casefold()
+        if needle in lowered:
+            hits.append(word)
+    return hits
+
+
+def clamp_score(value: int) -> int:
+    return max(0, min(100, value))
+
+
+def pick_short_phrase(text: str, fallback: str) -> str:
+    for word in ("これだ", "いいね", "人格", "お金", "AI", "DAKE", "作る", "遊び", "稼働中", "情報商材"):
+        if word.casefold() in text.casefold():
+            return word if len(word) <= 10 else word[:10]
+    parts = [part.strip() for part in re.split(r"[。！？!?\n]", text) if part.strip()]
+    for part in parts:
+        compact = re.sub(r"\s+", "", part)
+        if 4 <= len(compact) <= 14:
+            return compact
+    if text:
+        compact = re.sub(r"\s+", "", text)
+        return compact[:12] + ("…" if len(compact) > 12 else "")
+    return fallback
+
+
+def suggest_review_title(candidate: GeneratedCandidate, text: str) -> str:
+    lowered = text.casefold()
+    if "情報商材" in text:
+        return "情報商材にしない話"
+    if "人格" in text:
+        return "人格で伝わるショート"
+    if "お金" in text:
+        return "お金の話を切り出す"
+    if "ai" in lowered or "AI" in text:
+        return "AIで変えるショート"
+    if "dake" in lowered or "DAKE" in text:
+        return "DAKEらしさが出る候補"
+    if "作る" in text:
+        return "作る話のショート"
+    return UI_TEXT["title_candidate"].format(number=candidate.index)
+
+
+def build_review_reason(length: int, keyword_hits: list[str], strong_hits: list[str], score: int) -> str:
+    if length <= 0:
+        return "文字起こしが未作成または空のため、判断材料が少ない"
+    reasons: list[str] = []
+    if 35 <= length <= 220:
+        reasons.append("会話量があり、短く切り出しやすい")
+    elif length < 35:
+        reasons.append("文字量が少なく、単独では伝わりにくい")
+    else:
+        reasons.append("情報量が多めなので、さらに短く整える余地がある")
+    if keyword_hits:
+        reasons.append("使いやすい語が含まれる")
+    if strong_hits:
+        reasons.append("感情や断定のある言葉がある")
+    if score >= 75:
+        reasons.append("ショート候補として優先しやすい")
+    return "、".join(reasons)
+
+
+def evaluate_candidate(candidate: GeneratedCandidate) -> CandidateReview:
+    text = read_candidate_transcript(candidate)
+    length = len(re.sub(r"\s+", "", text))
+    keyword_hits = count_review_hits(text, REVIEW_KEYWORDS)
+    strong_hits = count_review_hits(text, REVIEW_STRONG_WORDS)
+
+    if length <= 0:
+        score = 5
+    elif length < 15:
+        score = 18
+    elif length < 35:
+        score = 38
+    elif length <= 140:
+        score = 55
+    elif length <= 260:
+        score = 48
+    else:
+        score = 34
+
+    score += min(30, len(keyword_hits) * 7)
+    score += min(20, len(strong_hits) * 5)
+    if re.search(r"[。！？!?]", text):
+        score += 4
+    if any(phrase in text for phrase in ("これだ", "いいね", "なりたくない", "実は")):
+        score += 8
+    if length > 320:
+        score -= 12
+    score = clamp_score(score)
+
+    fallback = UI_TEXT["title_candidate"].format(number=candidate.index)
+    return CandidateReview(
+        candidate=candidate.index,
+        score=score,
+        title=suggest_review_title(candidate, text),
+        thumbnail_text=pick_short_phrase(text, fallback),
+        reason=build_review_reason(length, keyword_hits, strong_hits, score),
+        transcript_file=candidate.transcript_path.name,
+    )
+
+
+def review_to_dict(review: CandidateReview) -> dict[str, object]:
+    return {
+        "candidate": review.candidate,
+        "score": review.score,
+        "title": review.title,
+        "thumbnail_text": review.thumbnail_text,
+        "reason": review.reason,
+        "transcript_file": review.transcript_file,
+    }
+
+
+def write_review_files(output_dir: Path, candidates: list[GeneratedCandidate]) -> ReviewOutput:
+    reviews: list[CandidateReview] = []
+    for candidate in candidates:
+        review = evaluate_candidate(candidate)
+        candidate.review = review
+        candidate.title_path.write_text(review.title + "\n", encoding="utf-8")
+        reviews.append(review)
+
+    text_blocks = []
+    for review in reviews:
+        text_blocks.append(
+            "\n".join(
+                [
+                    f"候補{review.candidate}：{review.score}点",
+                    f"タイトル案：{review.title}",
+                    f"サムネ文言：{review.thumbnail_text}",
+                    f"理由：{review.reason}",
+                ]
+            )
+        )
+    text_path = output_dir / REVIEW_TEXT_FILE
+    json_path = output_dir / REVIEW_JSON_FILE
+    text_path.write_text("\n\n".join(text_blocks) + ("\n" if text_blocks else ""), encoding="utf-8")
+    json_path.write_text(
+        json.dumps([review_to_dict(review) for review in reviews], ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return ReviewOutput(text_path=text_path, json_path=json_path, reviews=reviews)
+
+
+def load_review_dicts(output_dir: Path) -> list[dict[str, object]]:
+    path = output_dir / REVIEW_JSON_FILE
+    if not path.exists():
+        return []
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    if not isinstance(payload, list):
+        return []
+    return [item for item in payload if isinstance(item, dict)]
+
+
+def get_best_review(candidates: list[GeneratedCandidate]) -> CandidateReview | None:
+    reviews = [candidate.review for candidate in candidates if candidate.review is not None]
+    if not reviews:
+        return None
+    return max(reviews, key=lambda review: (review.score, -review.candidate))
+
+
 def get_local_ip() -> str:
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
@@ -540,6 +794,31 @@ def find_available_port(start_port: int = TRANSFER_START_PORT) -> int:
 
 def build_transfer_html(output_dir: Path) -> str:
     rows: list[str] = []
+    review_items = [output_dir / REVIEW_TEXT_FILE, output_dir / REVIEW_JSON_FILE]
+    review_links = []
+    for item in review_items:
+        if not item.exists():
+            continue
+        href = f"/files/{html.escape(item.name)}"
+        label = html.escape(item.name)
+        review_links.append(f"<a href=\"{href}\" download>{label}<span>{html.escape(UI_TEXT['mobile_download'])}</span></a>")
+    if review_links:
+        rows.append(
+            "<section><h2>"
+            + html.escape(UI_TEXT["mobile_review_section"])
+            + "</h2>"
+            + "\n".join(review_links)
+            + "</section>"
+        )
+
+    reviews = load_review_dicts(output_dir)
+    review_map: dict[int, dict[str, object]] = {}
+    for item in reviews:
+        try:
+            candidate_number = int(item.get("candidate", 0) or 0)
+        except (TypeError, ValueError):
+            continue
+        review_map[candidate_number] = item
     for index in range(1, SHORT_COUNT + 1):
         items = [
             output_dir / f"short_{index:02d}.mp4",
@@ -549,6 +828,31 @@ def build_transfer_html(output_dir: Path) -> str:
             output_dir / short_segments_json_name(index),
         ]
         links = []
+        review = review_map.get(index)
+        if review:
+            links.append(
+                "<div class=\"review-summary\">"
+                + "<p><strong>"
+                + html.escape(UI_TEXT["mobile_score"])
+                + f": {html.escape(str(review.get('score', '')))}"
+                + "</strong></p>"
+                + "<p>"
+                + html.escape(UI_TEXT["mobile_title_preview"])
+                + ": "
+                + html.escape(str(review.get("title", "")))
+                + "</p>"
+                + "<p>"
+                + html.escape(UI_TEXT["mobile_thumbnail_text"])
+                + ": "
+                + html.escape(str(review.get("thumbnail_text", "")))
+                + "</p>"
+                + "<p>"
+                + html.escape(UI_TEXT["mobile_reason"])
+                + ": "
+                + html.escape(str(review.get("reason", "")))
+                + "</p>"
+                + "</div>"
+            )
         for item in items:
             if not item.exists():
                 links.append(f"<span class=\"missing\">{html.escape(item.name)} / {html.escape(UI_TEXT['mobile_empty'])}</span>")
@@ -648,12 +952,26 @@ a span {{
   font-size: 13px;
 }}
 .title-preview,
+.review-summary,
 .missing {{
   display: block;
   color: var(--muted);
   font-size: 13px;
   line-height: 1.7;
   margin: 8px 0 0;
+}}
+.review-summary {{
+  background: #F8FAFD;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}}
+.review-summary p {{
+  margin: 0 0 4px;
+}}
+.review-summary p:last-child {{
+  margin-bottom: 0;
 }}
 </style>
 </head>
@@ -821,6 +1139,12 @@ def process_video(
         status_callback(UI_TEXT["status_transcript_skipped"])
 
     if status_callback:
+        status_callback(UI_TEXT["status_reviewing"])
+    review = write_review_files(output_dir, candidates)
+    if status_callback:
+        status_callback(UI_TEXT["status_review_done"])
+
+    if status_callback:
         status_callback(UI_TEXT["status_preparing_transfer"])
     server = transfer_server or TransferServer()
     transfer_url = server.start(output_dir)
@@ -829,6 +1153,7 @@ def process_video(
         video_info=video_info,
         candidates=candidates,
         transfer_url=transfer_url,
+        review=review,
         transcript_error=transcript_error,
     )
 
@@ -865,6 +1190,7 @@ class DakeVideoShortsCutApp:
         self.video_info_var = tk.StringVar(value=UI_TEXT["video_info_empty"])
         self.transfer_url_var = tk.StringVar(value="")
         self.transcript_enabled_var = tk.BooleanVar(value=True)
+        self.recommend_var = tk.StringVar(value=UI_TEXT["recommend_waiting"])
         self.result_vars = [
             tk.StringVar(value=UI_TEXT["result_waiting"]),
             tk.StringVar(value=UI_TEXT["result_waiting"]),
@@ -1079,6 +1405,14 @@ class DakeVideoShortsCutApp:
             font=(self.font_family, 13, "bold"),
             anchor="w",
         ).pack(fill="x", padx=18, pady=(16, 8))
+        tk.Label(
+            panel,
+            textvariable=self.recommend_var,
+            bg=THEME["panel"],
+            fg=THEME["accent"],
+            font=(self.font_family, 10, "bold"),
+            anchor="w",
+        ).pack(fill="x", padx=18, pady=(0, 10))
         for index, var in enumerate(self.result_vars, start=1):
             row = tk.Frame(panel, bg=THEME["panel"], highlightbackground=THEME["border"], highlightthickness=1)
             row.pack(fill="x", padx=18, pady=(0, 8))
@@ -1100,6 +1434,8 @@ class DakeVideoShortsCutApp:
                 fg=THEME["muted"],
                 font=(self.font_family, 9),
                 anchor="w",
+                justify="left",
+                wraplength=520,
             ).pack(side="left", fill="x", expand=True, padx=(0, 10))
 
     def _build_qr_panel(self, parent: tk.Frame) -> None:
@@ -1378,14 +1714,22 @@ class DakeVideoShortsCutApp:
         )
 
     def _clear_results(self) -> None:
+        self.recommend_var.set(UI_TEXT["recommend_waiting"])
         for var in self.result_vars:
             var.set(UI_TEXT["result_waiting"])
         self.qr_photo = None
         self.qr_label.configure(image="", text=UI_TEXT["qr_waiting"], fg=THEME["muted"])
 
     def _refresh_results(self, result: ProcessResult) -> None:
+        best = get_best_review(result.candidates)
+        if best is None:
+            self.recommend_var.set(UI_TEXT["recommend_waiting"])
+        else:
+            self.recommend_var.set(UI_TEXT["recommend_template"].format(number=best.candidate, score=best.score))
         for index, candidate in enumerate(result.candidates):
+            score = candidate.review.score if candidate.review is not None else "--"
             values = [
+                f"{UI_TEXT['result_score']}: {score}",
                 f"{UI_TEXT['result_short']}: {self._exists_text(candidate.short_path)}",
                 f"{UI_TEXT['result_thumb']}: {self._exists_text(candidate.thumb_path)}",
                 f"{UI_TEXT['result_title_file']}: {self._exists_text(candidate.title_path)}",
@@ -1470,23 +1814,33 @@ def run_launch_check() -> int:
         raise RuntimeError("short segment fixture failed")
     with tempfile.TemporaryDirectory() as temp_dir:
         output_dir = Path(temp_dir)
+        candidates: list[GeneratedCandidate] = []
         for index in range(1, SHORT_COUNT + 1):
-            (output_dir / f"short_{index:02d}.mp4").write_bytes(b"dummy")
-            (output_dir / f"thumb_{index:02d}.jpg").write_bytes(b"dummy")
-            (output_dir / f"title_{index:02d}.txt").write_text(
+            candidate = GeneratedCandidate(
+                index=index,
+                short_path=output_dir / f"short_{index:02d}.mp4",
+                thumb_path=output_dir / f"thumb_{index:02d}.jpg",
+                title_path=output_dir / f"title_{index:02d}.txt",
+                transcript_path=output_dir / short_transcript_text_name(index),
+                segments_path=output_dir / short_segments_json_name(index),
+            )
+            candidates.append(candidate)
+            candidate.short_path.write_bytes(b"dummy")
+            candidate.thumb_path.write_bytes(b"dummy")
+            candidate.title_path.write_text(
                 UI_TEXT["title_candidate"].format(number=index) + "\n",
                 encoding="utf-8",
             )
             transcript = write_transcript_files(
-                output_dir / short_transcript_text_name(index),
-                output_dir / short_segments_json_name(index),
+                candidate.transcript_path,
+                candidate.segments_path,
                 [
                     {
                         "start": 12.4,
                         "end": 18.9,
                         "start_text": "00:12",
                         "end_text": "00:18",
-                        "text": "テスト文字起こしです。",
+                        "text": "AIでDAKEを作る。これはいいね。",
                     }
                 ],
             )
@@ -1496,9 +1850,24 @@ def run_launch_check() -> int:
                 raise RuntimeError("transcript text fixture failed")
         if (output_dir / "transcript.txt").exists() or (output_dir / "transcript_segments.json").exists():
             raise RuntimeError("global transcript fixture failed")
+        review = write_review_files(output_dir, candidates)
+        if not review.text_path.exists() or not review.json_path.exists() or not get_best_review(candidates):
+            raise RuntimeError("review fixture failed")
         page = build_transfer_html(output_dir)
-        if "short_01.mp4" not in page or short_transcript_text_name(1) not in page or UI_TEXT["mobile_title"] not in page:
+        if (
+            "short_01.mp4" not in page
+            or short_transcript_text_name(1) not in page
+            or REVIEW_TEXT_FILE not in page
+            or UI_TEXT["mobile_score"] not in page
+            or UI_TEXT["mobile_title"] not in page
+        ):
             raise RuntimeError("transfer html fixture failed")
+
+        nested_parent = output_dir / f"{OUTPUT_FOLDER_PREFIX}_fixture"
+        nested_parent.mkdir()
+        nested_output = create_output_dir(nested_parent / "short_01.mp4", now=datetime(2026, 1, 2, 3, 4, 5))
+        if nested_output.parent != output_dir:
+            raise RuntimeError("nested output fixture failed")
 
     ffmpeg_status = "available" if find_tool("ffmpeg") else "missing"
     ffprobe_status = "available" if find_tool("ffprobe") else "missing"
@@ -1508,6 +1877,7 @@ def run_launch_check() -> int:
     print(UI_TEXT["launch_check_segments"])
     print(UI_TEXT["launch_check_html"])
     print(UI_TEXT["launch_check_transcript"])
+    print(UI_TEXT["launch_check_review"])
     print(UI_TEXT["launch_check_qr"].format(status=check_qr_dependency()))
     return 0
 
@@ -1525,28 +1895,39 @@ def run_process_check(input_file: str, create_transcript: bool = True) -> int:
             parsed_url = urlparse(result.transfer_url)
             local_url = f"http://127.0.0.1:{parsed_url.port or TRANSFER_START_PORT}/"
             with urlopen(local_url, timeout=5) as response:
-                body = response.read(4096).decode("utf-8", errors="replace")
+                body = response.read(24000).decode("utf-8", errors="replace")
             print(f"transfer_page={'short_01.mp4' in body}")
             transfer_has_transcript = all(
                 candidate.transcript_path.exists() and candidate.transcript_path.name in body
                 for candidate in result.candidates
             )
             print(f"transfer_transcript={transfer_has_transcript}")
+            transfer_has_review = REVIEW_TEXT_FILE in body and UI_TEXT["mobile_score"] in body
+            print(f"transfer_review={transfer_has_review}")
         except Exception:
             print("transfer_page=False")
             print("transfer_transcript=False")
+            print("transfer_review=False")
         for candidate in result.candidates:
             print(candidate.short_path.name, candidate.short_path.exists())
             print(candidate.thumb_path.name, candidate.thumb_path.exists())
             print(candidate.title_path.name, candidate.title_path.exists())
             print(candidate.transcript_path.name, candidate.transcript_path.exists())
             print(candidate.segments_path.name, candidate.segments_path.exists())
+            print(f"review_score_{candidate.index}={candidate.review.score if candidate.review else 'missing'}")
         transcript_ok = all(
             candidate.transcript_path.exists() and candidate.segments_path.exists()
             for candidate in result.candidates
         )
+        review_ok = result.review is not None and result.review.text_path.exists() and result.review.json_path.exists()
+        best = get_best_review(result.candidates)
         print(f"global_transcript={(result.output_dir / 'transcript.txt').exists()}")
         print(UI_TEXT["process_check_transcript"].format(status="created" if transcript_ok else "missing"))
+        print(UI_TEXT["process_check_review"].format(status="created" if review_ok else "missing"))
+        print(f"shorts_review.txt={(result.output_dir / REVIEW_TEXT_FILE).exists()}")
+        print(f"shorts_review.json={(result.output_dir / REVIEW_JSON_FILE).exists()}")
+        print(f"review_best={best.candidate if best else 'missing'}")
+        print(f"nested_output={not result.output_dir.parent.name.startswith(OUTPUT_FOLDER_PREFIX)}")
         if result.transcript_error:
             print(f"transcript_error={result.transcript_error}")
     finally:
