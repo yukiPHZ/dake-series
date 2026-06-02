@@ -1,0 +1,8 @@
+build/
+dist/
+*.spec
+*_config.json
+__pycache__/
+*.pyc
+version_info.txt
+.codex_verify/
