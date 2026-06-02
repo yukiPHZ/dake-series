@@ -78,6 +78,7 @@ UI_TEXT = {
     "recommend_waiting": "おすすめ: 未作成",
     "recommend_template": "おすすめ: 候補 {number}（{score}点） / {method}",
     "recommend_card_template": "おすすめ：候補{number}（{score}点） / {method}\nタイトル案：{title}\nサムネ文言：{thumbnail_text}\n理由：{reason}",
+    "display_mode_full": "全体表示（おすすめ）",
     "checkbox_transcribe": "ショートごとに文字起こし",
     "checkbox_ollama_review": "Ollamaで候補評価",
     "ollama_review_note": "Ollama起動中のみ使用できます。失敗時は通常評価に戻ります。",
@@ -292,6 +293,7 @@ def get_config_path() -> Path:
 
 def default_app_config() -> dict[str, object]:
     return {
+        "display_full_mode": True,
         "use_ollama_review": False,
         "ollama_model": DEFAULT_OLLAMA_MODEL,
         "ollama_url": DEFAULT_OLLAMA_URL,
@@ -309,6 +311,7 @@ def load_app_config() -> dict[str, object]:
         return config
     if not isinstance(payload, dict):
         return config
+    config["display_full_mode"] = bool(payload.get("display_full_mode", config["display_full_mode"]))
     config["use_ollama_review"] = bool(payload.get("use_ollama_review", config["use_ollama_review"]))
     model = str(payload.get("ollama_model") or "").strip()
     url = str(payload.get("ollama_url") or "").strip()
@@ -322,6 +325,7 @@ def load_app_config() -> dict[str, object]:
 def save_app_config(config: dict[str, object]) -> None:
     path = get_config_path()
     payload = {
+        "display_full_mode": bool(config.get("display_full_mode", True)),
         "use_ollama_review": bool(config.get("use_ollama_review", False)),
         "ollama_model": str(config.get("ollama_model") or DEFAULT_OLLAMA_MODEL),
         "ollama_url": str(config.get("ollama_url") or DEFAULT_OLLAMA_URL),
@@ -521,8 +525,25 @@ def choose_output_parent(input_path: Path) -> Path:
     return parent
 
 
-def video_filter() -> str:
-    return "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920"
+def crop_video_filter() -> str:
+    return "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1"
+
+
+def full_display_video_filter() -> str:
+    return (
+        "[0:v]split=2[bg][fg];"
+        "[bg]scale=1080:1920:force_original_aspect_ratio=increase,"
+        "crop=1080:1920,gblur=sigma=38:steps=2[bg];"
+        "[fg]scale=1080:1920:force_original_aspect_ratio=decrease[fg];"
+        "[bg][fg]overlay=(W-w)/2:(H-h)/2:format=auto,setsar=1[v]"
+    )
+
+
+def add_render_filter_args(command: list[str], display_full_mode: bool) -> None:
+    if display_full_mode:
+        command.extend(["-filter_complex", full_display_video_filter(), "-map", "[v]"])
+    else:
+        command.extend(["-vf", crop_video_filter()])
 
 
 def ffmpeg_time(value: float) -> str:
@@ -535,6 +556,7 @@ def create_short_video(
     output_path: Path,
     segment: ShortSegment,
     has_audio: bool,
+    display_full_mode: bool,
 ) -> None:
     command = [
         ffmpeg_path,
@@ -545,18 +567,23 @@ def create_short_video(
         str(input_path),
         "-t",
         ffmpeg_time(segment.duration),
-        "-vf",
-        video_filter(),
-        "-c:v",
-        "libx264",
-        "-preset",
-        "veryfast",
-        "-crf",
-        "23",
-        "-pix_fmt",
-        "yuv420p",
     ]
+    add_render_filter_args(command, display_full_mode)
+    command.extend(
+        [
+            "-c:v",
+            "libx264",
+            "-preset",
+            "veryfast",
+            "-crf",
+            "23",
+            "-pix_fmt",
+            "yuv420p",
+        ]
+    )
     if has_audio:
+        if display_full_mode:
+            command.extend(["-map", "0:a:0?"])
         command.extend(["-c:a", "aac", "-b:a", "160k"])
     else:
         command.append("-an")
@@ -564,7 +591,13 @@ def create_short_video(
     run_subprocess(command, UI_TEXT["error_process_failed"])
 
 
-def create_thumbnail(ffmpeg_path: str, input_path: Path, output_path: Path, segment: ShortSegment) -> None:
+def create_thumbnail(
+    ffmpeg_path: str,
+    input_path: Path,
+    output_path: Path,
+    segment: ShortSegment,
+    display_full_mode: bool,
+) -> None:
     thumb_time = segment.start + min(3.0, max(0.0, segment.duration / 2))
     command = [
         ffmpeg_path,
@@ -573,14 +606,17 @@ def create_thumbnail(ffmpeg_path: str, input_path: Path, output_path: Path, segm
         ffmpeg_time(thumb_time),
         "-i",
         str(input_path),
-        "-frames:v",
-        "1",
-        "-vf",
-        video_filter(),
-        "-q:v",
-        "2",
-        str(output_path),
     ]
+    add_render_filter_args(command, display_full_mode)
+    command.extend(
+        [
+            "-frames:v",
+            "1",
+            "-q:v",
+            "2",
+            str(output_path),
+        ]
+    )
     run_subprocess(command, UI_TEXT["error_process_failed"])
 
 
@@ -1496,6 +1532,7 @@ def process_video(
     status_callback=None,
     transfer_server: TransferServer | None = None,
     create_transcript: bool = True,
+    display_full_mode: bool = True,
     use_ollama_review: bool = False,
     ollama_model: str = DEFAULT_OLLAMA_MODEL,
     ollama_url: str = DEFAULT_OLLAMA_URL,
@@ -1513,7 +1550,7 @@ def process_video(
         if status_callback:
             status_callback(UI_TEXT["phase_short_item"].format(index=segment.index))
         short_path = output_dir / f"short_{segment.index:02d}.mp4"
-        create_short_video(ffmpeg_path, input_path, short_path, segment, video_info.has_audio)
+        create_short_video(ffmpeg_path, input_path, short_path, segment, video_info.has_audio, display_full_mode)
         candidates.append(
             GeneratedCandidate(
                 index=segment.index,
@@ -1531,7 +1568,7 @@ def process_video(
     for segment, candidate in zip(segments, candidates):
         if status_callback:
             status_callback(UI_TEXT["phase_thumb_item"].format(index=segment.index))
-        create_thumbnail(ffmpeg_path, input_path, candidate.thumb_path, segment)
+        create_thumbnail(ffmpeg_path, input_path, candidate.thumb_path, segment, display_full_mode)
         write_title_file(candidate.title_path, segment.index)
 
     transcript_error = ""
@@ -1612,6 +1649,7 @@ class DakeVideoShortsCutApp:
         self.selected_var = tk.StringVar(value=UI_TEXT["selected_file_empty"])
         self.video_info_var = tk.StringVar(value=UI_TEXT["video_info_empty"])
         self.transfer_url_var = tk.StringVar(value="")
+        self.display_full_mode_var = tk.BooleanVar(value=bool(self.app_config.get("display_full_mode", True)))
         self.transcript_enabled_var = tk.BooleanVar(value=True)
         self.ollama_review_var = tk.BooleanVar(value=bool(self.app_config.get("use_ollama_review", False)))
         self.recommend_var = tk.StringVar(value=UI_TEXT["recommend_waiting"])
@@ -1723,6 +1761,20 @@ class DakeVideoShortsCutApp:
         info.pack(fill="x", padx=18, pady=(0, 18))
         self._info_row(info, UI_TEXT["selected_file_label"], self.selected_var)
         self._info_row(info, UI_TEXT["video_info_label"], self.video_info_var)
+        self.display_full_check = tk.Checkbutton(
+            info,
+            text=UI_TEXT["display_mode_full"],
+            variable=self.display_full_mode_var,
+            bg=THEME["panel"],
+            fg=THEME["text"],
+            activebackground=THEME["panel"],
+            activeforeground=THEME["text"],
+            selectcolor=THEME["panel"],
+            font=(self.font_family, 9, "bold"),
+            anchor="w",
+            cursor="hand2",
+        )
+        self.display_full_check.pack(anchor="w", pady=(6, 0))
         self.transcript_check = tk.Checkbutton(
             info,
             text=UI_TEXT["checkbox_transcribe"],
@@ -2102,23 +2154,32 @@ class DakeVideoShortsCutApp:
         self._clear_results()
         self._set_status(UI_TEXT["status_checking"])
         create_transcript = bool(self.transcript_enabled_var.get())
+        display_full_mode = bool(self.display_full_mode_var.get())
         use_ollama_review = bool(self.ollama_review_var.get())
+        self.app_config["display_full_mode"] = display_full_mode
         self.app_config["use_ollama_review"] = use_ollama_review
         save_app_config(self.app_config)
         worker = threading.Thread(
             target=self._process_worker,
-            args=(self.input_path, create_transcript, use_ollama_review),
+            args=(self.input_path, create_transcript, display_full_mode, use_ollama_review),
             daemon=True,
         )
         worker.start()
 
-    def _process_worker(self, path: Path, create_transcript: bool, use_ollama_review: bool) -> None:
+    def _process_worker(
+        self,
+        path: Path,
+        create_transcript: bool,
+        display_full_mode: bool,
+        use_ollama_review: bool,
+    ) -> None:
         try:
             result = process_video(
                 path,
                 self._queue_status,
                 self.transfer_server,
                 create_transcript=create_transcript,
+                display_full_mode=display_full_mode,
                 use_ollama_review=use_ollama_review,
                 ollama_model=str(self.app_config.get("ollama_model") or DEFAULT_OLLAMA_MODEL),
                 ollama_url=str(self.app_config.get("ollama_url") or DEFAULT_OLLAMA_URL),
@@ -2266,10 +2327,12 @@ class DakeVideoShortsCutApp:
     def _set_button_states(self) -> None:
         state = tk.DISABLED if self.busy else tk.NORMAL
         self.create_button.configure(state=state, bg="#A9C0F7" if self.busy else THEME["accent"])
+        self.display_full_check.configure(state=state)
         self.transcript_check.configure(state=state)
         self.ollama_review_check.configure(state=state)
 
     def _on_close(self) -> None:
+        self.app_config["display_full_mode"] = bool(self.display_full_mode_var.get())
         self.app_config["use_ollama_review"] = bool(self.ollama_review_var.get())
         save_app_config(self.app_config)
         self.transfer_server.shutdown()
@@ -2292,6 +2355,10 @@ def run_launch_check() -> int:
     short_segments = build_segments(30.0)
     if len(short_segments) != SHORT_COUNT or any(segment.duration <= 0 for segment in short_segments):
         raise RuntimeError("short segment fixture failed")
+    if "gblur" not in full_display_video_filter() or "force_original_aspect_ratio=decrease" not in full_display_video_filter():
+        raise RuntimeError("full display filter fixture failed")
+    if "crop=1080:1920" not in crop_video_filter():
+        raise RuntimeError("crop filter fixture failed")
     with tempfile.TemporaryDirectory() as temp_dir:
         output_dir = Path(temp_dir)
         candidates: list[GeneratedCandidate] = []
@@ -2372,17 +2439,24 @@ def run_launch_check() -> int:
     return 0
 
 
-def run_process_check(input_file: str, create_transcript: bool = True, use_ollama_review: bool = False) -> int:
+def run_process_check(
+    input_file: str,
+    create_transcript: bool = True,
+    display_full_mode: bool = True,
+    use_ollama_review: bool = False,
+) -> int:
     server = TransferServer()
     try:
         result = process_video(
             Path(input_file),
             transfer_server=server,
             create_transcript=create_transcript,
+            display_full_mode=display_full_mode,
             use_ollama_review=use_ollama_review,
         )
         print(UI_TEXT["process_check_done"].format(output_dir=result.output_dir))
         print(result.transfer_url)
+        print(f"display_full_mode={display_full_mode}")
         try:
             from urllib.parse import urlparse
             from urllib.request import urlopen
@@ -2442,6 +2516,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--launch-check", action="store_true")
     parser.add_argument("--process-check", metavar="MP4")
     parser.add_argument("--skip-transcript", action="store_true")
+    parser.add_argument("--center-crop", action="store_true")
     parser.add_argument("--ollama-review", action="store_true")
     args = parser.parse_args(argv)
     if args.launch_check:
@@ -2450,6 +2525,7 @@ def main(argv: list[str] | None = None) -> int:
         return run_process_check(
             args.process_check,
             create_transcript=not args.skip_transcript,
+            display_full_mode=not args.center_crop,
             use_ollama_review=args.ollama_review,
         )
     app = DakeVideoShortsCutApp()

@@ -10,6 +10,7 @@ YouTube URL取得や投稿機能は持たせず、MP4を入れてショート候
 - ffprobeで動画情報を確認
 - 動画全体を3分割し、それぞれからショート候補を作成
 - 9:16 / 1080x1920 のMP4を出力
+- 標準では横動画全体を見せ、上下にぼかし背景を入れて出力
 - サムネ画像とタイトル案テキストを出力
 - `ショートごとに文字起こし` をONにすると、生成したショート候補ごとの文字起こしを出力
 - ショート候補ごとに評価を行い、使えそう度・タイトル案・サムネ文言案を出力
@@ -21,11 +22,12 @@ YouTube URL取得や投稿機能は持たせず、MP4を入れてショート候
 
 1. `python main.py` で起動
 2. MP4をドラッグ＆ドロップ、または `MP4を選ぶ` から選択
-3. 必要に応じて `ショートごとに文字起こし` をON/OFF
-4. 必要に応じて `Ollamaで候補評価` をON
-5. `ショートを作成` を押す
-6. 生成後、保存先フォルダとQRコードを確認
-7. スマホでQRコードを読み取り、ブラウザから必要なファイルを保存
+3. 必要に応じて `全体表示（おすすめ）` をON/OFF
+4. 必要に応じて `ショートごとに文字起こし` をON/OFF
+5. 必要に応じて `Ollamaで候補評価` をON
+6. `ショートを作成` を押す
+7. 生成後、保存先フォルダとQRコードを確認
+8. スマホでQRコードを読み取り、ブラウザから必要なファイルを保存
 
 出力フォルダは入力動画と同じ階層に作成されます。入力動画が `dake_shorts_output_...` フォルダ内にある場合は、出力フォルダの入れ子を避けるため一段上に作成します。
 
@@ -83,6 +85,7 @@ v0.6では、通常のルールベース評価に加えて、Ollamaが起動し�
 
 ```json
 {
+  "display_full_mode": true,
   "use_ollama_review": false,
   "ollama_model": "qwen2.5:7b",
   "ollama_url": "http://localhost:11434/api/generate"
@@ -99,6 +102,14 @@ v0.6では、通常のルールベース評価に加えて、Ollamaが起動し�
 - JSON系ファイルは下部の開発用ファイルにまとめています。
 - OpenAI APIは未使用です。
 - Ollamaは任意機能です。
+
+## v0.7 縦動画見栄え改善
+
+- ショート動画の標準出力を、横動画全体表示＋上下ぼかし背景に変更しました。
+- 横動画全体が見えるため、制作配信や作業配信の画面情報を残しやすくなります。
+- 背景には拡大コピーした動画を強めにぼかして配置します。
+- 中央には元動画全体を1080px幅に収めて表示します。
+- `全体表示（おすすめ）` をOFFにすると、従来の中央クロップで出力できます。
 
 ## 必要なもの
 
@@ -165,6 +176,12 @@ Ollama評価をCLIで確認する場合:
 python main.py --process-check "C:\path\to\sample.mp4" --ollama-review
 ```
 
+従来の中央クロップで確認する場合:
+
+```powershell
+python main.py --process-check "C:\path\to\sample.mp4" --center-crop
+```
+
 ## DAKE_META
 
 ```json
@@ -175,7 +192,7 @@ python main.py --process-check "C:\path\to\sample.mp4" --ollama-review
   "launcher_description": "MP4からショート候補とサムネを作成します。",
   "site_title": "Dakeショート切り出し",
   "site_description": "MP4を入れるだけで、ショート動画候補・サムネ・タイトル案を作成します。",
-  "update_summary": "おすすめ候補表示とサムネ文言出力を追加し、スマホ転送ページを改善",
+  "update_summary": "横動画全体表示＋上下ぼかし背景によるショート動画出力に対応",
   "folder_name": "DAKE_Video_Shorts_Cut",
   "exe_name": "DakeVideo_Shorts_Cut.exe",
   "release_url": "",
