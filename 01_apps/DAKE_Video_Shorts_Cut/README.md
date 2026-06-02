@@ -1,0 +1,119 @@
+# Dakeショート切り出し
+
+Dakeショート切り出しは、ローカルMP4からショート動画候補を3本作成し、サムネ画像とタイトル案を同時に出力するDAKEアプリです。
+
+YouTube URL取得や投稿機能は持たせず、MP4を入れてショート候補を出すことだけに絞っています。
+
+## 概要
+
+- MP4を1本選ぶ
+- ffprobeで動画情報を確認
+- 動画全体を3分割し、それぞれからショート候補を作成
+- 9:16 / 1080x1920 のMP4を出力
+- サムネ画像とタイトル案テキストを出力
+- QRコードで同じWi-Fi内のスマホから保存できるページを表示
+
+## 使い方
+
+1. `python main.py` で起動
+2. MP4をドラッグ＆ドロップ、または `MP4を選ぶ` から選択
+3. `ショートを作成` を押す
+4. 生成後、保存先フォルダとQRコードを確認
+5. スマホでQRコードを読み取り、ブラウザから必要なファイルを保存
+
+出力フォルダは入力動画と同じ階層に作成されます。
+
+```text
+dake_shorts_output_YYYYMMDD_HHMMSS/
+  short_01.mp4
+  short_02.mp4
+  short_03.mp4
+  thumb_01.jpg
+  thumb_02.jpg
+  thumb_03.jpg
+  title_01.txt
+  title_02.txt
+  title_03.txt
+```
+
+## 必要なもの
+
+- ffmpeg
+- ffprobe
+- Pythonライブラリ
+  - qrcode
+  - Pillow
+  - tkinterdnd2
+
+Pythonライブラリは以下でインストールできます。
+
+```powershell
+pip install -r requirements.txt
+```
+
+ffmpeg / ffprobe はPATHから実行できる状態にしてください。
+
+## QR転送の注意
+
+- PCとスマホが同じWi-Fi内にあるときに使います。
+- iPhoneの写真アプリへ完全自動保存はしません。
+- iPhoneではブラウザ表示後、共有や保存操作でビデオ・画像を手動保存してください。
+- PC側アプリを閉じると転送ページも停止します。
+
+## v1でやらないこと
+
+- YouTube URL取得
+- 自動投稿
+- BGM追加
+- テロップ編集
+- AI高精度判定
+- SNS投稿予約
+
+## ビルド方法
+
+`build.bat` を実行すると、`dist/DakeVideo_Shorts_Cut.exe` を生成します。
+
+DAKE共通アイコン `..\..\02_assets\dake_icon.ico` を使用します。
+
+## 検証
+
+```powershell
+python -m py_compile main.py
+python main.py --launch-check
+```
+
+実動画で確認する場合:
+
+```powershell
+python main.py --process-check "C:\path\to\sample.mp4"
+```
+
+## DAKE_META
+
+```json
+{
+  "app_key": "video_shorts_cut",
+  "display_name": "ショート切り出し",
+  "launcher_title": "ショート切り出し",
+  "launcher_description": "MP4からショート候補とサムネを作成します。",
+  "site_title": "Dakeショート切り出し",
+  "site_description": "MP4を入れるだけで、ショート動画候補・サムネ・タイトル案を作成します。",
+  "update_summary": "MP4からショート候補とスマホ転送用QRを作成する新規アプリを追加",
+  "folder_name": "DAKE_Video_Shorts_Cut",
+  "exe_name": "DakeVideo_Shorts_Cut.exe",
+  "release_url": "",
+  "screenshot_path": "assets/screenshot.webp",
+  "status": "available",
+  "show_in_launcher": true,
+  "show_on_site": true
+}
+```
+
+## RELEASE_BODY
+
+```text
+MP4からショート動画候補を作成
+サムネ画像とタイトル案も同時出力
+QRコードでスマホへ転送
+Windows向けexe
+```
