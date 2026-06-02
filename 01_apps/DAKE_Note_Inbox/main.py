@@ -29,6 +29,7 @@ UI_TEXT = {
     "display_name": "note素材受信箱",
     "subtitle": "Slack素材をPEAKHEADZ_ROOTへ置く受信箱",
     "section_status": "同期状態",
+    "section_article_candidates": "記事候補",
     "section_settings": "設定",
     "slack_status": "Slack接続状態",
     "last_synced_at": "最終同期日時",
@@ -50,6 +51,7 @@ UI_TEXT = {
     "button_open_notes": "NOTESを開く",
     "button_open_articles": "ARTICLESを開く",
     "button_tag_materials": "札付けする",
+    "button_update_candidates": "記事候補更新",
     "button_save_settings": "設定保存",
     "button_browse": "参照",
     "label_token": "Slack Bot Token",
@@ -59,6 +61,8 @@ UI_TEXT = {
     "label_interval": "同期間隔（秒）",
     "label_ollama_enabled": "Ollama使用",
     "label_ollama_model": "Ollamaモデル名",
+    "ollama_on": "ON",
+    "ollama_off": "OFF",
     "settings_saved": "設定を保存しました。",
     "missing_slack": "Slack Bot Token と Slack Channel ID を設定してください。",
     "missing_root": "PEAKHEADZ_ROOT を設定してください。",
@@ -68,6 +72,18 @@ UI_TEXT = {
     "tag_done": "{count}件をNOTESへ保存しました。",
     "tag_none": "未処理のINBOX素材はありません。",
     "missing_inbox": "INBOXが見つかりません。",
+    "missing_notes": "NOTESが見つかりません。",
+    "candidate_updating": "記事候補生成中",
+    "candidate_empty": "記事候補はまだありません。",
+    "candidate_saved": "記事候補を更新しました。",
+    "candidate_title": "タイトル",
+    "candidate_reason": "理由",
+    "candidate_material_count": "使用素材",
+    "candidate_count_unit": "{count}件",
+    "candidate_heading": "候補{index}",
+    "article_candidates_heading": "記事候補",
+    "candidate_default_title": "note素材を読み返す入口",
+    "candidate_default_reason": "最近の札付き素材から、Obsidianで巡れるまとまりが見えるため。",
     "open_failed": "開けませんでした: {path}",
     "obsidian_failed": "Obsidianを開けませんでした。設定を確認してください。",
     "obsidian_browse_title": "Obsidian.exeを選択",
@@ -100,6 +116,7 @@ SLACK_HISTORY_URL = "https://slack.com/api/conversations.history"
 OLLAMA_GENERATE_URL = "http://127.0.0.1:11434/api/generate"
 DEFAULT_OLLAMA_MODEL = "qwen2.5:7b"
 OBSIDIAN_LINK_CANDIDATES = ["在る", "握らない強さ", "側に", "BORINEF", "熾火", "線", "ワー", "DAKE", "Codex", "Slack", "Obsidian", "note"]
+MAX_ARTICLE_CANDIDATES = 3
 
 
 def appdata_dir() -> Path:
@@ -150,6 +167,21 @@ class SlackMessage:
     ts: str
     text: str
     user: str = ""
+
+
+@dataclass
+class MaterialSummary:
+    path: Path
+    tags: list[str]
+    links: list[str]
+    article_hint: str
+
+
+@dataclass
+class ArticleCandidate:
+    title: str
+    reason: str
+    material_count: int
 
 
 class ConfigStore:
@@ -326,6 +358,14 @@ def target_notes(root_path: str) -> Path:
     return Path(root_path).expanduser() / "NOTES"
 
 
+def target_articles(root_path: str) -> Path:
+    return Path(root_path).expanduser() / "ARTICLES"
+
+
+def article_candidates_path(root_path: str) -> Path:
+    return target_articles(root_path) / "article_candidates.md"
+
+
 def unique_path(path: Path) -> Path:
     if not path.exists():
         return path
@@ -365,6 +405,45 @@ def split_markdown_frontmatter(content: str) -> tuple[dict[str, str], str]:
             continue
         key, value = line.split(":", 1)
         meta[key.strip()] = strip_yaml_scalar(value)
+    body = "\n".join(lines[end_index + 1 :]).lstrip("\n")
+    return meta, body
+
+
+def split_markdown_frontmatter_with_lists(content: str) -> tuple[dict[str, object], str]:
+    if not content.startswith("---"):
+        return {}, content
+    lines = content.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return {}, content
+    end_index = None
+    for index in range(1, len(lines)):
+        if lines[index].strip() == "---":
+            end_index = index
+            break
+    if end_index is None:
+        return {}, content
+    meta: dict[str, object] = {}
+    current_list_key = ""
+    for line in lines[1:end_index]:
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if stripped.startswith("- ") and current_list_key:
+            current = meta.setdefault(current_list_key, [])
+            if isinstance(current, list):
+                current.append(strip_yaml_scalar(stripped[2:]))
+            continue
+        current_list_key = ""
+        if ":" not in line:
+            continue
+        key, value = line.split(":", 1)
+        key = key.strip()
+        value = value.strip()
+        if value:
+            meta[key] = strip_yaml_scalar(value)
+        else:
+            meta[key] = []
+            current_list_key = key
     body = "\n".join(lines[end_index + 1 :]).lstrip("\n")
     return meta, body
 
@@ -599,6 +678,199 @@ def tag_inbox_materials(config: AppConfig, limit: int = 100) -> tuple[int, str]:
     if UI_TEXT["ollama_fallback"] in statuses:
         return count, UI_TEXT["ollama_fallback"]
     return count, statuses[-1]
+
+
+def string_list(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    result: list[str] = []
+    for item in value:
+        if isinstance(item, str) and item.strip():
+            result.append(item.strip())
+    return result
+
+
+def material_summary_from_path(path: Path) -> MaterialSummary | None:
+    content = path.read_text(encoding="utf-8")
+    meta, _body = split_markdown_frontmatter_with_lists(content)
+    if str(meta.get("status", "")).strip().lower() != "material":
+        return None
+    tags = string_list(meta.get("tags"))
+    links = string_list(meta.get("links"))
+    hint = str(meta.get("article_hint", "")).strip()
+    if not tags and not links and not hint:
+        return None
+    return MaterialSummary(path=path, tags=tags, links=links, article_hint=hint)
+
+
+def collect_material_summaries(root_path: str) -> list[MaterialSummary]:
+    notes = target_notes(root_path)
+    if not notes.exists():
+        raise FileNotFoundError(UI_TEXT["missing_notes"])
+    summaries: list[MaterialSummary] = []
+    for path in sorted(notes.rglob("*.md")):
+        summary = material_summary_from_path(path)
+        if summary:
+            summaries.append(summary)
+    return summaries
+
+
+def article_candidate_prompt(summaries: list[MaterialSummary]) -> str:
+    lines = []
+    for index, summary in enumerate(summaries[:80], 1):
+        lines.append(
+            "\n".join(
+                [
+                    f"素材{index}",
+                    "tags: " + ", ".join(summary.tags[:8]),
+                    "links: " + ", ".join(summary.links[:8]),
+                    "article_hint: " + summary.article_hint[:180],
+                ]
+            )
+        )
+    return (
+        "あなたはnote記事本文を書かない編集補助です。"
+        "以下の札付き素材から、記事候補を最大3件だけJSONで返してください。"
+        "ランキング、score、本文生成は禁止です。"
+        "原文本文は渡していません。tags, links, article_hintだけで判断してください。"
+        '形式: {"candidates":[{"title":"短いタイトル","reason":"短い理由","material_count":3}]}\n'
+        + "\n---\n".join(lines)
+    )
+
+
+def call_ollama_for_article_candidates(summaries: list[MaterialSummary], model: str) -> dict:
+    payload = {
+        "model": model or DEFAULT_OLLAMA_MODEL,
+        "prompt": article_candidate_prompt(summaries),
+        "stream": False,
+        "options": {"temperature": 0.25},
+    }
+    request = urllib.request.Request(
+        OLLAMA_GENERATE_URL,
+        data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(request, timeout=35) as response:
+        data = json.loads(response.read().decode("utf-8"))
+    return extract_json_object(str(data.get("response", "")))
+
+
+def clamp_material_count(value: object, total: int) -> int:
+    count = safe_int(value, 1)
+    if total <= 0:
+        return 0
+    return max(1, min(count, total))
+
+
+def normalize_article_candidates(data: dict, summaries: list[MaterialSummary]) -> list[ArticleCandidate]:
+    raw_candidates = data.get("candidates", [])
+    if not isinstance(raw_candidates, list):
+        return []
+    candidates: list[ArticleCandidate] = []
+    for item in raw_candidates[:MAX_ARTICLE_CANDIDATES]:
+        if not isinstance(item, dict):
+            continue
+        title = str(item.get("title", "")).strip()
+        reason = str(item.get("reason", "")).strip()
+        if not title or not reason:
+            continue
+        candidates.append(
+            ArticleCandidate(
+                title=title[:80],
+                reason=reason[:220],
+                material_count=clamp_material_count(item.get("material_count", 1), len(summaries)),
+            )
+        )
+    return candidates[:MAX_ARTICLE_CANDIDATES]
+
+
+def fallback_title_for_key(key: str) -> str:
+    titles = {
+        "在る": "在るをめぐる断片",
+        "握らない強さ": "握らない強さを残す",
+        "DAKE": "DAKEを入口にする素材整理",
+        "Slack": "Slackに投げた断片を育てる",
+        "Obsidian": "Obsidianで巡るnote素材",
+        "note": "note素材を読み返す入口",
+    }
+    return titles.get(key, f"{key}から始めるnote素材")
+
+
+def fallback_article_candidates(summaries: list[MaterialSummary]) -> list[ArticleCandidate]:
+    if not summaries:
+        return []
+    buckets: dict[str, int] = {}
+    for summary in summaries:
+        keys = summary.links + summary.tags
+        seen: set[str] = set()
+        for key in keys:
+            normalized = normalize_link(key).strip("[]") if key.startswith("[[") else normalize_tag(key)
+            if not normalized or normalized in seen or normalized == UI_TEXT["tag_note_material"]:
+                continue
+            seen.add(normalized)
+            buckets[normalized] = buckets.get(normalized, 0) + 1
+    if not buckets:
+        buckets["note"] = len(summaries)
+    ordered = sorted(buckets.items(), key=lambda item: (-item[1], item[0]))[:MAX_ARTICLE_CANDIDATES]
+    candidates: list[ArticleCandidate] = []
+    for key, count in ordered:
+        candidates.append(
+            ArticleCandidate(
+                title=fallback_title_for_key(key),
+                reason=f"NOTESの素材で「{key}」につながる札やメモがまとまっているため。",
+                material_count=count,
+            )
+        )
+    return candidates[:MAX_ARTICLE_CANDIDATES]
+
+
+def generate_article_candidates(config: AppConfig) -> list[ArticleCandidate]:
+    summaries = collect_material_summaries(config.peakheadz_root)
+    if not summaries:
+        return []
+    if config.ollama_enabled:
+        try:
+            candidates = normalize_article_candidates(call_ollama_for_article_candidates(summaries, config.ollama_model), summaries)
+            if candidates:
+                return candidates[:MAX_ARTICLE_CANDIDATES]
+        except Exception:
+            pass
+    return fallback_article_candidates(summaries)
+
+
+def markdown_for_article_candidates(candidates: list[ArticleCandidate]) -> str:
+    lines = [f"# {UI_TEXT['article_candidates_heading']}", ""]
+    for index, candidate in enumerate(candidates[:MAX_ARTICLE_CANDIDATES], 1):
+        lines.extend(
+            [
+                f"## {UI_TEXT['candidate_heading'].format(index=index)}",
+                "",
+                UI_TEXT["candidate_title"],
+                "",
+                candidate.title,
+                "",
+                UI_TEXT["candidate_reason"],
+                "",
+                candidate.reason,
+                "",
+                UI_TEXT["candidate_material_count"],
+                "",
+                UI_TEXT["candidate_count_unit"].format(count=candidate.material_count),
+                "",
+                "---",
+                "",
+            ]
+        )
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def save_article_candidates(config: AppConfig, candidates: list[ArticleCandidate]) -> Path:
+    articles = target_articles(config.peakheadz_root)
+    articles.mkdir(parents=True, exist_ok=True)
+    path = article_candidates_path(config.peakheadz_root)
+    path.write_text(markdown_for_article_candidates(candidates), encoding="utf-8", newline="\n")
+    return path
 
 
 def markdown_for_slack_message(message: SlackMessage, channel_id: str) -> str:
@@ -977,9 +1249,14 @@ class NoteInboxApp:
                 self.config.obsidian_path = str(launcher)
         self.sync_lock = threading.Lock()
         self.tag_lock = threading.Lock()
+        self.candidate_lock = threading.Lock()
         self.status_vars: dict[str, StringVar] = {}
         self.entry_vars: dict[str, StringVar] = {}
         self.check_vars: dict[str, StringVar] = {}
+        self.candidate_vars: list[dict[str, StringVar]] = []
+        self.candidate_frames: list[Frame] = []
+        self.candidate_empty_var: StringVar | None = None
+        self.toggle_buttons: dict[str, ttk.Button] = {}
         self.form_row = 0
         self.buttons: list[ttk.Button] = []
         self.tray = WindowsTrayIcon(self)
@@ -1041,6 +1318,28 @@ class NoteInboxApp:
         )
         style.map("Accent.TButton", background=[("active", "#3b82f6"), ("disabled", "#284267")])
         style.configure("Browse.TButton", padding=(10, 5), font=("Yu Gothic UI", 9), borderwidth=0, relief="flat")
+        style.configure(
+            "ToggleOn.TButton",
+            padding=(18, 6),
+            font=("Yu Gothic UI", 10, "bold"),
+            borderwidth=0,
+            relief="flat",
+            background="#2f8f75",
+            foreground="#f8fffc",
+            focuscolor="#2f8f75",
+        )
+        style.map("ToggleOn.TButton", background=[("active", "#36a789"), ("disabled", "#24483f")])
+        style.configure(
+            "ToggleOff.TButton",
+            padding=(18, 6),
+            font=("Yu Gothic UI", 10, "bold"),
+            borderwidth=0,
+            relief="flat",
+            background="#263143",
+            foreground=COLORS["muted"],
+            focuscolor="#263143",
+        )
+        style.map("ToggleOff.TButton", background=[("active", "#303c52"), ("disabled", "#1b2534")])
 
         canvas = Canvas(self.root, bg=COLORS["bg"], highlightthickness=0)
         canvas.pack(fill=BOTH, expand=True)
@@ -1083,6 +1382,34 @@ class NoteInboxApp:
             self.status_vars[key] = var
             Label(grid, textvariable=var, bg=COLORS["panel"], fg=COLORS["text"], font=("Yu Gothic UI", 10), wraplength=540, justify="left").grid(row=row, column=1, sticky="w", padx=(18, 0), pady=3)
         grid.columnconfigure(1, weight=1)
+
+        candidate_panel = Frame(frame, bg=COLORS["panel"], highlightbackground=COLORS["line"], highlightthickness=1)
+        candidate_panel.pack(fill="x", pady=(0, 14))
+        candidate_header = Frame(candidate_panel, bg=COLORS["panel"])
+        candidate_header.pack(fill="x", padx=18, pady=(14, 8))
+        Label(candidate_header, text=UI_TEXT["section_article_candidates"], bg=COLORS["panel"], fg=COLORS["accent"], font=("Yu Gothic UI", 12, "bold")).pack(side="left")
+        self._add_button(candidate_header, UI_TEXT["button_update_candidates"], self.update_article_candidates_now)
+
+        candidate_body = Frame(candidate_panel, bg=COLORS["panel"])
+        candidate_body.pack(fill="x", padx=18, pady=(0, 16))
+        self.candidate_empty_var = StringVar(value=UI_TEXT["candidate_empty"])
+        Label(candidate_body, textvariable=self.candidate_empty_var, bg=COLORS["panel"], fg=COLORS["muted"], font=("Yu Gothic UI", 10)).pack(anchor="w", pady=(0, 6))
+        for index in range(MAX_ARTICLE_CANDIDATES):
+            card = Frame(candidate_body, bg=COLORS["panel_2"], highlightbackground=COLORS["line"], highlightthickness=1)
+            card.pack(fill="x", pady=(6, 0))
+            vars_for_card = {
+                "heading": StringVar(value=UI_TEXT["candidate_heading"].format(index=index + 1)),
+                "title": StringVar(value=""),
+                "reason": StringVar(value=""),
+                "count": StringVar(value=""),
+            }
+            self.candidate_vars.append(vars_for_card)
+            self.candidate_frames.append(card)
+            Label(card, textvariable=vars_for_card["heading"], bg=COLORS["panel_2"], fg=COLORS["accent_2"], font=("Yu Gothic UI", 10, "bold")).pack(anchor="w", padx=14, pady=(10, 3))
+            Label(card, textvariable=vars_for_card["title"], bg=COLORS["panel_2"], fg=COLORS["text"], font=("Yu Gothic UI", 11, "bold"), wraplength=820, justify="left").pack(anchor="w", padx=14, pady=2)
+            Label(card, textvariable=vars_for_card["reason"], bg=COLORS["panel_2"], fg=COLORS["muted"], font=("Yu Gothic UI", 9), wraplength=820, justify="left").pack(anchor="w", padx=14, pady=2)
+            Label(card, textvariable=vars_for_card["count"], bg=COLORS["panel_2"], fg=COLORS["accent"], font=("Yu Gothic UI", 9, "bold")).pack(anchor="w", padx=14, pady=(2, 10))
+            card.pack_forget()
 
         button_panel = Frame(frame, bg=COLORS["bg"])
         button_panel.pack(anchor="center", pady=(0, 14))
@@ -1148,8 +1475,27 @@ class NoteInboxApp:
         Label(parent, text=label_text, bg=COLORS["panel"], fg=COLORS["muted"], font=("Yu Gothic UI", 9)).grid(row=row, column=0, sticky="w", pady=5)
         var = StringVar(value="1" if value else "0")
         self.check_vars[key] = var
-        check = ttk.Checkbutton(parent, variable=var, onvalue="1", offvalue="0")
-        check.grid(row=row, column=1, sticky="w", padx=(18, 0), pady=5)
+        button = ttk.Button(parent, command=lambda: self._toggle_setting(key))
+        button.grid(row=row, column=1, sticky="w", padx=(18, 0), pady=5)
+        self.toggle_buttons[key] = button
+        self.buttons.append(button)
+        self._refresh_toggle(key)
+
+    def _toggle_setting(self, key: str) -> None:
+        var = self.check_vars[key]
+        var.set("0" if var.get() == "1" else "1")
+        self._refresh_toggle(key)
+
+    def _refresh_toggle(self, key: str) -> None:
+        button = self.toggle_buttons.get(key)
+        var = self.check_vars.get(key)
+        if not button or not var:
+            return
+        enabled = var.get() == "1"
+        button.configure(
+            text=UI_TEXT["ollama_on"] if enabled else UI_TEXT["ollama_off"],
+            style="ToggleOn.TButton" if enabled else "ToggleOff.TButton",
+        )
 
     def _refresh_status(self) -> None:
         connected = UI_TEXT["connected"] if self.config.slack_bot_token and self.config.slack_channel_id else UI_TEXT["not_connected"]
@@ -1299,6 +1645,54 @@ class NoteInboxApp:
             messagebox.showinfo(UI_TEXT["app_name"], message)
         self._refresh_status()
 
+    def update_article_candidates_now(self) -> None:
+        self.save_settings_without_dialog()
+        if not self.config.peakheadz_root:
+            messagebox.showwarning(UI_TEXT["app_name"], UI_TEXT["missing_root"])
+            return
+        if not self.candidate_lock.acquire(blocking=False):
+            return
+        if self.candidate_empty_var:
+            self.candidate_empty_var.set(UI_TEXT["candidate_updating"])
+        self._set_buttons(DISABLED)
+        threading.Thread(target=self._candidate_worker, name="note-inbox-candidates", daemon=True).start()
+
+    def _candidate_worker(self) -> None:
+        try:
+            candidates = generate_article_candidates(self.config)
+            path = save_article_candidates(self.config, candidates)
+            self.root.after(0, lambda: self._candidate_complete(candidates, path, None))
+        except Exception as exc:
+            error = str(exc)
+            self.root.after(0, lambda: self._candidate_complete([], None, error))
+        finally:
+            self.candidate_lock.release()
+
+    def _candidate_complete(self, candidates: list[ArticleCandidate], path: Path | None, error: str | None) -> None:
+        self._set_buttons(NORMAL)
+        if error:
+            if self.candidate_empty_var:
+                self.candidate_empty_var.set(UI_TEXT["candidate_empty"])
+            messagebox.showerror(UI_TEXT["app_name"], f"{UI_TEXT['soft_error']}\n{error}")
+            return
+        self._render_article_candidates(candidates)
+        if self.candidate_empty_var:
+            self.candidate_empty_var.set(UI_TEXT["candidate_saved"] if path else UI_TEXT["candidate_empty"])
+
+    def _render_article_candidates(self, candidates: list[ArticleCandidate]) -> None:
+        for index, frame in enumerate(self.candidate_frames):
+            if index >= len(candidates):
+                frame.pack_forget()
+                continue
+            candidate = candidates[index]
+            vars_for_card = self.candidate_vars[index]
+            vars_for_card["heading"].set(UI_TEXT["candidate_heading"].format(index=index + 1))
+            vars_for_card["title"].set(candidate.title)
+            vars_for_card["reason"].set(candidate.reason)
+            count_text = UI_TEXT["candidate_count_unit"].format(count=candidate.material_count)
+            vars_for_card["count"].set(f"{UI_TEXT['candidate_material_count']}: {count_text}")
+            frame.pack(fill="x", pady=(6, 0))
+
     def _schedule_auto_sync(self) -> None:
         if self.auto_sync_after_id:
             self.root.after_cancel(self.auto_sync_after_id)
@@ -1401,6 +1795,23 @@ def run_self_test() -> int:
         material = material_files[0].read_text(encoding="utf-8")
         if "status: material" not in material or "ollama_status" not in material or "[[" not in material:
             raise AssertionError("material markdown format failed")
+        loaded.ollama_enabled = False
+        candidates = generate_article_candidates(loaded)
+        if not candidates or len(candidates) > MAX_ARTICLE_CANDIDATES:
+            raise AssertionError("article candidate generation failed")
+        candidate_path = save_article_candidates(loaded, candidates)
+        candidate_markdown = candidate_path.read_text(encoding="utf-8")
+        if "# " not in candidate_markdown or "## " not in candidate_markdown:
+            raise AssertionError("article candidate markdown failed")
+        too_many = [
+            ArticleCandidate(title=f"title {index}", reason=f"reason {index}", material_count=index)
+            for index in range(1, 5)
+        ]
+        capped_markdown = markdown_for_article_candidates(too_many)
+        if UI_TEXT["candidate_heading"].format(index=4) in capped_markdown:
+            raise AssertionError("article candidate cap failed")
+        if "score" in capped_markdown.lower() or "ranking" in capped_markdown.lower():
+            raise AssertionError("article candidate forbidden text failed")
     print(UI_TEXT["self_test_ok"])
     return 0
 

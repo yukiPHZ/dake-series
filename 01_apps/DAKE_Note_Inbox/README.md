@@ -3,7 +3,7 @@ DAKE_META:
   id: DAKE_Note_Inbox
   name: DAKE_Note_Inbox
   display_name: note素材受信箱
-  version: 0.2.0
+  version: 0.3.0
   status: active
   app_type: desktop
   exe_name: DakeNote_Inbox.exe
@@ -20,10 +20,10 @@ DAKE_META:
 
 ## RELEASE_BODY
 
-DAKE_Note_Inbox v0.2.0 は、Slackから素材を差分取得して `PEAKHEADZ_ROOT\INBOX` に保存し、Ollamaで軽い札付けを行って `PEAKHEADZ_ROOT\NOTES` に素材Markdownを作る版です。
+DAKE_Note_Inbox v0.3.0 は、Slackから素材を差分取得して `PEAKHEADZ_ROOT\INBOX` に保存し、Ollamaで軽い札付けを行って `PEAKHEADZ_ROOT\NOTES` に素材Markdownを作り、最大3件の記事候補を `PEAKHEADZ_ROOT\ARTICLES` に保存する版です。
 
 - Slack Bot Token / Channel ID を設定して差分同期
-- `last_ts` を `data/note_inbox_config.json` に保存
+- `last_ts` を `%APPDATA%\DAKE_Note_Inbox\note_inbox_config.json` に保存
 - Slack本文は改変せずMarkdownへ保存
 - Obsidian、INBOX、NOTES、ARTICLESを開くボタン
 - Obsidianは実行ファイルパスを指定
@@ -34,12 +34,14 @@ DAKE_Note_Inbox v0.2.0 は、Slackから素材を差分取得して `PEAKHEADZ_R
 - Ollamaモデル名設定
 - INBOX raw MarkdownからNOTES material Markdownを生成
 - Obsidian内部リンクと記事化メモを付与
+- NOTES material Markdownから記事候補を最大3件生成
+- `ARTICLES\article_candidates.md` へ記事候補を保存
 - 起動時は最大化
 - 最小化からタスクトレイ常駐、ダブルクリックで復帰
 - 手動同期は完了ダイアログを表示し、自動同期は状態表示だけを更新
 - 軽量なコネクティングドッツ背景
 
-記事候補、記事本文生成、Codex素材生成、Embedding、Semantic Search、通知、承認、遠隔操作、Wake機能は含みません。
+記事本文生成、Codex素材生成、Embedding、Semantic Search、通知、承認、遠隔操作、Wake機能は含みません。
 
 ## 目的
 
@@ -55,7 +57,7 @@ PEAKHEADZ_ROOT
 Obsidian
 ```
 
-v0.1では、Slackから素材を受信して `INBOX` に保存するところまでを成立させます。
+v0.3では、Slackから素材を受信し、札付けし、記事の種だけを最大3件見つけるところまでを成立させます。
 
 ## 使い方
 
@@ -65,7 +67,8 @@ v0.1では、Slackから素材を受信して `INBOX` に保存するところ�
 4. `設定保存` を押します。
 5. `今すぐ同期` を押すと、Slackの差分がMarkdownで保存されます。
 6. `札付けする` を押すと、INBOXの未処理MarkdownからNOTESへ素材Markdownが作られます。
-7. `Obsidianを開く`、`INBOXを開く`、`NOTESを開く`、`ARTICLESを開く` から確認先を開けます。
+7. `記事候補更新` を押すと、NOTESのmaterial Markdownから最大3件の記事候補が作られます。
+8. `Obsidianを開く`、`INBOXを開く`、`NOTESを開く`、`ARTICLESを開く` から確認先を開けます。
 
 設定はユーザー領域に保存されます。このファイルはGit管理しません。
 
@@ -133,6 +136,26 @@ raw Markdownは改変しません。material Markdownは `PEAKHEADZ_ROOT\NOTES` 
 - ranking
 - article_candidate
 - article_type
+
+## 記事候補
+
+`記事候補更新` を押した時だけ、`PEAKHEADZ_ROOT\NOTES` のmaterial Markdownを読み、最大3件の記事候補を作ります。
+
+Ollamaへ渡すのは `tags`、`links`、`article_hint` のみです。Slack原文全文は渡しません。
+
+保存先:
+
+```text
+PEAKHEADZ_ROOT\ARTICLES\article_candidates.md
+```
+
+保存する内容:
+
+- タイトル
+- 理由
+- 使用素材数
+
+ランキング、score、記事本文生成は行いません。
 
 ## material保存形式
 
