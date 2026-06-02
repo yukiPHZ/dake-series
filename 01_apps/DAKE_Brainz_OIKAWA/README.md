@@ -6,6 +6,31 @@ OIKAWAを開くことは、単なるアプリ起動ではなく、補助脳へ�
 
 チャットAIではありません。通知AIでも、タスク管理UIでもありません。呼ばれた時だけ記憶層を覗き、まだ残っている線を静かに返します。
 
+## Frozen / Phase1 凍結方針
+
+OIKAWAはPhase1で frozen 扱いにします。削除はしませんが、継続開発は行いません。
+
+後継は `DAKE_Note_Inbox` です。今後の正本パイプラインは、Slackから受け取った思想・価値観・出来事・断片をMarkdownとして残し、Obsidianで読み、Codexへ渡し、noteへ進める最小構成へ縮退します。
+
+継承するもの:
+
+- Slack取り込み
+- Markdown保存
+- Ollama接続の最小部品
+
+継承しないもの:
+
+- 記憶OS
+- 検索UI
+- 熾火UI
+- 通知
+- 承認
+- 遠隔操作
+- OIKAWA巡回提案
+- QPSC巨大連携
+
+OIKAWAの巡回、熾火、側に在る、通知、正本ニュース端末としての拡張は新規開発しません。既存実装は参照用に残し、DAKE_Note_Inboxでは札付けと原文保存に必要な最小部品だけを継承します。
+
 ## OIKAWA思想
 
 OIKAWAはBRAINZ本体とは別アプリです。
@@ -345,7 +370,7 @@ This app is a QPCS/reference app for local documentation and assistive brain wor
   "exe_name": "DakeBrainz_OIKAWA.exe",
   "release_url": "",
   "screenshot_path": "assets/screenshot.webp",
-  "status": "experimental",
+  "status": "frozen",
   "app_type": "qpcs",
   "completion_goal": "reference_ready",
   "show_in_launcher": false,

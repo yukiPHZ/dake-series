@@ -6,6 +6,31 @@
 
 BRAINZはChatGPTやCodexの代替AIではありません。記録そのものが目的でもありません。Slack断片、Codexログ、ChatGPT export、note、README、Git、実務メモ、BORINEF断片を、未来の自分が再接続できる点として保存する層です。
 
+## Frozen / Phase1 凍結方針
+
+BRAINZはPhase1で frozen 扱いにします。削除はしませんが、継続開発は行いません。
+
+後継は `DAKE_Note_Inbox` です。今後の正本パイプラインは、Slackから受け取った思想・価値観・出来事・断片をMarkdownとして残し、Obsidianで読み、Codexへ渡し、noteへ進める最小構成へ縮退します。
+
+継承するもの:
+
+- Slack取り込み
+- Markdown保存
+- Ollama接続の最小部品
+
+継承しないもの:
+
+- 記憶OS
+- 検索UI
+- 熾火UI
+- 通知
+- 承認
+- 遠隔操作
+- OIKAWA巡回提案
+- QPSC巨大連携
+
+Slack本文の原文保存とMarkdown正本化の技術だけを残し、BRAINZとしての検索・記憶庫・通知・Remote Queue・巨大連携は新規開発しません。
+
 ## QPCS正本ルート: PEAKHEADZ_ROOT
 
 BRAINZは、今後のQPCS正本ルートとして `C:\Users\yukiz\Documents\PEAKHEADZ_ROOT` を扱います。
@@ -635,7 +660,7 @@ This app is a QPCS/reference app for local documentation and assistive brain wor
   "exe_name": "DakeBrainz_Search.exe",
   "release_url": "",
   "screenshot_path": "assets/screenshot.webp",
-  "status": "draft",
+  "status": "frozen",
   "app_type": "qpcs",
   "completion_goal": "reference_ready",
   "show_in_launcher": false,
