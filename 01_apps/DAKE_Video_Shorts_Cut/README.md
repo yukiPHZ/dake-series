@@ -11,15 +11,17 @@ YouTube URL取得や投稿機能は持たせず、MP4を入れてショート候
 - 動画全体を3分割し、それぞれからショート候補を作成
 - 9:16 / 1080x1920 のMP4を出力
 - サムネ画像とタイトル案テキストを出力
+- `文字起こしも作成` をONにすると、タイムスタンプ付き文字起こしを出力
 - QRコードで同じWi-Fi内のスマホから保存できるページを表示
 
 ## 使い方
 
 1. `python main.py` で起動
 2. MP4をドラッグ＆ドロップ、または `MP4を選ぶ` から選択
-3. `ショートを作成` を押す
-4. 生成後、保存先フォルダとQRコードを確認
-5. スマホでQRコードを読み取り、ブラウザから必要なファイルを保存
+3. 必要に応じて `文字起こしも作成` をON/OFF
+4. `ショートを作成` を押す
+5. 生成後、保存先フォルダとQRコードを確認
+6. スマホでQRコードを読み取り、ブラウザから必要なファイルを保存
 
 出力フォルダは入力動画と同じ階層に作成されます。
 
@@ -34,7 +36,20 @@ dake_shorts_output_YYYYMMDD_HHMMSS/
   title_01.txt
   title_02.txt
   title_03.txt
+  transcript.txt
+  transcript_segments.json
 ```
+
+## 文字起こし
+
+v0.2で文字起こし機能を追加しました。
+
+- `文字起こしも作成` をONにすると `transcript.txt` と `transcript_segments.json` が生成されます。
+- 初回実行時や長い動画では時間がかかります。
+- 文字起こしには `faster-whisper` が必要です。
+- 環境により `faster-whisper` の導入やモデル取得ができない場合があります。その場合でもショート動画・サムネ・タイトル案の生成は継続します。
+- 文字起こしは今後のAI候補選定の前段階です。
+- v0.2では熱量判定、OpenAI API判定、Ollama判定は未実装です。
 
 ## 必要なもの
 
@@ -44,6 +59,7 @@ dake_shorts_output_YYYYMMDD_HHMMSS/
   - qrcode
   - Pillow
   - tkinterdnd2
+  - faster-whisper
 
 Pythonライブラリは以下でインストールできます。
 
@@ -70,6 +86,7 @@ ffmpeg / ffprobe はPATHから実行できる状態にしてください。
 - BGM追加
 - テロップ編集
 - AI高精度判定
+- 熱量判定
 - SNS投稿予約
 
 ## ビルド方法
@@ -103,7 +120,7 @@ python main.py --process-check "C:\path\to\sample.mp4"
   "launcher_description": "MP4からショート候補とサムネを作成します。",
   "site_title": "Dakeショート切り出し",
   "site_description": "MP4を入れるだけで、ショート動画候補・サムネ・タイトル案を作成します。",
-  "update_summary": "MP4からショート候補とスマホ転送用QRを作成する新規アプリを追加",
+  "update_summary": "MP4からショート候補を作成し、タイムスタンプ付き文字起こしも出力できるように更新",
   "folder_name": "DAKE_Video_Shorts_Cut",
   "exe_name": "DakeVideo_Shorts_Cut.exe",
   "release_url": "",
