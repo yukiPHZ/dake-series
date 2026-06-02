@@ -67,9 +67,12 @@ python main.py --qpsc-reload
 ## 操作
 
 - 再読込
+- 5分ごとの裏側自動更新
 - URL列をダブルクリックしてURLを開く
 - GitHub列をダブルクリックしてGitHubを開く
 - README列をダブルクリックしてREADMEを開く
+
+GUI起動時と再読込時に GitHub URL 補完用の外部コマンドを呼ぶ場合は、Windowsでコンソールを表示しないように実行します。
 
 ## 品質チェック
 
@@ -96,7 +99,7 @@ python main.py --open-check
   "launcher_description": "README正本からWebサイト索引を自動生成します。",
   "site_title": "",
   "site_description": "",
-  "update_summary": "DAKE Web Dashboardの後継として、サイト群を俯瞰する静かな索引を追加しました。",
+  "update_summary": "GitHub URL補完の外部コマンドを非表示化し、5分ごとの裏側自動更新を追加しました。",
   "folder_name": "DAKE_Web_Index",
   "exe_name": "DakeWeb_Index.exe",
   "release_url": "",

@@ -34,6 +34,7 @@ DEFAULT_DEV_ROOT = Path(os.environ.get("DAKE_WEB_INDEX_ROOT", os.environ.get("DA
 DEFAULT_SERIES_ROOT = Path(os.environ.get("DAKE_SERIES_ROOT", r"C:\Users\yukiz\devlop\DAKE_series"))
 MAX_SCAN_DEPTH = 2
 WORKER_POLL_MS = 80
+AUTO_RELOAD_MS = 5 * 60 * 1000
 
 UI_TEXT = {
     "window_title": "DAKE Web Index",
@@ -50,6 +51,7 @@ UI_TEXT = {
     "status_loaded": "{count}件 / {time}",
     "status_error": "読込できませんでした",
     "status_no_selection": "行を選択してください",
+    "auto_reload_interval": "自動更新: 5分ごと",
     "value_unset": "未設定",
     "value_readme": "README.md",
     "dialog_error_title": "エラー",
@@ -255,16 +257,28 @@ def url_from_meta(meta: dict[str, object], readme_text: str) -> str:
     return normalize_http_url(value) or first_http_url(readme_text)
 
 
+def run_hidden_command(args: list[str], cwd: Path | None = None, timeout: float | None = None) -> subprocess.CompletedProcess[str]:
+    kwargs: dict[str, object] = {
+        "cwd": str(cwd) if cwd is not None else None,
+        "capture_output": True,
+        "text": True,
+        "encoding": "utf-8",
+        "errors": "replace",
+        "timeout": timeout,
+        "check": False,
+    }
+    if sys.platform.startswith("win"):
+        kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
+    return subprocess.run(args, **kwargs)
+
+
 def github_from_git_remote(folder: Path) -> str:
     if not (folder / ".git").exists():
         return ""
     try:
-        result = subprocess.run(
+        result = run_hidden_command(
             ["git", "-C", str(folder), "config", "--get", "remote.origin.url"],
-            capture_output=True,
-            text=True,
             timeout=2.0,
-            check=False,
         )
     except Exception:
         return ""
@@ -420,7 +434,9 @@ class WebIndexApp:
         self.record_by_iid: dict[str, SiteRecord] = {}
         self.worker_queue: queue.Queue[tuple[str, object]] = queue.Queue()
         self.worker_thread: threading.Thread | None = None
+        self.auto_reload_job: str | None = None
         self.status_var = tk.StringVar(value=UI_TEXT["status_waiting"])
+        self.auto_status_var = tk.StringVar(value=UI_TEXT["auto_reload_interval"])
 
         self.root.title(UI_TEXT["window_title"])
         self.root.geometry("1120x680")
@@ -429,7 +445,7 @@ class WebIndexApp:
         apply_window_icon(root)
         self.configure_style()
         self.build_ui()
-        self.refresh()
+        self.refresh(reset_auto_timer=True)
 
     def configure_style(self) -> None:
         style = ttk.Style(self.root)
@@ -504,7 +520,7 @@ class WebIndexApp:
         self.reload_button = tk.Button(
             footer,
             text=UI_TEXT["button_reload"],
-            command=self.refresh,
+            command=lambda: self.refresh(reset_auto_timer=True),
             bg=THEME["accent"],
             fg="#FFFFFF",
             activebackground=THEME["accent_hover"],
@@ -517,8 +533,21 @@ class WebIndexApp:
             font=(self.font_family, 9, "bold"),
         )
         self.reload_button.pack(side="right")
+        tk.Label(footer, textvariable=self.auto_status_var, bg=THEME["bg"], fg=THEME["muted"], font=(self.font_family, 9)).pack(side="right", padx=(0, 14))
 
-    def refresh(self) -> None:
+    def schedule_auto_reload(self) -> None:
+        if self.auto_reload_job is not None:
+            self.root.after_cancel(self.auto_reload_job)
+        self.auto_reload_job = self.root.after(AUTO_RELOAD_MS, self.on_auto_reload)
+
+    def on_auto_reload(self) -> None:
+        self.auto_reload_job = None
+        self.refresh()
+        self.schedule_auto_reload()
+
+    def refresh(self, reset_auto_timer: bool = False) -> None:
+        if reset_auto_timer:
+            self.schedule_auto_reload()
         if self.worker_thread and self.worker_thread.is_alive():
             return
         self.status_var.set(UI_TEXT["status_loading"])
