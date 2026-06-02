@@ -5,6 +5,7 @@ rmdir /s /q dist
 del *.spec
 
 pyinstaller ^
+--name DakeVideo_Shorts_Cut ^
 --onefile ^
 --noconsole ^
 --clean ^

@@ -256,6 +256,12 @@ def validate_mp4_path(path: Path) -> Path:
     return path
 
 
+def get_subprocess_creationflags() -> int:
+    if os.name == "nt":
+        return getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    return 0
+
+
 def run_subprocess(command: list[str], error_message: str) -> subprocess.CompletedProcess[str]:
     try:
         completed = subprocess.run(
@@ -265,6 +271,7 @@ def run_subprocess(command: list[str], error_message: str) -> subprocess.Complet
             text=True,
             encoding="utf-8",
             errors="replace",
+            creationflags=get_subprocess_creationflags(),
         )
     except OSError as exc:
         raise UserFacingError(error_message) from exc
