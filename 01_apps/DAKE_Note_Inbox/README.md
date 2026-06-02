@@ -1,8 +1,9 @@
 ---
 DAKE_META:
   id: DAKE_Note_Inbox
-  name: note素材受信箱
-  version: 0.1.1
+  name: DAKE_Note_Inbox
+  display_name: note素材受信箱
+  version: 0.1.2
   status: active
   app_type: desktop
   exe_name: DakeNote_Inbox.exe
@@ -11,25 +12,28 @@ DAKE_META:
   canonical_readme: true
 ---
 
-# note素材受信箱
+# DAKE_Note_Inbox
 
-Slackからnote素材を受け取り、`PEAKHEADZ_ROOT\INBOX`へMarkdownで保存する最小アプリです。
+表示名「note素材受信箱」。Slackからnote素材を受け取り、`PEAKHEADZ_ROOT\INBOX`へMarkdownで保存する最小アプリです。
 
 このアプリは補助脳ではありません。検索、通知、承認、遠隔操作、記事生成は行いません。Slackから原文を受け取り、PEAKHEADZ_ROOTへ置き、Obsidianで読むための導線だけを持ちます。
 
 ## RELEASE_BODY
 
-DAKE_Note_Inbox v0.1.1 は、Slackから素材を差分取得し、Markdownとして `PEAKHEADZ_ROOT\INBOX` に保存する初期版のUX改善版です。
+DAKE_Note_Inbox v0.1.2 は、Slackから素材を差分取得し、Markdownとして `PEAKHEADZ_ROOT\INBOX` に保存する初期版のUX改善版です。
 
 - Slack Bot Token / Channel ID を設定して差分同期
 - `last_ts` を `data/note_inbox_config.json` に保存
 - Slack本文は改変せずMarkdownへ保存
 - Obsidian、INBOX、NOTES、ARTICLESを開くボタン
 - Obsidianは実行ファイルパスを指定
+- Obsidian.exeの参照ボタン
+- 未設定時のObsidian自動探索
+- 設定は `%APPDATA%\DAKE_Note_Inbox\note_inbox_config.json` に保存
 - 起動時は最大化
 - 最小化からタスクトレイ常駐、ダブルクリックで復帰
 - 手動同期は完了ダイアログを表示し、自動同期は状態表示だけを更新
-- 軽量な星背景
+- 軽量なコネクティングドッツ背景
 
 Ollama、記事候補、Codex素材生成、Embedding、Semantic Search、通知、承認、遠隔操作、Wake機能は含みません。
 
@@ -57,13 +61,19 @@ v0.1では、Slackから素材を受信して `INBOX` に保存するところ�
 4. `今すぐ同期` を押すと、Slackの差分がMarkdownで保存されます。
 5. `Obsidianを開く`、`INBOXを開く`、`NOTESを開く`、`ARTICLESを開く` から確認先を開けます。
 
-設定は `data/note_inbox_config.json` に保存されます。このファイルはGit管理しません。
+設定はユーザー領域に保存されます。このファイルはGit管理しません。
+
+```text
+%APPDATA%\DAKE_Note_Inbox\note_inbox_config.json
+```
 
 Obsidian実行ファイルには、VaultではなくObsidian本体のexeを指定します。
 
 ```text
 C:\Users\yukiz\AppData\Local\Programs\Obsidian\Obsidian.exe
 ```
+
+未設定時は標準インストール先とスタートメニューのObsidianショートカットを自動探索します。起動時は `PEAKHEADZ_ROOT` をVaultとして開くことを試み、失敗時はObsidian URIでの起動へフォールバックします。
 
 ## タスクトレイ
 

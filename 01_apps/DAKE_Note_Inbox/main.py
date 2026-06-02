@@ -16,14 +16,17 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import webbrowser
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from tkinter import BOTH, DISABLED, NORMAL, Canvas, Entry, Frame, Label, StringVar, Tk, messagebox, ttk
+from tkinter import BOTH, DISABLED, NORMAL, Canvas, Entry, Frame, Label, StringVar, Tk, filedialog, messagebox, ttk
 
 
 UI_TEXT = {
-    "app_name": "note素材受信箱",
-    "window_title": "note素材受信箱",
+    "app_name": "DAKE_Note_Inbox",
+    "window_title": "DAKE_Note_Inbox",
+    "display_name": "note素材受信箱",
+    "subtitle": "Slack素材をPEAKHEADZ_ROOTへ置く受信箱",
     "section_status": "同期状態",
     "section_settings": "設定",
     "slack_status": "Slack接続状態",
@@ -43,6 +46,7 @@ UI_TEXT = {
     "button_open_notes": "NOTESを開く",
     "button_open_articles": "ARTICLESを開く",
     "button_save_settings": "設定保存",
+    "button_browse": "参照",
     "label_token": "Slack Bot Token",
     "label_channel": "Slack Channel ID",
     "label_root": "PEAKHEADZ_ROOT",
@@ -55,7 +59,9 @@ UI_TEXT = {
     "sync_none": "新しいSlack素材はありません。",
     "open_failed": "開けませんでした: {path}",
     "obsidian_failed": "Obsidianを開けませんでした。設定を確認してください。",
+    "obsidian_browse_title": "Obsidian.exeを選択",
     "soft_error": "処理に失敗しました。",
+    "filetype_executable": "実行ファイル",
     "markdown_heading": "Slack原文",
     "tray_open": "開く",
     "tray_sync": "今すぐ同期",
@@ -66,12 +72,20 @@ UI_TEXT = {
 }
 
 
+APP_NAME = "DAKE_Note_Inbox"
 APP_DIR = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
-CONFIG_PATH = APP_DIR / "data" / "note_inbox_config.json"
 DEFAULT_PEAKHEADZ_ROOT = Path.home() / "Documents" / "PEAKHEADZ_ROOT"
 SLACK_HISTORY_URL = "https://slack.com/api/conversations.history"
-COMMON_ICON_PATH = APP_DIR.parent.parent / "02_assets" / "dake_icon.ico"
-APP_NAME = "DAKE_Note_Inbox"
+
+
+def appdata_dir() -> Path:
+    base = os.getenv("APPDATA")
+    if base:
+        return Path(base)
+    return Path.home() / "AppData" / "Roaming"
+
+
+CONFIG_PATH = appdata_dir() / APP_NAME / "note_inbox_config.json"
 
 
 COLORS = {
@@ -114,10 +128,15 @@ class ConfigStore:
         self.path = path
 
     def load(self) -> AppConfig:
-        if not self.path.exists():
-            return AppConfig()
+        source_path = self.path
+        if not source_path.exists():
+            legacy = legacy_config_path()
+            if legacy.exists():
+                source_path = legacy
+            else:
+                return AppConfig()
         try:
-            data = json.loads(self.path.read_text(encoding="utf-8"))
+            data = json.loads(source_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             return AppConfig()
         base = AppConfig()
@@ -127,6 +146,8 @@ class ConfigStore:
         base.sync_interval_seconds = normalize_interval(base.sync_interval_seconds)
         base.last_sync_count = safe_int(base.last_sync_count, 0)
         base.today_sync_count = safe_int(base.today_sync_count, 0)
+        if source_path != self.path:
+            self.save(base)
         return base
 
     def save(self, config: AppConfig) -> None:
@@ -159,9 +180,24 @@ def today_key() -> str:
     return dt.date.today().isoformat()
 
 
+def legacy_config_path() -> Path:
+    return APP_DIR / "data" / "note_inbox_config.json"
+
+
+def common_icon_candidates() -> list[Path]:
+    candidates = [
+        APP_DIR.parent.parent / "02_assets" / "dake_icon.ico",
+        APP_DIR.parent.parent.parent / "02_assets" / "dake_icon.ico",
+    ]
+    bundle_root = Path(getattr(sys, "_MEIPASS", APP_DIR))
+    candidates.append(bundle_root / "assets" / "dake_icon.ico")
+    return candidates
+
+
 def app_icon_path() -> Path | None:
-    if COMMON_ICON_PATH.exists():
-        return COMMON_ICON_PATH
+    for candidate in common_icon_candidates():
+        if candidate.exists():
+            return candidate
     return None
 
 
@@ -290,6 +326,46 @@ def open_path(path: Path) -> None:
         os.startfile(str(resolved))  # type: ignore[attr-defined]
     else:
         subprocess.Popen(["xdg-open", str(resolved)])
+
+
+def localappdata_dir() -> Path:
+    base = os.getenv("LOCALAPPDATA")
+    if base:
+        return Path(base)
+    return Path.home() / "AppData" / "Local"
+
+
+def obsidian_launcher_candidates() -> list[Path]:
+    return [
+        localappdata_dir() / "Programs" / "Obsidian" / "Obsidian.exe",
+        appdata_dir() / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Obsidian.lnk",
+    ]
+
+
+def find_obsidian_launcher() -> Path | None:
+    for candidate in obsidian_launcher_candidates():
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def obsidian_vault_uri(root_path: Path) -> str:
+    vault_name = root_path.expanduser().name or "PEAKHEADZ_ROOT"
+    return "obsidian://open?vault=" + urllib.parse.quote(vault_name)
+
+
+def open_obsidian_with_launcher(launcher: Path, root_path: Path) -> None:
+    launcher = launcher.expanduser()
+    root_path = root_path.expanduser()
+    suffix = launcher.suffix.lower()
+    if suffix == ".exe":
+        subprocess.Popen([str(launcher), str(root_path)])
+        return
+    if suffix == ".lnk" and os.name == "nt":
+        os.startfile(str(launcher))  # type: ignore[attr-defined]
+        webbrowser.open(obsidian_vault_uri(root_path))
+        return
+    raise FileNotFoundError(str(launcher))
 
 
 class WindowsTrayIcon:
@@ -479,10 +555,11 @@ class WindowsTrayIcon:
 
 
 class StarField:
-    def __init__(self, canvas: Canvas, count: int = 42) -> None:
+    def __init__(self, canvas: Canvas, count: int = 38) -> None:
         self.canvas = canvas
         self.count = count
-        self.items: list[tuple[int, float, float]] = []
+        self.stars: list[dict[str, float | int]] = []
+        self.lines: list[int] = []
         self.running = True
         self.resize_after_id: str | None = None
         self.canvas.bind("<Configure>", self._on_resize, add="+")
@@ -494,17 +571,31 @@ class StarField:
         self.canvas.update_idletasks()
         width = max(self.canvas.winfo_width(), 920)
         height = max(self.canvas.winfo_height(), 620)
-        for item, _phase, _speed in self.items:
-            self.canvas.delete(item)
-        self.items.clear()
+        for star in self.stars:
+            self.canvas.delete(int(star["item"]))
+        for line in self.lines:
+            self.canvas.delete(line)
+        self.stars.clear()
+        self.lines.clear()
         for _index in range(self.count):
-            x = random.randint(12, width - 12)
-            y = random.randint(12, height - 12)
+            x = float(random.randint(12, width - 12))
+            y = float(random.randint(12, height - 12))
             size = random.choice([1, 1, 2])
             phase = random.random() * 6.28
             speed = random.uniform(0.25, 0.55)
             item = self.canvas.create_oval(x, y, x + size, y + size, fill="#53667f", outline="")
-            self.items.append((item, phase, speed))
+            self.stars.append(
+                {
+                    "item": item,
+                    "x": x,
+                    "y": y,
+                    "size": float(size),
+                    "phase": phase,
+                    "speed": speed,
+                    "vx": random.uniform(-0.18, 0.18),
+                    "vy": random.uniform(-0.12, 0.12),
+                }
+            )
 
     def _on_resize(self, _event) -> None:
         if self.resize_after_id:
@@ -516,10 +607,50 @@ class StarField:
             return
         current = time.time()
         palette = ["#405066", "#53667f", "#7288a8", "#9fb5d6"]
-        for item, phase, speed in self.items:
-            value = int((1 + math.sin(current * speed + phase)) * 1.5)
-            self.canvas.itemconfigure(item, fill=palette[max(0, min(value, len(palette) - 1))])
-        self.canvas.after(1200, self._tick)
+        width = max(self.canvas.winfo_width(), 920)
+        height = max(self.canvas.winfo_height(), 620)
+        for star in self.stars:
+            x = float(star["x"]) + float(star["vx"])
+            y = float(star["y"]) + float(star["vy"])
+            if x < 8 or x > width - 8:
+                star["vx"] = -float(star["vx"])
+                x = max(8, min(width - 8, x))
+            if y < 8 or y > height - 8:
+                star["vy"] = -float(star["vy"])
+                y = max(8, min(height - 8, y))
+            star["x"] = x
+            star["y"] = y
+            size = float(star["size"])
+            value = int((1 + math.sin(current * float(star["speed"]) + float(star["phase"]))) * 1.5)
+            color = palette[max(0, min(value, len(palette) - 1))]
+            item = int(star["item"])
+            self.canvas.coords(item, x, y, x + size, y + size)
+            self.canvas.itemconfigure(item, fill=color)
+        self._draw_connections()
+        self.canvas.after(180, self._tick)
+
+    def _draw_connections(self) -> None:
+        for line in self.lines:
+            self.canvas.delete(line)
+        self.lines.clear()
+        max_lines = 54
+        max_distance = 118.0
+        for index, star in enumerate(self.stars):
+            if len(self.lines) >= max_lines:
+                break
+            x1 = float(star["x"])
+            y1 = float(star["y"])
+            for other in self.stars[index + 1 :]:
+                dx = float(other["x"]) - x1
+                dy = float(other["y"]) - y1
+                distance = math.sqrt(dx * dx + dy * dy)
+                if distance <= max_distance:
+                    tone = "#27364a" if distance > 72 else "#334a68"
+                    line = self.canvas.create_line(x1, y1, float(other["x"]), float(other["y"]), fill=tone, width=1)
+                    self.canvas.tag_lower(line)
+                    self.lines.append(line)
+                    if len(self.lines) >= max_lines:
+                        break
 
 
 class NoteInboxApp:
@@ -527,6 +658,10 @@ class NoteInboxApp:
         self.root = root
         self.store = store or ConfigStore()
         self.config = self.store.load()
+        if not self.config.obsidian_path:
+            launcher = find_obsidian_launcher()
+            if launcher and launcher.suffix.lower() == ".exe":
+                self.config.obsidian_path = str(launcher)
         self.sync_lock = threading.Lock()
         self.status_vars: dict[str, StringVar] = {}
         self.entry_vars: dict[str, StringVar] = {}
@@ -563,8 +698,33 @@ class NoteInboxApp:
     def _build_ui(self) -> None:
         style = ttk.Style()
         style.theme_use("clam")
-        style.configure("TButton", padding=(12, 7), font=("Yu Gothic UI", 10))
-        style.configure("Accent.TButton", padding=(14, 8), font=("Yu Gothic UI", 10, "bold"))
+        style.configure(
+            "TButton",
+            padding=(14, 8),
+            font=("Yu Gothic UI", 10),
+            borderwidth=0,
+            relief="flat",
+            background=COLORS["panel_2"],
+            foreground=COLORS["text"],
+            focuscolor=COLORS["panel_2"],
+        )
+        style.map(
+            "TButton",
+            background=[("active", "#1d3049"), ("disabled", "#182333")],
+            foreground=[("disabled", COLORS["muted"])],
+        )
+        style.configure(
+            "Accent.TButton",
+            padding=(18, 9),
+            font=("Yu Gothic UI", 10, "bold"),
+            borderwidth=0,
+            relief="flat",
+            background="#2563eb",
+            foreground="#f8fbff",
+            focuscolor="#2563eb",
+        )
+        style.map("Accent.TButton", background=[("active", "#3b82f6"), ("disabled", "#284267")])
+        style.configure("Browse.TButton", padding=(10, 5), font=("Yu Gothic UI", 9), borderwidth=0, relief="flat")
 
         canvas = Canvas(self.root, bg=COLORS["bg"], highlightthickness=0)
         canvas.pack(fill=BOTH, expand=True)
@@ -582,6 +742,8 @@ class NoteInboxApp:
 
         title = Label(frame, text=UI_TEXT["app_name"], bg=COLORS["bg"], fg=COLORS["text"], font=("Yu Gothic UI", 20, "bold"))
         title.pack(anchor="center", pady=(24, 8))
+        subtitle = Label(frame, text=UI_TEXT["subtitle"], bg=COLORS["bg"], fg=COLORS["muted"], font=("Yu Gothic UI", 10))
+        subtitle.pack(anchor="center", pady=(0, 12))
 
         status_panel = Frame(frame, bg=COLORS["panel"], highlightbackground=COLORS["line"], highlightthickness=1)
         status_panel.pack(fill="x", pady=(8, 14))
@@ -620,7 +782,7 @@ class NoteInboxApp:
         self._add_entry(form, "slack_bot_token", UI_TEXT["label_token"], self.config.slack_bot_token, show="*")
         self._add_entry(form, "slack_channel_id", UI_TEXT["label_channel"], self.config.slack_channel_id)
         self._add_entry(form, "peakheadz_root", UI_TEXT["label_root"], self.config.peakheadz_root)
-        self._add_entry(form, "obsidian_path", UI_TEXT["label_obsidian"], self.config.obsidian_path)
+        self._add_entry(form, "obsidian_path", UI_TEXT["label_obsidian"], self.config.obsidian_path, browse_command=self.browse_obsidian_exe)
         self._add_entry(form, "sync_interval_seconds", UI_TEXT["label_interval"], str(self.config.sync_interval_seconds))
         form.columnconfigure(1, weight=1)
 
@@ -633,7 +795,7 @@ class NoteInboxApp:
         button.pack(side="left", padx=(0, 8), pady=4)
         self.buttons.append(button)
 
-    def _add_entry(self, parent: Frame, key: str, label_text: str, value: str, show: str | None = None) -> None:
+    def _add_entry(self, parent: Frame, key: str, label_text: str, value: str, show: str | None = None, browse_command=None) -> None:
         row = len(self.entry_vars)
         Label(parent, text=label_text, bg=COLORS["panel"], fg=COLORS["muted"], font=("Yu Gothic UI", 9)).grid(row=row, column=0, sticky="w", pady=5)
         var = StringVar(value=value)
@@ -652,6 +814,10 @@ class NoteInboxApp:
             font=("Yu Gothic UI", 10),
         )
         entry.grid(row=row, column=1, sticky="ew", padx=(18, 0), pady=5, ipady=5)
+        if browse_command:
+            button = ttk.Button(parent, text=UI_TEXT["button_browse"], command=browse_command, style="Browse.TButton")
+            button.grid(row=row, column=2, sticky="e", padx=(8, 0), pady=5)
+            self.buttons.append(button)
 
     def _refresh_status(self) -> None:
         connected = UI_TEXT["connected"] if self.config.slack_bot_token and self.config.slack_channel_id else UI_TEXT["not_connected"]
@@ -771,16 +937,34 @@ class NoteInboxApp:
             self.sync_now(show_dialog=False)
         self._schedule_auto_sync()
 
+    def browse_obsidian_exe(self) -> None:
+        raw_path = self.entry_vars["obsidian_path"].get().strip()
+        initial = Path(raw_path).expanduser() if raw_path else None
+        initial_dir = str(initial.parent) if initial and initial.exists() else str(localappdata_dir() / "Programs" / "Obsidian")
+        selected = filedialog.askopenfilename(
+            title=UI_TEXT["obsidian_browse_title"],
+            initialdir=initial_dir,
+            filetypes=[(UI_TEXT["filetype_executable"], "*.exe"), ("All files", "*.*")],
+        )
+        if selected:
+            self.entry_vars["obsidian_path"].set(selected)
+
     def open_obsidian(self) -> None:
         self.save_settings_without_dialog()
         root_path = Path(self.config.peakheadz_root).expanduser()
-        obsidian = Path(self.config.obsidian_path).expanduser() if self.config.obsidian_path else None
+        configured = Path(self.config.obsidian_path).expanduser() if self.config.obsidian_path else None
+        launcher = configured if configured and configured.exists() else find_obsidian_launcher()
         try:
-            if obsidian and obsidian.exists() and obsidian.is_file():
-                subprocess.Popen([str(obsidian), str(root_path)])
+            if launcher:
+                open_obsidian_with_launcher(launcher, root_path)
             else:
-                raise FileNotFoundError(str(obsidian or ""))
+                webbrowser.open(obsidian_vault_uri(root_path))
         except Exception:
+            try:
+                if webbrowser.open(obsidian_vault_uri(root_path)):
+                    return
+            except Exception:
+                pass
             messagebox.showerror(UI_TEXT["app_name"], UI_TEXT["obsidian_failed"])
 
     def open_inbox(self) -> None:
