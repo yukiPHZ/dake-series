@@ -28,9 +28,9 @@ except Exception:
 APP_ID = "dake.qpsc.dashboard"
 APP_FOLDER_NAME = "DAKE_QPSC_Dashboard"
 APP_DASHBOARD_FOLDER = "DAKE_App_Dashboard"
-WEB_DASHBOARD_FOLDER = "DAKE_Web_Dashboard"
+WEB_INDEX_FOLDER = "DAKE_Web_Index"
 APP_DASHBOARD_EXE = "DakeApp_Dashboard.exe"
-WEB_DASHBOARD_EXE = "DakeWeb_Dashboard.exe"
+WEB_INDEX_EXE = "DakeWeb_Index.exe"
 BOOTH_ASSIST_FOLDER = "DAKE_BOOTH_Assist"
 BOOTH_ASSIST_EXE = "DakeBOOTH_Assist.exe"
 DIST_DIR_NAME = "dist"
@@ -40,6 +40,7 @@ DEFAULT_SERIES_ROOT = Path(os.environ.get("DAKE_SERIES_ROOT", r"C:\Users\yukiz\d
 DEFAULT_APPS_ROOT = Path(os.environ.get("QPSC_SERIES_APPS_ROOT", str(DEFAULT_SERIES_ROOT / "01_apps")))
 WORKER_POLL_MS = 80
 MAX_NEXT_ACTIONS = 3
+MAX_WEB_SITE_ROWS = 5
 
 UI_TEXT = {
     "window_title": "Quiet Personal Cognitive System",
@@ -50,14 +51,22 @@ UI_TEXT = {
     "section_current_title": "現在地",
     "button_reload": "再確認",
     "button_open_app_dashboard": "App詳細",
-    "button_open_web_dashboard": "Web詳細",
+    "button_open_web_index": "Open Web Index",
     "button_open_target": "選択対象を開く",
     "button_close": "閉じる",
     "button_open_failed_title": "起動できません",
     "button_open_failed": "対象が見つかりません。\n\n{path}",
     "button_open_error": "起動に失敗しました。\n\n{path}\n\n{error}",
     "card_app_title": "アプリ",
-    "card_site_title": "サイト",
+    "card_web_sites_title": "Web Sites",
+    "card_web_sites_subtitle": "README正本から自動生成",
+    "column_folder_name": "フォルダ名",
+    "column_site_name": "サイト名",
+    "column_updated": "最終更新日時",
+    "sites_count": "{count} sites",
+    "web_index_opened": "DAKE_Web_Indexを起動しました。",
+    "web_index_fallback": "DAKE_Web_Indexフォルダを開きました。",
+    "value_unset": "-",
     "card_git_title": "Git",
     "card_next_title": "いま見るもの",
     "section_unresolved_title": "未処理",
@@ -73,31 +82,27 @@ UI_TEXT = {
     "label_system_count": "QPCS系",
     "label_personal_count": "ユキズ専用",
     "label_frozen_count": "凍結",
-    "label_site_total": "サイト総数",
-    "label_cloudflare_unchecked": "Cloudflare未確認",
-    "label_health_attention": "health未確認または異常",
-    "label_site_git_uncommitted": "Git未反映または未commit",
     "label_series_uncommitted": "DAKE_series 未commit件数",
     "label_series_untracked": "DAKE_series 未追跡件数",
-    "label_git_attention": "要確認",
+    "label_git_attention": "Git確認",
     "value_waiting": "確認待ち",
     "value_none": "なし",
     "value_yes": "あり",
     "value_git_ok": "なし",
-    "value_git_attention": "要確認あり",
-    "priority_urgent": "優先",
+    "value_git_attention": "確認あり",
+    "priority_urgent": "先に見る",
     "priority_active": "通常",
     "priority_later": "保留",
-    "priority_summary": "優先 {urgent} / 全体 {total}\n通常 {active} / 保留 {later}",
+    "priority_summary": "先に見る {urgent} / 全体 {total}\n通常 {active} / 保留 {later}",
     "priority_brief": "{urgent}/{total}",
     "priority_header": "【{label}】",
     "status_checking": "確認中…",
     "status_ready": "確認完了",
-    "status_attention": "要確認あり",
+    "status_attention": "確認あり",
     "status_launch_check_ok": "LAUNCH CHECK OK",
     "last_loaded_waiting": "未確認",
     "last_loaded_value": "確認: {time}",
-    "summary_template": "優先 {urgent}件 / 未処理全体 {total}件 / アプリ {apps}件 / サイト {sites}件",
+    "summary_template": "未処理 {total}件 / アプリ {apps}件 / Web {sites} sites",
     "dialog_empty": "対象はありません。",
     "dialog_booth_title": "BOOTH登録候補アプリ",
     "dialog_booth_materials_title": "BOOTH素材不足アプリ",
@@ -105,9 +110,6 @@ UI_TEXT = {
     "dialog_screenshot_title": "スクショ未作成アプリ",
     "dialog_readme_title": "README不足アプリ",
     "dialog_role_title": "分類別 要確認アプリ",
-    "dialog_cloudflare_title": "Cloudflare未確認サイト",
-    "dialog_health_title": "health未確認または異常サイト",
-    "dialog_site_git_title": "Git未反映または未commitサイト",
     "dialog_series_git_title": "DAKE_series Git要確認",
     "dialog_select_notice": "一覧から対象を選択してください。",
     "next_none": "現時点で明確な候補はありません。",
@@ -116,10 +118,7 @@ UI_TEXT = {
     "next_release": "Release作成が必要な出荷候補",
     "next_readme": "README不足のアプリ",
     "next_role": "分類別の確認が必要なアプリ",
-    "next_cloudflare": "Cloudflare確認が必要な公開サイト",
-    "next_health": "health確認が必要な公開サイト",
-    "next_site_git": "サイト系Git未反映を確認",
-    "next_series_git": "DAKE_seriesの未commitを確認",
+    "next_series_git": "DAKE_seriesのGit確認",
     "next_line": "{index}. {label}（{count}件）",
     "reason_booth_missing": "BOOTH素材あり / booth_url未設定",
     "reason_booth_materials_missing": "BOOTH登録前の素材が不足",
@@ -151,21 +150,18 @@ UI_TEXT = {
     "completion_goal_local_ready": "ローカル運用",
     "completion_goal_frozen_closed": "凍結完了",
     "completion_goal_unknown": "未設定",
-    "reason_cloudflare_missing": "Cloudflare URLまたはProjectが未確認",
-    "reason_health_attention": "health_urlまたはFunctions healthが未確認",
-    "reason_site_git": "Git未反映または未commitがあります",
-    "reason_series_git": "DAKE_seriesに未commitがあります",
+    "reason_series_git": "DAKE_seriesのGit状態を確認してください",
     "source_app": "App Dashboard",
-    "source_web": "Web Dashboard",
+    "source_web_index": "DAKE_Web_Index",
     "source_git": "DAKE_series",
     "source_error": "{source}: 状態取得に失敗しました",
     "error_missing_main": "main.py が見つかりません",
-    "error_import_failed": "既存Dashboardを読み込めません: {error}",
-    "error_missing_function": "既存Dashboardの取得関数が見つかりません",
-    "error_scan_failed": "既存Dashboardの状態取得に失敗しました: {error}",
+    "error_import_failed": "外部ノードを読み込めません: {error}",
+    "error_missing_function": "外部ノードの取得関数が見つかりません",
+    "error_scan_failed": "外部ノードの取得に失敗しました: {error}",
     "booth_assist_notice": "DAKE_BOOTH_Assistを起動しました: {folder}",
     "booth_assist_fallback": "DAKE_BOOTH_Assistが見つからないためフォルダを開きます。",
-    "launch_check_template": "LAUNCH CHECK OK: apps={apps} booth={booth_urgent}/{booth_total} release={release_urgent}/{release_total} screenshot={screenshot_urgent}/{screenshot_total} readme={readme_urgent}/{readme_total} role={role_urgent}/{role_total} sites={sites} cloudflare={cloudflare_urgent}/{cloudflare_total} health={health_urgent}/{health_total} site_git={site_git_urgent}/{site_git_total} series_git={series_git}",
+    "launch_check_template": "LAUNCH CHECK OK: apps={apps} booth={booth_urgent}/{booth_total} release={release_urgent}/{release_total} screenshot={screenshot_urgent}/{screenshot_total} readme={readme_urgent}/{readme_total} role={role_urgent}/{role_total} web_sites={sites} series_git={series_git}",
 }
 
 THEME = {
@@ -201,7 +197,6 @@ PRIORITY_ACTIVE = "active"
 PRIORITY_LATER = "later"
 PRIORITY_ORDER = (PRIORITY_URGENT, PRIORITY_ACTIVE, PRIORITY_LATER)
 DAKE_META_PATTERN = re.compile(r"##\s*DAKE_META\b.*?```(?:json)?\s*(\{.*?\})\s*```", re.IGNORECASE | re.DOTALL)
-DAKE_WEB_META_PATTERN = re.compile(r"##\s*DAKE_WEB_META\b.*?```(?:json)?\s*(\{.*?\})\s*```", re.IGNORECASE | re.DOTALL)
 
 
 @dataclass(frozen=True)
@@ -234,11 +229,17 @@ class AppRadar:
 
 
 @dataclass(frozen=True)
+class WebSiteItem:
+    folder_name: str
+    site_name: str
+    updated_text: str
+    folder_path: Path
+
+
+@dataclass(frozen=True)
 class SiteRadar:
     total: int = 0
-    cloudflare_unchecked: tuple[TargetItem, ...] = ()
-    health_attention: tuple[TargetItem, ...] = ()
-    git_uncommitted: tuple[TargetItem, ...] = ()
+    items: tuple[WebSiteItem, ...] = ()
     error: str = ""
 
 
@@ -266,10 +267,8 @@ class RadarSummary:
             + priority_count(self.app.screenshot_missing, PRIORITY_URGENT)
             + priority_count(self.app.readme_missing, PRIORITY_URGENT)
             + priority_count(self.app.role_attention, PRIORITY_URGENT)
-            + priority_count(self.site.cloudflare_unchecked, PRIORITY_URGENT)
-            + priority_count(self.site.health_attention, PRIORITY_URGENT)
-            + priority_count(self.site.git_uncommitted, PRIORITY_URGENT)
             + self.git.series_uncommitted
+            + self.git.series_untracked
             + len(self.warnings)
         )
 
@@ -282,10 +281,8 @@ class RadarSummary:
             + len(self.app.screenshot_missing)
             + len(self.app.readme_missing)
             + len(self.app.role_attention)
-            + len(self.site.cloudflare_unchecked)
-            + len(self.site.health_attention)
-            + len(self.site.git_uncommitted)
             + self.git.series_uncommitted
+            + self.git.series_untracked
             + len(self.warnings)
         )
 
@@ -342,13 +339,11 @@ def dashboard_dir(env_name: str, folder_name: str) -> Path:
     candidates: list[Path] = []
     if env_value:
         candidates.append(Path(env_value))
+    candidates.extend([app_dir().parent / folder_name, DEFAULT_APPS_ROOT / folder_name])
     if folder_name == APP_DASHBOARD_FOLDER:
-        staging = app_dir().parent / "codex_staging_dake_dashboard_phase4"
-    else:
-        staging = app_dir().parent / "codex_staging_web_dashboard" / WEB_DASHBOARD_FOLDER
-    candidates.extend([app_dir().parent / folder_name, DEFAULT_APPS_ROOT / folder_name, staging])
+        candidates.append(app_dir().parent / "codex_staging_dake_dashboard_phase4")
     for candidate in candidates:
-        if (candidate / "main.py").exists():
+        if (candidate / "main.py").exists() or (candidate / DIST_DIR_NAME).exists():
             return candidate
     return candidates[0] if candidates else DEFAULT_APPS_ROOT / folder_name
 
@@ -357,8 +352,8 @@ def app_dashboard_dir() -> Path:
     return dashboard_dir("QPSC_APP_DASHBOARD_DIR", APP_DASHBOARD_FOLDER)
 
 
-def web_dashboard_dir() -> Path:
-    return dashboard_dir("QPSC_WEB_DASHBOARD_DIR", WEB_DASHBOARD_FOLDER)
+def web_index_dir() -> Path:
+    return dashboard_dir("QPSC_WEB_INDEX_DIR", WEB_INDEX_FOLDER)
 
 
 def load_dashboard_module(name: str, folder: Path):
@@ -474,11 +469,6 @@ def target_for_app(record: object, meta: dict[str, object], reason_key: str, det
         priority=priority,
     )
 
-
-def target_for_site(record: object, reason_key: str, url: str = "", priority: str = PRIORITY_ACTIVE) -> TargetItem:
-    folder = Path(getattr(record, "folder_path", ""))
-    title = safe_text(getattr(record, "display_name", "")) or safe_text(getattr(record, "folder_name", folder.name))
-    return TargetItem(title=title, detail=UI_TEXT[reason_key], path=folder, folder_name=folder.name, url=url, priority=priority)
 
 
 def meta_status(record: object, meta: dict[str, object]) -> str:
@@ -871,90 +861,6 @@ def collect_git_radar(app_module, series_root_path: Path) -> GitRadar:
         return GitRadar(error=str(exc))
 
 
-def site_cloudflare_unchecked(record: object, meta: dict[str, object]) -> bool:
-    files = getattr(record, "files", None)
-    cloudflare = getattr(record, "cloudflare", None)
-    class_key = safe_text(getattr(record, "class_key", ""))
-    production_url = safe_text(getattr(record, "production_url", ""))
-    domain = safe_text(getattr(record, "domain", ""))
-    health_url = safe_text(getattr(record, "health_url", ""))
-    cloudflare_url = safe_text(getattr(record, "cloudflare_url", ""))
-    cloudflare_project = safe_text(getattr(record, "cloudflare_project", ""))
-    meta_cloudflare_url = first_safe_text(
-        meta.get("cloudflare_url"),
-        meta.get("cloudflare_project_url"),
-        meta.get("cloudflare_dashboard_url"),
-    )
-    likely_pages = bool(getattr(cloudflare, "likely_pages", False)) or bool(getattr(files, "has_wrangler", False))
-    has_production = bool(production_url or domain)
-    health_unknown = bool(health_url) and (
-        not bool(getattr(cloudflare, "has_health_file", False)) or not bool(getattr(cloudflare, "has_routes_api", False))
-    )
-    return (
-        class_key == "deploy_review"
-        or (likely_pages and not meta_cloudflare_url and not cloudflare_url)
-        or (has_production and not cloudflare_url)
-        or (has_production and not cloudflare_project)
-        or health_unknown
-    )
-
-
-def site_status(record: object, meta: dict[str, object]) -> str:
-    return (safe_text(meta.get("status", "")) or safe_text(getattr(record, "status_value", ""))).lower()
-
-
-def site_has_production(record: object) -> bool:
-    return bool(safe_text(getattr(record, "production_url", "")) or safe_text(getattr(record, "domain", "")))
-
-
-def site_is_public_target(record: object, meta: dict[str, object]) -> bool:
-    status = site_status(record, meta)
-    if status in LATER_SITE_STATUS:
-        return False
-    if not bool(getattr(record, "show_on_dashboard", True)):
-        return False
-    return site_has_production(record)
-
-
-def classify_cloudflare_priority(record: object, meta: dict[str, object]) -> str:
-    status = site_status(record, meta)
-    if not site_has_production(record) or status in LATER_SITE_STATUS:
-        return PRIORITY_LATER
-    if site_is_public_target(record, meta):
-        return PRIORITY_URGENT
-    return PRIORITY_ACTIVE
-
-
-def classify_health_priority(record: object, meta: dict[str, object]) -> str:
-    files = getattr(record, "files", None)
-    cloudflare = getattr(record, "cloudflare", None)
-    has_api = bool(getattr(files, "has_functions", False)) or bool(getattr(cloudflare, "has_functions_api", False))
-    if has_api and site_is_public_target(record, meta):
-        return PRIORITY_URGENT
-    if has_api:
-        return PRIORITY_ACTIVE
-    return PRIORITY_LATER
-
-
-def classify_site_git_priority(record: object, meta: dict[str, object]) -> str:
-    if site_is_public_target(record, meta):
-        return PRIORITY_URGENT
-    if site_has_production(record):
-        return PRIORITY_ACTIVE
-    return PRIORITY_LATER
-
-
-def site_health_attention(record: object) -> bool:
-    files = getattr(record, "files", None)
-    cloudflare = getattr(record, "cloudflare", None)
-    has_functions = bool(getattr(files, "has_functions", False))
-    health_url = safe_text(getattr(record, "health_url", ""))
-    return has_functions and (
-        not health_url
-        or not bool(getattr(cloudflare, "has_health_file", False))
-        or not bool(getattr(cloudflare, "has_routes_api", False))
-    )
-
 
 def first_safe_text(*values: object) -> str:
     for value in values:
@@ -964,43 +870,33 @@ def first_safe_text(*values: object) -> str:
     return ""
 
 
+def web_site_item_from_record(record: object) -> WebSiteItem:
+    folder_path = Path(getattr(record, "folder_path", ""))
+    folder_name = safe_text(getattr(record, "folder_name", "")) or folder_path.name
+    site_name = safe_text(getattr(record, "site_name", "")) or UI_TEXT["value_unset"]
+    updated_getter = getattr(record, "updated_text", None)
+    updated_text = safe_text(updated_getter()) if callable(updated_getter) else safe_text(getattr(record, "last_updated", ""))
+    return WebSiteItem(
+        folder_name=folder_name or UI_TEXT["value_unset"],
+        site_name=site_name,
+        updated_text=updated_text or UI_TEXT["value_unset"],
+        folder_path=folder_path,
+    )
+
+
 def collect_site_radar() -> tuple[SiteRadar, tuple[str, ...]]:
-    folder = web_dashboard_dir()
+    folder = web_index_dir()
     try:
-        module = load_dashboard_module("web", folder)
+        module = load_dashboard_module("web_index", folder)
         if not hasattr(module, "scan_sites"):
             raise AttributeError(UI_TEXT["error_missing_function"])
-        dev_root = getattr(module, "DEV_ROOT", DEFAULT_SERIES_ROOT.parent)
+        dev_root = getattr(module, "DEFAULT_DEV_ROOT", DEFAULT_SERIES_ROOT.parent)
         records = list(module.scan_sites(dev_root))
-        cloudflare_unchecked: list[TargetItem] = []
-        health_attention: list[TargetItem] = []
-        git_uncommitted: list[TargetItem] = []
-        for record in records:
-            record_folder = Path(getattr(record, "folder_path", ""))
-            meta, _issue_key = extract_meta(record_folder / README_NAME, DAKE_WEB_META_PATTERN)
-            cloudflare_url = safe_text(getattr(record, "cloudflare_url", ""))
-            if site_cloudflare_unchecked(record, meta):
-                cloudflare_unchecked.append(
-                    target_for_site(record, "reason_cloudflare_missing", cloudflare_url, classify_cloudflare_priority(record, meta))
-                )
-            if site_health_attention(record):
-                health_attention.append(
-                    target_for_site(record, "reason_health_attention", safe_text(getattr(record, "health_url", "")), classify_health_priority(record, meta))
-                )
-            git = getattr(record, "git", None)
-            if bool(getattr(git, "has_dirty", False)) or int(getattr(git, "ahead", 0) or 0) > 0:
-                git_uncommitted.append(target_for_site(record, "reason_site_git", priority=classify_site_git_priority(record, meta)))
-        return (
-            SiteRadar(
-                total=len(records),
-                cloudflare_unchecked=tuple(cloudflare_unchecked),
-                health_attention=tuple(health_attention),
-                git_uncommitted=tuple(git_uncommitted),
-            ),
-            (),
-        )
+        records.sort(key=lambda record: (safe_text(getattr(record, "folder_name", "")).lower(), safe_text(getattr(record, "site_name", "")).lower()))
+        items = tuple(web_site_item_from_record(record) for record in records[:MAX_WEB_SITE_ROWS])
+        return SiteRadar(total=len(records), items=items), ()
     except Exception as exc:
-        warning = UI_TEXT["source_error"].format(source=UI_TEXT["source_web"])
+        warning = UI_TEXT["source_error"].format(source=UI_TEXT["source_web_index"])
         return SiteRadar(error=UI_TEXT["error_scan_failed"].format(error=exc)), (warning,)
 
 
@@ -1064,12 +960,8 @@ class QpscDashboardApp:
             "personal": tk.StringVar(value=UI_TEXT["value_waiting"]),
             "frozen": tk.StringVar(value=UI_TEXT["value_waiting"]),
         }
-        self.site_vars = {
-            "total": tk.StringVar(value=UI_TEXT["value_waiting"]),
-            "cloudflare": tk.StringVar(value=UI_TEXT["value_waiting"]),
-            "health": tk.StringVar(value=UI_TEXT["value_waiting"]),
-            "git": tk.StringVar(value=UI_TEXT["value_waiting"]),
-        }
+        self.web_site_rows: list[tuple[tk.StringVar, tk.StringVar, tk.StringVar]] = []
+        self.web_sites_total_var = tk.StringVar(value=UI_TEXT["value_waiting"])
         self.git_vars = {
             "series_uncommitted": tk.StringVar(value=UI_TEXT["value_waiting"]),
             "series_untracked": tk.StringVar(value=UI_TEXT["value_waiting"]),
@@ -1104,7 +996,7 @@ class QpscDashboardApp:
         self.reload_button = self.make_button(actions, UI_TEXT["button_reload"], self.refresh, primary=True)
         self.reload_button.pack(side="left", padx=(0, 8))
         self.make_button(actions, UI_TEXT["button_open_app_dashboard"], self.open_app_dashboard).pack(side="left", padx=(0, 8))
-        self.make_button(actions, UI_TEXT["button_open_web_dashboard"], self.open_web_dashboard).pack(side="left")
+        self.make_button(actions, UI_TEXT["button_open_web_index"], self.open_web_index).pack(side="left")
 
         tk.Label(outer, text=UI_TEXT["section_current_title"], bg=THEME["bg"], fg=THEME["text"], font=(self.font_family, 13, "bold")).pack(anchor="w", pady=(24, 8))
         cards = tk.Frame(outer, bg=THEME["bg"])
@@ -1112,7 +1004,7 @@ class QpscDashboardApp:
         cards.grid_columnconfigure(0, weight=1, uniform="cards")
         cards.grid_columnconfigure(1, weight=1, uniform="cards")
         self.build_app_card(cards).grid(row=0, column=0, sticky="nsew", padx=(0, 10))
-        self.build_site_card(cards).grid(row=0, column=1, sticky="nsew", padx=(10, 0))
+        self.build_web_sites_card(cards).grid(row=0, column=1, sticky="nsew", padx=(10, 0))
 
         lower = tk.Frame(outer, bg=THEME["bg"])
         lower.pack(fill="both", expand=True)
@@ -1177,21 +1069,37 @@ class QpscDashboardApp:
         )
         return frame
 
-    def build_site_card(self, parent: tk.Misc) -> tk.Frame:
+    def build_web_sites_card(self, parent: tk.Misc) -> tk.Frame:
         frame = self.make_card(parent)
-        self.card_title(frame, UI_TEXT["card_site_title"])
+        self.card_title(frame, UI_TEXT["card_web_sites_title"])
         body = tk.Frame(frame, bg=THEME["panel"])
-        body.pack(fill="both", expand=True, padx=16, pady=(2, 16))
-        self.metric_row(body, UI_TEXT["label_site_total"], self.site_vars["total"], None).pack(fill="x", pady=(0, 10))
-        self.section_title(body, UI_TEXT["section_unresolved_title"])
-        self.metric_grid(
-            body,
-            (
-                (UI_TEXT["label_cloudflare_unchecked"], self.site_vars["cloudflare"], lambda: self.show_targets("cloudflare")),
-                (UI_TEXT["label_health_attention"], self.site_vars["health"], lambda: self.show_targets("health")),
-                (UI_TEXT["label_site_git_uncommitted"], self.site_vars["git"], lambda: self.show_targets("site_git")),
-            ),
-        )
+        body.pack(fill="both", expand=True, padx=16, pady=(0, 16))
+        tk.Label(body, text=UI_TEXT["card_web_sites_subtitle"], bg=THEME["panel"], fg=THEME["muted"], font=(self.font_family, 9)).pack(anchor="w", pady=(0, 8))
+
+        table = tk.Frame(body, bg=THEME["panel"])
+        table.pack(fill="both", expand=True)
+        for column, weight in enumerate((3, 3, 2)):
+            table.grid_columnconfigure(column, weight=weight, uniform="web_sites")
+        headers = (UI_TEXT["column_folder_name"], UI_TEXT["column_site_name"], UI_TEXT["column_updated"])
+        for column, label in enumerate(headers):
+            tk.Label(table, text=label, bg=THEME["panel"], fg=THEME["quiet"], anchor="w", font=(self.font_family, 8, "bold")).grid(row=0, column=column, sticky="ew", padx=(0, 8 if column < 2 else 0), pady=(0, 4))
+
+        for row_index in range(MAX_WEB_SITE_ROWS):
+            row_vars = (
+                tk.StringVar(value=""),
+                tk.StringVar(value=""),
+                tk.StringVar(value=""),
+            )
+            self.web_site_rows.append(row_vars)
+            for column, value_var in enumerate(row_vars):
+                cell = tk.Label(table, textvariable=value_var, bg=THEME["panel_alt"], fg=THEME["text"], anchor="w", font=(self.font_family, 9), padx=8, pady=5)
+                cell.grid(row=row_index + 1, column=column, sticky="ew", padx=(0, 8 if column < 2 else 0), pady=(0, 4))
+                cell.bind("<Double-Button-1>", lambda _event: self.open_web_index())
+
+        footer = tk.Frame(body, bg=THEME["panel"])
+        footer.pack(fill="x", pady=(8, 0))
+        tk.Label(footer, textvariable=self.web_sites_total_var, bg=THEME["panel"], fg=THEME["muted"], font=(self.font_family, 10, "bold")).pack(side="left")
+        self.make_button(footer, UI_TEXT["button_open_web_index"], self.open_web_index, primary=True).pack(side="right")
         return frame
 
     def build_git_card(self, parent: tk.Misc) -> tk.Frame:
@@ -1301,14 +1209,16 @@ class QpscDashboardApp:
         self.app_vars["system"].set(str(summary.app.system_count))
         self.app_vars["personal"].set(str(summary.app.personal_count))
         self.app_vars["frozen"].set(str(summary.app.frozen_count))
-        self.site_vars["total"].set(str(summary.site.total))
-        self.site_vars["cloudflare"].set(priority_brief(summary.site.cloudflare_unchecked))
-        self.site_vars["health"].set(priority_brief(summary.site.health_attention))
-        self.site_vars["git"].set(priority_brief(summary.site.git_uncommitted))
+        self.web_sites_total_var.set(UI_TEXT["sites_count"].format(count=summary.site.total))
+        for index, row_vars in enumerate(self.web_site_rows):
+            item = summary.site.items[index] if index < len(summary.site.items) else None
+            row_vars[0].set(item.folder_name if item else "")
+            row_vars[1].set(item.site_name if item else "")
+            row_vars[2].set(item.updated_text if item else "")
         self.git_vars["series_uncommitted"].set(str(summary.git.series_uncommitted))
         self.git_vars["series_untracked"].set(str(summary.git.series_untracked))
-        self.git_vars["attention"].set(UI_TEXT["value_git_attention"] if summary.git.error or summary.git.series_uncommitted else UI_TEXT["value_git_ok"])
-        self.summary_var.set(UI_TEXT["summary_template"].format(urgent=summary.urgent_total, total=summary.action_total, apps=summary.app.total, sites=summary.site.total))
+        self.git_vars["attention"].set(UI_TEXT["value_git_attention"] if summary.git.error or summary.git.series_uncommitted or summary.git.series_untracked else UI_TEXT["value_git_ok"])
+        self.summary_var.set(UI_TEXT["summary_template"].format(total=summary.action_total, apps=summary.app.total, sites=summary.site.total))
         self.status_var.set(UI_TEXT["status_attention"] if summary.urgent_total else UI_TEXT["status_ready"])
         self.render_next_actions(summary)
 
@@ -1332,10 +1242,7 @@ class QpscDashboardApp:
         candidates = [
             ("next_booth", priority_count(summary.app.booth_missing, PRIORITY_URGENT), "booth"),
             ("next_role", len(summary.app.role_attention), "role"),
-            ("next_cloudflare", priority_count(summary.site.cloudflare_unchecked, PRIORITY_URGENT), "cloudflare"),
-            ("next_health", priority_count(summary.site.health_attention, PRIORITY_URGENT), "health"),
-            ("next_site_git", priority_count(summary.site.git_uncommitted, PRIORITY_URGENT), "site_git"),
-            ("next_series_git", summary.git.series_uncommitted, "series_git"),
+            ("next_series_git", summary.git.series_uncommitted + summary.git.series_untracked, "series_git"),
         ]
         return [item for item in candidates if item[1]][:MAX_NEXT_ACTIONS]
 
@@ -1355,12 +1262,6 @@ class QpscDashboardApp:
             return UI_TEXT["dialog_readme_title"], summary.app.readme_missing
         if key == "role":
             return UI_TEXT["dialog_role_title"], summary.app.role_attention
-        if key == "cloudflare":
-            return UI_TEXT["dialog_cloudflare_title"], summary.site.cloudflare_unchecked
-        if key == "health":
-            return UI_TEXT["dialog_health_title"], summary.site.health_attention
-        if key == "site_git":
-            return UI_TEXT["dialog_site_git_title"], summary.site.git_uncommitted
         if key == "series_git":
             target = TargetItem(UI_TEXT["source_git"], UI_TEXT["reason_series_git"], DEFAULT_SERIES_ROOT, DEFAULT_SERIES_ROOT.name)
             return UI_TEXT["dialog_series_git_title"], (target,) if summary.git.series_uncommitted or summary.git.series_untracked or summary.git.error else ()
@@ -1409,8 +1310,6 @@ class QpscDashboardApp:
         elif key == "readme":
             readme = target.path / README_NAME
             open_path(readme if readme.exists() else target.path)
-        elif key in {"cloudflare", "health"}:
-            open_url_or_path(target.url, target.path)
         else:
             open_path(target.path)
 
@@ -1435,8 +1334,23 @@ class QpscDashboardApp:
     def open_app_dashboard(self) -> None:
         self.open_dashboard(app_dashboard_dir(), APP_DASHBOARD_EXE)
 
-    def open_web_dashboard(self) -> None:
-        self.open_dashboard(web_dashboard_dir(), WEB_DASHBOARD_EXE)
+    def open_web_index(self) -> None:
+        folder = web_index_dir()
+        exe_path = folder / DIST_DIR_NAME / WEB_INDEX_EXE
+        try:
+            if exe_path.exists():
+                subprocess.Popen([str(exe_path)], cwd=str(folder))
+                self.status_var.set(UI_TEXT["web_index_opened"])
+                return
+            if folder.exists():
+                open_path(folder)
+                self.status_var.set(UI_TEXT["web_index_fallback"])
+                return
+            raise FileNotFoundError(str(folder))
+        except FileNotFoundError:
+            messagebox.showinfo(UI_TEXT["button_open_failed_title"], UI_TEXT["button_open_failed"].format(path=folder), parent=self.root)
+        except Exception as exc:
+            messagebox.showerror(UI_TEXT["button_open_failed_title"], UI_TEXT["button_open_error"].format(path=folder, error=exc), parent=self.root)
 
     def open_dashboard(self, folder: Path, exe_name: str) -> None:
         try:
@@ -1471,13 +1385,7 @@ def run_launch_check() -> int:
             role_urgent=priority_count(summary.app.role_attention, PRIORITY_URGENT),
             role_total=len(summary.app.role_attention),
             sites=summary.site.total,
-            cloudflare_urgent=priority_count(summary.site.cloudflare_unchecked, PRIORITY_URGENT),
-            cloudflare_total=len(summary.site.cloudflare_unchecked),
-            health_urgent=priority_count(summary.site.health_attention, PRIORITY_URGENT),
-            health_total=len(summary.site.health_attention),
-            site_git_urgent=priority_count(summary.site.git_uncommitted, PRIORITY_URGENT),
-            site_git_total=len(summary.site.git_uncommitted),
-            series_git=summary.git.series_uncommitted,
+            series_git=summary.git.series_uncommitted + summary.git.series_untracked,
         )
     )
     for warning in summary.warnings:
