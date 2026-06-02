@@ -11,14 +11,14 @@ YouTube URL取得や投稿機能は持たせず、MP4を入れてショート候
 - 動画全体を3分割し、それぞれからショート候補を作成
 - 9:16 / 1080x1920 のMP4を出力
 - サムネ画像とタイトル案テキストを出力
-- `文字起こしも作成` をONにすると、タイムスタンプ付き文字起こしを出力
+- `ショートごとに文字起こし` をONにすると、生成したショート候補ごとの文字起こしを出力
 - QRコードで同じWi-Fi内のスマホから保存できるページを表示
 
 ## 使い方
 
 1. `python main.py` で起動
 2. MP4をドラッグ＆ドロップ、または `MP4を選ぶ` から選択
-3. 必要に応じて `文字起こしも作成` をON/OFF
+3. 必要に応じて `ショートごとに文字起こし` をON/OFF
 4. `ショートを作成` を押す
 5. 生成後、保存先フォルダとQRコードを確認
 6. スマホでQRコードを読み取り、ブラウザから必要なファイルを保存
@@ -36,20 +36,25 @@ dake_shorts_output_YYYYMMDD_HHMMSS/
   title_01.txt
   title_02.txt
   title_03.txt
-  transcript.txt
-  transcript_segments.json
+  short_01_transcript.txt
+  short_01_segments.json
+  short_02_transcript.txt
+  short_02_segments.json
+  short_03_transcript.txt
+  short_03_segments.json
 ```
 
 ## 文字起こし
 
-v0.2で文字起こし機能を追加しました。
+v0.3では、長尺元動画全体ではなく、生成したショート動画だけを文字起こしします。
 
-- `文字起こしも作成` をONにすると `transcript.txt` と `transcript_segments.json` が生成されます。
-- 初回実行時や長い動画では時間がかかります。
+- `ショートごとに文字起こし` をONにすると `short_01_transcript.txt` などが生成されます。
+- 長尺元動画を丸ごと読まないため、処理の長時間化を避けやすくしています。
+- 初回実行時や音声の長いショートでは時間がかかります。
 - 文字起こしには `faster-whisper` が必要です。
 - 環境により `faster-whisper` の導入やモデル取得ができない場合があります。その場合でもショート動画・サムネ・タイトル案の生成は継続します。
-- 文字起こしは今後のAI候補選定の前段階です。
-- v0.2では熱量判定、OpenAI API判定、Ollama判定は未実装です。
+- 候補ごとの文字起こしは、今後Ollama/OpenAIで候補評価するための前段階です。
+- v0.3では熱量判定、OpenAI API判定、Ollama判定は未実装です。
 
 ## 必要なもの
 
@@ -120,7 +125,7 @@ python main.py --process-check "C:\path\to\sample.mp4"
   "launcher_description": "MP4からショート候補とサムネを作成します。",
   "site_title": "Dakeショート切り出し",
   "site_description": "MP4を入れるだけで、ショート動画候補・サムネ・タイトル案を作成します。",
-  "update_summary": "MP4からショート候補を作成し、タイムスタンプ付き文字起こしも出力できるように更新",
+  "update_summary": "生成したショート候補ごとに文字起こしを出力できるように更新",
   "folder_name": "DAKE_Video_Shorts_Cut",
   "exe_name": "DakeVideo_Shorts_Cut.exe",
   "release_url": "",

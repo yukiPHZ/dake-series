@@ -67,9 +67,9 @@ UI_TEXT = {
     "result_short": "short",
     "result_thumb": "thumb",
     "result_title_file": "title",
-    "result_transcript_ready": "文字起こし: transcript.txt / transcript_segments.json",
-    "result_transcript_missing": "文字起こし: 未作成",
-    "checkbox_transcribe": "文字起こしも作成",
+    "result_transcript": "transcript",
+    "result_transcript_missing": "未作成",
+    "checkbox_transcribe": "ショートごとに文字起こし",
     "result_exists": "あり",
     "result_missing": "なし",
     "qr_title": "スマホ転送",
@@ -100,7 +100,6 @@ UI_TEXT = {
     "mobile_description": "PCで作成したショート動画・サムネ・タイトル案を保存できます。",
     "mobile_download": "ダウンロード",
     "mobile_title_preview": "タイトル案",
-    "mobile_transcript_section": "文字起こし",
     "mobile_empty": "ファイルが見つかりません。",
     "footer_left": "シンプルそれDAKEシリーズ",
     "footer_tagline": "止まらない、迷わない、すぐ終わる。",
@@ -152,8 +151,6 @@ SHORT_MIN_SECONDS = 45.0
 SHORT_MAX_SECONDS = 60.0
 QUEUE_POLL_MS = 100
 COMMON_ICON_RELATIVE = Path("..") / ".." / "02_assets" / "dake_icon.ico"
-TRANSCRIPT_TEXT_FILE = "transcript.txt"
-TRANSCRIPT_JSON_FILE = "transcript_segments.json"
 WHISPER_MODEL_SIZE = "base"
 WHISPER_DEVICE = "cpu"
 WHISPER_COMPUTE_TYPE = "int8"
@@ -180,12 +177,15 @@ class ShortSegment:
     duration: float
 
 
-@dataclass(frozen=True)
+@dataclass
 class GeneratedCandidate:
     index: int
     short_path: Path
     thumb_path: Path
     title_path: Path
+    transcript_path: Path
+    segments_path: Path
+    transcript_error: str = ""
 
 
 @dataclass(frozen=True)
@@ -200,7 +200,6 @@ class ProcessResult:
     video_info: VideoInfo
     candidates: list[GeneratedCandidate]
     transfer_url: str
-    transcript: TranscriptOutput | None = None
     transcript_error: str = ""
 
 
@@ -259,6 +258,8 @@ def format_timestamp(seconds: float) -> str:
     hours = total_seconds // 3600
     minutes = (total_seconds % 3600) // 60
     remain = total_seconds % 60
+    if hours <= 0:
+        return f"{minutes:02d}:{remain:02d}"
     return f"{hours:02d}:{minutes:02d}:{remain:02d}"
 
 
@@ -456,9 +457,15 @@ def write_title_file(path: Path, number: int) -> None:
     path.write_text(UI_TEXT["title_candidate"].format(number=number) + "\n", encoding="utf-8")
 
 
-def write_transcript_files(output_dir: Path, segments: list[dict[str, object]]) -> TranscriptOutput:
-    text_path = output_dir / TRANSCRIPT_TEXT_FILE
-    segments_path = output_dir / TRANSCRIPT_JSON_FILE
+def short_transcript_text_name(index: int) -> str:
+    return f"short_{index:02d}_transcript.txt"
+
+
+def short_segments_json_name(index: int) -> str:
+    return f"short_{index:02d}_segments.json"
+
+
+def write_transcript_files(text_path: Path, segments_path: Path, segments: list[dict[str, object]]) -> TranscriptOutput:
     text_blocks: list[str] = []
     for segment in segments:
         text = str(segment.get("text") or "").strip()
@@ -472,7 +479,7 @@ def write_transcript_files(output_dir: Path, segments: list[dict[str, object]]) 
     return TranscriptOutput(text_path=text_path, segments_path=segments_path)
 
 
-def transcribe_video(input_path: Path, output_dir: Path) -> TranscriptOutput:
+def transcribe_video(input_path: Path, text_path: Path, segments_path: Path) -> TranscriptOutput:
     try:
         from faster_whisper import WhisperModel
     except Exception as exc:
@@ -502,7 +509,7 @@ def transcribe_video(input_path: Path, output_dir: Path) -> TranscriptOutput:
     except Exception as exc:
         raise UserFacingError(UI_TEXT["status_transcript_failed"]) from exc
 
-    return write_transcript_files(output_dir, transcript_segments)
+    return write_transcript_files(text_path, segments_path, transcript_segments)
 
 
 def get_local_ip() -> str:
@@ -538,6 +545,8 @@ def build_transfer_html(output_dir: Path) -> str:
             output_dir / f"short_{index:02d}.mp4",
             output_dir / f"thumb_{index:02d}.jpg",
             output_dir / f"title_{index:02d}.txt",
+            output_dir / short_transcript_text_name(index),
+            output_dir / short_segments_json_name(index),
         ]
         links = []
         for item in items:
@@ -547,7 +556,7 @@ def build_transfer_html(output_dir: Path) -> str:
             href = f"/files/{html.escape(item.name)}"
             label = html.escape(item.name)
             links.append(f"<a href=\"{href}\" download>{label}<span>{html.escape(UI_TEXT['mobile_download'])}</span></a>")
-            if item.suffix.lower() == ".txt":
+            if item.name.startswith("title_") and item.suffix.lower() == ".txt":
                 try:
                     title_text = item.read_text(encoding="utf-8").strip()
                 except OSError:
@@ -565,22 +574,6 @@ def build_transfer_html(output_dir: Path) -> str:
             + html.escape(UI_TEXT["candidate_label"].format(number=index))
             + "</h2>"
             + "\n".join(links)
-            + "</section>"
-        )
-    transcript_links: list[str] = []
-    for item in (output_dir / TRANSCRIPT_TEXT_FILE, output_dir / TRANSCRIPT_JSON_FILE):
-        if not item.exists():
-            transcript_links.append(f"<span class=\"missing\">{html.escape(item.name)} / {html.escape(UI_TEXT['mobile_empty'])}</span>")
-            continue
-        href = f"/files/{html.escape(item.name)}"
-        label = html.escape(item.name)
-        transcript_links.append(f"<a href=\"{href}\" download>{label}<span>{html.escape(UI_TEXT['mobile_download'])}</span></a>")
-    if transcript_links:
-        rows.append(
-            "<section><h2>"
-            + html.escape(UI_TEXT["mobile_transcript_section"])
-            + "</h2>"
-            + "\n".join(transcript_links)
             + "</section>"
         )
 
@@ -794,6 +787,8 @@ def process_video(
                 short_path=short_path,
                 thumb_path=output_dir / f"thumb_{segment.index:02d}.jpg",
                 title_path=output_dir / f"title_{segment.index:02d}.txt",
+                transcript_path=output_dir / short_transcript_text_name(segment.index),
+                segments_path=output_dir / short_segments_json_name(segment.index),
             )
         )
 
@@ -805,19 +800,23 @@ def process_video(
         create_thumbnail(ffmpeg_path, input_path, candidate.thumb_path, segment)
         write_title_file(candidate.title_path, segment.index)
 
-    transcript: TranscriptOutput | None = None
     transcript_error = ""
     if create_transcript:
-        if status_callback:
-            status_callback(UI_TEXT["status_transcribing"])
-        try:
-            transcript = transcribe_video(input_path, output_dir)
+        transcript_failures: list[str] = []
+        for candidate in candidates:
             if status_callback:
-                status_callback(UI_TEXT["status_transcript_done"])
-        except Exception as exc:
-            transcript_error = str(exc) or UI_TEXT["status_transcript_failed"]
-            if status_callback:
-                status_callback(UI_TEXT["status_transcript_failed"])
+                status_callback(f"{candidate.index}/3 {UI_TEXT['status_transcribing']}")
+            try:
+                transcribe_video(candidate.short_path, candidate.transcript_path, candidate.segments_path)
+            except Exception as exc:
+                candidate.transcript_error = str(exc) or UI_TEXT["status_transcript_failed"]
+                transcript_failures.append(candidate.transcript_error)
+                if status_callback:
+                    status_callback(UI_TEXT["status_transcript_failed"])
+        if transcript_failures:
+            transcript_error = transcript_failures[0]
+        elif status_callback:
+            status_callback(UI_TEXT["status_transcript_done"])
     elif status_callback:
         status_callback(UI_TEXT["status_transcript_skipped"])
 
@@ -830,7 +829,6 @@ def process_video(
         video_info=video_info,
         candidates=candidates,
         transfer_url=transfer_url,
-        transcript=transcript,
         transcript_error=transcript_error,
     )
 
@@ -867,7 +865,6 @@ class DakeVideoShortsCutApp:
         self.video_info_var = tk.StringVar(value=UI_TEXT["video_info_empty"])
         self.transfer_url_var = tk.StringVar(value="")
         self.transcript_enabled_var = tk.BooleanVar(value=True)
-        self.transcript_result_var = tk.StringVar(value=UI_TEXT["result_transcript_missing"])
         self.result_vars = [
             tk.StringVar(value=UI_TEXT["result_waiting"]),
             tk.StringVar(value=UI_TEXT["result_waiting"]),
@@ -1104,19 +1101,6 @@ class DakeVideoShortsCutApp:
                 font=(self.font_family, 9),
                 anchor="w",
             ).pack(side="left", fill="x", expand=True, padx=(0, 10))
-
-        transcript_row = tk.Frame(panel, bg=THEME["panel"], highlightbackground=THEME["border"], highlightthickness=1)
-        transcript_row.pack(fill="x", padx=18, pady=(4, 12))
-        tk.Label(
-            transcript_row,
-            textvariable=self.transcript_result_var,
-            bg=THEME["panel"],
-            fg=THEME["muted"],
-            font=(self.font_family, 9, "bold"),
-            anchor="w",
-            padx=10,
-            pady=9,
-        ).pack(fill="x")
 
     def _build_qr_panel(self, parent: tk.Frame) -> None:
         panel = self._panel(parent)
@@ -1396,7 +1380,6 @@ class DakeVideoShortsCutApp:
     def _clear_results(self) -> None:
         for var in self.result_vars:
             var.set(UI_TEXT["result_waiting"])
-        self.transcript_result_var.set(UI_TEXT["result_transcript_missing"])
         self.qr_photo = None
         self.qr_label.configure(image="", text=UI_TEXT["qr_waiting"], fg=THEME["muted"])
 
@@ -1406,15 +1389,17 @@ class DakeVideoShortsCutApp:
                 f"{UI_TEXT['result_short']}: {self._exists_text(candidate.short_path)}",
                 f"{UI_TEXT['result_thumb']}: {self._exists_text(candidate.thumb_path)}",
                 f"{UI_TEXT['result_title_file']}: {self._exists_text(candidate.title_path)}",
+                f"{UI_TEXT['result_transcript']}: {self._transcript_exists_text(candidate)}",
             ]
             self.result_vars[index].set(" / ".join(values))
-        if result.transcript is not None and result.transcript.text_path.exists() and result.transcript.segments_path.exists():
-            self.transcript_result_var.set(UI_TEXT["result_transcript_ready"])
-        else:
-            self.transcript_result_var.set(UI_TEXT["result_transcript_missing"])
 
     def _exists_text(self, path: Path) -> str:
         return UI_TEXT["result_exists"] if path.exists() else UI_TEXT["result_missing"]
+
+    def _transcript_exists_text(self, candidate: GeneratedCandidate) -> str:
+        if candidate.transcript_path.exists() and candidate.segments_path.exists():
+            return UI_TEXT["result_exists"]
+        return UI_TEXT["result_transcript_missing"]
 
     def _show_qr(self, url: str) -> None:
         try:
@@ -1492,24 +1477,27 @@ def run_launch_check() -> int:
                 UI_TEXT["title_candidate"].format(number=index) + "\n",
                 encoding="utf-8",
             )
-        transcript = write_transcript_files(
-            output_dir,
-            [
-                {
-                    "start": 751.2,
-                    "end": 768.4,
-                    "start_text": "00:12:31",
-                    "end_text": "00:12:48",
-                    "text": "テスト文字起こしです。",
-                }
-            ],
-        )
-        if not transcript.text_path.exists() or not transcript.segments_path.exists():
-            raise RuntimeError("transcript fixture failed")
-        if "00:12:31" not in transcript.text_path.read_text(encoding="utf-8"):
-            raise RuntimeError("transcript text fixture failed")
+            transcript = write_transcript_files(
+                output_dir / short_transcript_text_name(index),
+                output_dir / short_segments_json_name(index),
+                [
+                    {
+                        "start": 12.4,
+                        "end": 18.9,
+                        "start_text": "00:12",
+                        "end_text": "00:18",
+                        "text": "テスト文字起こしです。",
+                    }
+                ],
+            )
+            if not transcript.text_path.exists() or not transcript.segments_path.exists():
+                raise RuntimeError("transcript fixture failed")
+            if "00:12" not in transcript.text_path.read_text(encoding="utf-8"):
+                raise RuntimeError("transcript text fixture failed")
+        if (output_dir / "transcript.txt").exists() or (output_dir / "transcript_segments.json").exists():
+            raise RuntimeError("global transcript fixture failed")
         page = build_transfer_html(output_dir)
-        if "short_01.mp4" not in page or TRANSCRIPT_TEXT_FILE not in page or UI_TEXT["mobile_title"] not in page:
+        if "short_01.mp4" not in page or short_transcript_text_name(1) not in page or UI_TEXT["mobile_title"] not in page:
             raise RuntimeError("transfer html fixture failed")
 
     ffmpeg_status = "available" if find_tool("ffmpeg") else "missing"
@@ -1539,7 +1527,11 @@ def run_process_check(input_file: str, create_transcript: bool = True) -> int:
             with urlopen(local_url, timeout=5) as response:
                 body = response.read(4096).decode("utf-8", errors="replace")
             print(f"transfer_page={'short_01.mp4' in body}")
-            print(f"transfer_transcript={TRANSCRIPT_TEXT_FILE in body and TRANSCRIPT_JSON_FILE in body}")
+            transfer_has_transcript = all(
+                candidate.transcript_path.exists() and candidate.transcript_path.name in body
+                for candidate in result.candidates
+            )
+            print(f"transfer_transcript={transfer_has_transcript}")
         except Exception:
             print("transfer_page=False")
             print("transfer_transcript=False")
@@ -1547,11 +1539,13 @@ def run_process_check(input_file: str, create_transcript: bool = True) -> int:
             print(candidate.short_path.name, candidate.short_path.exists())
             print(candidate.thumb_path.name, candidate.thumb_path.exists())
             print(candidate.title_path.name, candidate.title_path.exists())
-        transcript_ok = (
-            result.transcript is not None
-            and result.transcript.text_path.exists()
-            and result.transcript.segments_path.exists()
+            print(candidate.transcript_path.name, candidate.transcript_path.exists())
+            print(candidate.segments_path.name, candidate.segments_path.exists())
+        transcript_ok = all(
+            candidate.transcript_path.exists() and candidate.segments_path.exists()
+            for candidate in result.candidates
         )
+        print(f"global_transcript={(result.output_dir / 'transcript.txt').exists()}")
         print(UI_TEXT["process_check_transcript"].format(status="created" if transcript_ok else "missing"))
         if result.transcript_error:
             print(f"transcript_error={result.transcript_error}")
