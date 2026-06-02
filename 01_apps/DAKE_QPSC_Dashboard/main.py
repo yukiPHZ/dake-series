@@ -72,7 +72,7 @@ UI_TEXT = {
     "section_unresolved_title": "未処理",
     "section_classification_title": "分類",
     "label_app_total": "アプリ総数",
-    "label_booth_missing": "BOOTH登録候補",
+    "label_booth_missing": "BOOTH URL未設定",
     "label_booth_materials_missing": "BOOTH素材不足",
     "label_release_missing": "Release未作成",
     "label_screenshot_missing": "スクショ未作成",
@@ -93,6 +93,7 @@ UI_TEXT = {
     "priority_urgent": "先に見る",
     "priority_active": "通常",
     "priority_later": "保留",
+    "priority_later_ok": "後でよい",
     "priority_summary": "先に見る {urgent} / 全体 {total}\n通常 {active} / 保留 {later}",
     "priority_brief": "{urgent}/{total}",
     "priority_header": "【{label}】",
@@ -104,7 +105,7 @@ UI_TEXT = {
     "last_loaded_value": "確認: {time}",
     "summary_template": "未処理 {total}件 / アプリ {apps}件 / Web {sites} sites",
     "dialog_empty": "対象はありません。",
-    "dialog_booth_title": "BOOTH登録候補アプリ",
+    "dialog_booth_title": "BOOTH URL未設定アプリ",
     "dialog_booth_materials_title": "BOOTH素材不足アプリ",
     "dialog_release_title": "Release未作成アプリ",
     "dialog_screenshot_title": "スクショ未作成アプリ",
@@ -112,15 +113,20 @@ UI_TEXT = {
     "dialog_role_title": "分類別 要確認アプリ",
     "dialog_series_git_title": "DAKE_series Git要確認",
     "dialog_select_notice": "一覧から対象を選択してください。",
+    "dialog_booth_notice": "BOOTH素材が存在し、\nbooth_url が未設定のアプリです。",
+    "booth_waiting_items": "登録前確認あり: {items}",
+    "booth_wait_release": "release_urlなし",
+    "booth_wait_screenshot": "スクショ不足",
+    "booth_wait_readme": "補足説明不足",
     "next_none": "現時点で明確な候補はありません。",
-    "next_booth": "市場向けアプリのBOOTH登録候補",
+    "next_booth": "市場向けアプリのBOOTH URL未設定",
     "next_screenshot": "スクショ作成が必要な公開アプリ",
     "next_release": "Release作成が必要な出荷候補",
     "next_readme": "README不足のアプリ",
     "next_role": "分類別の確認が必要なアプリ",
     "next_series_git": "DAKE_seriesのGit確認",
     "next_line": "{index}. {label}（{count}件）",
-    "reason_booth_missing": "BOOTH素材あり / booth_url未設定",
+    "reason_booth_missing": "BOOTH素材あり / booth_url 未設定",
     "reason_booth_materials_missing": "BOOTH登録前の素材が不足",
     "reason_release_missing": "release_urlが未設定",
     "reason_screenshot_missing": "screenshot_pathまたは実ファイルが未整備",
@@ -161,7 +167,7 @@ UI_TEXT = {
     "error_scan_failed": "外部ノードの取得に失敗しました: {error}",
     "booth_assist_notice": "DAKE_BOOTH_Assistを起動しました: {folder}",
     "booth_assist_fallback": "DAKE_BOOTH_Assistが見つからないためフォルダを開きます。",
-    "launch_check_template": "LAUNCH CHECK OK: apps={apps} booth={booth_urgent}/{booth_total} release={release_urgent}/{release_total} screenshot={screenshot_urgent}/{screenshot_total} readme={readme_urgent}/{readme_total} role={role_urgent}/{role_total} web_sites={sites} series_git={series_git}",
+    "launch_check_template": "LAUNCH CHECK OK: apps={apps} booth_url={booth_urgent}/{booth_total} release={release_urgent}/{release_total} screenshot={screenshot_urgent}/{screenshot_total} readme={readme_urgent}/{readme_total} role={role_urgent}/{role_total} web_sites={sites} series_git={series_git}",
 }
 
 THEME = {
@@ -645,23 +651,37 @@ def app_readme_issue(folder: Path, record: object, meta: dict[str, object], issu
     return "", PRIORITY_ACTIVE
 
 
-def classify_booth_priority(record: object, meta: dict[str, object]) -> str:
-    if not is_market_formal_app(record, meta):
+def booth_url_waiting_items(record: object, meta: dict[str, object], has_readme_issue: bool) -> tuple[str, ...]:
+    items: list[str] = []
+    if not app_release_url(record, meta):
+        items.append(UI_TEXT["booth_wait_release"])
+    if app_screenshot_missing(record, meta):
+        items.append(UI_TEXT["booth_wait_screenshot"])
+    if has_readme_issue:
+        items.append(UI_TEXT["booth_wait_readme"])
+    return tuple(items)
+
+
+def booth_url_detail(record: object, meta: dict[str, object], has_readme_issue: bool) -> str:
+    waiting_items = booth_url_waiting_items(record, meta, has_readme_issue)
+    if not waiting_items:
+        return UI_TEXT["reason_booth_missing"]
+    return f"{UI_TEXT['reason_booth_missing']} / {UI_TEXT['booth_waiting_items'].format(items=', '.join(waiting_items))}"
+
+
+def classify_booth_url_priority(record: object, meta: dict[str, object], has_readme_issue: bool = False) -> str:
+    if not app_booth_url_missing(record, meta):
         return PRIORITY_LATER
     status = meta_status(record, meta)
-    has_release = bool(app_release_url(record, meta))
-    has_distribution = app_has_dist(record) or has_release
     visible = meta_show_on_site(meta) or meta_show_in_launcher(record, meta)
-    has_booth_product, _has_ready_product, has_ready_dir, has_thumbnail = app_booth_material_flags(record)
-    materials_complete = has_booth_product and has_ready_dir and has_thumbnail
-    needs_only_booth_url = materials_complete and not safe_text(meta.get("booth_url", ""))
-    if app_is_later_market_target(record, meta):
-        return PRIORITY_LATER
-    if status == "available" and has_release and has_distribution and visible and needs_only_booth_url:
-        return PRIORITY_URGENT
-    if status == "available":
-        return PRIORITY_ACTIVE
-    return PRIORITY_LATER
+    ready_to_register = (
+        status == "available"
+        and visible
+        and bool(app_release_url(record, meta))
+        and not app_screenshot_missing(record, meta)
+        and not has_readme_issue
+    )
+    return PRIORITY_URGENT if ready_to_register else PRIORITY_ACTIVE
 
 
 def classify_release_priority(record: object, meta: dict[str, object], has_readme_issue: bool) -> str:
@@ -697,20 +717,14 @@ def app_booth_materials_complete(record: object) -> bool:
     return has_booth_product and has_booth_ready and has_booth_thumbnail
 
 
-def app_booth_registration_candidate(record: object, meta: dict[str, object]) -> bool:
+def app_booth_url_missing(record: object, meta: dict[str, object]) -> bool:
     if not is_market_formal_app(record, meta):
         return False
     if app_is_later_market_target(record, meta):
         return False
     if safe_text(meta.get("booth_url", "")):
         return False
-    if not app_booth_materials_complete(record):
-        return False
-    status = meta_status(record, meta)
-    has_release = bool(app_release_url(record, meta))
-    has_distribution = app_has_dist(record) or has_release
-    visible = meta_show_on_site(meta) or meta_show_in_launcher(record, meta)
-    return status == "available" and has_distribution and visible
+    return app_booth_materials_complete(record)
 
 
 def app_booth_materials_missing(record: object, meta: dict[str, object]) -> bool:
@@ -722,7 +736,7 @@ def app_booth_materials_missing(record: object, meta: dict[str, object]) -> bool
 
 
 def app_booth_missing(record: object, meta: dict[str, object]) -> bool:
-    return app_booth_registration_candidate(record, meta)
+    return app_booth_url_missing(record, meta)
 
 
 def app_role_family(record: object, meta: dict[str, object]) -> str:
@@ -813,8 +827,16 @@ def collect_app_radar() -> tuple[AppRadar, GitRadar, tuple[str, ...]]:
                 else:
                     role_attention.append(target)
             if is_market_formal_app(record, meta):
-                if app_booth_registration_candidate(record, meta):
-                    booth_missing.append(target_for_app(record, meta, "reason_booth_missing", priority=PRIORITY_URGENT))
+                if app_booth_url_missing(record, meta):
+                    booth_missing.append(
+                        target_for_app(
+                            record,
+                            meta,
+                            "reason_booth_missing",
+                            booth_url_detail(record, meta, bool(reason)),
+                            classify_booth_url_priority(record, meta, bool(reason)),
+                        )
+                    )
                 if app_booth_materials_missing(record, meta):
                     booth_materials_missing.append(target_for_app(record, meta, "reason_booth_materials_missing", priority=PRIORITY_ACTIVE))
                 if not app_release_url(record, meta):
@@ -1240,8 +1262,8 @@ class QpscDashboardApp:
         if summary is None:
             return []
         candidates = [
-            ("next_booth", priority_count(summary.app.booth_missing, PRIORITY_URGENT), "booth"),
             ("next_role", len(summary.app.role_attention), "role"),
+            ("next_booth", priority_count(summary.app.booth_missing, PRIORITY_URGENT), "booth"),
             ("next_series_git", summary.git.series_uncommitted + summary.git.series_untracked, "series_git"),
         ]
         return [item for item in candidates if item[1]][:MAX_NEXT_ACTIONS]
@@ -1278,15 +1300,22 @@ class QpscDashboardApp:
         dialog.configure(bg=THEME["bg"])
         apply_window_icon(dialog)
         tk.Label(dialog, text=title, bg=THEME["bg"], fg=THEME["text"], font=(self.font_family, 14, "bold")).pack(anchor="w", padx=16, pady=(14, 4))
-        tk.Label(dialog, text=UI_TEXT["dialog_select_notice"], bg=THEME["bg"], fg=THEME["muted"], font=(self.font_family, 9)).pack(anchor="w", padx=16)
+        notice = UI_TEXT["dialog_booth_notice"] if key == "booth" else UI_TEXT["dialog_select_notice"]
+        tk.Label(dialog, text=notice, bg=THEME["bg"], fg=THEME["muted"], justify="left", font=(self.font_family, 9)).pack(anchor="w", padx=16)
         listbox = tk.Listbox(dialog, bg=THEME["input"], fg=THEME["text"], selectbackground=THEME["accent"], selectforeground="#FFFFFF", relief="flat", highlightthickness=1, highlightbackground=THEME["border"], font=(self.font_family, 10))
         listbox.pack(fill="both", expand=True, padx=16, pady=12)
         display_targets: list[TargetItem | None] = []
-        for priority in PRIORITY_ORDER:
-            group = priority_items(targets, priority)
-            if not group:
+        if key == "booth":
+            groups = (
+                (UI_TEXT["priority_urgent"], priority_items(targets, PRIORITY_URGENT), True),
+                (UI_TEXT["priority_later_ok"], tuple(target for target in targets if target.priority != PRIORITY_URGENT), True),
+            )
+        else:
+            groups = tuple((priority_label(priority), priority_items(targets, priority), False) for priority in PRIORITY_ORDER)
+        for label, group, show_empty in groups:
+            if not group and not show_empty:
                 continue
-            listbox.insert("end", UI_TEXT["priority_header"].format(label=priority_label(priority)))
+            listbox.insert("end", UI_TEXT["priority_header"].format(label=label))
             display_targets.append(None)
             for target in group:
                 listbox.insert("end", target.line())

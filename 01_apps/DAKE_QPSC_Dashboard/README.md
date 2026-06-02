@@ -27,7 +27,7 @@ QPCS Dashboard は正本を読み、
 
 - App Dashboard の状態を取得する
 - DAKE_Web_Index からWeb資産索引を取得する
-- BOOTH登録候補、Release未作成、スクショ未作成、README不足を表示する
+- BOOTH URL未設定、Release未作成、スクショ未作成、README不足を表示する
 - Web資産数と最終更新情報を表示する
 - 次に見る候補を表示する
 - 必要な時だけ詳細ノードや対象フォルダを開く
@@ -102,7 +102,14 @@ QPCS系はシステム稼働または正本提示を完成ゴールとします�
 ## レイアウト整理
 
 QPCS Dashboardは、分類と未処理を分けて表示します。
-市場向け、QPCS系、ユキズ専用、凍結といった分類情報と、BOOTH登録候補などの未処理情報を混在させず、Web資産は索引情報として現在地を一画面で確認できるようにしています。
+市場向け、QPCS系、ユキズ専用、凍結といった分類情報と、BOOTH URL未設定などの未処理情報を混在させず、Web資産は索引情報として現在地を一画面で確認できるようにしています。
+
+## BOOTH URL未設定
+
+BOOTH登録候補ではなく、
+BOOTH URL未設定状態を表示します。
+
+登録推奨かどうかは別判定とします。
 
 ## Web Sites
 
@@ -124,7 +131,7 @@ Web資産数と更新情報だけを表示し、
   "launcher_description": "QPCS全体の現在地を束ねて確認する司令塔",
   "site_title": "",
   "site_description": "",
-  "update_summary": "DAKE_Web_Dashboard連携を廃止し、DAKE_Web_IndexによるWeb資産索引表示へ変更しました。",
+  "update_summary": "BOOTH URL未設定状態の表示へ整理し、DAKE_Web_IndexによるWeb資産索引表示を維持しました。",
   "folder_name": "DAKE_QPSC_Dashboard",
   "exe_name": "QPSC_Dashboard.exe",
   "release_url": "",
