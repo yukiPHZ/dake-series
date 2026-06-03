@@ -12,7 +12,9 @@ import shutil
 import subprocess
 import threading
 import tempfile
+import time
 import tkinter as tk
+import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlparse
@@ -192,6 +194,7 @@ WINDOW_MIN_SIZE = (960, 700)
 CONFIG_FILE_NAME = "dake_booth_assist_config.json"
 CHROME_REMOTE_DEBUGGING_PORT = 9222
 CHROME_CDP_URL = f"http://127.0.0.1:{CHROME_REMOTE_DEBUGGING_PORT}"
+CHROME_CDP_VERSION_URL = f"{CHROME_CDP_URL}/json/version"
 CHROME_PROFILE_PARENT_NAME = "DakeBOOTH_Assist"
 CHROME_PROFILE_DIR_NAME = "chrome_profile"
 PRODUCT_FILE_NAME = "booth_product.txt"
@@ -477,12 +480,47 @@ def find_chrome_executable() -> str | None:
 
 
 def build_chrome_launch_args(chrome_path: str) -> list[str]:
+    return [chrome_path, *build_chrome_launch_options()]
+
+
+def build_chrome_launch_options() -> list[str]:
     return [
-        chrome_path,
         f"--remote-debugging-port={CHROME_REMOTE_DEBUGGING_PORT}",
         f"--user-data-dir={get_chrome_profile_dir()}",
         BOOTH_ADMIN_URL,
     ]
+
+
+def build_chrome_launch_command(chrome_path: str) -> str:
+    return subprocess.list2cmdline(build_chrome_launch_args(chrome_path))
+
+
+def launch_chrome_with_shell(chrome_path: str) -> str:
+    command = build_chrome_launch_command(chrome_path)
+    print(f"Chrome launch command: {command}", flush=True)
+    if os.name == "nt" and hasattr(os, "startfile"):
+        os.startfile(chrome_path, "open", subprocess.list2cmdline(build_chrome_launch_options()))
+    else:
+        subprocess.Popen(build_chrome_launch_args(chrome_path), stdin=subprocess.DEVNULL)
+    return command
+
+
+def wait_for_chrome_cdp(timeout_seconds: float = 8.0) -> tuple[bool, str]:
+    deadline = time.monotonic() + timeout_seconds
+    last_result = "not checked"
+    while time.monotonic() < deadline:
+        try:
+            with urllib.request.urlopen(CHROME_CDP_VERSION_URL, timeout=0.8) as response:
+                status_code = getattr(response, "status", response.getcode())
+                last_result = f"HTTP {status_code}"
+                print(f"Chrome CDP check: {CHROME_CDP_VERSION_URL} {last_result}", flush=True)
+                if status_code == 200:
+                    return True, last_result
+        except Exception as exc:
+            last_result = repr(exc)
+        time.sleep(0.25)
+    print(f"Chrome CDP check failed: {CHROME_CDP_VERSION_URL} {last_result}", flush=True)
+    return False, last_result
 
 
 def get_common_icon_candidates() -> list[Path]:
@@ -2239,6 +2277,7 @@ class DakeBoothAssistApp:
         self._set_status("status_chrome_launching")
         chrome_path = find_chrome_executable()
         manual_command = build_manual_chrome_command()
+        command = manual_command
         if chrome_path is None:
             self._set_status("status_error")
             messagebox.showerror(
@@ -2249,21 +2288,17 @@ class DakeBoothAssistApp:
 
         try:
             get_chrome_profile_dir().mkdir(parents=True, exist_ok=True)
-            creationflags = 0
-            if os.name == "nt":
-                creationflags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) | getattr(subprocess, "DETACHED_PROCESS", 0)
-            subprocess.Popen(
-                build_chrome_launch_args(chrome_path),
-                stdin=subprocess.DEVNULL,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                creationflags=creationflags,
-            )
+            command = launch_chrome_with_shell(chrome_path)
+            cdp_ready, cdp_result = wait_for_chrome_cdp()
+            if not cdp_ready:
+                raise RuntimeError(
+                    f"Chrome起動失敗: {CHROME_CDP_VERSION_URL} が 200 を返しませんでした。最後の結果: {cdp_result}"
+                )
         except Exception as exc:
-            self._set_status("status_error")
+            self._set_status("status_error", f"Chrome起動失敗: {exc}")
             messagebox.showerror(
                 UI_TEXT["dialog_error_title"],
-                UI_TEXT["dialog_chrome_launch_error"].format(command=manual_command, error=exc),
+                UI_TEXT["dialog_chrome_launch_error"].format(command=command, error=exc),
             )
             return
 
@@ -2604,6 +2639,15 @@ def run_launch_check() -> int:
     if setup_kind != "error_setup":
         raise RuntimeError("playwright setup guidance fixture failed")
 
+    chrome_check_path = find_chrome_executable() or "chrome.exe"
+    chrome_launch_command = build_chrome_launch_command(chrome_check_path)
+    if f"--remote-debugging-port={CHROME_REMOTE_DEBUGGING_PORT}" not in chrome_launch_command:
+        raise RuntimeError("chrome remote debugging command fixture failed")
+    if "--user-data-dir=" not in chrome_launch_command:
+        raise RuntimeError("chrome profile command fixture failed")
+    if BOOTH_ADMIN_URL not in chrome_launch_command:
+        raise RuntimeError("chrome booth url command fixture failed")
+
     product_apps = sum(1 for entry in apps if entry.has_product)
     pack_products = sum(1 for entry in apps if entry.product_type == PRODUCT_TYPE_PACK)
     shimarisu_pack = next((build_product_info(entry.path) for entry in apps if entry.name == SHIMARISU_PACK_ENTRY_NAME), None)
@@ -2642,9 +2686,11 @@ def run_launch_check() -> int:
     print(f"dake_backup_fields={dake_backup_fields}")
     print(f"dake_backup_tag_count={dake_backup_tag_count}")
     print(f"cdp_url={CHROME_CDP_URL}")
+    print(f"cdp_version_url={CHROME_CDP_VERSION_URL}")
     print(f"edit_url_hint={BOOTH_EDIT_URL_HINT}")
     print(f"chrome_path={find_chrome_executable() or 'missing'}")
     print(f"chrome_profile={get_chrome_profile_dir()}")
+    print(f"chrome_launch_command={chrome_launch_command}")
     print("fixtures=missing_product, missing_ready, multiple_zip, missing_playwright_python, ready_product_lookup, ready_product_priority, factory_v2_product, readme_fallback, open_edit_url_only, bad_page_detection, tag_split, file_input_detection, manual_file_upload, booth_url_save, pack_product")
     return 0
 
