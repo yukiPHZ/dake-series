@@ -22,6 +22,7 @@ INITIAL_REPUTATION = 50
 MAX_DAYS = 180
 BASE_MAINTENANCE_FEE = 50_000
 LOW_CASH_WARNING = 3_000_000
+DAILY_OPERATING_COST = 10_000
 
 UI_TEXT = {
     "title": "Dakeしまりす不動産",
@@ -49,7 +50,35 @@ UI_TEXT = {
     "status": "状態",
     "area": "エリア",
     "age": "築年数",
-    "buy_price": "買取価格",
+    "buy_price": "売主希望価格",
+    "seller_asking_price": "売主希望価格",
+    "purchase_price": "仕入価格",
+    "appraisal_offer": "査定金額を提示",
+    "appraisal_offer_title": "査定金額提示",
+    "appraisal_price": "提示査定金額",
+    "recommended_appraisal": "推奨査定価格",
+    "recommended_after_check": "調査後に表示",
+    "appraisal_reason": "査定理由",
+    "appraisal_passed": "査定金額が通りました。",
+    "appraisal_rejected": "査定金額は通りませんでした。",
+    "appraisal_rejected_note": "売主との条件が合わず、案件は終了しました。",
+    "offer_at_asking": "希望価格のまま提示",
+    "offer_minus_50": "50万円下げて提示",
+    "offer_minus_100": "100万円下げて提示",
+    "offer_minus_200": "200万円下げて提示",
+    "offer_minus_300": "300万円下げて提示",
+    "offer_risk_adjusted": "リスク反映価格で提示",
+    "appraisal_warning": "調査前の提示は危険です。見えていないリスクを含んだ金額になります。",
+    "appraisal_warning_hearing": "ヒアリング前の提示は危険です。売主しか知らない事情を見落としやすいです。",
+    "appraisal_ok_reason": "調査と聞き取りを踏まえた金額です。",
+    "appraisal_lowball_reason": "大きな問題が見えない中で低い提示です。",
+    "appraisal_risk_reason": "判明したリスクを価格に反映しました。",
+    "appraisal_high_risk_reason": "リスクに対して高めの仕入れです。",
+    "operating_cost": "営業コスト",
+    "daily_operating_cost": "営業コスト",
+    "operating_cost_total": "営業コスト合計",
+    "station_distance": "駅距離",
+    "floor_plan": "間取り",
     "expected_sale": "想定販売価格",
     "source": "仕入れ経路",
     "parking": "駐車場",
@@ -237,6 +266,11 @@ UI_TEXT = {
     "feedback_market_stale": "販売開始から時間が経ち、市場感が落ちています。",
     "feedback_suburban_one_parking": "駐車場1台なので、郊外ではやや弱いです。",
     "feedback_price_floor": "これ以上の値下げは利益がほとんど残りません。損切り処分も検討する場面です。",
+    "feedback_station_far": "駅から遠く、買主層が絞られます。",
+    "feedback_floor_2ldk": "2LDKなので、家族向けとしては少し弱いです。",
+    "feedback_floor_old": "古い間取り感があり、リフォーム効果が問われます。",
+    "feedback_purchase_heavy": "仕入価格が重く、利益を残しにくいです。",
+    "feedback_risk_purchase_heavy": "リスクに対して高く買っているため、出口が厳しくなっています。",
     "sold_loss_reason": "値下げと維持管理費が重なりました。",
     "credit_full_good": "調査とヒアリングを行い、納得感のある成約でした。",
     "credit_partial_good": "確認は一部に留まりましたが、黒字でまとめました。",
@@ -273,6 +307,9 @@ SHIMARISU_COMMENTS = {
     "investigated": "法的なところが見えてきました。出口の広さを確認しましょう。",
     "hearing": "聞いていないことが、あとから出てくることがあります。",
     "bought": "握りました。ここからは原価をふくらませすぎない勝負です。",
+    "appraisal_mode": "査定金額を一度だけ提示します。調査と聞き取りの材料で勝負しましょう。",
+    "appraisal_passed": "条件が通りました。ここから仕入れ判断の責任が始まります。",
+    "appraisal_rejected": "売主と条件が合いませんでした。次の案件に切り替えましょう。",
     "skipped": "この案件は、握らない強さかもしれません。",
     "cash_short": "資金が足りません。在庫と現金を少し見ましょう。",
     "renovate_light": "軽めでも、第一印象はけっこう変わります。",
@@ -352,6 +389,8 @@ PROPERTY_NAMES = (
     "日当たりの良い家",
 )
 
+FLOOR_PLANS = ("2LDK", "3LDK", "4LDK", "5DK", "4DK")
+
 RISK_LABELS = {
     "rebuildable": UI_TEXT["rebuildable"],
     "road_access_good": UI_TEXT["road_access"],
@@ -386,6 +425,9 @@ class PropertyCase:
     expected_sale_price: int
     source: str
     age: int
+    station_distance_m: int
+    station_walk_minutes: int
+    floor_plan: str
     parking_count: int
     corner_lot: bool
     rebuildable: bool
@@ -408,6 +450,13 @@ class PropertyCase:
     maintenance_cost_total: int = 0
     brokerage_fee_buy: int = 0
     repair_cost_total: int = 0
+    seller_asking_price: int = 0
+    appraisal_price: int = 0
+    appraisal_result: str = ""
+    appraisal_reason: str = ""
+    appraisal_credit_delta: int = 0
+    appraisal_mode: bool = False
+    overpaid_purchase: bool = False
     renovation_label_key: str = ""
     sale_strategy_key: str = ""
     target_profit: int = 0
@@ -503,6 +552,7 @@ class ShimarisuRealEstateGame:
         self.loss_count = 0
         self.uninvestigated_sales = 0
         self.unheard_sales = 0
+        self.operating_cost_total = 0
         self.best_profit = -10**12
         self.best_profit_name = ""
         self.message_log: list[str] = []
@@ -585,6 +635,10 @@ class ShimarisuRealEstateGame:
             self.hearing()
         elif action == "buy":
             self.buy_property()
+        elif action == "appraisal_start":
+            self.start_appraisal_offer()
+        elif action == "appraisal_offer":
+            self.submit_appraisal_offer(int(payload))
         elif action == "skip":
             self.skip_property()
         elif action == "confirm_next":
@@ -627,6 +681,17 @@ class ShimarisuRealEstateGame:
         )
         area = random.choice(AREAS)
         name = f"{area} {random.choice(PROPERTY_NAMES)}"
+        distance_pattern = random.choices(("near", "normal", "far", "very_far"), weights=(22, 44, 24, 10), k=1)[0]
+        if distance_pattern == "near":
+            station_distance_m = random.randint(300, 800)
+        elif distance_pattern == "normal":
+            station_distance_m = random.randint(900, 1600)
+        elif distance_pattern == "far":
+            station_distance_m = random.randint(1700, 2200)
+        else:
+            station_distance_m = random.randint(2300, 3000)
+        station_walk_minutes = math.ceil(station_distance_m / 80)
+        floor_plan = random.choices(FLOOR_PLANS, weights=(16, 32, 28, 12, 12), k=1)[0]
 
         if age < 15:
             buy_price = random.randint(12_000_000, 18_500_000)
@@ -673,6 +738,25 @@ class ShimarisuRealEstateGame:
         if incident_property:
             expected -= 1_000_000
             buy_price -= 700_000
+        if station_walk_minutes <= 10:
+            expected += 700_000
+            buy_price += 300_000
+        elif station_walk_minutes > 30:
+            expected -= 1_400_000
+            buy_price -= 800_000
+        elif station_walk_minutes > 20:
+            expected -= 800_000
+            buy_price -= 400_000
+        if parking_count >= 2 and station_walk_minutes > 20:
+            expected += 400_000
+        if floor_plan in {"3LDK", "4LDK"}:
+            expected += 500_000
+            buy_price += 200_000
+        elif floor_plan == "2LDK":
+            expected -= 500_000
+            buy_price -= 200_000
+        elif floor_plan in {"5DK", "4DK"}:
+            expected -= 300_000
 
         buy_price = max(3_800_000, round(buy_price / 100_000) * 100_000)
         expected = max(buy_price + 1_000_000, round(expected / 100_000) * 100_000)
@@ -685,6 +769,9 @@ class ShimarisuRealEstateGame:
             expected_sale_price=expected,
             source=source,
             age=age,
+            station_distance_m=station_distance_m,
+            station_walk_minutes=station_walk_minutes,
+            floor_plan=floor_plan,
             parking_count=parking_count,
             corner_lot=corner_lot,
             rebuildable=rebuildable,
@@ -696,6 +783,7 @@ class ShimarisuRealEstateGame:
             leftover_items=leftover_items,
             neighbor_trouble=neighbor_trouble,
             rebuild_blocker_reason=rebuild_blocker_reason,
+            seller_asking_price=buy_price,
             known_flags={},
         )
 
@@ -709,6 +797,13 @@ class ShimarisuRealEstateGame:
     def add_log(self, message: str) -> None:
         self.message_log.insert(0, message)
         self.message_log = self.message_log[:6]
+
+    def apply_operating_cost(self, days: int = 1) -> None:
+        if days <= 0:
+            return
+        amount = DAILY_OPERATING_COST * days
+        self.cash -= amount
+        self.operating_cost_total += amount
 
     def investigate(self) -> None:
         prop = self.current_property
@@ -746,16 +841,71 @@ class ShimarisuRealEstateGame:
         prop = self.current_property
         if not prop or prop.status != "candidate":
             return
-        fee = calc_brokerage_fee(prop.buy_price) if prop.source == "broker" else 0
-        total = prop.buy_price + fee
+        self.complete_purchase(prop.seller_asking_price or prop.buy_price, UI_TEXT["appraisal_ok_reason"])
+
+    def start_appraisal_offer(self) -> None:
+        prop = self.current_property
+        if not prop or prop.status != "candidate" or prop.appraisal_price:
+            return
+        prop.appraisal_mode = True
+        self.comment = SHIMARISU_COMMENTS["appraisal_mode"]
+
+    def submit_appraisal_offer(self, appraisal_price: int) -> None:
+        prop = self.current_property
+        if not prop or prop.status != "candidate" or prop.appraisal_price:
+            return
+        appraisal_price = max(500_000, round(appraisal_price / 100_000) * 100_000)
+        fee = calc_brokerage_fee(appraisal_price) if prop.source == "broker" else 0
+        if self.cash < appraisal_price + fee:
+            self.comment = SHIMARISU_COMMENTS["cash_short"]
+            self.add_log(UI_TEXT["log_cash_short"].format(amount=yen(appraisal_price + fee)))
+            return
+
+        accepted = random.random() < self.calculate_appraisal_acceptance(prop, appraisal_price)
+        credit_delta, reason = self.appraisal_credit_change(prop, appraisal_price, accepted)
+        prop.appraisal_price = appraisal_price
+        prop.appraisal_reason = reason
+        prop.appraisal_credit_delta = credit_delta
+        prop.appraisal_mode = False
+        self.reputation = max(0, min(100, self.reputation + credit_delta))
+
+        if accepted:
+            prop.appraisal_result = "accepted"
+            self.add_log(UI_TEXT["appraisal_passed"])
+            self.complete_purchase(appraisal_price, reason)
+            if not self.pending_confirmation:
+                self.pending_confirmation = "appraisal_accepted"
+                self.comment = SHIMARISU_COMMENTS["appraisal_passed"]
+            return
+
+        prop.appraisal_result = "rejected"
+        prop.status = "skipped"
+        self.skipped_count += 1
+        self.day += 2
+        self.apply_operating_cost(2)
+        self.comment = SHIMARISU_COMMENTS["appraisal_rejected"]
+        self.add_log(UI_TEXT["appraisal_rejected"])
+        self.pending_confirmation = "appraisal_rejected"
+
+    def complete_purchase(self, purchase_price: int, appraisal_reason: str = "") -> None:
+        prop = self.current_property
+        if not prop or prop.status != "candidate":
+            return
+        purchase_price = max(500_000, round(purchase_price / 100_000) * 100_000)
+        fee = calc_brokerage_fee(purchase_price) if prop.source == "broker" else 0
+        total = purchase_price + fee
         if self.cash < total:
             self.comment = SHIMARISU_COMMENTS["cash_short"]
             self.add_log(UI_TEXT["log_cash_short"].format(amount=yen(total)))
             return
 
         self.cash -= total
+        prop.buy_price = purchase_price
         prop.brokerage_fee_buy = fee
         prop.status = "owned"
+        prop.overpaid_purchase = self.is_overpaid_purchase(prop)
+        if appraisal_reason and not prop.appraisal_reason:
+            prop.appraisal_reason = appraisal_reason
         self.comment = SHIMARISU_COMMENTS["bought"]
         self.add_log(UI_TEXT["log_purchase"].format(amount=yen(total)))
         self.reveal_hidden_risks_after_purchase(prop)
@@ -844,6 +994,7 @@ class ShimarisuRealEstateGame:
         prop.status = "skipped"
         self.skipped_count += 1
         self.day += 2
+        self.apply_operating_cost(2)
         if prop.source == "broker" and not self.has_known_high_risk(prop):
             self.reputation = max(0, self.reputation - 1)
             self.add_log(UI_TEXT["log_broker_skip_rep"])
@@ -915,6 +1066,7 @@ class ShimarisuRealEstateGame:
 
         prop = self.current_property
         self.day += 1
+        self.apply_operating_cost(1)
 
         if prop and prop.status in {"owned", "renovating", "listed"}:
             prop.days_held += 1
@@ -1123,11 +1275,182 @@ class ShimarisuRealEstateGame:
             return "cash_center"
         return "loan_available"
 
+    def appraisal_visible(self, prop: PropertyCase) -> bool:
+        return prop.investigated or prop.heard_from_seller
+
+    def known_risk_score(self, prop: PropertyCase) -> int:
+        score = 0
+        if prop.known_flags.get("rebuildable") and not prop.rebuildable:
+            score += 3
+        if prop.known_flags.get("road_access_good") and not prop.road_access_good:
+            score += 3
+        if prop.known_flags.get("illegal_building") and prop.illegal_building:
+            score += 3
+        if prop.known_flags.get("incident_property") and prop.incident_property:
+            score += 2
+        if prop.known_flags.get("termite_damage") and prop.termite_damage:
+            score += 2
+        if prop.known_flags.get("flood_damage") and prop.flood_damage:
+            score += 2
+        if prop.known_flags.get("leftover_items") and prop.leftover_items:
+            score += 1
+        if prop.parking_count == 0:
+            score += 1
+        if prop.station_walk_minutes > 20:
+            score += 1
+        return score
+
+    def has_major_known_risk(self, prop: PropertyCase) -> bool:
+        return self.known_risk_score(prop) >= 3
+
+    def recommended_appraisal_range(self, prop: PropertyCase) -> tuple[int, int, str]:
+        expected = prop.expected_sale_price
+        target_profit = 2_500_000
+        standard_renovation = 3_500_000
+        repair_estimate = 0
+        reason = UI_TEXT["appraisal_ok_reason"]
+
+        if prop.known_flags.get("illegal_building") and prop.illegal_building:
+            low, high = int(expected * 0.40), int(expected * 0.55)
+            reason = UI_TEXT["feedback_illegal"]
+        elif (
+            prop.known_flags.get("rebuildable")
+            and not prop.rebuildable
+            or prop.known_flags.get("road_access_good")
+            and not prop.road_access_good
+        ):
+            low, high = int(expected * 0.45), int(expected * 0.60)
+            reason = UI_TEXT["feedback_rebuild"] if not prop.rebuildable else UI_TEXT["feedback_road"]
+        elif prop.known_flags.get("incident_property") and prop.incident_property:
+            low, high = int(expected * 0.55), int(expected * 0.70)
+            reason = UI_TEXT["feedback_incident"]
+        else:
+            if prop.known_flags.get("termite_damage") and prop.termite_damage:
+                repair_estimate += 800_000
+                reason = UI_TEXT["feedback_termite"]
+            if prop.known_flags.get("flood_damage") and prop.flood_damage:
+                repair_estimate += 700_000
+                reason = UI_TEXT["feedback_flood"]
+            center = expected - target_profit - standard_renovation - repair_estimate
+            if prop.station_walk_minutes > 30:
+                center -= 700_000
+                reason = UI_TEXT["feedback_station_far"]
+            elif prop.station_walk_minutes > 20:
+                center -= 400_000
+                reason = UI_TEXT["feedback_station_far"]
+            if prop.floor_plan == "2LDK":
+                center -= 300_000
+                reason = UI_TEXT["feedback_floor_2ldk"]
+            elif prop.floor_plan in {"5DK", "4DK"}:
+                center -= 200_000
+                reason = UI_TEXT["feedback_floor_old"]
+            low, high = center - 500_000, center + 500_000
+
+        low = max(1_000_000, round(low / 100_000) * 100_000)
+        high = max(low + 500_000, round(high / 100_000) * 100_000)
+        return low, high, reason
+
+    def calculate_appraisal_acceptance(self, prop: PropertyCase, appraisal_price: int) -> float:
+        asking = max(1, prop.seller_asking_price or prop.buy_price)
+        ratio = appraisal_price / asking
+        if ratio >= 0.98:
+            chance = 0.95
+        elif ratio >= 0.90:
+            chance = 0.80
+        elif ratio >= 0.80:
+            chance = 0.60
+        elif ratio >= 0.70:
+            chance = 0.40
+        elif ratio >= 0.60:
+            chance = 0.25
+        else:
+            chance = 0.10
+
+        if prop.known_flags.get("rebuildable") and not prop.rebuildable:
+            chance += 0.15
+        if prop.known_flags.get("road_access_good") and not prop.road_access_good:
+            chance += 0.15
+        if prop.known_flags.get("illegal_building") and prop.illegal_building:
+            chance += 0.15
+        if prop.known_flags.get("incident_property") and prop.incident_property:
+            chance += 0.10
+        if prop.known_flags.get("termite_damage") and prop.termite_damage:
+            chance += 0.10
+        if prop.known_flags.get("flood_damage") and prop.flood_damage:
+            chance += 0.10
+        if prop.known_flags.get("leftover_items") and prop.leftover_items:
+            chance += 0.05
+        if prop.station_walk_minutes > 20:
+            chance += 0.05
+        if prop.parking_count == 0:
+            chance += 0.05
+        if self.known_risk_score(prop) <= 1 and ratio < 0.80:
+            chance -= 0.10
+        if self.reputation >= 70:
+            chance += 0.05
+        elif self.reputation < 40:
+            chance -= 0.10
+        return clamp(chance, 0.05, 0.98)
+
+    def appraisal_credit_change(self, prop: PropertyCase, appraisal_price: int, accepted: bool) -> tuple[int, str]:
+        asking = max(1, prop.seller_asking_price or prop.buy_price)
+        ratio = appraisal_price / asking
+        risk_score = self.known_risk_score(prop)
+        recommended_low, recommended_high, reason = self.recommended_appraisal_range(prop)
+        if risk_score <= 1:
+            if ratio < 0.60:
+                return -6, UI_TEXT["appraisal_lowball_reason"]
+            if ratio < 0.70:
+                return -4, UI_TEXT["appraisal_lowball_reason"]
+            if ratio < 0.80:
+                return -2, UI_TEXT["appraisal_lowball_reason"]
+        if accepted and prop.investigated and prop.heard_from_seller and recommended_low <= appraisal_price <= recommended_high:
+            return 1, reason
+        if accepted and risk_score >= 3 and ratio >= 0.90:
+            return 0, UI_TEXT["appraisal_high_risk_reason"]
+        if not accepted and ratio < 0.80:
+            return -1, UI_TEXT["appraisal_lowball_reason"]
+        return 0, reason
+
+    def is_overpaid_purchase(self, prop: PropertyCase) -> bool:
+        _, recommended_high, _ = self.recommended_appraisal_range(prop)
+        asking = max(1, prop.seller_asking_price or prop.buy_price)
+        ratio = prop.buy_price / asking
+        return prop.buy_price > recommended_high or (self.has_major_known_risk(prop) and ratio >= 0.90)
+
+    def appraisal_options(self, prop: PropertyCase) -> list[tuple[str, int]]:
+        asking = prop.seller_asking_price or prop.buy_price
+        options: list[tuple[str, int]] = [
+            (UI_TEXT["offer_at_asking"], asking),
+            (UI_TEXT["offer_minus_50"], asking - 500_000),
+            (UI_TEXT["offer_minus_100"], asking - 1_000_000),
+        ]
+        if self.appraisal_visible(prop):
+            low, high, _ = self.recommended_appraisal_range(prop)
+            risk_price = min(high, asking - 500_000)
+            options.append((UI_TEXT["offer_risk_adjusted"], risk_price))
+        else:
+            options.append((UI_TEXT["offer_minus_200"], asking - 2_000_000))
+
+        deduped: list[tuple[str, int]] = []
+        seen: set[int] = set()
+        for label, price in options:
+            rounded = max(500_000, round(price / 100_000) * 100_000)
+            if rounded in seen:
+                continue
+            seen.add(rounded)
+            deduped.append((label, rounded))
+        return deduped[:4]
+
     def calculate_credit_change(self, prop: PropertyCase, profit: int) -> tuple[int, str]:
         if profit < 0:
             return -3, UI_TEXT["credit_loss"]
         if prop.hidden_risk_found and not (prop.investigated and prop.heard_from_seller):
             return -2, UI_TEXT["credit_hidden_risk"]
+        if prop.overpaid_purchase:
+            if profit < 2_000_000:
+                return -1, UI_TEXT["appraisal_high_risk_reason"]
+            return 0, UI_TEXT["appraisal_high_risk_reason"]
         if prop.investigated and prop.heard_from_seller:
             return 3, UI_TEXT["credit_full_good"]
         if profit >= 1_500_000:
@@ -1152,6 +1475,10 @@ class ShimarisuRealEstateGame:
         if prop.termite_damage or prop.flood_damage or prop.neighbor_trouble:
             points += 1
         if prop.parking_count == 0 or prop.age >= 40:
+            points += 1
+        if prop.station_walk_minutes > 20 or prop.floor_plan == "2LDK":
+            points += 1
+        if prop.overpaid_purchase:
             points += 1
         if not prop.investigated:
             points += 1
@@ -1227,6 +1554,10 @@ class ShimarisuRealEstateGame:
         reasons: list[str] = []
         if self.is_price_floor(prop):
             reasons.append(UI_TEXT["feedback_price_floor"])
+        if prop.overpaid_purchase:
+            reasons.append(UI_TEXT["feedback_purchase_heavy"])
+            if self.has_major_known_risk(prop):
+                reasons.append(UI_TEXT["feedback_risk_purchase_heavy"])
         market = self.risk_adjusted_market_value(prop)
         if prop.listed_price > market * 1.04:
             reasons.append(UI_TEXT["feedback_price_high"])
@@ -1248,6 +1579,12 @@ class ShimarisuRealEstateGame:
             reasons.append(UI_TEXT["feedback_parking"])
         elif prop.parking_count == 1:
             reasons.append(UI_TEXT["feedback_suburban_one_parking"])
+        if prop.station_walk_minutes > 20:
+            reasons.append(UI_TEXT["feedback_station_far"])
+        if prop.floor_plan == "2LDK":
+            reasons.append(UI_TEXT["feedback_floor_2ldk"])
+        elif prop.floor_plan in {"5DK", "4DK"} and prop.renovation_budget < 3_500_000:
+            reasons.append(UI_TEXT["feedback_floor_old"])
         if prop.age >= 40:
             reasons.append(UI_TEXT["feedback_old"])
         if prop.days_held >= 60:
@@ -1270,11 +1607,16 @@ class ShimarisuRealEstateGame:
             points.append(UI_TEXT["investigate_hint"])
         if not prop.heard_from_seller:
             points.append(UI_TEXT["hearing_hint"])
-        rough_profit = prop.expected_sale_price - prop.buy_price
+        asking = prop.seller_asking_price or prop.buy_price
+        rough_profit = prop.expected_sale_price - asking
         if rough_profit < 2_000_000:
             points.append(UI_TEXT["skip_reason_margin"])
         if prop.parking_count == 0:
             points.append(UI_TEXT["feedback_parking"])
+        if prop.station_walk_minutes > 20:
+            points.append(UI_TEXT["feedback_station_far"])
+        if prop.floor_plan == "2LDK":
+            points.append(UI_TEXT["feedback_floor_2ldk"])
         if prop.age >= 40:
             points.append(UI_TEXT["feedback_old"])
         return points[:5]
@@ -1282,10 +1624,11 @@ class ShimarisuRealEstateGame:
     def skip_reason_for(self, prop: PropertyCase) -> str:
         if self.has_known_high_risk(prop):
             return UI_TEXT["skip_reason_risk"]
-        rough_profit = prop.expected_sale_price - prop.buy_price
+        asking = prop.seller_asking_price or prop.buy_price
+        rough_profit = prop.expected_sale_price - asking
         if rough_profit < 2_000_000:
             return UI_TEXT["skip_reason_margin"]
-        if self.cash < prop.buy_price + (calc_brokerage_fee(prop.buy_price) if prop.source == "broker" else 0):
+        if self.cash < asking + (calc_brokerage_fee(asking) if prop.source == "broker" else 0):
             return UI_TEXT["skip_reason_cash"]
         return UI_TEXT["skip_reason_optional"]
 
@@ -1324,6 +1667,20 @@ class ShimarisuRealEstateGame:
             value -= 400_000
         if prop.neighbor_trouble:
             value -= 500_000
+        if prop.station_walk_minutes <= 10:
+            value += 600_000
+        elif prop.station_walk_minutes > 30:
+            value -= 1_200_000
+        elif prop.station_walk_minutes > 20:
+            value -= 700_000
+        if prop.parking_count >= 2 and prop.station_walk_minutes > 20:
+            value += 350_000
+        if prop.floor_plan in {"3LDK", "4LDK"}:
+            value += 400_000
+        elif prop.floor_plan == "2LDK":
+            value -= 500_000
+        elif prop.floor_plan in {"5DK", "4DK"} and prop.renovation_budget < 3_500_000:
+            value -= 300_000
         return max(1_000_000, value)
 
     def calculate_sale_chance(self, prop: PropertyCase) -> float:
@@ -1341,6 +1698,22 @@ class ShimarisuRealEstateGame:
             chance += 0.025
         else:
             chance += 0.01
+        if prop.station_walk_minutes <= 10:
+            chance += 0.025
+        elif prop.station_walk_minutes > 30:
+            chance -= 0.055
+        elif prop.station_walk_minutes > 20:
+            chance -= 0.035
+        if prop.parking_count >= 2 and prop.station_walk_minutes > 20:
+            chance += 0.018
+        if prop.floor_plan in {"3LDK", "4LDK"}:
+            chance += 0.018
+        elif prop.floor_plan == "2LDK":
+            chance -= 0.02
+        elif prop.floor_plan in {"5DK", "4DK"} and prop.renovation_budget >= 3_500_000:
+            chance += 0.015
+        elif prop.floor_plan in {"5DK", "4DK"}:
+            chance -= 0.012
         if prop.corner_lot:
             chance += 0.015
         if prop.age < 15:
@@ -1372,6 +1745,8 @@ class ShimarisuRealEstateGame:
             chance -= 0.01
         if prop.neighbor_trouble:
             chance -= 0.02
+        if prop.overpaid_purchase:
+            chance -= 0.035
         chance += min(0.04, prop.price_cut_count * 0.012)
         if not prop.investigated and not prop.heard_from_seller:
             chance -= 0.30
@@ -1437,20 +1812,21 @@ class ShimarisuRealEstateGame:
         title_font = self.get_font(46, True)
         sub_font = self.get_font(18)
         title_surf = title_font.render(UI_TEXT["title"], True, COLORS["text"])
-        self.screen.blit(title_surf, title_surf.get_rect(center=(WINDOW_WIDTH // 2, 110)))
+        self.screen.blit(title_surf, title_surf.get_rect(center=(WINDOW_WIDTH // 2, 104)))
         sub_surf = sub_font.render(UI_TEXT["subtitle"], True, COLORS["muted"])
-        self.screen.blit(sub_surf, sub_surf.get_rect(center=(WINDOW_WIDTH // 2, 158)))
+        self.screen.blit(sub_surf, sub_surf.get_rect(center=(WINDOW_WIDTH // 2, 152)))
 
-        image_rect = pygame.Rect(396, 188, 308, 308)
+        image_rect = pygame.Rect(0, 0, 308, 308)
+        image_rect.center = (WINDOW_WIDTH // 2, 330)
         self.draw_shimarisu_image(self.shimarisu_title, image_rect, large=True)
         self.draw_wrapped_text(
             self.comment,
-            pygame.Rect(330, 510, 440, 54),
+            pygame.Rect(WINDOW_WIDTH // 2 - 220, 500, 440, 54),
             self.get_font(15),
             COLORS["muted"],
             center=True,
         )
-        self.add_button(pygame.Rect(454, 586, 192, 54), UI_TEXT["start"], "start")
+        self.add_button(pygame.Rect(WINDOW_WIDTH // 2 - 96, 584, 192, 54), UI_TEXT["start"], "start")
         self.draw_buttons()
 
     def draw_main(self) -> None:
@@ -1472,6 +1848,7 @@ class ShimarisuRealEstateGame:
             (UI_TEXT["holding_value"], yen(self.holding_value())),
             (UI_TEXT["total_assets"], yen(self.total_assets_estimate())),
             (UI_TEXT["asset_gain"], yen(self.total_assets_estimate() - INITIAL_CASH)),
+            (UI_TEXT["operating_cost_total"], yen(self.operating_cost_total)),
             (UI_TEXT["sold_count"], f"{self.sold_count}件"),
             (UI_TEXT["skipped_count"], f"{self.skipped_count}件"),
             (UI_TEXT["unsold_count"], f"{self.unsold_count()}件"),
@@ -1570,11 +1947,12 @@ class ShimarisuRealEstateGame:
             (UI_TEXT["day"], f"{min(self.day, MAX_DAYS)}日目 / {MAX_DAYS}日"),
             (UI_TEXT["cash"], yen(self.cash)),
             (UI_TEXT["reputation"], str(self.reputation)),
+            (UI_TEXT["daily_operating_cost"], f"{yen(DAILY_OPERATING_COST)}/日"),
         ]
-        x = header.right - 600
+        x = header.right - 724
         for label, value in stats:
-            self.draw_stat_chip(label, value, pygame.Rect(x, header.y + 14, 184, 36))
-            x += 196
+            self.draw_stat_chip(label, value, pygame.Rect(x, header.y + 14, 172, 36))
+            x += 184
 
     def draw_left_panel(self) -> None:
         panel = pygame.Rect(24, 98, 270, 606)
@@ -1631,16 +2009,20 @@ class ShimarisuRealEstateGame:
         rows = [
             (UI_TEXT["area"], prop.area),
             (UI_TEXT["age"], f"築{prop.age}年"),
-            (UI_TEXT["buy_price"], yen(prop.buy_price)),
+            (UI_TEXT["floor_plan"], prop.floor_plan),
+            (UI_TEXT["station_distance"], self.station_distance_text(prop)),
+            (UI_TEXT["seller_asking_price"], yen(prop.seller_asking_price or prop.buy_price)),
             (UI_TEXT["expected_sale"], yen(prop.expected_sale_price)),
             (UI_TEXT["source"], UI_TEXT[prop.source]),
             (UI_TEXT["parking"], f"{prop.parking_count}台"),
             (UI_TEXT["corner_lot"], self.yes_no(prop.corner_lot)),
         ]
+        if prop.status not in {"candidate", "skipped"}:
+            rows.insert(5, (UI_TEXT["purchase_price"], yen(prop.buy_price)))
         y = panel.y + 110
         for label, value in rows:
-            self.draw_key_value(label, value, pygame.Rect(panel.x + 24, y, 390, 26))
-            y += 32
+            self.draw_key_value(label, value, pygame.Rect(panel.x + 24, y, 390, 24))
+            y += 28
 
         self.draw_text(UI_TEXT["known_info"], (panel.x + 24, y + 8), 16, True, COLORS["muted"])
         y += 38
@@ -1710,6 +2092,28 @@ class ShimarisuRealEstateGame:
         for label, value in cost_rows:
             self.draw_key_value(label, value, pygame.Rect(panel.x + 18, y, 316, 24), small=True)
             y += 28
+
+        if self.pending_confirmation == "appraisal_accepted" and prop.appraisal_result == "accepted":
+            y += 10
+            box = pygame.Rect(panel.x + 18, y, 316, 166)
+            pygame.draw.rect(self.screen, COLORS["soft_green"], box, border_radius=8)
+            pygame.draw.rect(self.screen, COLORS["green"], box, 1, border_radius=8)
+            self.draw_text(UI_TEXT["appraisal_passed"], (box.x + 14, box.y + 10), 15, True, COLORS["green_dark"])
+            rows = [
+                (UI_TEXT["seller_asking_price"], yen(prop.seller_asking_price or prop.buy_price)),
+                (UI_TEXT["appraisal_price"], yen(prop.appraisal_price)),
+                (UI_TEXT["purchase_price"], yen(prop.buy_price)),
+                (UI_TEXT["credit_delta"], self.signed_plain(prop.appraisal_credit_delta)),
+            ]
+            row_y = box.y + 42
+            for label, value in rows:
+                color = COLORS["green_dark"] if label == UI_TEXT["credit_delta"] and prop.appraisal_credit_delta >= 0 else COLORS["text"]
+                if label == UI_TEXT["credit_delta"] and prop.appraisal_credit_delta < 0:
+                    color = COLORS["red"]
+                self.draw_key_value(label, value, pygame.Rect(box.x + 14, row_y, box.width - 28, 20), small=True, value_color=color)
+                row_y += 23
+            self.draw_wrapped_text(prop.appraisal_reason, pygame.Rect(box.x + 14, row_y + 4, box.width - 28, 42), self.get_font(12), COLORS["muted"])
+            return
 
         if prop.status == "sold":
             y += 10
@@ -1816,7 +2220,11 @@ class ShimarisuRealEstateGame:
             self.draw_cash_memo(panel, y)
 
     def right_panel_title(self, prop: PropertyCase) -> str:
+        if self.pending_confirmation == "appraisal_accepted" and prop.appraisal_result == "accepted":
+            return UI_TEXT["appraisal_offer_title"]
         if prop.status == "candidate":
+            if prop.appraisal_mode:
+                return UI_TEXT["appraisal_offer_title"]
             return UI_TEXT["case_memo"]
         if prop.status == "skipped":
             return UI_TEXT["skip_result"]
@@ -1830,55 +2238,84 @@ class ShimarisuRealEstateGame:
 
     def draw_candidate_right_panel(self, panel: pygame.Rect, prop: PropertyCase) -> None:
         y = panel.y + 58
-        rough_profit = prop.expected_sale_price - prop.buy_price
+        asking = prop.seller_asking_price or prop.buy_price
+        rough_profit = prop.expected_sale_price - asking
         rows = [
-            (UI_TEXT["buy_price"], yen(prop.buy_price)),
+            (UI_TEXT["seller_asking_price"], yen(asking)),
             (UI_TEXT["expected_sale"], yen(prop.expected_sale_price)),
             (UI_TEXT["rough_profit"], yen(rough_profit)),
             (UI_TEXT["investigation_state"], UI_TEXT["survey_done"] if prop.investigated else UI_TEXT["not_checked"]),
             (UI_TEXT["hearing_state"], UI_TEXT["hearing_done"] if prop.heard_from_seller else UI_TEXT["not_checked"]),
+            (UI_TEXT["daily_operating_cost"], f"{yen(DAILY_OPERATING_COST)} / 日"),
         ]
         for label, value in rows:
             self.draw_key_value(label, value, pygame.Rect(panel.x + 18, y, 316, 24), small=True)
-            y += 30
+            y += 28
+
+        y += 4
+        self.draw_text(UI_TEXT["recommended_appraisal"], (panel.x + 18, y), 15, True, COLORS["muted"])
+        y += 26
+        if self.appraisal_visible(prop):
+            low, high, reason = self.recommended_appraisal_range(prop)
+            self.draw_key_value(
+                UI_TEXT["recommended_appraisal"],
+                f"{yen(low)} - {yen(high)}",
+                pygame.Rect(panel.x + 18, y, 316, 22),
+                small=True,
+                value_color=COLORS["green_dark"],
+            )
+            y += 26
+            self.draw_wrapped_text(reason, pygame.Rect(panel.x + 18, y, 316, 38), self.get_font(12), COLORS["muted"])
+            y += 42
+        else:
+            self.draw_wrapped_text(UI_TEXT["recommended_after_check"], pygame.Rect(panel.x + 18, y, 316, 28), self.get_font(12), COLORS["muted"])
+            y += 34
 
         y += 8
         self.draw_text(UI_TEXT["attention_points"], (panel.x + 18, y), 15, True, COLORS["muted"])
         y += 26
         points = self.candidate_attention_points(prop)
-        for point in points[:5]:
+        for point in points[:4]:
             self.draw_wrapped_text(
                 f"・{point}",
-                pygame.Rect(panel.x + 18, y, 316, 24),
-                self.get_font(12),
+                pygame.Rect(panel.x + 18, y, 316, 22),
+                self.get_font(11),
                 COLORS["muted"],
             )
-            y += 24
+            y += 22
 
         y += 8
-        self.draw_wrapped_text(UI_TEXT["investigate_hint"], pygame.Rect(panel.x + 18, y, 316, 38), self.get_font(12), COLORS["muted"])
-        y += 42
-        self.draw_wrapped_text(UI_TEXT["hearing_hint"], pygame.Rect(panel.x + 18, y, 316, 38), self.get_font(12), COLORS["muted"])
+        if not prop.investigated:
+            self.draw_wrapped_text(UI_TEXT["appraisal_warning"], pygame.Rect(panel.x + 18, y, 316, 38), self.get_font(11), COLORS["red"])
+            y += 40
+        elif not prop.heard_from_seller:
+            self.draw_wrapped_text(UI_TEXT["appraisal_warning_hearing"], pygame.Rect(panel.x + 18, y, 316, 38), self.get_font(11), COLORS["red"])
 
     def draw_skipped_right_panel(self, panel: pygame.Rect, prop: PropertyCase) -> None:
         y = panel.y + 58
-        self.draw_wrapped_text(UI_TEXT["skip_message"], pygame.Rect(panel.x + 18, y, 316, 34), self.get_font(15), COLORS["text"])
+        message = UI_TEXT["appraisal_rejected"] if prop.appraisal_result == "rejected" else UI_TEXT["skip_message"]
+        self.draw_wrapped_text(message, pygame.Rect(panel.x + 18, y, 316, 34), self.get_font(15), COLORS["text"])
         y += 48
-        rep_delta = "-1" if prop.source == "broker" and not self.has_known_high_risk(prop) else "なし"
+        rep_delta = self.signed_plain(prop.appraisal_credit_delta) if prop.appraisal_result == "rejected" else (
+            "-1" if prop.source == "broker" and not self.has_known_high_risk(prop) else "なし"
+        )
         rows = [
-            (UI_TEXT["buy_price"], yen(prop.buy_price)),
+            (UI_TEXT["seller_asking_price"], yen(prop.seller_asking_price or prop.buy_price)),
             (UI_TEXT["expected_sale"], yen(prop.expected_sale_price)),
             (UI_TEXT["skip_reason"], self.skip_reason_for(prop)),
             (UI_TEXT["elapsed_days"], "+2日"),
             (UI_TEXT["credit_delta"], rep_delta),
         ]
+        if prop.appraisal_price:
+            rows.insert(2, (UI_TEXT["appraisal_price"], yen(prop.appraisal_price)))
         for label, value in rows:
             self.draw_key_value(label, value, pygame.Rect(panel.x + 18, y, 316, 24), small=True)
-            y += 31
+            y += 29
         y += 12
         self.draw_text(UI_TEXT["cash_memo"], (panel.x + 18, y), 15, True, COLORS["muted"])
         y += 28
-        self.draw_wrapped_text(self.comment, pygame.Rect(panel.x + 18, y, 316, 74), self.get_font(13), COLORS["muted"])
+        detail = prop.appraisal_reason if prop.appraisal_result == "rejected" else self.comment
+        self.draw_wrapped_text(detail, pygame.Rect(panel.x + 18, y, 316, 74), self.get_font(13), COLORS["muted"])
 
     def draw_listed_right_panel(self, panel: pygame.Rect, prop: PropertyCase) -> None:
         y = panel.y + 58
@@ -2051,13 +2488,22 @@ class ShimarisuRealEstateGame:
             return [(UI_TEXT["confirm_next"], "confirm_next", None, True)]
         if self.pending_confirmation == "risk":
             return [(UI_TEXT["confirm_continue"], "confirm_continue", None, True)]
+        if self.pending_confirmation == "appraisal_accepted":
+            return [(UI_TEXT["confirm_continue"], "confirm_continue", None, True)]
+        if self.pending_confirmation == "appraisal_rejected":
+            return [(UI_TEXT["confirm_next"], "confirm_next", None, True)]
         if not prop:
             return [(UI_TEXT["new_case"], "new_case", None, True)]
         if prop.status == "candidate":
+            if prop.appraisal_mode:
+                return [
+                    (f"{label}\n{yen(price)}", "appraisal_offer", price, True)
+                    for label, price in self.appraisal_options(prop)
+                ]
             return [
                 (UI_TEXT["investigate"], "investigate", None, not prop.known_flags.get("investigated")),
                 (UI_TEXT["hearing"], "hearing", None, not prop.known_flags.get("hearing")),
-                (UI_TEXT["buy"], "buy", None, True),
+                (UI_TEXT["appraisal_offer"], "appraisal_start", None, True),
                 (UI_TEXT["skip"], "skip", None, True),
             ]
         if prop.status == "skipped":
@@ -2111,6 +2557,9 @@ class ShimarisuRealEstateGame:
         price = self.calculate_total_cost(prop) + target + int(option["profit_delta"])
         return max(1_000_000, round(price / 100_000) * 100_000)
 
+    def station_distance_text(self, prop: PropertyCase) -> str:
+        return f"徒歩{prop.station_walk_minutes}分 / {prop.station_distance_m}m"
+
     def yes_no(self, value: bool) -> str:
         return UI_TEXT["yes"] if value else UI_TEXT["no"]
 
@@ -2124,7 +2573,7 @@ class ShimarisuRealEstateGame:
         pygame.draw.rect(self.screen, COLORS["soft"], rect, border_radius=8)
         self.draw_text(label, (rect.x + 10, rect.y + 8), 12, False, COLORS["muted"])
         value_surface = self.get_font(14, True).render(value, True, COLORS["text"])
-        self.screen.blit(value_surface, (rect.x + 60, rect.y + 8))
+        self.screen.blit(value_surface, value_surface.get_rect(midright=(rect.right - 10, rect.y + 18)))
 
     def draw_status_badge(self, prop: PropertyCase, rect: pygame.Rect) -> None:
         color = COLORS["soft_green"]
