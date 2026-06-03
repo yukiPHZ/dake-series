@@ -507,6 +507,14 @@ class AdvancedTimerApp(tk.Tk):
 
 
 def main() -> None:
+    if "--launch-check" in sys.argv:
+        app = AdvancedTimerApp()
+        app.update_idletasks()
+        app.update()
+        app.destroy()
+        print("launch-check ok")
+        return
+
     app = AdvancedTimerApp()
     app.mainloop()
 

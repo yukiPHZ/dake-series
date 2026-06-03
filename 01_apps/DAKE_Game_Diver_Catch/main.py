@@ -13,11 +13,11 @@ import tkinter as tk
 
 
 APP_NAME = "DAKE_Game_Diver_Catch"
-WINDOW_TITLE = "Dake潜って獲る"
+WINDOW_TITLE = "Dake潜って捕る"
 COPYRIGHT = "Copyright 2026 DAKE / Yukihiko Kikuta"
 
 UI_TEXT = {
-    "display_name": "Dake潜って獲る",
+    "display_name": "Dake潜って捕る",
     "score_label": "SCORE",
     "best_label": "BEST",
     "life_label": "LIFE",
@@ -27,7 +27,7 @@ UI_TEXT = {
     "mode_label": "MODE",
     "mode_normal": "NORMAL",
     "mode_timeless": "TIMELESS",
-    "menu_title": "Dake潜って獲る",
+    "menu_title": "Dake潜って捕る",
     "menu_mode_normal": "NORMAL 60SEC",
     "menu_mode_timeless": "TIMELESS",
     "menu_select_hint": "↑↓ SELECT",

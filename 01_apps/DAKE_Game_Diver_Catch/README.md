@@ -1,8 +1,8 @@
-# Dake潜って獲る
+# Dake潜って捕る
 
 ## アプリ概要
 
-`Dake潜って獲る` は、80年代〜初期90年代のLCD携帯ゲーム風に遊べるDAKE番外ミニゲームです。船から海へ潜り、銛で小魚・大魚・イカ・宝箱を獲って、サメを避けながら船へ戻ると得点になります。
+`Dake潜って捕る` は、80年代〜初期90年代のLCD携帯ゲーム風に遊べるDAKE番外ミニゲームです。船から海へ潜り、銛で小魚・大魚・イカ・宝箱を捕って、サメを避けながら船へ戻ると得点になります。
 
 単機能・軽量・即起動を優先し、外部画像素材や追加依存を使わない Python / Tkinter 製のCanvasゲームです。
 
@@ -84,25 +84,27 @@
 ```json
 {
   "app_key": "game_diver_catch",
-  "display_name": "Dake潜って獲る",
-  "launcher_title": "Dake潜って獲る",
-  "launcher_description": "船から潜って、銛で獲って、戻って得点。LCD携帯ゲーム風ミニゲーム。",
-  "site_title": "Dake潜って獲る",
-  "site_description": "80年代〜初期90年代のLCD携帯ゲーム風に、ダイバーが海へ潜って獲物を持ち帰るミニゲームです。",
-  "update_summary": "起動時メニューとモード選択、メニューへ戻る導線を追加。",
+  "display_name": "Dake潜って捕る",
+  "launcher_title": "Dake潜って捕る",
+  "launcher_description": "潜って捕って、船へ戻るレトロ風ミニゲーム。",
+  "site_title": "Dake潜って捕る",
+  "site_description": "ダイバーが海へ潜り、捕った獲物を船へ戻して得点する軽量ミニゲームです。",
+  "update_summary": "市場向けミニゲームとして正式出荷準備しました。",
   "folder_name": "DAKE_Game_Diver_Catch",
   "exe_name": "DakeGame_Diver_Catch.exe",
-  "release_url": "",
+  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Game_Diver_Catch_v1.0.0",
   "screenshot_path": "assets/screenshot.webp",
   "status": "available",
   "show_in_launcher": true,
-  "show_on_site": true
+  "show_on_site": true,
+  "app_type": "market",
+  "completion_goal": "formal_release"
 }
 ```
 
 ## RELEASE_BODY
 
-Dake潜って獲る
-船から潜って、銛で獲って、戻って得点
-LCD携帯ゲーム風ミニゲーム
-Windows向けexe
+- 潜って捕って、船へ戻るレトロ風ミニゲーム
+- NORMAL / TIMELESS モード
+- ベストスコア保存
+- Windows向けexe

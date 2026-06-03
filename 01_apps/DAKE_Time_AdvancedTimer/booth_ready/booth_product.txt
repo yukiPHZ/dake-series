@@ -1,0 +1,44 @@
+# 商品名
+Dakeアドバンスドタイマー
+
+# 価格案
+300円
+
+# 商品紹介文
+集中時間と休憩時間をすぐに始められる静かなタイマー。
+
+・集中時間と休憩時間をすぐ始めるタイマー
+・25分 / 5分 / 15分 / カスタム時間に対応
+・静かなDAKE UI
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。
+
+# タグ
+Windows
+実務
+ツール
+仕事効率化
+軽量
+シンプル
+
+# BOOTH商品画像
+assets/booth_thumbnail.jpg
+
+# 補助画像
+assets/screenshot.jpg
+
+# 作品ファイル
+booth_ready/DakeAdvanced_Timer.zip
+
+# GitHub Release
+https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Time_AdvancedTimer_v1.0.0
+
+# 注意事項
+Windows向けアプリです。
+ご利用は自己責任でお願いいたします。
+大切なファイルは事前にバックアップを推奨します。
+本ソフトウェアの無断転載・再配布を禁止します。
+
+# URL

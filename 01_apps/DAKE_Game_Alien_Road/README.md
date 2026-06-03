@@ -46,30 +46,27 @@ SNSへの自動投稿はしません。OAuth認証は実装しません。アカ
 ```json
 {
   "app_key": "game_alien_road",
-  "display_name": "エイリアンロード",
+  "display_name": "DakeAlien Road",
   "folder_name": "DAKE_Game_Alien_Road",
   "exe_name": "DakeGame_AlienRoad.exe",
-  "status": "internal",
+  "status": "available",
   "show_in_launcher": true,
   "show_on_site": true,
-  "release_url": "",
+  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Game_Alien_Road_v1.0.0",
   "screenshot_path": "assets/screenshot.webp",
-  "site_title": "エイリアンロード",
-  "site_description": "左か右か、それDAKE。扇子状に迫る道を避け続ける反射神経ミニゲーム。",
-  "update_summary": "左/右だけで遊べるLCD携帯ゲーム風ミニゲームを追加。"
+  "site_title": "DakeAlien Road",
+  "site_description": "左右に動いて障害物とエイリアンを避ける、軽量なレトロ風ミニゲームです。",
+  "update_summary": "市場向けミニゲームとして正式出荷準備しました。",
+  "launcher_title": "DakeAlien Road",
+  "launcher_description": "左右移動だけで遊べる、LCD携帯ゲーム風ミニゲーム。",
+  "app_type": "market",
+  "completion_goal": "formal_release"
 }
 ```
 
 ## RELEASE_BODY
 
-DAKE番外ゲームとして、LCD携帯ゲーム風の反射神経ミニゲーム「DAKE Alien Road」を追加しました。
-
-- 左/右だけで遊べる単機能ミニゲーム
-- 扇子状に広がる道路と5レーンの回避プレイ
-- 固定障害物と、横方向に移動することがあるエイリアン機体
-- 見た目より少し甘めの当たり判定
-- 時間経過による速度上昇とSTAGE上昇
-- スコア、STAGE、SPEED、ベストスコア表示
-- ベストスコアをローカルconfigに保存
-- ゲームオーバー後の投稿文コピーとX投稿画面オープン
-- 自動投稿、OAuth認証、アカウント連携なし
+- 左右移動だけで遊べるレトロ風ミニゲーム
+- 5レーンの回避アクション
+- ベストスコア保存
+- Windows向けexe

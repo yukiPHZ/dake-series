@@ -1,0 +1,44 @@
+# 商品名
+Dake潜って捕る
+
+# 価格案
+300円
+
+# 商品紹介文
+潜って捕って、船へ戻るレトロ風ミニゲーム。
+
+・潜って捕って、船へ戻るレトロ風ミニゲーム
+・NORMAL / TIMELESS モード
+・ベストスコア保存
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。
+
+# タグ
+Windows
+実務
+ツール
+仕事効率化
+軽量
+シンプル
+
+# BOOTH商品画像
+assets/booth_thumbnail.jpg
+
+# 補助画像
+assets/screenshot.jpg
+
+# 作品ファイル
+booth_ready/DakeGame_Diver_Catch.zip
+
+# GitHub Release
+https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Game_Diver_Catch_v1.0.0
+
+# 注意事項
+Windows向けアプリです。
+ご利用は自己責任でお願いいたします。
+大切なファイルは事前にバックアップを推奨します。
+本ソフトウェアの無断転載・再配布を禁止します。
+
+# URL
