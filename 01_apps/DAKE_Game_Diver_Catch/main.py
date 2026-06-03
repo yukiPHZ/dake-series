@@ -27,18 +27,26 @@ UI_TEXT = {
     "mode_label": "MODE",
     "mode_normal": "NORMAL",
     "mode_timeless": "TIMELESS",
+    "menu_title": "Dake潜って獲る",
+    "menu_mode_normal": "NORMAL 60SEC",
+    "menu_mode_timeless": "TIMELESS",
+    "menu_select_hint": "↑↓ SELECT",
+    "menu_start_hint": "ENTER START",
+    "menu_short_hint": "T MODE / M MENU",
+    "menu_return_hint": "M/Esc MENU",
+    "menu_retry_hint": "ENTER RETRY",
     "hold_small_fish": "小魚",
     "hold_big_fish": "大魚",
     "hold_squid": "イカ",
     "hold_treasure": "宝箱",
     "ready_hint": "ENTER START",
-    "playing_hint": "欲張りすぎず、船へ戻る",
+    "playing_hint": "M/Esc: MENU  R: RETRY",
     "paused_title": "PAUSED",
     "paused_hint": "ENTER RESUME",
     "game_over_title": "GAME OVER",
-    "game_over_hint": "ENTER / R RESTART",
+    "game_over_hint": "ENTER RETRY / M MENU",
     "time_up_title": "TIME UP",
-    "status_ready": "ENTERで開始",
+    "status_ready": "モードを選んで開始",
     "status_diving": "潜水開始",
     "status_need_water": "海中で銛を撃つ",
     "status_harpoon": "銛を突いた",
@@ -61,6 +69,7 @@ UI_TEXT = {
     "status_kraken_close": "逃げろ",
     "status_kraken_hit": "海の王者に接触",
     "status_mode_changed": "Tでモード切替",
+    "status_menu": "メニューへ戻った",
     "status_game_over": "GAME OVER",
     "status_paused": "一時停止",
     "status_resumed": "再開",
@@ -186,7 +195,7 @@ class BackgroundItem:
 class GameModel:
     best_score: int = 0
     random: random.Random = field(default_factory=random.Random)
-    state: str = "idle"
+    state: str = "menu"
     mode: str = "normal"
     score: int = 0
     life: int = MAX_LIFE
@@ -242,11 +251,39 @@ class GameModel:
         self._ensure_prey(min_count=2)
 
     def toggle_mode(self) -> None:
-        if self.state not in {"idle", "game_over"}:
+        if self.state not in {"menu", "game_over"}:
             return
         self.mode = "timeless" if self.mode == "normal" else "normal"
         self.time_remaining = NORMAL_TIME_LIMIT
         self.message_key = "status_mode_changed"
+        self.message_args = {}
+
+    def select_menu_mode(self, direction: int) -> None:
+        if self.state != "menu":
+            return
+        if direction:
+            self.toggle_mode()
+
+    def return_to_menu(self) -> None:
+        if self.score > self.best_score:
+            self.best_score = self.score
+            self.best_dirty = True
+        self.state = "menu"
+        self.hold.clear()
+        self.prey.clear()
+        self.sharks.clear()
+        self.harpoon = None
+        self.kraken = None
+        self.diver_col = GRID_COLUMNS // 2
+        self.diver_row = -1
+        self.air = AIR_MAX
+        self.time_remaining = NORMAL_TIME_LIMIT
+        self.elapsed = 0.0
+        self.move_cooldown = 0.0
+        self.inactivity_timer = 0.0
+        self.score_popup_value = 0
+        self.score_popup_timer = 0.0
+        self.message_key = "status_menu"
         self.message_args = {}
 
     def resume(self) -> None:
@@ -785,6 +822,10 @@ def key_token_from_keysym(keysym: str) -> str:
     return aliases.get(token, token)
 
 
+def make_pressed_keys() -> set[str]:
+    return set()
+
+
 def load_best_score(path: Path = CONFIG_PATH) -> int:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -869,7 +910,7 @@ class DiverCatchApp(tk.Tk):
         )
         self.canvas.pack(fill="both", expand=True)
         self.last_time = time.perf_counter()
-        self.pressed_keys: set[str] = set()
+        self.pressed_keys = make_pressed_keys()
         self._bind_controls()
         self._draw()
         self.after(33, self._tick)
@@ -904,6 +945,8 @@ class DiverCatchApp(tk.Tk):
             self._handle_enter()
         elif token == "r":
             self._restart()
+        elif token in {"m", "escape"}:
+            self._return_to_menu()
         elif token == "t":
             self._toggle_mode()
         elif token == "p":
@@ -911,9 +954,15 @@ class DiverCatchApp(tk.Tk):
         elif token == "space":
             self._fire()
         elif token in {"up", "w"}:
-            self._move(0, -1)
+            if self.model.state == "menu":
+                self._select_menu_mode(-1)
+            else:
+                self._move(0, -1)
         elif token in {"down", "s"}:
-            self._move(0, 1)
+            if self.model.state == "menu":
+                self._select_menu_mode(1)
+            else:
+                self._move(0, 1)
         elif token in {"left", "a"}:
             self._move(-1, 0)
         elif token in {"right", "d"}:
@@ -923,13 +972,16 @@ class DiverCatchApp(tk.Tk):
         self.pressed_keys.discard(key_token_from_keysym(str(event.keysym)))
 
     def _handle_enter(self) -> None:
-        if self.model.state in {"idle", "game_over"}:
+        if self.model.state in {"menu", "game_over"}:
             self.model.start_game()
         elif self.model.state == "paused":
             self.model.resume()
         self._draw()
 
     def _restart(self) -> None:
+        if self.model.score > self.model.best_score:
+            self.model.best_score = self.model.score
+            self.model.best_dirty = True
         self.model.start_game()
         self._save_best_if_needed()
         self._draw()
@@ -939,7 +991,19 @@ class DiverCatchApp(tk.Tk):
         self._draw()
 
     def _toggle_mode(self) -> None:
+        if self.model.state == "game_over":
+            self.model.return_to_menu()
         self.model.toggle_mode()
+        self._save_best_if_needed()
+        self._draw()
+
+    def _select_menu_mode(self, direction: int) -> None:
+        self.model.select_menu_mode(direction)
+        self._draw()
+
+    def _return_to_menu(self) -> None:
+        self.model.return_to_menu()
+        self._save_best_if_needed()
         self._draw()
 
     def _move(self, delta_col: int, delta_row: int) -> None:
@@ -973,6 +1037,10 @@ class DiverCatchApp(tk.Tk):
     def _draw(self) -> None:
         self.canvas.delete("all")
         self._draw_lcd_background()
+        if self.model.state == "menu":
+            self._draw_menu()
+            return
+
         self._draw_status_row()
         self._draw_ship_area()
         self._draw_grid()
@@ -983,18 +1051,40 @@ class DiverCatchApp(tk.Tk):
         self._draw_kraken()
         self._draw_score_popup()
         self._draw_footer()
-        if self.model.state == "idle":
-            self._draw_center_overlay(UI_TEXT["display_name"], UI_TEXT["ready_hint"])
-        elif self.model.state == "paused":
+        if self.model.state == "paused":
             self._draw_center_overlay(UI_TEXT["paused_title"], UI_TEXT["paused_hint"])
         elif self.model.state == "game_over":
             title = UI_TEXT["time_up_title"] if self.model.message_key == "status_time_up" else UI_TEXT["game_over_title"]
-            self._draw_center_overlay(title, UI_TEXT["game_over_hint"])
+            self._draw_game_over_overlay(title)
 
     def _draw_lcd_background(self) -> None:
         self.canvas.create_rectangle(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, fill=COLORS["lcd_bg"], outline="")
         for y in range(0, WINDOW_HEIGHT, 12):
             self.canvas.create_line(0, y, WINDOW_WIDTH, y, fill=COLORS["lcd_line"], width=1)
+
+    def _draw_menu(self) -> None:
+        panel = (46, 72, WINDOW_WIDTH - 46, FOOTER_BOTTOM - 24)
+        self.canvas.create_rectangle(*panel, fill=COLORS["panel"], outline=COLORS["ink"], width=2)
+        self.canvas.create_text(WINDOW_WIDTH / 2, 122, text=UI_TEXT["menu_title"], fill=COLORS["ink"], font=FONTS["title"])
+
+        options = [
+            ("normal", UI_TEXT["menu_mode_normal"]),
+            ("timeless", UI_TEXT["menu_mode_timeless"]),
+        ]
+        for index, (mode, label) in enumerate(options):
+            y = 202 + index * 54
+            selected = mode == self.model.mode
+            if selected:
+                self.canvas.create_rectangle(122, y - 22, WINDOW_WIDTH - 122, y + 22, fill=COLORS["highlight"], outline=COLORS["ink"], width=2)
+                self.canvas.create_text(142, y, text=">", fill=COLORS["ink"], font=FONTS["lcd_large"], anchor="w")
+            self.canvas.create_text(176, y, text=label, fill=COLORS["ink"], font=FONTS["lcd_large"], anchor="w")
+
+        self.canvas.create_line(92, 320, WINDOW_WIDTH - 92, 320, fill=COLORS["lcd_shadow"], width=2)
+        self.canvas.create_text(WINDOW_WIDTH / 2, 360, text=UI_TEXT["menu_start_hint"], fill=COLORS["ink"], font=FONTS["lcd_large"])
+        self.canvas.create_text(WINDOW_WIDTH / 2, 394, text=UI_TEXT["menu_select_hint"], fill=COLORS["ink_soft"], font=FONTS["label"])
+        self.canvas.create_text(WINDOW_WIDTH / 2, 424, text=UI_TEXT["menu_short_hint"], fill=COLORS["ink_soft"], font=FONTS["label"])
+        self.canvas.create_text(WINDOW_WIDTH / 2, 480, text=self._status_text(), fill=COLORS["ink"], font=FONTS["label"])
+        self.canvas.create_text(WINDOW_WIDTH / 2, 522, text=f"{UI_TEXT['best_label']} {self.model.best_score}", fill=COLORS["ink"], font=FONTS["lcd"])
 
     def _draw_status_row(self) -> None:
         self.canvas.create_rectangle(10, 8, WINDOW_WIDTH - 10, 58, fill=COLORS["panel"], outline=COLORS["ink"], width=2)
@@ -1262,6 +1352,14 @@ class DiverCatchApp(tk.Tk):
         self.canvas.create_text(WINDOW_WIDTH / 2, 294, text=title, fill=COLORS["ink"], font=FONTS["title"])
         self.canvas.create_text(WINDOW_WIDTH / 2, 330, text=hint, fill=COLORS["ink"], font=FONTS["lcd"])
 
+    def _draw_game_over_overlay(self, title: str) -> None:
+        self.canvas.create_rectangle(58, 232, WINDOW_WIDTH - 58, 386, fill=COLORS["lcd_bg"], outline=COLORS["ink"], width=2)
+        self.canvas.create_text(WINDOW_WIDTH / 2, 266, text=title, fill=COLORS["ink"], font=FONTS["title"])
+        score_line = f"{UI_TEXT['score_label']} {self.model.score}  {UI_TEXT['best_label']} {self.model.best_score}"
+        self.canvas.create_text(WINDOW_WIDTH / 2, 308, text=score_line, fill=COLORS["ink"], font=FONTS["lcd"])
+        self.canvas.create_text(WINDOW_WIDTH / 2, 342, text=UI_TEXT["game_over_hint"], fill=COLORS["ink"], font=FONTS["lcd"])
+        self.canvas.create_text(WINDOW_WIDTH / 2, 366, text=UI_TEXT["menu_short_hint"], fill=COLORS["ink_soft"], font=FONTS["small"])
+
     def _cell_center(self, col: int, row: int) -> tuple[float, float]:
         return (
             GRID_LEFT + col * CELL_WIDTH + CELL_WIDTH / 2,
@@ -1295,13 +1393,14 @@ def run_launch_check() -> None:
         assert load_best_score(config_path) == 50
 
         model = GameModel(best_score=load_best_score(config_path), random=random.Random(7))
-        assert model.state == "idle"
+        assert model.state == "menu"
         assert model.mode == "normal"
         assert model.air == AIR_MAX
         assert model.time_remaining == NORMAL_TIME_LIMIT
         assert model.kraken is None
         assert model.inactivity_timer == 0.0
         assert model.kraken_spawn_count == 0
+        assert make_pressed_keys() == set()
         assert GRID_COLUMNS == 7
         assert GRID_ROWS == 8
         assert HOLD_CAPACITY == 3
@@ -1309,6 +1408,18 @@ def run_launch_check() -> None:
         assert key_token_from_keysym("space") == "space"
         assert key_token_from_keysym("W") == "w"
 
+        model.update(5.0)
+        assert model.state == "menu"
+        assert model.elapsed == 0.0
+        assert model.air == AIR_MAX
+        assert model.time_remaining == NORMAL_TIME_LIMIT
+        assert model.prey == []
+        assert model.sharks == []
+
+        model.select_menu_mode(1)
+        assert model.mode == "timeless"
+        model.select_menu_mode(-1)
+        assert model.mode == "normal"
         model.toggle_mode()
         assert model.mode == "timeless"
         assert model.target_shark_count() == 1
@@ -1324,6 +1435,20 @@ def run_launch_check() -> None:
         assert len(model.background_items) >= 4
         assert 1 <= len(model.sharks) <= 2
         assert 1 <= len(model.prey) <= 3
+
+        model.score = 75
+        model.return_to_menu()
+        assert model.state == "menu"
+        assert model.best_score == 75
+        assert model.best_dirty
+        assert model.hold_used() == 0
+        assert model.prey == []
+        assert model.sharks == []
+
+        model.start_game()
+        assert model.state == "playing"
+        assert model.score == 0
+        assert model.air == AIR_MAX
 
         for _index in range(20):
             cell = model._random_empty_cell("treasure")
