@@ -63,10 +63,10 @@ UI_TEXT = {
     "appraisal_rejected": "査定金額は通りませんでした。",
     "appraisal_rejected_note": "売主との条件が合わず、案件は終了しました。",
     "offer_at_asking": "希望価格のまま提示",
+    "offer_minus_30": "30万円下げて提示",
     "offer_minus_50": "50万円下げて提示",
+    "offer_minus_80": "80万円下げて提示",
     "offer_minus_100": "100万円下げて提示",
-    "offer_minus_200": "200万円下げて提示",
-    "offer_minus_300": "300万円下げて提示",
     "offer_risk_adjusted": "リスク反映価格で提示",
     "appraisal_warning": "調査前の提示は危険です。見えていないリスクを含んだ金額になります。",
     "appraisal_warning_hearing": "ヒアリング前の提示は危険です。売主しか知らない事情を見落としやすいです。",
@@ -99,6 +99,7 @@ UI_TEXT = {
     "risk_none": "なし",
     "risk_suspected": "疑い",
     "risk_confirmed": "あり",
+    "risk_small": "少なめ",
     "risk_many": "多い",
     "legal_road_risk": "法務・道路",
     "building_risk": "建物",
@@ -274,6 +275,7 @@ UI_TEXT = {
     "credit_reason": "理由",
     "trust_evaluation": "信用評価",
     "loss_count": "赤字件数",
+    "target_missed_sales": "目標未達成約",
     "uninvestigated_sales": "未調査成約",
     "unheard_sales": "未ヒアリング成約",
     "market_freshness": "市場感",
@@ -305,14 +307,25 @@ UI_TEXT = {
     "credit_no_check_good": "利益は出ましたが、調査不足のまま進めたため信用は伸びませんでした。",
     "credit_hidden_risk": "隠れリスク発覚後の成約です。説明責任の重さが残りました。",
     "credit_loss": "赤字成約です。仕入れ判断と価格調整を見直しましょう。",
+    "credit_target_missed": "黒字ではありますが、目標利益には届きませんでした。",
+    "credit_under_construction_discount": "工事中で早く売れましたが、指値を受けています。出口判断は慎重に見ましょう。",
+    "sale_result_target_clear": "目標利益を超えました。出口設計がうまくいきました。",
+    "sale_result_reform_thin": "売れましたが、リフォーム再販としては利益が薄いです。250万円を切るなら、仕入れか出口の見直しが必要です。",
+    "sale_result_reform_loss": "赤字です。仕入れ価格か出口判断を見直しましょう。",
+    "sale_result_as_is_clear": "現況販売としては最低ラインを超えました。",
+    "sale_result_as_is_thin": "売れましたが、現況販売としては利益が薄いです。",
+    "sale_result_black_target_missed": "黒字ではありますが、成功とは言い切れません。",
     "trust_comment_good": "堅実です。調査と説明を重ね、次につながる仕事でした。",
     "trust_comment_mixed": "利益は出ていますが、調査不足の案件が目立ちました。",
     "trust_comment_bad": "資金と信用の両方が傷んでいます。仕入れ判断を見直しましょう。",
+    "trust_comment_target_missed": "黒字は出ていますが、目標利益未達の成約が目立ちました。",
+    "trust_comment_thin_exit": "売り切っていますが、利益の薄い出口が多いです。",
+    "trust_comment_cash_recovered": "資金回収はできています。次は仕入れ価格をもう少し絞りましょう。",
     "exit_method": "出口",
     "old_house_land_exit": "現況販売 / 古家付き売地",
     "purchase_banned": "買付禁止",
-    "purchase_banned_skip": "買付禁止: 見送る",
-    "purchase_banned_notice": "売主反社関係が判明しました。利益ではなく、撤退する案件です。",
+    "purchase_banned_skip": "買付禁止：見送る",
+    "purchase_banned_notice": "これは利益ではなく撤退です。買わないことが仕事です。",
     "renovation_listing": "工事中販売を開始しました。",
     "start_renovation_listing": "工事中販売を開始",
     "under_construction_offer": "工事中申込",
@@ -327,11 +340,13 @@ UI_TEXT = {
     "offer_reason_stale": "販売日数が長く、買主が弱気です。",
     "offer_reason_risk": "リスク説明を理由に指値されています。",
     "offer_reason_cash": "現金決済の早さを理由にした指値です。",
+    "offer_reason_rounding": "端数調整の範囲です。利益目標を確認しましょう。",
+    "offer_reason_million": "100万円の指値です。飲むなら理由が必要です。",
     "log_offer_received": "購入申込: {amount} / 指値 {discount}",
     "log_offer_accepted": "指値を受けました: {amount}",
     "log_offer_rejected": "申込を断って販売継続しました。",
-    "offer_accepted_credit": "合理的な指値を受け、早めに資金回収しました。",
-    "offer_loss_credit": "大きな指値で赤字になりました。出口判断を見直しましょう。",
+    "offer_accepted_credit": "この指値なら、資金回収とのバランスで検討できます。",
+    "offer_loss_credit": "指値を受けて赤字になりました。出口判断を見直しましょう。",
     "offer_rejected": "申込を断りました。次の買主がいるかを見ます。",
     "quick_exit": "早い資金回収でした。",
     "slow_exit": "資金回収に時間がかかりました。",
@@ -389,7 +404,7 @@ SHIMARISU_COMMENTS = {
     "offer_accept": "痛い指値でも、資金を戻して次へ進めるなら出口です。",
     "offer_reject": "断るなら、次の買主がいる根拠を見ましょう。",
     "lowball_market": "安い理由を買主も見ています。価格の下げ方には注意です。",
-    "risk_retreat": "利益ではなく、撤退する案件です。",
+    "risk_retreat": "これは利益ではなく撤退です。買わないことが仕事です。",
     "loss_cut": "痛いですが、次へ進むための出口です。",
     "low_cash": "資金が少なくなっています。在庫を抱えすぎると動けなくなります。",
     "result_good": "堅く増やせました。小さく作って、ちゃんと回っています。",
@@ -505,8 +520,11 @@ class PropertyCase:
     neighbor_trouble: bool
     rain_leak_level: str = "none"
     building_tilt_level: str = "none"
+    termite_level: str = "none"
+    leftover_level: str = "none"
     neighbor_garbage_house: bool = False
     nearby_antisocial_base: bool = False
+    seller_antisocial_level: str = "none"
     seller_antisocial: bool = False
     rebuild_blocker_reason: str = ""
     status: str = "candidate"
@@ -546,6 +564,7 @@ class PropertyCase:
     hidden_risk_found: bool = False
     credit_delta: int = 0
     credit_reason: str = ""
+    sale_result_comment: str = ""
     sale_negotiation_discount: int = 0
     disposal_sale: bool = False
     purchase_offer_price: int = 0
@@ -629,6 +648,7 @@ class ShimarisuRealEstateGame:
         self.sold_count = 0
         self.skipped_count = 0
         self.loss_count = 0
+        self.target_missed_sales = 0
         self.uninvestigated_sales = 0
         self.unheard_sales = 0
         self.operating_cost_total = 0
@@ -804,9 +824,17 @@ class ShimarisuRealEstateGame:
                 )
         illegal_building = random.random() < (0.05 if age < 25 else 0.14)
         flood_damage = random.random() < (0.07 if area in {"佐倉市", "市原市"} else 0.05)
-        termite_damage = random.random() < (0.04 if age < 25 else 0.18)
+        termite_level = weighted_choice(
+            ("none", "suspected", "confirmed"),
+            (96, 3, 1) if age < 25 else (82, 10, 8),
+        )
+        termite_damage = termite_level != "none"
         incident_property = random.random() < 0.06
-        leftover_items = random.random() < (0.10 if age < 25 else 0.24)
+        leftover_level = weighted_choice(
+            ("none", "small", "many"),
+            (90, 7, 3) if age < 25 else (76, 14, 10),
+        )
+        leftover_items = leftover_level != "none"
         neighbor_trouble = random.random() < (0.04 if age < 25 else 0.10)
         rain_leak_level = weighted_choice(
             ("none", "suspected", "confirmed"),
@@ -817,8 +845,9 @@ class ShimarisuRealEstateGame:
             (94, 5, 1) if age < 25 else (84, 12, 4),
         )
         neighbor_garbage_house = random.random() < (0.04 if age < 25 else 0.09)
-        nearby_antisocial_base = random.random() < 0.04
-        seller_antisocial = random.random() < 0.025
+        nearby_antisocial_base = random.random() < 0.045
+        seller_antisocial_level = weighted_choice(("none", "suspected", "confirmed"), (96, 3, 1))
+        seller_antisocial = seller_antisocial_level == "confirmed"
         source = "direct" if random.random() < 0.46 else "broker"
 
         if parking_count >= 2:
@@ -905,8 +934,11 @@ class ShimarisuRealEstateGame:
             neighbor_trouble=neighbor_trouble,
             rain_leak_level=rain_leak_level,
             building_tilt_level=building_tilt_level,
+            termite_level=termite_level,
+            leftover_level=leftover_level,
             neighbor_garbage_house=neighbor_garbage_house,
             nearby_antisocial_base=nearby_antisocial_base,
+            seller_antisocial_level=seller_antisocial_level,
             seller_antisocial=seller_antisocial,
             rebuild_blocker_reason=rebuild_blocker_reason,
             seller_asking_price=buy_price,
@@ -1098,9 +1130,11 @@ class ShimarisuRealEstateGame:
                 prop.incident_property = True
                 add_event(UI_TEXT["event_incident_found"], 0, "incident_property", "risk_hearing_short")
             if not prop.termite_damage and random.random() < 0.22:
+                prop.termite_level = "confirmed"
                 prop.termite_damage = True
                 add_event(UI_TEXT["event_termite_found"], 800_000, "termite_damage", "risk_hearing_short")
             if not prop.leftover_items and random.random() < 0.22:
+                prop.leftover_level = "many"
                 prop.leftover_items = True
                 add_event(UI_TEXT["event_leftover_found"], 400_000, "leftover_items", "risk_hearing_short")
             if not prop.neighbor_trouble and random.random() < 0.18:
@@ -1112,7 +1146,11 @@ class ShimarisuRealEstateGame:
             if not prop.nearby_antisocial_base and random.random() < 0.04:
                 prop.nearby_antisocial_base = True
                 add_event(UI_TEXT["event_nearby_antisocial_found"], 0, "nearby_antisocial_base", "risk_hearing_short")
-            if not prop.seller_antisocial and random.random() < 0.025:
+            if prop.seller_antisocial_level == "none" and random.random() < 0.025:
+                prop.seller_antisocial_level = "suspected"
+                add_event(UI_TEXT["event_seller_antisocial_found"], 0, "seller_antisocial", "risk_hearing_short")
+            if prop.seller_antisocial_level != "confirmed" and random.random() < 0.01:
+                prop.seller_antisocial_level = "confirmed"
                 prop.seller_antisocial = True
                 add_event(UI_TEXT["event_seller_antisocial_found"], 0, "seller_antisocial", "risk_hearing_short")
 
@@ -1136,7 +1174,7 @@ class ShimarisuRealEstateGame:
             add_event(UI_TEXT["event_garbage_found"], 0, "neighbor_garbage_house", "risk_hearing_short")
         if prop.nearby_antisocial_base and not prop.known_flags.get("nearby_antisocial_base") and random.random() < 0.9:
             add_event(UI_TEXT["event_nearby_antisocial_found"], 0, "nearby_antisocial_base", "risk_hearing_short")
-        if prop.seller_antisocial and not prop.known_flags.get("seller_antisocial") and random.random() < 0.9:
+        if prop.seller_antisocial_level != "none" and not prop.known_flags.get("seller_antisocial") and random.random() < 0.9:
             add_event(UI_TEXT["event_seller_antisocial_found"], 0, "seller_antisocial", "risk_hearing_short")
         if prop.illegal_building and not prop.known_flags.get("illegal_building") and random.random() < 0.95:
             add_event(UI_TEXT["event_illegal_found"], 0, "illegal_building", "risk_investigate_short")
@@ -1366,14 +1404,20 @@ class ShimarisuRealEstateGame:
         if points <= 0:
             return 0
         if points == 1:
-            return 500_000
+            return 300_000
         if points == 2:
-            return 1_000_000
-        return 2_000_000
+            return 500_000
+        if points == 3:
+            return 800_000
+        return 1_000_000
 
     def purchase_offer_reason_for(self, prop: PropertyCase, discount: int) -> str:
         if discount <= 0:
             return UI_TEXT["offer_reason_full"]
+        if discount >= 1_000_000:
+            return UI_TEXT["offer_reason_million"]
+        if discount <= 300_000:
+            return UI_TEXT["offer_reason_rounding"]
         if prop.market_freshness < 85 or prop.listed_days >= 45:
             return UI_TEXT["offer_reason_stale"]
         if self.has_major_known_risk(prop) or prop.nearby_antisocial_base or prop.building_tilt_level != "none":
@@ -1391,7 +1435,7 @@ class ShimarisuRealEstateGame:
         brokerage = calc_brokerage_fee(sold_price)
         outside_fee = 0 if self_buyer else calc_brokerage_fee(sold_price)
         profit = sold_price + brokerage - outside_fee - total_cost
-        forced_credit = -2 if profit < 0 and discount >= 1_000_000 else None
+        forced_credit = -3 if profit < 0 and discount > 0 else None
         forced_reason = UI_TEXT["offer_loss_credit"] if forced_credit is not None else None
         self.complete_sale(
             prop,
@@ -1401,7 +1445,7 @@ class ShimarisuRealEstateGame:
             forced_credit=forced_credit,
             forced_reason=forced_reason,
         )
-        if profit >= 0 and discount <= 1_000_000:
+        if profit >= 0 and discount > 0 and self.sale_target_met(prop, profit):
             prop.credit_reason = f"{prop.credit_reason}\n{UI_TEXT['offer_accepted_credit']}"
         self.add_log(UI_TEXT["log_offer_accepted"].format(amount=yen(sold_price)))
 
@@ -1456,10 +1500,13 @@ class ShimarisuRealEstateGame:
             self.unheard_sales += 1
         if profit < 0:
             self.loss_count += 1
+        elif self.sale_target_missed(prop, profit):
+            self.target_missed_sales += 1
         if profit > self.best_profit:
             self.best_profit = profit
             self.best_profit_name = prop.name
 
+        prop.sale_result_comment = self.sale_result_comment_for(prop, profit)
         if forced_credit is None:
             credit_delta, credit_reason = self.calculate_credit_change(prop, profit)
         else:
@@ -1468,14 +1515,7 @@ class ShimarisuRealEstateGame:
         prop.credit_reason = credit_reason
         self.reputation = max(0, min(100, self.reputation + credit_delta))
 
-        if sold_under_construction and profit >= 0:
-            self.comment = SHIMARISU_COMMENTS["renovating_offer"]
-        elif profit >= 2_000_000:
-            self.comment = SHIMARISU_COMMENTS["sold_good"]
-        elif profit >= 0:
-            self.comment = SHIMARISU_COMMENTS["sold_bad"]
-        else:
-            self.comment = SHIMARISU_COMMENTS["sold_bad"]
+        self.comment = prop.sale_result_comment
 
         self.add_log(UI_TEXT["log_sold"].format(amount=yen(prop.sold_price), profit=yen(profit)))
         self.pending_confirmation = "sold"
@@ -1526,10 +1566,13 @@ class ShimarisuRealEstateGame:
             self.unheard_sales += 1
         if profit < 0:
             self.loss_count += 1
+        elif self.sale_target_missed(prop, profit):
+            self.target_missed_sales += 1
         if profit > self.best_profit:
             self.best_profit = profit
             self.best_profit_name = prop.name
 
+        prop.sale_result_comment = self.sale_result_comment_for(prop, profit)
         self.reputation = max(0, min(100, self.reputation + credit_delta))
         self.comment = SHIMARISU_COMMENTS["loss_cut"]
         self.add_log(UI_TEXT["log_loss_cut"].format(amount=yen(sold_price), profit=yen(profit)))
@@ -1583,6 +1626,25 @@ class ShimarisuRealEstateGame:
                 return None
         return price + calc_brokerage_fee(price) - self.calculate_total_cost(prop)
 
+    def sale_target_met(self, prop: PropertyCase, profit: int) -> bool:
+        target = self.target_profit_for(prop)
+        return target is not None and profit >= target
+
+    def sale_target_missed(self, prop: PropertyCase, profit: int) -> bool:
+        target = self.target_profit_for(prop)
+        return target is not None and 0 <= profit < target
+
+    def sale_result_comment_for(self, prop: PropertyCase, profit: int) -> str:
+        if profit < 0:
+            return UI_TEXT["sale_result_reform_loss"]
+        if self.sale_target_met(prop, profit):
+            if prop.renovation_budget > 0:
+                return UI_TEXT["sale_result_target_clear"]
+            return UI_TEXT["sale_result_as_is_clear"]
+        if prop.renovation_budget > 0:
+            return f"{UI_TEXT['sale_result_reform_thin']}\n{UI_TEXT['sale_result_black_target_missed']}"
+        return f"{UI_TEXT['sale_result_as_is_thin']}\n{UI_TEXT['sale_result_black_target_missed']}"
+
     def buyer_finance_status(self, prop: PropertyCase) -> str:
         if prop.illegal_building:
             return "cash_only"
@@ -1593,7 +1655,7 @@ class ShimarisuRealEstateGame:
         return "loan_available"
 
     def is_purchase_banned(self, prop: PropertyCase) -> bool:
-        return prop.seller_antisocial and prop.known_flags.get("seller_antisocial", False)
+        return prop.seller_antisocial_level == "confirmed" and prop.known_flags.get("seller_antisocial", False)
 
     def has_wide_parking_mismatch(self, prop: PropertyCase) -> bool:
         return prop.floor_plan in {"4LDK", "5DK", "5LDK"} and prop.parking_count <= 1
@@ -1627,11 +1689,11 @@ class ShimarisuRealEstateGame:
         if prop.known_flags.get("incident_property") and prop.incident_property:
             score += 2
         if prop.known_flags.get("termite_damage") and prop.termite_damage:
-            score += 2
+            score += 3 if prop.termite_level == "confirmed" else 2
         if prop.known_flags.get("flood_damage") and prop.flood_damage:
             score += 2
         if prop.known_flags.get("leftover_items") and prop.leftover_items:
-            score += 1
+            score += 2 if prop.leftover_level == "many" else 1
         if prop.known_flags.get("rain_leak_level") and prop.rain_leak_level == "suspected":
             score += 2
         elif prop.known_flags.get("rain_leak_level") and prop.rain_leak_level == "confirmed":
@@ -1644,6 +1706,8 @@ class ShimarisuRealEstateGame:
             score += 2
         if prop.known_flags.get("nearby_antisocial_base") and prop.nearby_antisocial_base:
             score += 5
+        if prop.known_flags.get("seller_antisocial") and prop.seller_antisocial_level == "suspected":
+            score += 3
         if self.is_purchase_banned(prop):
             score += 8
         if prop.parking_count == 0:
@@ -1799,15 +1863,11 @@ class ShimarisuRealEstateGame:
         asking = prop.seller_asking_price or prop.buy_price
         options: list[tuple[str, int]] = [
             (UI_TEXT["offer_at_asking"], asking),
+            (UI_TEXT["offer_minus_30"], asking - 300_000),
             (UI_TEXT["offer_minus_50"], asking - 500_000),
+            (UI_TEXT["offer_minus_80"], asking - 800_000),
             (UI_TEXT["offer_minus_100"], asking - 1_000_000),
         ]
-        if self.appraisal_visible(prop):
-            low, high, _ = self.recommended_appraisal_range(prop)
-            risk_price = min(high, asking - 500_000)
-            options.append((UI_TEXT["offer_risk_adjusted"], risk_price))
-        else:
-            options.append((UI_TEXT["offer_minus_200"], asking - 2_000_000))
 
         deduped: list[tuple[str, int]] = []
         seen: set[int] = set()
@@ -1817,35 +1877,52 @@ class ShimarisuRealEstateGame:
                 continue
             seen.add(rounded)
             deduped.append((label, rounded))
-        return deduped[:4]
+        return deduped[:5]
 
     def calculate_credit_change(self, prop: PropertyCase, profit: int) -> tuple[int, str]:
         if profit < 0:
             return -3, UI_TEXT["credit_loss"]
+
+        target_met = self.sale_target_met(prop, profit)
+        target_missed = self.sale_target_missed(prop, profit)
+        discount_taken = prop.sale_negotiation_discount > 0
+
+        if prop.sold_under_construction:
+            if discount_taken and target_missed:
+                return -1, UI_TEXT["credit_under_construction_discount"]
+            if discount_taken and target_met:
+                base = 2 if prop.investigated and prop.heard_from_seller else 1
+                return base, UI_TEXT["credit_under_construction_discount"]
+            if target_met and prop.investigated and prop.heard_from_seller:
+                return 4, UI_TEXT["sale_result_target_clear"]
+            if target_missed:
+                return 0, UI_TEXT["credit_target_missed"]
+
+        if target_missed:
+            base = -1 if prop.renovation_budget > 0 else 0
+            return base, UI_TEXT["credit_target_missed"]
+
         reason = UI_TEXT["credit_full_good"]
         if prop.hidden_risk_found and not (prop.investigated and prop.heard_from_seller):
             base = -2
             reason = UI_TEXT["credit_hidden_risk"]
         elif prop.overpaid_purchase:
-            base = -1 if profit < 2_000_000 else 0
+            base = 0 if target_met else -1
             reason = UI_TEXT["appraisal_high_risk_reason"]
-        elif prop.sold_under_construction and prop.investigated and prop.heard_from_seller:
-            base = 4
-            reason = UI_TEXT["offer_accepted_credit"]
         elif prop.investigated and prop.heard_from_seller:
             base = 3
             reason = UI_TEXT["credit_full_good"]
-        elif profit >= 1_500_000:
+        elif target_met:
             base = 0
             reason = UI_TEXT["credit_no_check_good"]
         else:
             base = -1
             reason = UI_TEXT["credit_no_check_good"]
 
-        if prop.days_held <= 30:
+        if target_met and prop.days_held <= 30:
             base += 2
             reason = f"{reason}\n{UI_TEXT['quick_exit']}"
-        elif prop.days_held <= 60:
+        elif target_met and prop.days_held <= 60:
             base += 1
             reason = f"{reason}\n{UI_TEXT['quick_exit']}"
         elif prop.days_held > 120:
@@ -1883,7 +1960,7 @@ class ShimarisuRealEstateGame:
         if points <= 1:
             return 0
         rate = min(0.08, 0.015 * points)
-        return round((prop.listed_price * rate) / 100_000) * 100_000
+        return min(1_000_000, round((prop.listed_price * rate) / 100_000) * 100_000)
 
     def update_market_freshness(self, prop: PropertyCase) -> None:
         if prop.listed_days > 90:
@@ -1911,7 +1988,7 @@ class ShimarisuRealEstateGame:
             (prop.rain_leak_level != "none", "rain_leak_level"),
             (prop.building_tilt_level != "none", "building_tilt_level"),
             (prop.nearby_antisocial_base, "nearby_antisocial_base"),
-            (prop.seller_antisocial, "seller_antisocial"),
+            (prop.seller_antisocial_level != "none", "seller_antisocial"),
         )
         return any(is_risky and prop.known_flags.get(key, False) for is_risky, key in checks)
 
@@ -2055,10 +2132,20 @@ class ShimarisuRealEstateGame:
             points.append(UI_TEXT["feedback_floor_2ldk"])
         if prop.age >= 40:
             points.append(UI_TEXT["feedback_old"])
+        if prop.seller_antisocial_level != "none" and prop.known_flags.get("seller_antisocial"):
+            points.insert(0, f"{UI_TEXT['seller_antisocial']}: {self.seller_antisocial_text(prop)}")
         if prop.rain_leak_level != "none" and prop.known_flags.get("rain_leak_level"):
             points.append(UI_TEXT["feedback_rain_leak"])
         if prop.building_tilt_level != "none" and prop.known_flags.get("building_tilt_level"):
             points.append(UI_TEXT["feedback_tilt"])
+        if prop.termite_level != "none" and prop.known_flags.get("termite_damage"):
+            points.append(f"{UI_TEXT['termite']}: {self.termite_level_text(prop.termite_level)}")
+        if prop.leftover_level != "none" and prop.known_flags.get("leftover_items"):
+            points.append(f"{UI_TEXT['leftover']}: {self.leftover_level_text(prop.leftover_level)}")
+        if prop.nearby_antisocial_base and prop.known_flags.get("nearby_antisocial_base"):
+            points.append(UI_TEXT["feedback_nearby_antisocial"])
+        if prop.neighbor_garbage_house and prop.known_flags.get("neighbor_garbage_house"):
+            points.append(UI_TEXT["feedback_neighbor_garbage"])
         if self.is_purchase_banned(prop):
             points.insert(0, UI_TEXT["purchase_banned_notice"])
         return points[:5]
@@ -2265,6 +2352,8 @@ class ShimarisuRealEstateGame:
             if self.cash < LOW_CASH_WARNING:
                 return UI_TEXT["result_unsold_cash_short"]
             return UI_TEXT["result_unsold_asset_plus"]
+        if self.target_missed_sales:
+            return UI_TEXT["trust_comment_cash_recovered"]
         gain = self.cash - INITIAL_CASH
         if gain >= 4_000_000:
             return SHIMARISU_COMMENTS["result_good"]
@@ -2335,6 +2424,7 @@ class ShimarisuRealEstateGame:
             (UI_TEXT["skipped_count"], f"{self.skipped_count}件"),
             (UI_TEXT["unsold_count"], f"{self.unsold_count()}件"),
             (UI_TEXT["loss_count"], f"{self.loss_count}件"),
+            (UI_TEXT["target_missed_sales"], f"{self.target_missed_sales}件"),
             (UI_TEXT["uninvestigated_sales"], f"{self.uninvestigated_sales}件"),
             (UI_TEXT["unheard_sales"], f"{self.unheard_sales}件"),
         ]
@@ -2349,7 +2439,7 @@ class ShimarisuRealEstateGame:
             rows.append((UI_TEXT["best_profit"], UI_TEXT["best_profit_none"]))
         rows.append((UI_TEXT["reputation"], f"{self.reputation}"))
         row_y = panel.y + 104
-        row_h = 29
+        row_h = 27
         split = (len(rows) + 1) // 2
         for index, (label, value) in enumerate(rows):
             column = 0 if index < split else 1
@@ -2358,7 +2448,7 @@ class ShimarisuRealEstateGame:
             y = row_y + row_index * row_h
             self.draw_key_value(label, value, pygame.Rect(x, y, 350, 24))
 
-        self.draw_inventory_evaluation(panel, panel.y + 304)
+        self.draw_inventory_evaluation(panel, panel.y + 318)
         if self.shimarisu:
             self.draw_shimarisu_image(self.shimarisu, pygame.Rect(panel.x + 42, panel.y + 486, 96, 96))
         self.draw_text(UI_TEXT["trust_evaluation"], (panel.x + 156, panel.y + 486), 17, True, COLORS["green_dark"])
@@ -2399,6 +2489,10 @@ class ShimarisuRealEstateGame:
             if self.cash < LOW_CASH_WARNING or self.unrealized_profit() < 0:
                 return UI_TEXT["trust_comment_bad"]
             return UI_TEXT["result_unsold_asset_plus"]
+        if self.target_missed_sales >= 2:
+            return UI_TEXT["trust_comment_target_missed"]
+        if self.target_missed_sales == 1:
+            return UI_TEXT["trust_comment_thin_exit"]
         if self.reputation >= 58 and self.loss_count == 0 and self.uninvestigated_sales == 0 and self.unheard_sales == 0:
             return UI_TEXT["trust_comment_good"]
         if self.total_assets_estimate() >= INITIAL_CASH and (self.uninvestigated_sales or self.unheard_sales):
@@ -2626,6 +2720,7 @@ class ShimarisuRealEstateGame:
             self.screen.blit(profit_surf, profit_surf.get_rect(midright=(profit_rect.right - 14, profit_rect.y + 52)))
             y += 94
 
+            target = self.target_profit_for(prop)
             sold_rows = [
                 (UI_TEXT["sale_price"], yen(prop.sold_price)),
                 (UI_TEXT["total_cost"], yen(self.calculate_total_cost(prop))),
@@ -2634,12 +2729,17 @@ class ShimarisuRealEstateGame:
                 (UI_TEXT["outside_fee"], yen(prop.outside_fee)),
                 (UI_TEXT["net_proceeds"], yen(prop.net_proceeds)),
                 (UI_TEXT["sale_channel"], UI_TEXT[prop.sale_channel]),
-                (UI_TEXT["credit_delta"], self.signed_plain(prop.credit_delta)),
             ]
+            if target is not None:
+                sold_rows.append((UI_TEXT["target_profit"], yen(target)))
+                sold_rows.append((UI_TEXT["target_gap"], self.signed_yen(prop.sold_profit - target)))
+            sold_rows.append((UI_TEXT["credit_delta"], self.signed_plain(prop.credit_delta)))
             self.draw_text(UI_TEXT["sold_result"], (panel.x + 18, y), 16, True, COLORS["muted"])
             y += 30
             for label, value in sold_rows:
                 value_color = COLORS["green_dark"] if label == UI_TEXT["net_proceeds"] else COLORS["text"]
+                if label == UI_TEXT["target_gap"]:
+                    value_color = COLORS["green_dark"] if prop.sold_profit >= (target or 0) else COLORS["red"]
                 if label == UI_TEXT["credit_delta"]:
                     value_color = COLORS["green_dark"] if prop.credit_delta >= 0 else COLORS["red"]
                 self.draw_key_value(
@@ -2650,8 +2750,11 @@ class ShimarisuRealEstateGame:
                     value_color=value_color,
                 )
                 y += 25
-            if y + 48 < panel.bottom:
-                self.draw_wrapped_text(prop.credit_reason, pygame.Rect(panel.x + 18, y + 6, 316, 42), self.get_font(12), COLORS["muted"])
+            if y + 66 < panel.bottom:
+                comment_lines = prop.sale_result_comment or prop.credit_reason
+                if prop.credit_reason and prop.credit_reason not in comment_lines:
+                    comment_lines = f"{comment_lines}\n{prop.credit_reason}"
+                self.draw_wrapped_text(comment_lines, pygame.Rect(panel.x + 18, y + 6, 316, 62), self.get_font(11), COLORS["muted"])
             return
 
         y += 10
@@ -2776,7 +2879,7 @@ class ShimarisuRealEstateGame:
         self.draw_text(UI_TEXT["attention_points"], (panel.x + 18, y), 15, True, COLORS["muted"])
         y += 26
         points = self.candidate_attention_points(prop)
-        for point in points[:4]:
+        for point in points[:5]:
             self.draw_wrapped_text(
                 f"・{point}",
                 pygame.Rect(panel.x + 18, y, 316, 22),
@@ -3089,28 +3192,21 @@ class ShimarisuRealEstateGame:
     def visible_risk_rows(self, prop: PropertyCase) -> list[tuple[str, str, bool]]:
         rows: list[tuple[str, str, bool]] = []
         checks = (
-            ("__legal", UI_TEXT["legal_road_risk"]),
+            ("seller_antisocial", self.seller_antisocial_text(prop)),
             ("rebuildable", UI_TEXT["possible"] if prop.rebuildable else UI_TEXT["not_possible"]),
             ("road_access_good", UI_TEXT["good"] if prop.road_access_good else UI_TEXT["bad"]),
             ("illegal_building", self.yes_no(prop.illegal_building)),
-            ("__building", UI_TEXT["building_risk"]),
-            ("flood_damage", self.yes_no(prop.flood_damage)),
-            ("termite_damage", self.yes_no(prop.termite_damage)),
-            ("leftover_items", self.yes_no(prop.leftover_items)),
             ("rain_leak_level", self.risk_level_text(prop.rain_leak_level)),
             ("building_tilt_level", self.risk_level_text(prop.building_tilt_level)),
-            ("__neighborhood", UI_TEXT["neighborhood_risk"]),
+            ("termite_damage", self.termite_level_text(prop.termite_level)),
+            ("leftover_items", self.leftover_level_text(prop.leftover_level)),
+            ("nearby_antisocial_base", self.yes_no(prop.nearby_antisocial_base)),
+            ("neighbor_garbage_house", self.yes_no(prop.neighbor_garbage_house)),
+            ("flood_damage", self.yes_no(prop.flood_damage)),
             ("incident_property", self.yes_no(prop.incident_property)),
             ("neighbor_trouble", self.yes_no(prop.neighbor_trouble)),
-            ("neighbor_garbage_house", self.yes_no(prop.neighbor_garbage_house)),
-            ("nearby_antisocial_base", self.yes_no(prop.nearby_antisocial_base)),
-            ("__seller", UI_TEXT["seller_risk"]),
-            ("seller_antisocial", self.yes_no(prop.seller_antisocial)),
         )
         for key, value in checks:
-            if key.startswith("__"):
-                rows.append((value, "", True))
-                continue
             rows.append((RISK_LABELS[key], value, prop.known_flags.get(key, False)))
             if key == "rebuildable":
                 reason = prop.rebuild_blocker_reason if prop.rebuild_blocker_reason else UI_TEXT["none"]
@@ -3134,6 +3230,19 @@ class ShimarisuRealEstateGame:
         if value == "confirmed":
             return UI_TEXT["risk_confirmed"]
         return UI_TEXT["risk_none"]
+
+    def termite_level_text(self, value: str) -> str:
+        return self.risk_level_text(value)
+
+    def leftover_level_text(self, value: str) -> str:
+        if value == "small":
+            return UI_TEXT["risk_small"]
+        if value == "many":
+            return UI_TEXT["risk_many"]
+        return UI_TEXT["risk_none"]
+
+    def seller_antisocial_text(self, prop: PropertyCase) -> str:
+        return self.risk_level_text(prop.seller_antisocial_level)
 
     def draw_panel(self, rect: pygame.Rect, color: tuple[int, int, int]) -> None:
         shadow = rect.move(0, 2)
