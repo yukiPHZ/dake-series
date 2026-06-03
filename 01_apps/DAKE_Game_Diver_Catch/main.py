@@ -21,7 +21,12 @@ UI_TEXT = {
     "score_label": "SCORE",
     "best_label": "BEST",
     "life_label": "LIFE",
+    "air_label": "AIR",
+    "time_label": "TIME",
     "hold_label": "HOLD",
+    "mode_label": "MODE",
+    "mode_normal": "NORMAL",
+    "mode_timeless": "TIMELESS",
     "hold_small_fish": "小魚",
     "hold_big_fish": "大魚",
     "hold_squid": "イカ",
@@ -32,11 +37,12 @@ UI_TEXT = {
     "paused_hint": "ENTER RESUME",
     "game_over_title": "GAME OVER",
     "game_over_hint": "ENTER / R RESTART",
+    "time_up_title": "TIME UP",
     "status_ready": "ENTERで開始",
     "status_diving": "潜水開始",
     "status_need_water": "海中で銛を撃つ",
-    "status_harpoon": "銛発射",
-    "status_harpoon_busy": "銛を回収中",
+    "status_harpoon": "銛を突いた",
+    "status_harpoon_busy": "銛を戻す",
     "status_hold_full": "持ちきれない",
     "status_return_ship": "船へ戻れ",
     "status_missed": "銛は外れた",
@@ -48,6 +54,13 @@ UI_TEXT = {
     "status_scored": "持ち帰り成功 +{points}",
     "status_hit": "サメに接触",
     "status_hit_lost": "サメに接触、獲物を失った",
+    "status_air_low": "息が苦しい",
+    "status_air_out": "酸素切れ",
+    "status_time_up": "TIME UP",
+    "status_kraken_warning": "クラーケン接近",
+    "status_kraken_close": "逃げろ",
+    "status_kraken_hit": "海の王者に接触",
+    "status_mode_changed": "Tでモード切替",
     "status_game_over": "GAME OVER",
     "status_paused": "一時停止",
     "status_resumed": "再開",
@@ -71,9 +84,21 @@ FOOTER_TOP = 538
 FOOTER_BOTTOM = 640
 MAX_LIFE = 3
 HOLD_CAPACITY = 3
-HARPOON_STEP_SECONDS = 0.075
+HARPOON_DISPLAY_SECONDS = 0.16
 SHARK_BASE_SECONDS = 0.94
 SHARK_MIN_SECONDS = 0.42
+AIR_MAX = 100.0
+NORMAL_TIME_LIMIT = 60.0
+TREASURE_MIN_ROW = GRID_ROWS - 2
+SINK_BASE_SECONDS = 2.4
+SINK_TREASURE_SECONDS = 1.55
+KRAKEN_START_SECONDS = 18.0
+KRAKEN_DURATION_SECONDS = 13.0
+KRAKEN_MOVE_SECONDS = 1.15
+KRAKEN_NORMAL_CHANCE = 0.62
+KRAKEN_TIMELESS_CHANCE = 0.72
+KRAKEN_MAX_SPAWNS_NORMAL = 1
+TIMELESS_MAX_SHARKS = 4
 
 PREY_POINTS = {
     "small_fish": 10,
@@ -138,8 +163,15 @@ class Harpoon:
     col: int
     row: int
     direction: int
-    timer: float = HARPOON_STEP_SECONDS
-    steps_left: int = GRID_COLUMNS
+    timer: float = HARPOON_DISPLAY_SECONDS
+
+
+@dataclass
+class Kraken:
+    col: int
+    row: int
+    timer: float = KRAKEN_DURATION_SECONDS
+    move_timer: float = KRAKEN_MOVE_SECONDS
 
 
 @dataclass
@@ -155,8 +187,11 @@ class GameModel:
     best_score: int = 0
     random: random.Random = field(default_factory=random.Random)
     state: str = "idle"
+    mode: str = "normal"
     score: int = 0
     life: int = MAX_LIFE
+    air: float = AIR_MAX
+    time_remaining: float = NORMAL_TIME_LIMIT
     hold: list[str] = field(default_factory=list)
     diver_col: int = GRID_COLUMNS // 2
     diver_row: int = -1
@@ -165,9 +200,13 @@ class GameModel:
     prey: list[Prey] = field(default_factory=list)
     sharks: list[Shark] = field(default_factory=list)
     harpoon: Harpoon | None = None
+    kraken: Kraken | None = None
     background_items: list[BackgroundItem] = field(default_factory=list)
     last_shark_rows: list[int] = field(default_factory=list)
     move_cooldown: float = 0.0
+    inactivity_timer: float = 0.0
+    kraken_spawn_timer: float = KRAKEN_START_SECONDS
+    kraken_spawn_count: int = 0
     score_popup_value: int = 0
     score_popup_timer: float = 0.0
     message_key: str = "status_ready"
@@ -178,6 +217,8 @@ class GameModel:
         self.state = "playing"
         self.score = 0
         self.life = MAX_LIFE
+        self.air = AIR_MAX
+        self.time_remaining = NORMAL_TIME_LIMIT
         self.hold.clear()
         self.diver_col = GRID_COLUMNS // 2
         self.diver_row = -1
@@ -186,8 +227,12 @@ class GameModel:
         self.prey.clear()
         self.sharks.clear()
         self.harpoon = None
+        self.kraken = None
         self.last_shark_rows.clear()
         self.move_cooldown = 0.0
+        self.inactivity_timer = 0.0
+        self.kraken_spawn_timer = KRAKEN_START_SECONDS + self.random.uniform(4.0, 13.0)
+        self.kraken_spawn_count = 0
         self.score_popup_value = 0
         self.score_popup_timer = 0.0
         self.message_key = "status_diving"
@@ -195,6 +240,14 @@ class GameModel:
         self._generate_background()
         self._ensure_sharks()
         self._ensure_prey(min_count=2)
+
+    def toggle_mode(self) -> None:
+        if self.state not in {"idle", "game_over"}:
+            return
+        self.mode = "timeless" if self.mode == "normal" else "normal"
+        self.time_remaining = NORMAL_TIME_LIMIT
+        self.message_key = "status_mode_changed"
+        self.message_args = {}
 
     def resume(self) -> None:
         if self.state == "paused":
@@ -232,9 +285,9 @@ class GameModel:
     def move_delay(self) -> float:
         level = self.move_penalty_level()
         if level == 2:
-            return 0.18
+            return 0.22 if self.mode == "timeless" else 0.18
         if level == 1:
-            return 0.10
+            return 0.13 if self.mode == "timeless" else 0.10
         return 0.0
 
     def move(self, delta_col: int, delta_row: int) -> bool:
@@ -275,6 +328,7 @@ class GameModel:
             self._check_shark_contact()
 
         if moved:
+            self.inactivity_timer = 0.0
             self.move_cooldown = self.move_delay()
         return moved
 
@@ -283,10 +337,6 @@ class GameModel:
             return
         if self.diver_row < 0:
             self.message_key = "status_need_water"
-            self.message_args = {}
-            return
-        if self.hold_space_left() <= 0:
-            self.message_key = "status_return_ship"
             self.message_args = {}
             return
         if self.harpoon is not None:
@@ -301,9 +351,12 @@ class GameModel:
             return
 
         self.harpoon = Harpoon(col=start_col, row=self.diver_row, direction=self.facing)
+        self.inactivity_timer = 0.0
         self.message_key = "status_harpoon"
         self.message_args = {}
-        self._catch_prey_at(start_col, self.diver_row)
+        if not self._catch_prey_at(start_col, self.diver_row) and self.hold_space_left() <= 0:
+            self.message_key = "status_return_ship"
+            self.message_args = {}
 
     def update(self, dt: float) -> None:
         if self.state != "playing":
@@ -311,16 +364,68 @@ class GameModel:
         self.elapsed += dt
         self.move_cooldown = max(0.0, self.move_cooldown - dt)
         self.score_popup_timer = max(0.0, self.score_popup_timer - dt)
+        self._update_time(dt)
+        if self.state != "playing":
+            return
+        self._update_air(dt)
+        if self.state != "playing":
+            return
+        self._update_inactivity_sink(dt)
         self._ensure_sharks()
         self._update_sharks(dt)
         self._update_prey(dt)
         self._update_harpoon(dt)
+        self._update_kraken(dt)
         self._ensure_prey(min_count=1)
         self._check_shark_contact()
+        self._check_kraken_contact()
 
     def shark_interval(self) -> float:
-        speed_up = self.elapsed * 0.0024 + self.score * 0.00036
+        speed_up = self.elapsed * 0.0022 + self.score * 0.00032
+        if self.mode == "timeless":
+            speed_up += min(0.22, self.elapsed * 0.0018)
         return max(SHARK_MIN_SECONDS, SHARK_BASE_SECONDS - speed_up)
+
+    def _update_time(self, dt: float) -> None:
+        if self.mode != "normal":
+            return
+        self.time_remaining = max(0.0, self.time_remaining - dt)
+        if self.time_remaining <= 0:
+            self._finish_game("status_time_up")
+
+    def _update_air(self, dt: float) -> None:
+        if self.diver_row < 0:
+            self.air = min(AIR_MAX, self.air + dt * 82.0)
+            return
+
+        depth = self.diver_row / max(1, GRID_ROWS - 1)
+        rate = 5.8 + depth * 9.2 + max(0, self.diver_row - 4) * 1.8
+        if self.hold_used() >= HOLD_CAPACITY:
+            rate += 1.5
+        self.air = max(0.0, self.air - rate * dt)
+        if self.air <= 22 and self.message_key not in {"status_kraken_warning", "status_kraken_close"}:
+            self.message_key = "status_air_low"
+            self.message_args = {}
+        if self.air <= 0:
+            self._lose_life("status_air_out", clear_kraken=False)
+
+    def _update_inactivity_sink(self, dt: float) -> None:
+        if self.diver_row < 0 or not self.hold or self.move_penalty_level() <= 0:
+            self.inactivity_timer = 0.0
+            return
+        self.inactivity_timer += dt
+        threshold = SINK_TREASURE_SECONDS if "treasure" in self.hold else SINK_BASE_SECONDS
+        if self.mode == "timeless":
+            threshold = max(1.25, threshold - 0.25)
+        if self.inactivity_timer < threshold:
+            return
+        self.inactivity_timer = 0.0
+        if self.diver_row < GRID_ROWS - 1:
+            self.diver_row += 1
+            self.message_key = "status_heavy"
+            self.message_args = {}
+            self._check_shark_contact()
+            self._check_kraken_contact()
 
     def _deliver_hold(self) -> None:
         if not self.hold:
@@ -335,6 +440,8 @@ class GameModel:
             self.best_score = self.score
             self.best_dirty = True
         self.hold.clear()
+        self.air = min(AIR_MAX, self.air + 35.0)
+        self.inactivity_timer = 0.0
         self.score_popup_value = points
         self.score_popup_timer = 0.85
         self.message_key = "status_big_score" if full_load else "status_scored"
@@ -348,25 +455,43 @@ class GameModel:
             if not is_cell_in_grid(shark.col, shark.row):
                 continue
             if shark.col == self.diver_col and shark.row == self.diver_row:
-                had_hold = bool(self.hold)
-                self.life -= 1
-                self.hold.clear()
-                self.harpoon = None
-                self.move_cooldown = 0.0
-                self.diver_col = GRID_COLUMNS // 2
-                self.diver_row = -1
-                if self.life <= 0:
-                    self.life = 0
-                    self.state = "game_over"
-                    if self.score > self.best_score:
-                        self.best_score = self.score
-                        self.best_dirty = True
-                    self.message_key = "status_game_over"
-                    self.message_args = {}
-                else:
-                    self.message_key = "status_hit_lost" if had_hold else "status_hit"
-                    self.message_args = {}
+                self._lose_life("status_hit_lost" if self.hold else "status_hit", clear_kraken=False)
                 return
+
+    def _check_kraken_contact(self) -> None:
+        if self.state != "playing" or self.diver_row < 0 or self.kraken is None:
+            return
+        if self.kraken.col == self.diver_col and self.kraken.row == self.diver_row:
+            self._lose_life("status_kraken_hit", clear_kraken=True)
+
+    def _lose_life(self, message_key: str, clear_kraken: bool) -> None:
+        self.life -= 1
+        self.hold.clear()
+        self.harpoon = None
+        if clear_kraken:
+            self.kraken = None
+            self._schedule_next_kraken()
+        self.move_cooldown = 0.0
+        self.inactivity_timer = 0.0
+        self.air = AIR_MAX
+        self.diver_col = GRID_COLUMNS // 2
+        self.diver_row = -1
+        if self.life <= 0:
+            self.life = 0
+            self._finish_game("status_game_over")
+        else:
+            self.message_key = message_key
+            self.message_args = {}
+
+    def _finish_game(self, message_key: str) -> None:
+        self.state = "game_over"
+        self.harpoon = None
+        self.kraken = None
+        if self.score > self.best_score:
+            self.best_score = self.score
+            self.best_dirty = True
+        self.message_key = message_key
+        self.message_args = {}
 
     def _update_sharks(self, dt: float) -> None:
         interval = self.shark_interval()
@@ -387,7 +512,8 @@ class GameModel:
             if item.kind == "treasure":
                 continue
             item.timer -= dt
-            interval = PREY_MOVE_SECONDS[item.kind]
+            speed_factor = 1.0 + (min(0.22, self.elapsed * 0.0015) if self.mode == "timeless" else 0.0)
+            interval = PREY_MOVE_SECONDS[item.kind] / speed_factor
             while item.timer <= 0:
                 item.timer += interval + self.random.uniform(-0.12, 0.18)
                 occupied = {
@@ -408,16 +534,35 @@ class GameModel:
         if self.harpoon is None:
             return
         self.harpoon.timer -= dt
-        while self.harpoon is not None and self.harpoon.timer <= 0:
-            self.harpoon.col += self.harpoon.direction
-            self.harpoon.steps_left -= 1
-            self.harpoon.timer += HARPOON_STEP_SECONDS
-            if not is_cell_in_grid(self.harpoon.col, self.harpoon.row) or self.harpoon.steps_left < 0:
-                self.harpoon = None
-                self.message_key = "status_missed"
+        if self.harpoon.timer <= 0:
+            self.harpoon = None
+
+    def _update_kraken(self, dt: float) -> None:
+        if self.kraken is None:
+            self.kraken_spawn_timer -= dt
+            if self.kraken_spawn_timer <= 0 and self._can_spawn_kraken():
+                self._spawn_kraken()
+            return
+
+        self.kraken.timer -= dt
+        self.kraken.move_timer -= dt
+        if self.kraken.timer <= 0:
+            self.kraken = None
+            self._schedule_next_kraken()
+            return
+
+        if self.kraken.move_timer <= 0:
+            self.kraken.move_timer += max(0.74, KRAKEN_MOVE_SECONDS - self.difficulty_level() * 0.04)
+            target_col = self.diver_col if self.diver_row >= 0 else GRID_COLUMNS // 2
+            target_row = self.diver_row if self.diver_row >= 0 else 0
+            if self.kraken.col != target_col:
+                self.kraken.col += 1 if target_col > self.kraken.col else -1
+            elif self.kraken.row != target_row:
+                self.kraken.row += 1 if target_row > self.kraken.row else -1
+            if self.random.random() < 0.22:
+                self.message_key = "status_kraken_close"
                 self.message_args = {}
-                return
-            self._catch_prey_at(self.harpoon.col, self.harpoon.row)
+            self._check_kraken_contact()
 
     def _try_move_prey(
         self,
@@ -466,9 +611,17 @@ class GameModel:
         return False
 
     def _ensure_sharks(self) -> None:
-        target_count = 2 if self.elapsed >= 42.0 or self.score >= 180 else 1
+        target_count = self.target_shark_count()
         while len(self.sharks) < target_count:
             self.sharks.append(self._new_shark())
+
+    def target_shark_count(self) -> int:
+        if self.mode == "timeless":
+            return min(TIMELESS_MAX_SHARKS, 1 + int(self.elapsed // 42.0) + int(self.score >= 260))
+        return 2 if self.elapsed >= 42.0 or self.score >= 180 else 1
+
+    def difficulty_level(self) -> int:
+        return max(0, int(self.elapsed // 45.0))
 
     def _new_shark(self) -> Shark:
         direction = self.random.choice([-1, 1])
@@ -528,7 +681,7 @@ class GameModel:
 
         min_row = 2 if kind == "squid" else 0
         if kind == "treasure":
-            min_row = 4
+            min_row = TREASURE_MIN_ROW
         cells = [
             (col, row)
             for row in range(min_row, GRID_ROWS)
@@ -538,6 +691,38 @@ class GameModel:
         if not cells:
             return None
         return self.random.choice(cells)
+
+    def _can_spawn_kraken(self) -> bool:
+        if self.elapsed < KRAKEN_START_SECONDS:
+            self._schedule_next_kraken()
+            return False
+        if self.mode == "normal" and self.kraken_spawn_count >= KRAKEN_MAX_SPAWNS_NORMAL:
+            return False
+        chance = KRAKEN_TIMELESS_CHANCE if self.mode == "timeless" else KRAKEN_NORMAL_CHANCE
+        chance += min(0.09, self.difficulty_level() * 0.012)
+        if self.random.random() > chance:
+            self._schedule_next_kraken()
+            return False
+        return True
+
+    def _spawn_kraken(self) -> None:
+        side = self.random.choice([-1, 1])
+        col = 0 if side > 0 else GRID_COLUMNS - 1
+        if self.diver_row >= 0:
+            row = clamp(self.diver_row + self.random.choice([-1, 0, 1]), 1, GRID_ROWS - 1)
+        else:
+            row = self.random.randrange(3, GRID_ROWS)
+        self.kraken = Kraken(col=col, row=row)
+        self.kraken_spawn_count += 1
+        self.message_key = "status_kraken_warning"
+        self.message_args = {}
+
+    def _schedule_next_kraken(self) -> None:
+        if self.mode == "timeless":
+            base = max(13.0, 28.0 - self.difficulty_level() * 2.0)
+            self.kraken_spawn_timer = base + self.random.uniform(6.0, 18.0)
+        else:
+            self.kraken_spawn_timer = 9999.0
 
     def _random_prey_kind(self) -> str:
         roll = self.random.random()
@@ -585,6 +770,19 @@ def clamp(value: int, lower: int, upper: int) -> int:
 
 def is_cell_in_grid(col: int, row: int) -> bool:
     return 0 <= col < GRID_COLUMNS and 0 <= row < GRID_ROWS
+
+
+def key_token_from_keysym(keysym: str) -> str:
+    token = keysym.lower()
+    aliases = {
+        "return": "return",
+        "space": "space",
+        "up": "up",
+        "down": "down",
+        "left": "left",
+        "right": "right",
+    }
+    return aliases.get(token, token)
 
 
 def load_best_score(path: Path = CONFIG_PATH) -> int:
@@ -671,6 +869,7 @@ class DiverCatchApp(tk.Tk):
         )
         self.canvas.pack(fill="both", expand=True)
         self.last_time = time.perf_counter()
+        self.pressed_keys: set[str] = set()
         self._bind_controls()
         self._draw()
         self.after(33, self._tick)
@@ -690,25 +889,38 @@ class DiverCatchApp(tk.Tk):
                 return
 
     def _bind_controls(self) -> None:
-        self.bind("<Return>", lambda _event: self._handle_enter())
-        self.bind("<r>", lambda _event: self._restart())
-        self.bind("<R>", lambda _event: self._restart())
-        self.bind("<space>", lambda _event: self._fire())
-        self.bind("<p>", lambda _event: self._toggle_pause())
-        self.bind("<P>", lambda _event: self._toggle_pause())
-        self.bind("<Up>", lambda _event: self._move(0, -1))
-        self.bind("<Down>", lambda _event: self._move(0, 1))
-        self.bind("<Left>", lambda _event: self._move(-1, 0))
-        self.bind("<Right>", lambda _event: self._move(1, 0))
-        self.bind("<w>", lambda _event: self._move(0, -1))
-        self.bind("<W>", lambda _event: self._move(0, -1))
-        self.bind("<s>", lambda _event: self._move(0, 1))
-        self.bind("<S>", lambda _event: self._move(0, 1))
-        self.bind("<a>", lambda _event: self._move(-1, 0))
-        self.bind("<A>", lambda _event: self._move(-1, 0))
-        self.bind("<d>", lambda _event: self._move(1, 0))
-        self.bind("<D>", lambda _event: self._move(1, 0))
+        self.bind("<KeyPress>", self._handle_key_press)
+        self.bind("<KeyRelease>", self._handle_key_release)
+        self.bind("<FocusOut>", lambda _event: self.pressed_keys.clear())
         self.focus_force()
+
+    def _handle_key_press(self, event: tk.Event) -> None:
+        token = key_token_from_keysym(str(event.keysym))
+        if token in self.pressed_keys:
+            return
+        self.pressed_keys.add(token)
+
+        if token == "return":
+            self._handle_enter()
+        elif token == "r":
+            self._restart()
+        elif token == "t":
+            self._toggle_mode()
+        elif token == "p":
+            self._toggle_pause()
+        elif token == "space":
+            self._fire()
+        elif token in {"up", "w"}:
+            self._move(0, -1)
+        elif token in {"down", "s"}:
+            self._move(0, 1)
+        elif token in {"left", "a"}:
+            self._move(-1, 0)
+        elif token in {"right", "d"}:
+            self._move(1, 0)
+
+    def _handle_key_release(self, event: tk.Event) -> None:
+        self.pressed_keys.discard(key_token_from_keysym(str(event.keysym)))
 
     def _handle_enter(self) -> None:
         if self.model.state in {"idle", "game_over"}:
@@ -724,6 +936,10 @@ class DiverCatchApp(tk.Tk):
 
     def _toggle_pause(self) -> None:
         self.model.toggle_pause()
+        self._draw()
+
+    def _toggle_mode(self) -> None:
+        self.model.toggle_mode()
         self._draw()
 
     def _move(self, delta_col: int, delta_row: int) -> None:
@@ -764,6 +980,7 @@ class DiverCatchApp(tk.Tk):
         self._draw_harpoon()
         self._draw_diver()
         self._draw_sharks()
+        self._draw_kraken()
         self._draw_score_popup()
         self._draw_footer()
         if self.model.state == "idle":
@@ -771,7 +988,8 @@ class DiverCatchApp(tk.Tk):
         elif self.model.state == "paused":
             self._draw_center_overlay(UI_TEXT["paused_title"], UI_TEXT["paused_hint"])
         elif self.model.state == "game_over":
-            self._draw_center_overlay(UI_TEXT["game_over_title"], UI_TEXT["game_over_hint"])
+            title = UI_TEXT["time_up_title"] if self.model.message_key == "status_time_up" else UI_TEXT["game_over_title"]
+            self._draw_center_overlay(title, UI_TEXT["game_over_hint"])
 
     def _draw_lcd_background(self) -> None:
         self.canvas.create_rectangle(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, fill=COLORS["lcd_bg"], outline="")
@@ -784,6 +1002,8 @@ class DiverCatchApp(tk.Tk):
             (UI_TEXT["score_label"], str(self.model.score)),
             (UI_TEXT["best_label"], str(self.model.best_score)),
             (UI_TEXT["life_label"], str(self.model.life)),
+            (UI_TEXT["air_label"], str(int(round(self.model.air)))),
+            (UI_TEXT["time_label"], self._time_text()),
             (UI_TEXT["hold_label"], self._hold_text()),
         ]
         column_width = (WINDOW_WIDTH - 20) / len(stats)
@@ -905,6 +1125,18 @@ class DiverCatchApp(tk.Tk):
             )
             self.canvas.create_oval(x + 15 * direction - 2, y - 5, x + 15 * direction + 2, y - 1, fill=COLORS["highlight"], outline="")
 
+    def _draw_kraken(self) -> None:
+        kraken = self.model.kraken
+        if kraken is None:
+            return
+        x, y = self._cell_center(kraken.col, kraken.row)
+        self.canvas.create_oval(x - 22, y - 23, x + 22, y + 14, fill=COLORS["ink"], outline=COLORS["ink"])
+        self.canvas.create_arc(x - 26, y - 31, x + 26, y + 21, start=20, extent=140, outline=COLORS["highlight"], width=2)
+        for offset in (-18, -9, 0, 9, 18):
+            self.canvas.create_line(x + offset, y + 10, x + offset - 8, y + 31, fill=COLORS["ink"], width=3)
+        self.canvas.create_oval(x - 9, y - 7, x - 4, y - 2, fill=COLORS["highlight"], outline="")
+        self.canvas.create_oval(x + 4, y - 7, x + 9, y - 2, fill=COLORS["highlight"], outline="")
+
     def _draw_diver(self) -> None:
         if self.model.diver_row < 0:
             x = self._cell_center(self.model.diver_col, 0)[0]
@@ -1021,8 +1253,9 @@ class DiverCatchApp(tk.Tk):
     def _draw_footer(self) -> None:
         self.canvas.create_rectangle(10, FOOTER_TOP, WINDOW_WIDTH - 10, FOOTER_BOTTOM, fill=COLORS["panel"], outline=COLORS["ink"], width=2)
         self.canvas.create_text(22, FOOTER_TOP + 24, text=self._status_text(), fill=COLORS["ink"], font=FONTS["label"], anchor="w")
-        self.canvas.create_text(22, FOOTER_TOP + 56, text=UI_TEXT["playing_hint"], fill=COLORS["ink_soft"], font=FONTS["small"], anchor="w")
-        self.canvas.create_text(WINDOW_WIDTH - 22, FOOTER_TOP + 56, text=COPYRIGHT, fill=COLORS["ink_soft"], font=FONTS["small"], anchor="e")
+        self.canvas.create_text(22, FOOTER_TOP + 52, text=self._mode_text(), fill=COLORS["ink"], font=FONTS["lcd"], anchor="w")
+        self.canvas.create_text(22, FOOTER_TOP + 78, text=UI_TEXT["playing_hint"], fill=COLORS["ink_soft"], font=FONTS["small"], anchor="w")
+        self.canvas.create_text(WINDOW_WIDTH - 22, FOOTER_TOP + 78, text=COPYRIGHT, fill=COLORS["ink_soft"], font=FONTS["small"], anchor="e")
 
     def _draw_center_overlay(self, title: str, hint: str) -> None:
         self.canvas.create_rectangle(64, 260, WINDOW_WIDTH - 64, 354, fill=COLORS["lcd_bg"], outline=COLORS["ink"], width=2)
@@ -1037,6 +1270,15 @@ class DiverCatchApp(tk.Tk):
 
     def _hold_text(self) -> str:
         return f"{self.model.hold_used()}/{HOLD_CAPACITY}"
+
+    def _time_text(self) -> str:
+        if self.model.mode == "timeless":
+            return "--"
+        return str(max(0, int(self.model.time_remaining + 0.99)))
+
+    def _mode_text(self) -> str:
+        mode_text = UI_TEXT["mode_timeless"] if self.model.mode == "timeless" else UI_TEXT["mode_normal"]
+        return f"{UI_TEXT['mode_label']} {mode_text}  T:MODE"
 
     def _status_text(self) -> str:
         args = dict(self.model.message_args)
@@ -1054,29 +1296,60 @@ def run_launch_check() -> None:
 
         model = GameModel(best_score=load_best_score(config_path), random=random.Random(7))
         assert model.state == "idle"
+        assert model.mode == "normal"
+        assert model.air == AIR_MAX
+        assert model.time_remaining == NORMAL_TIME_LIMIT
+        assert model.kraken is None
+        assert model.inactivity_timer == 0.0
+        assert model.kraken_spawn_count == 0
         assert GRID_COLUMNS == 7
         assert GRID_ROWS == 8
         assert HOLD_CAPACITY == 3
+        assert HARPOON_DISPLAY_SECONDS <= 0.2
+        assert key_token_from_keysym("space") == "space"
+        assert key_token_from_keysym("W") == "w"
+
+        model.toggle_mode()
+        assert model.mode == "timeless"
+        assert model.target_shark_count() == 1
+        model.toggle_mode()
+        assert model.mode == "normal"
 
         model.start_game()
         assert model.state == "playing"
         assert model.life == MAX_LIFE
+        assert model.air == AIR_MAX
+        assert 59.0 < model.time_remaining <= NORMAL_TIME_LIMIT
         assert model.hold_used() == 0
         assert len(model.background_items) >= 4
         assert 1 <= len(model.sharks) <= 2
         assert 1 <= len(model.prey) <= 3
 
-        model.prey = [Prey("small_fish", 4, 0)]
+        for _index in range(20):
+            cell = model._random_empty_cell("treasure")
+            assert cell is None or cell[1] >= TREASURE_MIN_ROW
+
+        model.prey = [Prey("small_fish", 5, 0)]
         model.sharks = []
         model.diver_col = 3
         model.diver_row = 0
         model.facing = 1
         model.fire_harpoon()
-        assert model.hold == ["small_fish"]
-        assert model.hold_used() == 1
+        assert model.hold == []
+        assert model.harpoon is not None
+        assert model.harpoon.col == 4
+        model._update_harpoon(1.0)
+        assert model.harpoon is None
 
         model.prey = [Prey("small_fish", 4, 0)]
         model.fire_harpoon()
+        assert model.hold == ["small_fish"]
+        assert model.hold_used() == 1
+
+        model._update_harpoon(1.0)
+        model.prey = [Prey("small_fish", 4, 0)]
+        model.fire_harpoon()
+        model._update_harpoon(1.0)
         model.prey = [Prey("small_fish", 4, 0)]
         model.fire_harpoon()
         assert model.hold_used() == 3
@@ -1094,11 +1367,38 @@ def run_launch_check() -> None:
         assert model.hold_used() == 0
         assert model.score_popup_value == 30
 
+        model.diver_row = 0
+        model.air = AIR_MAX
+        model._update_air(1.0)
+        shallow_air = model.air
+        model.air = AIR_MAX
+        model.diver_row = GRID_ROWS - 1
+        model._update_air(1.0)
+        deep_air = model.air
+        assert deep_air < shallow_air
+
+        model.air = 0.1
+        model.life = 2
+        model.hold = ["small_fish"]
+        model.diver_row = GRID_ROWS - 1
+        model._update_air(1.0)
+        assert model.life == 1
+        assert model.diver_row == -1
+        assert model.hold_used() == 0
+        assert model.air == AIR_MAX
+
         model.hold = ["treasure"]
         treasure_delay = model.move_delay()
         model.hold = ["big_fish"]
         big_fish_delay = model.move_delay()
         assert treasure_delay > big_fish_delay > 0
+
+        model.hold = ["treasure"]
+        model.diver_row = 2
+        model.diver_col = 3
+        model.inactivity_timer = SINK_TREASURE_SECONDS
+        model._update_inactivity_sink(0.01)
+        assert model.diver_row == 3
 
         model.hold.clear()
         model.prey = [Prey("squid", 4, 3, direction=-1, timer=0.0)]
@@ -1118,6 +1418,36 @@ def run_launch_check() -> None:
         model.last_shark_rows = [2, 2, 2]
         row = model._pick_shark_row()
         assert 1 <= row < GRID_ROWS
+
+        model.kraken = Kraken(col=0, row=6, timer=KRAKEN_DURATION_SECONDS, move_timer=0.0)
+        model.diver_col = 3
+        model.diver_row = 6
+        model._update_kraken(0.01)
+        assert model.kraken is not None
+        assert model.kraken.col == 1
+
+        model.kraken = None
+        model.kraken_spawn_timer = 0.0
+        model.elapsed = KRAKEN_START_SECONDS + 1.0
+        model.random = random.Random(1)
+        model._update_kraken(0.01)
+        assert model.kraken is not None or model.kraken_spawn_timer > 0
+
+        model.mode = "normal"
+        model.state = "playing"
+        model.time_remaining = 0.01
+        model.update(0.05)
+        assert model.state == "game_over"
+        assert model.message_key == "status_time_up"
+
+        model = GameModel(best_score=load_best_score(config_path), random=random.Random(9))
+        model.toggle_mode()
+        assert model.mode == "timeless"
+        model.start_game()
+        model.elapsed = 130.0
+        assert model.target_shark_count() >= 3
+        model.update(0.05)
+        assert model.state == "playing"
 
         model.best_dirty = False
         model.state = "playing"
