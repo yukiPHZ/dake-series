@@ -12,6 +12,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from PIL import Image
+
 
 ROOT = Path(__file__).resolve().parents[1]
 APPS_DIR = ROOT / "01_apps"
@@ -31,6 +33,12 @@ class PackCheck:
     included_count: int = 0
     booth_url: str = ""
     has_thumbnail: bool = False
+    has_ready_thumbnail: bool = False
+    thumbnail_size: str = ""
+    ready_thumbnail_size: str = ""
+    thumbnail_ok: bool = False
+    ready_thumbnail_ok: bool = False
+    product_references_thumbnail: bool = False
     has_product: bool = False
     has_ready_dir: bool = False
     has_readme_txt: bool = False
@@ -46,13 +54,16 @@ class PackCheck:
 
     @property
     def materials_score(self) -> int:
-        return sum((self.has_thumbnail, self.has_product, self.has_ready_dir))
+        return sum((self.thumbnail_ok, self.has_product and self.product_references_thumbnail, self.has_ready_dir and self.ready_thumbnail_ok))
 
     @property
     def ready(self) -> bool:
         return (
             self.status == "available"
             and self.materials_score == 3
+            and self.thumbnail_ok
+            and self.ready_thumbnail_ok
+            and self.product_references_thumbnail
             and self.has_readme_txt
             and self.has_notice
             and self.has_pack_zip
@@ -162,6 +173,17 @@ def load_manifest(pack_dir: Path) -> dict[str, Any]:
     return loaded if isinstance(loaded, dict) else {}
 
 
+def image_size_text(path: Path) -> tuple[str, bool]:
+    if not path.exists():
+        return "", False
+    try:
+        with Image.open(path) as image:
+            width, height = image.size
+    except Exception:
+        return "unreadable", False
+    return f"{width}x{height}", width == 1200 and height == 1200
+
+
 def check_pack(pack_dir: Path) -> PackCheck:
     meta = extract_meta(pack_dir / "README.md", "PACK_META")
     result = PackCheck(
@@ -177,8 +199,15 @@ def check_pack(pack_dir: Path) -> PackCheck:
     result.included_count = len(included)
     ready_dir = pack_dir / READY_DIR_NAME
     result.has_ready_dir = ready_dir.is_dir()
-    result.has_thumbnail = (pack_dir / "assets" / "booth_thumbnail.jpg").exists()
+    thumbnail_path = pack_dir / "assets" / "booth_thumbnail.jpg"
+    ready_thumbnail_path = ready_dir / "booth_thumbnail.jpg"
+    result.has_thumbnail = thumbnail_path.exists()
+    result.has_ready_thumbnail = ready_thumbnail_path.exists()
+    result.thumbnail_size, result.thumbnail_ok = image_size_text(thumbnail_path)
+    result.ready_thumbnail_size, result.ready_thumbnail_ok = image_size_text(ready_thumbnail_path)
     result.has_product = (ready_dir / PRODUCT_FILE_NAME).exists()
+    if result.has_product:
+        result.product_references_thumbnail = "assets/booth_thumbnail.jpg" in read_text(ready_dir / PRODUCT_FILE_NAME)
     result.has_readme_txt = (ready_dir / "README.txt").exists()
     result.has_notice = (ready_dir / "注意事項.txt").exists()
     pack_zips = sorted((path for path in ready_dir.glob("*.zip") if path.is_file()), key=lambda item: item.name.lower()) if ready_dir.exists() else []
@@ -191,7 +220,11 @@ def check_pack(pack_dir: Path) -> PackCheck:
         ("PACK_META", bool(meta)),
         ("included_apps", bool(included)),
         ("assets/booth_thumbnail.jpg", result.has_thumbnail),
+        ("assets/booth_thumbnail.jpg:1200x1200", result.thumbnail_ok),
+        ("pack_ready/booth_thumbnail.jpg", result.has_ready_thumbnail),
+        ("pack_ready/booth_thumbnail.jpg:1200x1200", result.ready_thumbnail_ok),
         ("pack_ready/booth_product.txt", result.has_product),
+        ("booth_product:assets/booth_thumbnail.jpg", result.product_references_thumbnail),
         ("pack_ready/README.txt", result.has_readme_txt),
         ("pack_ready/注意事項.txt", result.has_notice),
         ("pack_ready/*.zip", result.has_pack_zip),
@@ -274,6 +307,12 @@ def write_reports(results: list[PackCheck], report_dir: Path) -> None:
                 "included_count",
                 "booth_url",
                 "thumbnail",
+                "ready_thumbnail",
+                "thumbnail_size",
+                "ready_thumbnail_size",
+                "thumbnail_ok",
+                "ready_thumbnail_ok",
+                "product_references_thumbnail",
                 "booth_product",
                 "pack_ready",
                 "readme_txt",
@@ -299,6 +338,12 @@ def write_reports(results: list[PackCheck], report_dir: Path) -> None:
                     "included_count": result.included_count,
                     "booth_url": result.booth_url,
                     "thumbnail": result.has_thumbnail,
+                    "ready_thumbnail": result.has_ready_thumbnail,
+                    "thumbnail_size": result.thumbnail_size,
+                    "ready_thumbnail_size": result.ready_thumbnail_size,
+                    "thumbnail_ok": result.thumbnail_ok,
+                    "ready_thumbnail_ok": result.ready_thumbnail_ok,
+                    "product_references_thumbnail": result.product_references_thumbnail,
                     "booth_product": result.has_product,
                     "pack_ready": result.has_ready_dir,
                     "readme_txt": result.has_readme_txt,
@@ -321,21 +366,26 @@ def write_reports(results: list[PackCheck], report_dir: Path) -> None:
         "",
         f"- Pack total: {len(results)}",
         f"- Ready: {sum(1 for result in results if result.ready)}",
+        f"- BOOTH URL set: {sum(1 for result in results if result.booth_url)}",
         f"- BOOTH URL unset: {sum(1 for result in results if not result.booth_url)}",
+        f"- Pack thumbnail ok: {sum(1 for result in results if result.thumbnail_ok and result.ready_thumbnail_ok)}",
+        f"- Pack thumbnail missing: {sum(1 for result in results if not result.has_thumbnail or not result.has_ready_thumbnail)}",
+        f"- Pack thumbnail wrong size: {sum(1 for result in results if (result.has_thumbnail and not result.thumbnail_ok) or (result.has_ready_thumbnail and not result.ready_thumbnail_ok))}",
         f"- Stale: {sum(1 for result in results if result.stale)}",
         "",
         "## Packs",
         "",
-        "| Folder | Display | Status | BOOTH | Score | Zip | Missing | Stale | Next |",
-        "|---|---|---|---|---|---|---|---|---|",
+        "| Folder | Display | Status | BOOTH | Thumb | Score | Zip | Missing | Stale | Next |",
+        "|---|---|---|---|---|---|---|---|---|---|",
     ]
     for result in results:
         lines.append(
-            "| {folder} | {display} | {status} | {booth} | {score} | {zip} | {missing} | {stale} | {next} |".format(
+            "| {folder} | {display} | {status} | {booth} | {thumb} | {score} | {zip} | {missing} | {stale} | {next} |".format(
                 folder=result.folder,
                 display=result.display_name,
                 status=result.status,
                 booth="set" if result.booth_url else "unset",
+                thumb="ok" if result.thumbnail_ok and result.ready_thumbnail_ok else "check",
                 score=f"{result.materials_score}/3",
                 zip=result.pack_zip or "-",
                 missing=", ".join(result.missing) or "-",
@@ -355,7 +405,7 @@ def main() -> int:
     write_reports(results, Path(args.report_dir))
     for result in results:
         state = "OK" if result.ready else "CHECK"
-        print(f"{state}: {result.folder} booth={result.materials_score}/3 zip={result.pack_zip or '-'} next={result.next_step}")
+        print(f"{state}: {result.folder} booth={result.materials_score}/3 thumb={result.thumbnail_size or '-'}/{result.ready_thumbnail_size or '-'} url={'set' if result.booth_url else 'empty'} zip={result.pack_zip or '-'} next={result.next_step}")
         if result.missing:
             print(f"  missing: {', '.join(result.missing)}")
         if result.stale:

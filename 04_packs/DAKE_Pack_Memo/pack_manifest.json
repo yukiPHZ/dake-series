@@ -1,11 +1,11 @@
 {
   "schema": "dake_pack_manifest_v1",
-  "generated_at": "2026-06-03T15:54:25+09:00",
+  "generated_at": "2026-06-03T17:53:04+09:00",
   "folder_name": "DAKE_Pack_Memo",
   "display_name": "DAKE メモと記録パック",
   "status": "available",
   "price": 980,
-  "booth_url": "",
+  "booth_url": "https://peakheadz.booth.pm/items/8449208",
   "included_apps": [
     {
       "folder": "DAKE_Sticky_Memo",
@@ -54,5 +54,7 @@
   ],
   "pack_zip": "04_packs/DAKE_Pack_Memo/pack_ready/DAKE_Pack_Memo.zip",
   "pack_zip_size": 37762217,
-  "pack_zip_sha256": "c00a3435711b156912386422440c31613c4a7a4e8d6c2b584e54cf5d53563d22"
+  "thumbnail": "assets/booth_thumbnail.jpg",
+  "ready_thumbnail": "pack_ready/booth_thumbnail.jpg",
+  "pack_zip_sha256": "62b2656fc2b2941bcb01c070d9338f1dde3ed24798c79fc8db24ca71b45f21bc"
 }

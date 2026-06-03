@@ -11,22 +11,22 @@
   "product_type": "pack",
   "status": "available",
   "price": 980,
-  "booth_url": "",
+  "booth_url": "https://peakheadz.booth.pm/items/8449208",
   "included_apps": [
-"DAKE_Sticky_Memo",
-"DAKE_Maji_Memo",
-"DAKE_Git_Memo",
-"DAKE_Yesterday_Task_Memo"
+    "DAKE_Sticky_Memo",
+    "DAKE_Maji_Memo",
+    "DAKE_Git_Memo",
+    "DAKE_Yesterday_Task_Memo"
   ],
   "show_in_booth_assist": true,
   "show_on_dashboard": true,
   "tags": [
-"メモ",
-"記録",
-"Windows",
-"実務",
-"ツール",
-"軽量"
+    "メモ",
+    "記録",
+    "Windows",
+    "実務",
+    "ツール",
+    "軽量"
   ],
   "summary": "付箋、短文メモ、Gitメモ、昨日タスクの記録をまとめたメモ運用パックです。",
   "copyright": "PEAKHEADZ"

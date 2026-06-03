@@ -1,11 +1,11 @@
 {
   "schema": "dake_pack_manifest_v1",
-  "generated_at": "2026-06-03T15:54:24+09:00",
+  "generated_at": "2026-06-03T17:53:03+09:00",
   "folder_name": "DAKE_Pack_Document",
   "display_name": "DAKE 書類整理パック",
   "status": "available",
   "price": 1480,
-  "booth_url": "",
+  "booth_url": "https://peakheadz.booth.pm/items/8448353",
   "included_apps": [
     {
       "folder": "DAKE_PDF_Merge",
@@ -54,5 +54,7 @@
   ],
   "pack_zip": "04_packs/DAKE_Pack_Document/pack_ready/DAKE_Pack_Document.zip",
   "pack_zip_size": 124859888,
-  "pack_zip_sha256": "9f611289fa9702a6a803e0ad0039e3ccf0d8b36106a96e334dff165a5f99d523"
+  "thumbnail": "assets/booth_thumbnail.jpg",
+  "ready_thumbnail": "pack_ready/booth_thumbnail.jpg",
+  "pack_zip_sha256": "83b4be666bafd907de79884a698fce5e98101123d7fef5a942eaf6d0ea3f72b0"
 }

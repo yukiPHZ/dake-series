@@ -98,7 +98,7 @@ def write_text(path: Path, text: str, dry_run: bool, generated: list[str]) -> No
 
 
 def extract_json_section(text: str, heading: str) -> dict[str, Any] | None:
-    match = re.search(rf"(?s)^##\s+{re.escape(heading)}\s*```json\s*(.*?)\s*```", text, re.MULTILINE)
+    match = re.search(rf"(?s)^\s*##\s+{re.escape(heading)}\s*```json\s*(.*?)\s*```", text, re.MULTILINE)
     if not match:
         return None
     loaded = json.loads(match.group(1))
@@ -106,7 +106,7 @@ def extract_json_section(text: str, heading: str) -> dict[str, Any] | None:
 
 
 def extract_pack_body(text: str) -> str:
-    match = re.search(r"(?s)^##\s+PACK_BODY\s*(.*?)(?:\n##\s+|\Z)", text, re.MULTILINE)
+    match = re.search(r"(?s)^\s*##\s+PACK_BODY\s*(.*?)(?:\n\s*##\s+|\Z)", text, re.MULTILINE)
     return match.group(1).strip() if match else ""
 
 
@@ -268,40 +268,75 @@ def font(kind: str, size: int) -> ImageFont.ImageFont:
     return ImageFont.load_default()
 
 
-def make_thumbnail(pack_dir: Path, meta: dict[str, Any], sources: list[SourceApp], dry_run: bool, generated: list[str]) -> None:
-    path = pack_dir / "assets" / "booth_thumbnail.jpg"
-    generated.append(str(path.relative_to(ROOT)))
+def pack_category_label(meta: dict[str, Any]) -> str:
+    tags = meta.get("tags")
+    values = [str(tag).strip() for tag in tags if str(tag).strip()] if isinstance(tags, list) else []
+    joined = " ".join(values + [str(meta.get("display_name") or ""), str(meta.get("summary") or "")])
+    if "PDF" in joined or "画像" in joined or "Image" in joined:
+        return "PDF / Image"
+    if "メモ" in joined or "記録" in joined or "Memo" in joined:
+        return "Memo / Record"
+    return "DAKE / Work"
+
+
+def pack_thumbnail_copy(pack_dir: Path) -> tuple[Path, Path]:
+    return pack_dir / "assets" / "booth_thumbnail.jpg", pack_dir / READY_DIR_NAME / "booth_thumbnail.jpg"
+
+
+def make_thumbnail(pack_dir: Path, meta: dict[str, Any], sources: list[SourceApp], dry_run: bool, generated: list[str]) -> list[str]:
+    asset_path, ready_path = pack_thumbnail_copy(pack_dir)
+    generated.extend([asset_path.relative_to(ROOT).as_posix(), ready_path.relative_to(ROOT).as_posix()])
     if dry_run:
-        return
-    path.parent.mkdir(parents=True, exist_ok=True)
-    image = Image.new("RGB", THUMBNAIL_SIZE, "#F7F9FC")
-    draw = ImageDraw.Draw(image)
-    width, height = THUMBNAIL_SIZE
-    draw.rectangle((0, 0, width, 16), fill="#2457C5")
-    draw.rectangle((78, 96, width - 78, height - 96), fill="#FFFFFF", outline="#D7DCE7", width=3)
-    draw.text((116, 128), "PEAKHEADZ / DAKE PACK", fill="#667085", font=font("bold", 34))
-    title = str(meta.get("display_name") or pack_dir.name)
-    title_font = font("bold", 78)
-    for line in wrap_lines(title, title_font, 960, draw)[:2]:
-        draw.text((116, 210), line, fill="#182230", font=title_font)
-        break
-    summary = str(meta.get("summary") or "")
-    summary_font = font("regular", 34)
-    y = 410
-    for line in wrap_lines(summary, summary_font, 900, draw)[:3]:
-        draw.text((116, y), line, fill="#344054", font=summary_font)
-        y += 48
-    draw.rectangle((116, 620, width - 116, 626), fill="#E4E7EC")
-    item_font = font("regular", 31)
-    y = 675
-    for source in sources[:5]:
-        label = source.display_name or source.folder
-        draw.text((132, y), f"+ {label}", fill="#1D4CB4", font=item_font)
-        y += 48
-    price = as_int(meta.get("price"))
-    draw.text((116, height - 185), f"{price:,} yen", fill="#182230", font=font("bold", 50))
-    draw.text((116, height - 116), "Windows向け / 実務用 / 軽量", fill="#667085", font=font("regular", 28))
-    image.save(path, "JPEG", quality=92, optimize=True)
+        return []
+    try:
+        asset_path.parent.mkdir(parents=True, exist_ok=True)
+        ready_path.parent.mkdir(parents=True, exist_ok=True)
+        image = Image.new("RGB", THUMBNAIL_SIZE, "#F7F9FC")
+        draw = ImageDraw.Draw(image)
+        width, height = THUMBNAIL_SIZE
+        draw.rectangle((0, 0, width, 16), fill="#2457C5")
+        card_bottom = height - 72
+        draw.rectangle((86, 96, width - 86, card_bottom), fill="#FFFFFF", outline="#D7DCE7", width=3)
+        draw.rounded_rectangle((116, 130, 244, 182), radius=8, fill="#EAF2FF", outline="#BFD2FF", width=2)
+        draw.text((148, 142), "PACK", fill="#2457C5", font=font("bold", 25))
+        draw.text((272, 139), "PEAKHEADZ / DAKE", fill="#667085", font=font("bold", 29))
+
+        title = str(meta.get("display_name") or pack_dir.name)
+        title_font = font("bold", 72)
+        y = 240
+        for line in wrap_lines(title, title_font, 930, draw)[:2]:
+            draw.text((120, y), line, fill="#182230", font=title_font)
+            y += 86
+
+        summary = str(meta.get("summary") or "").strip()
+        summary_font = font("regular", 34)
+        for line in wrap_lines(summary, summary_font, 900, draw)[:2]:
+            draw.text((122, y + 10), line, fill="#344054", font=summary_font)
+            y += 46
+
+        included_text = f"{len(sources)}つのDAKEを収録"
+        category_text = pack_category_label(meta)
+        draw.rounded_rectangle((122, 600, 460, 660), radius=8, fill="#F2F4F7", outline="#E4E7EC", width=2)
+        draw.text((148, 614), included_text, fill="#1D2939", font=font("bold", 30))
+        draw.rounded_rectangle((490, 600, 790, 660), radius=8, fill="#F2F4F7", outline="#E4E7EC", width=2)
+        draw.text((518, 614), category_text, fill="#1D2939", font=font("bold", 30))
+
+        draw.text((124, 735), "複数のDAKEをまとめた実務パック", fill="#667085", font=font("regular", 29))
+        item_font = font("regular", 28)
+        y = 794
+        for source in sources[:4]:
+            label = source.display_name or source.folder
+            draw.text((142, y), f"+ {label}", fill="#2457C5", font=item_font)
+            y += 42
+        price = as_int(meta.get("price"))
+        footer_y = height - 132
+        draw.text((122, footer_y - 58), f"{price:,} yen", fill="#182230", font=font("bold", 46))
+        draw.text((122, footer_y), "Windows / BOOTH / DAKE Pack", fill="#667085", font=font("regular", 27))
+        image.save(asset_path, "JPEG", quality=92, optimize=True)
+        image.save(ready_path, "JPEG", quality=92, optimize=True)
+        return []
+    except Exception as exc:
+        return [f"thumbnail generation failed: {exc}"]
 
 
 def make_readme_txt(meta: dict[str, Any], sources: list[SourceApp]) -> str:
@@ -339,6 +374,12 @@ def make_product_text(meta: dict[str, Any], body: str, sources: list[SourceApp],
 
 # 商品紹介文
 {summary}
+
+# BOOTH商品画像
+assets/booth_thumbnail.jpg
+
+# 補助画像
+pack_ready/booth_thumbnail.jpg
 
 {body}
 
@@ -402,6 +443,8 @@ def build_manifest(pack_dir: Path, meta: dict[str, Any], sources: list[SourceApp
         "included_apps": source_items,
         "pack_zip": zip_path.relative_to(ROOT).as_posix() if zip_path else "",
         "pack_zip_size": zip_path.stat().st_size if zip_path and zip_path.exists() else 0,
+        "thumbnail": "assets/booth_thumbnail.jpg",
+        "ready_thumbnail": f"{READY_DIR_NAME}/booth_thumbnail.jpg",
         "pack_zip_sha256": sha256(zip_path) if zip_path and zip_path.exists() else "",
     }
     return manifest
@@ -452,7 +495,7 @@ def process_pack(pack_dir: Path, only_available: bool, dry_run: bool) -> PackRes
     write_text(ready_dir / "README.txt", make_readme_txt(meta, sources), dry_run, result.generated)
     write_text(ready_dir / "注意事項.txt", NOTICE_TEXT, dry_run, result.generated)
     write_text(ready_dir / PRODUCT_FILE_NAME, make_product_text(meta, body, sources, booth_url), dry_run, result.generated)
-    make_thumbnail(pack_dir, meta, sources, dry_run, result.generated)
+    result.warnings.extend(make_thumbnail(pack_dir, meta, sources, dry_run, result.generated))
     zip_path = make_pack_zip(pack_dir, sources, dry_run, result.generated)
     if not dry_run and zip_path.exists():
         result.zip_name = zip_path.name

@@ -7,6 +7,12 @@ DAKE メモと記録パック
 # 商品紹介文
 付箋、短文メモ、Gitメモ、昨日タスクの記録をまとめたメモ運用パックです。
 
+# BOOTH商品画像
+assets/booth_thumbnail.jpg
+
+# 補助画像
+pack_ready/booth_thumbnail.jpg
+
 ### 概要
 
 付箋メモ、短文メモ、Git作業メモ、昨日タスクの記録をまとめたパックです。
@@ -71,3 +77,4 @@ Windows
 軽量
 
 # URL
+https://peakheadz.booth.pm/items/8449208

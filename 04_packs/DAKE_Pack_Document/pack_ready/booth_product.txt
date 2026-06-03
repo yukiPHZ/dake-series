@@ -7,6 +7,12 @@ DAKE 書類整理パック
 # 商品紹介文
 PDF結合、画像PDF化、画像リサイズ、A4貼り付けをまとめた書類整理向けパックです。
 
+# BOOTH商品画像
+assets/booth_thumbnail.jpg
+
+# 補助画像
+pack_ready/booth_thumbnail.jpg
+
 ### 概要
 
 PDFの結合、画像からPDF作成、画像リサイズ、画像のA4貼り付けをまとめたパックです。
@@ -71,3 +77,4 @@ Windows
 ツール
 
 # URL
+https://peakheadz.booth.pm/items/8448353

@@ -11,22 +11,22 @@ PDFや画像を日常業務で扱うための、DAKEシリーズ書類整理パ�
   "product_type": "pack",
   "status": "available",
   "price": 1480,
-  "booth_url": "",
+  "booth_url": "https://peakheadz.booth.pm/items/8448353",
   "included_apps": [
-"DAKE_PDF_Merge",
-"DAKE_Image_ToPDF",
-"DAKE_Image_Resize",
-"DAKE_Image_PasteA4"
+    "DAKE_PDF_Merge",
+    "DAKE_Image_ToPDF",
+    "DAKE_Image_Resize",
+    "DAKE_Image_PasteA4"
   ],
   "show_in_booth_assist": true,
   "show_on_dashboard": true,
   "tags": [
-"PDF",
-"画像",
-"書類整理",
-"Windows",
-"実務",
-"ツール"
+    "PDF",
+    "画像",
+    "書類整理",
+    "Windows",
+    "実務",
+    "ツール"
   ],
   "summary": "PDF結合、画像PDF化、画像リサイズ、A4貼り付けをまとめた書類整理向けパックです。",
   "copyright": "PEAKHEADZ"
