@@ -147,6 +147,7 @@ UI_TEXT = {
     "missing_booth_thumbnail": "assets/booth_thumbnail.jpg",
     "missing_booth_product": "booth_product.txt",
     "missing_booth_ready": "booth_ready/",
+    "missing_booth_url": "BOOTH URL",
     "missing_dist_exe": "dist/*.exe",
     "missing_release_url": "release_url",
     "meta_folder_name": "folder_name",
@@ -418,6 +419,7 @@ SHIPMENT_MISSING_KEYS = (
     "booth_thumbnail",
     "booth_product",
     "booth_ready",
+    "booth_url",
     "dist_exe",
     "release_url",
 )
@@ -475,6 +477,7 @@ class FileChecks:
     has_booth_thumbnail: bool
     has_booth_product: bool
     has_booth_ready: bool
+    has_booth_url: bool
     has_dist_exe: bool
     has_release_url: bool
     dist_exes: tuple[Path, ...]
@@ -656,6 +659,8 @@ def completion_goal_key_from_label(label: str) -> str:
 def is_formal_release_meta(meta_fields: dict[str, str]) -> bool:
     status = meta_fields.get("status", "").strip().lower()
     if status in NON_PUBLIC_STATUSES:
+        return False
+    if status != "available":
         return False
     app_type = normalize_app_type(meta_fields.get("app_type", ""))
     completion_goal = normalize_completion_goal(meta_fields.get("completion_goal", ""))
@@ -896,8 +901,8 @@ def booth_label(checks: FileChecks) -> str:
 
 def booth_product_candidates(folder: Path) -> tuple[Path, ...]:
     return (
-        folder / BOOTH_PRODUCT_NAME,
         folder / BOOTH_READY_NAME / BOOTH_PRODUCT_NAME,
+        folder / BOOTH_PRODUCT_NAME,
     )
 
 
@@ -906,6 +911,40 @@ def find_booth_product_path(folder: Path) -> Path | None:
         if candidate.is_file():
             return candidate
     return None
+
+
+def read_booth_url_from_product(path: Path) -> str:
+    try:
+        lines = read_text_utf8(path).splitlines()
+    except OSError:
+        return ""
+
+    for index, line in enumerate(lines):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        lowered = stripped.lower()
+        if lowered.startswith("booth url:"):
+            return stripped.split(":", 1)[1].strip()
+        if stripped == "# URL" or stripped == "# BOOTH URL":
+            for value_line in lines[index + 1 :]:
+                value = value_line.strip()
+                if not value:
+                    continue
+                if value.startswith("#"):
+                    break
+                return value
+    return ""
+
+
+def booth_url_from_product(folder: Path) -> str:
+    for candidate in booth_product_candidates(folder):
+        if not candidate.is_file():
+            continue
+        url = read_booth_url_from_product(candidate)
+        if url:
+            return url
+    return ""
 
 
 def booth_missing_keys(checks: FileChecks) -> tuple[str, ...]:
@@ -1000,6 +1039,8 @@ def build_missing_keys(
         missing.append("booth_product")
     if not checks.has_booth_ready:
         missing.append("booth_ready")
+    if not checks.has_booth_url:
+        missing.append("booth_url")
     if not checks.has_dist_exe:
         missing.append("dist_exe")
     if not checks.has_release_url:
@@ -1014,6 +1055,7 @@ def scan_folder(folder: Path) -> AppRecord:
     release_url = meta_fields.get("release_url", "").strip()
     dist_exes = existing_dist_exes(folder)
     booth_product_path = find_booth_product_path(folder)
+    booth_url = booth_url_from_product(folder)
     checks = FileChecks(
         has_readme=readme_path.exists(),
         has_release_body=(folder / RELEASE_BODY_NAME).exists(),
@@ -1021,6 +1063,7 @@ def scan_folder(folder: Path) -> AppRecord:
         has_booth_thumbnail=(folder / BOOTH_THUMBNAIL_RELATIVE).exists(),
         has_booth_product=booth_product_path is not None,
         has_booth_ready=(folder / BOOTH_READY_NAME).is_dir(),
+        has_booth_url=bool(booth_url),
         has_dist_exe=bool(dist_exes),
         has_release_url=bool(release_url),
         dist_exes=dist_exes,
@@ -1065,6 +1108,7 @@ def error_record(folder: Path, exc: Exception) -> AppRecord:
         has_booth_thumbnail=False,
         has_booth_product=False,
         has_booth_ready=False,
+        has_booth_url=False,
         has_dist_exe=False,
         has_release_url=False,
         dist_exes=(),
@@ -1110,6 +1154,7 @@ def formal_ship_line_reached(record: AppRecord) -> bool:
         and record.checks.has_dist_exe
         and record.checks.has_screenshot
         and record.checks.booth_materials_ready
+        and record.checks.has_booth_url
     )
 
 
@@ -1122,6 +1167,7 @@ def is_booth_registration_target(record: AppRecord) -> bool:
         and record.checks.has_booth_thumbnail
         and record.checks.has_booth_product
         and record.checks.has_booth_ready
+        and not record.checks.has_booth_url
     )
 
 

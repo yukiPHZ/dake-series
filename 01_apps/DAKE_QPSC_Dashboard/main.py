@@ -528,6 +528,8 @@ def is_market_formal_app(record: object, meta: dict[str, object]) -> bool:
     status = meta_status(record, meta)
     if status in EXCLUDED_APP_STATUS:
         return False
+    if status != "available":
+        return False
     return app_type_value(record, meta) == "market" and completion_goal_value(record, meta) == "formal_release"
 
 
@@ -557,8 +559,8 @@ def app_has_dist(record: object) -> bool:
 
 def app_booth_product_candidates(folder: Path) -> tuple[Path, ...]:
     return (
-        folder / "booth_product.txt",
         folder / "booth_ready" / "booth_product.txt",
+        folder / "booth_product.txt",
     )
 
 
@@ -567,6 +569,49 @@ def find_app_booth_product_path(folder: Path) -> Path | None:
         if candidate.is_file():
             return candidate
     return None
+
+
+def read_booth_url_from_product(path: Path) -> str:
+    try:
+        lines = read_text_utf8(path).splitlines()
+    except OSError:
+        return ""
+
+    for index, line in enumerate(lines):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        lowered = stripped.lower()
+        if lowered.startswith("booth url:"):
+            return stripped.split(":", 1)[1].strip()
+        if stripped == "# URL" or stripped == "# BOOTH URL":
+            for value_line in lines[index + 1 :]:
+                value = value_line.strip()
+                if not value:
+                    continue
+                if value.startswith("#"):
+                    break
+                return value
+    return ""
+
+
+def app_booth_url(record: object, meta: dict[str, object]) -> str:
+    meta_url = safe_text(meta.get("booth_url", ""))
+    if meta_url:
+        return meta_url
+    fields = getattr(record, "meta_fields", {})
+    if isinstance(fields, dict):
+        field_url = safe_text(fields.get("booth_url", ""))
+        if field_url:
+            return field_url
+    folder = Path(getattr(record, "folder_path", ""))
+    for candidate in app_booth_product_candidates(folder):
+        if not candidate.is_file():
+            continue
+        url = read_booth_url_from_product(candidate)
+        if url:
+            return url
+    return ""
 
 
 def app_booth_material_flags(record: object) -> tuple[bool, bool, bool, bool]:
@@ -719,9 +764,9 @@ def app_booth_url_missing(record: object, meta: dict[str, object]) -> bool:
         return False
     if app_is_later_market_target(record, meta):
         return False
-    if safe_text(meta.get("booth_url", "")):
+    if app_booth_url(record, meta):
         return False
-    return app_booth_materials_complete(record)
+    return True
 
 
 def app_booth_materials_missing(record: object, meta: dict[str, object]) -> bool:
