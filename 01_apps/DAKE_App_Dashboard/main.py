@@ -57,6 +57,7 @@ UI_TEXT = {
     "button_open_folder": "フォルダを開く",
     "button_open_readme": "README.md を開く",
     "button_open_release": "Release URL を開く",
+    "button_open_booth_url": "BOOTH URL を開く",
     "button_release_missing": "Release URL なし",
     "button_next_work": "次の作業へ",
     "button_open_booth_assist": "BOOTHアシストで開く",
@@ -82,6 +83,7 @@ UI_TEXT = {
     "link_booth_thumbnail": "booth_thumbnail",
     "link_booth_product": "booth_product",
     "link_booth_ready": "booth_ready",
+    "link_booth_url": "BOOTH URL",
     "link_dist": "dist",
     "link_exe": "exe",
     "link_release_url": "Release URL",
@@ -92,7 +94,7 @@ UI_TEXT = {
     "summary_implementation": "実装中",
     "summary_distribution_ready": "配布準備",
     "summary_released": "配布中",
-    "summary_booth_ready": "BOOTH準備済み",
+    "summary_booth_registered": "BOOTH登録済み",
     "summary_needs_review": "要確認",
     "filter_all": "全部",
     "filter_implementation": "実装中",
@@ -127,6 +129,7 @@ UI_TEXT = {
     "status_distribution_ready": "配布準備",
     "status_released": "配布中",
     "status_booth_ready": "BOOTH準備済み",
+    "status_booth_registered": "BOOTH登録済み",
     "status_needs_review": "要確認",
     "status_loading": "読み込み中",
     "status_ready": "正本を読み込みました",
@@ -169,12 +172,15 @@ UI_TEXT = {
     "file_booth_thumbnail": "assets/booth_thumbnail.jpg",
     "file_booth_product": "booth_product.txt",
     "file_booth_ready": "booth_ready/",
+    "file_booth_url": "BOOTH URL",
     "file_dist_exe": "dist/*.exe",
     "file_release_url": "release_url",
     "booth_status_title": "BOOTH状況 {ready}/3",
     "booth_status_ready": "✓ {label}",
     "booth_status_missing": "✗ {label}",
     "booth_missing_title": "不足:",
+    "booth_url_registered": "BOOTH URL: 登録済み",
+    "booth_url_missing": "BOOTH URL: 未設定",
     "booth_ready_label_thumbnail": "booth_thumbnail.jpg",
     "booth_ready_label_product": "booth_product.txt",
     "booth_ready_label_ready": "booth_ready/",
@@ -335,6 +341,7 @@ STATUS_THEME = {
     "distribution_ready": ("#202033", THEME["warning"]),
     "released": ("#152A25", THEME["success"]),
     "booth_ready": ("#1D213B", THEME["purple"]),
+    "booth_registered": ("#152A25", THEME["success"]),
     "needs_review": ("#301B34", THEME["review"]),
     "system_ready": ("#142337", THEME["accent_hover"]),
     "local_ready": ("#1A2530", THEME["muted"]),
@@ -432,6 +439,7 @@ WORKSPACE_LINK_GROUPS = (
             "readme",
             "release_url",
             "github_url",
+            "booth_url",
         ),
     ),
     (
@@ -504,6 +512,7 @@ class AppRecord:
     app_type: str
     completion_goal: str
     status_key: str
+    booth_url: str
     missing_keys: tuple[str, ...]
     issue_messages: tuple[str, ...]
     last_modified: float
@@ -926,7 +935,7 @@ def read_booth_url_from_product(path: Path) -> str:
         lowered = stripped.lower()
         if lowered.startswith("booth url:"):
             return stripped.split(":", 1)[1].strip()
-        if stripped == "# URL" or stripped == "# BOOTH URL":
+        if lowered in {"# url", "# booth url"}:
             for value_line in lines[index + 1 :]:
                 value = value_line.strip()
                 if not value:
@@ -995,13 +1004,13 @@ def classify_status(folder: Path, meta_fields: dict[str, str], checks: FileCheck
             return "local_ready"
         return "implementation"
 
-    if checks.booth_materials_ready:
+    if checks.has_booth_url:
+        return "booth_registered"
+
+    if checks.has_booth_ready:
         return "booth_ready"
 
-    if checks.has_release_url and checks.has_dist_exe and checks.has_screenshot:
-        return "released"
-
-    if checks.has_dist_exe and checks.has_screenshot and not checks.has_release_url:
+    if checks.has_release_url:
         return "distribution_ready"
 
     status = meta_fields.get("status", "").strip().lower()
@@ -1009,9 +1018,6 @@ def classify_status(folder: Path, meta_fields: dict[str, str], checks: FileCheck
         return "implementation"
 
     if folder.name == APP_FOLDER_NAME:
-        return "implementation"
-
-    if checks.has_readme and (not checks.has_release_url or not checks.has_dist_exe):
         return "implementation"
 
     return "needs_review"
@@ -1093,6 +1099,7 @@ def scan_folder(folder: Path) -> AppRecord:
         app_type=app_type,
         completion_goal=completion_goal,
         status_key=status_key,
+        booth_url=booth_url,
         missing_keys=missing_keys,
         issue_messages=issues,
         last_modified=last_modified,
@@ -1122,6 +1129,7 @@ def error_record(folder: Path, exc: Exception) -> AppRecord:
         app_type=normalize_app_type(meta_fields.get("app_type", "")),
         completion_goal=normalize_completion_goal(meta_fields.get("completion_goal", "")),
         status_key="needs_review",
+        booth_url="",
         missing_keys=build_missing_keys(checks, (issue,), is_formal_release_meta(meta_fields)),
         issue_messages=(issue,),
         last_modified=latest_mtime([folder / README_NAME], folder),
@@ -1334,7 +1342,7 @@ class DashboardApp:
             "implementation": tk.StringVar(value="0"),
             "distribution_ready": tk.StringVar(value="0"),
             "released": tk.StringVar(value="0"),
-            "booth_ready": tk.StringVar(value="0"),
+            "booth_registered": tk.StringVar(value="0"),
             "needs_review": tk.StringVar(value="0"),
         }
         self.qpsc_vars = {
@@ -1514,7 +1522,7 @@ class DashboardApp:
             ("implementation", "summary_implementation"),
             ("distribution_ready", "summary_distribution_ready"),
             ("released", "summary_released"),
-            ("booth_ready", "summary_booth_ready"),
+            ("booth_registered", "summary_booth_registered"),
             ("needs_review", "summary_needs_review"),
         ]
         for index, (key, label_key) in enumerate(cards):
@@ -2459,7 +2467,9 @@ class DashboardApp:
         if self.filter_key == "all":
             return True
         if self.filter_key == "booth":
-            return record.status_key == "booth_ready"
+            return is_formal_release_app(record) and (
+                record.status_key in {"booth_registered", "booth_ready"} or not record.checks.has_booth_url
+            )
         if self.filter_key in {"market", "qpcs", "personal"}:
             return record.app_type == self.filter_key
         if self.filter_key == "frozen":
@@ -2657,6 +2667,9 @@ class DashboardApp:
         if key == "release_url":
             url = record.release_url
             return (short_display(url) if url else UI_TEXT["link_missing"], bool(url))
+        if key == "booth_url":
+            url = record.booth_url
+            return (short_display(url) if url else UI_TEXT["link_missing"], bool(url))
         if key == "github_url":
             url = github_repo_url(record)
             return (short_display(url) if url else UI_TEXT["link_unavailable"], bool(url))
@@ -2719,6 +2732,10 @@ class DashboardApp:
         for key in BOOTH_MATERIAL_KEYS:
             template = UI_TEXT["booth_status_missing"] if key in booth_missing else UI_TEXT["booth_status_ready"]
             booth_lines.append(template.format(label=booth_item_label(key)))
+        if record.booth_url:
+            booth_lines.extend([UI_TEXT["booth_url_registered"], record.booth_url])
+        else:
+            booth_lines.append(UI_TEXT["booth_url_missing"])
         if booth_missing:
             booth_lines.append("")
             booth_lines.append(UI_TEXT["booth_missing_title"])
@@ -2731,6 +2748,7 @@ class DashboardApp:
             ("file_booth_thumbnail", checks.has_booth_thumbnail),
             ("file_booth_product", checks.has_booth_product),
             ("file_booth_ready", checks.has_booth_ready),
+            ("file_booth_url", checks.has_booth_url),
             ("file_dist_exe", checks.has_dist_exe),
             ("file_release_url", checks.has_release_url),
         ]
@@ -2856,6 +2874,9 @@ class DashboardApp:
             return
         if key == "release_url":
             self.open_url(record.release_url, UI_TEXT["link_release_url"])
+            return
+        if key == "booth_url":
+            self.open_url(record.booth_url, UI_TEXT["link_booth_url"])
             return
         if key == "github_url":
             self.open_url(github_repo_url(record), UI_TEXT["link_github_url"])
