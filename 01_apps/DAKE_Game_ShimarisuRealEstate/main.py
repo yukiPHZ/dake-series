@@ -39,7 +39,7 @@ UI_TEXT = {
     "cash": "資金",
     "day": "日数",
     "profit": "利益",
-    "reputation": "評判",
+    "reputation": "信用",
     "current_case": "現在の案件",
     "owned_property": "保有物件",
     "case_detail": "案件詳細",
@@ -208,6 +208,42 @@ UI_TEXT = {
     "unsold_count": "売れ残り件数",
     "cash_warning": "資金が少なくなっています。在庫を抱えすぎると動けなくなります。",
     "cash_short_result": "資金ショートです。売れるまで耐える必要がありました。",
+    "case_memo": "案件メモ",
+    "rough_profit": "想定粗利",
+    "investigation_state": "調査状態",
+    "hearing_state": "ヒアリング状態",
+    "attention_points": "注意ポイント",
+    "skip_result": "見送り結果",
+    "skip_message": "この案件は見送りました。",
+    "skip_reason": "見送り理由",
+    "skip_reason_risk": "リスク高",
+    "skip_reason_margin": "利幅不足",
+    "skip_reason_cash": "資金温存",
+    "skip_reason_optional": "任意",
+    "elapsed_days": "経過日数",
+    "credit_delta": "信用変化",
+    "credit_reason": "理由",
+    "trust_evaluation": "信用評価",
+    "loss_count": "赤字件数",
+    "uninvestigated_sales": "未調査成約",
+    "unheard_sales": "未ヒアリング成約",
+    "market_freshness": "市場感",
+    "sales_days": "販売日数",
+    "confirmed_loss": "確定損失",
+    "sale_negotiation": "成約時調整",
+    "feedback_under_investigated": "調査不足で出口が読みづらいです。",
+    "feedback_under_heard": "聞き取り不足で買主説明に不安があります。",
+    "feedback_market_stale": "販売開始から時間が経ち、市場感が落ちています。",
+    "feedback_suburban_one_parking": "駐車場1台なので、郊外ではやや弱いです。",
+    "sold_loss_reason": "値下げと維持管理費が重なりました。",
+    "credit_full_good": "調査とヒアリングを行い、納得感のある成約でした。",
+    "credit_partial_good": "確認は一部に留まりましたが、黒字でまとめました。",
+    "credit_no_check_good": "利益は出ましたが、調査不足のまま進めたため信用は伸びませんでした。",
+    "credit_hidden_risk": "隠れリスク発覚後の成約です。説明責任の重さが残りました。",
+    "credit_loss": "赤字成約です。仕入れ判断と価格調整を見直しましょう。",
+    "trust_comment_good": "堅実です。調査と説明を重ね、次につながる仕事でした。",
+    "trust_comment_mixed": "利益は出ていますが、調査不足の案件が目立ちました。",
+    "trust_comment_bad": "資金と信用の両方が傷んでいます。仕入れ判断を見直しましょう。",
 }
 
 SHIMARISU_COMMENTS = {
@@ -361,6 +397,12 @@ class PropertyCase:
     net_proceeds: int = 0
     last_sale_feedback: list[str] = field(default_factory=list)
     price_cut_count: int = 0
+    listed_days: int = 0
+    market_freshness: int = 100
+    hidden_risk_found: bool = False
+    credit_delta: int = 0
+    credit_reason: str = ""
+    sale_negotiation_discount: int = 0
 
 
 @dataclass
@@ -433,6 +475,9 @@ class ShimarisuRealEstateGame:
         self.current_property: PropertyCase | None = None
         self.sold_count = 0
         self.skipped_count = 0
+        self.loss_count = 0
+        self.uninvestigated_sales = 0
+        self.unheard_sales = 0
         self.best_profit = -10**12
         self.best_profit_name = ""
         self.message_log: list[str] = []
@@ -752,6 +797,7 @@ class ShimarisuRealEstateGame:
             prop.repair_cost_total += total_extra
             self.cash -= total_extra
             self.add_log(UI_TEXT["log_extra_cost"].format(amount=yen(total_extra)))
+        prop.hidden_risk_found = True
         self.comment = SHIMARISU_COMMENTS["risk_found"]
         self.pending_confirmation = "risk"
 
@@ -816,6 +862,9 @@ class ShimarisuRealEstateGame:
         prop.listed_price = max(1_000_000, round(listed_price / 100_000) * 100_000)
         prop.sale_strategy_key = str(option["key"])
         prop.status = "listed"
+        prop.listed_days = 0
+        prop.market_freshness = 100
+        prop.last_sale_feedback = self.sale_feedback_reasons(prop)
         self.comment = SHIMARISU_COMMENTS["listed"]
         self.add_log(
             UI_TEXT["log_listed"].format(
@@ -847,6 +896,11 @@ class ShimarisuRealEstateGame:
                 self.add_log(UI_TEXT["log_renovation_done"])
                 self.comment = UI_TEXT["renovation_done_comment"]
 
+        if prop and prop.status == "listed":
+            prop.listed_days += 1
+            self.update_market_freshness(prop)
+            prop.last_sale_feedback = self.sale_feedback_reasons(prop)
+
         if allow_sale and prop and prop.status == "listed":
             self.try_sell_property(prop)
 
@@ -862,34 +916,45 @@ class ShimarisuRealEstateGame:
             return
 
         self_buyer = random.random() < 0.60
-        brokerage = calc_brokerage_fee(prop.listed_price)
-        outside_fee = 0 if self_buyer else calc_brokerage_fee(prop.listed_price)
-        proceeds = prop.listed_price + brokerage - outside_fee
+        negotiation_discount = self.sale_negotiation_discount_for(prop)
+        sold_price = max(500_000, prop.listed_price - negotiation_discount)
+        brokerage = calc_brokerage_fee(sold_price)
+        outside_fee = 0 if self_buyer else calc_brokerage_fee(sold_price)
+        proceeds = sold_price + brokerage - outside_fee
         total_cost = self.calculate_total_cost(prop)
         profit = proceeds - total_cost
 
         self.cash += proceeds
         prop.status = "sold"
-        prop.sold_price = prop.listed_price
+        prop.sold_price = sold_price
         prop.sale_channel = "auto_customer" if self_buyer else "outside_customer"
         prop.brokerage_income = brokerage
         prop.outside_fee = outside_fee
         prop.net_proceeds = proceeds
         prop.sold_profit = profit
+        prop.sale_negotiation_discount = negotiation_discount
 
         self.sold_count += 1
+        if not prop.investigated:
+            self.uninvestigated_sales += 1
+        if not prop.heard_from_seller:
+            self.unheard_sales += 1
+        if profit < 0:
+            self.loss_count += 1
         if profit > self.best_profit:
             self.best_profit = profit
             self.best_profit_name = prop.name
 
+        credit_delta, credit_reason = self.calculate_credit_change(prop, profit)
+        prop.credit_delta = credit_delta
+        prop.credit_reason = credit_reason
+        self.reputation = max(0, min(100, self.reputation + credit_delta))
+
         if profit >= 2_000_000:
-            self.reputation = min(100, self.reputation + 4)
             self.comment = SHIMARISU_COMMENTS["sold_good"]
         elif profit >= 0:
-            self.reputation = min(100, self.reputation + 1)
             self.comment = SHIMARISU_COMMENTS["sold_bad"]
         else:
-            self.reputation = max(0, self.reputation - 5)
             self.comment = SHIMARISU_COMMENTS["sold_bad"]
 
         self.add_log(UI_TEXT["log_sold"].format(amount=yen(prop.sold_price), profit=yen(profit)))
@@ -944,6 +1009,54 @@ class ShimarisuRealEstateGame:
             return "cash_center"
         return "loan_available"
 
+    def calculate_credit_change(self, prop: PropertyCase, profit: int) -> tuple[int, str]:
+        if profit < 0:
+            return -3, UI_TEXT["credit_loss"]
+        if prop.hidden_risk_found and not (prop.investigated and prop.heard_from_seller):
+            return -2, UI_TEXT["credit_hidden_risk"]
+        if prop.investigated and prop.heard_from_seller:
+            return 3, UI_TEXT["credit_full_good"]
+        if prop.investigated or prop.heard_from_seller:
+            return 1, UI_TEXT["credit_partial_good"]
+        if profit >= 1_500_000:
+            return 0, UI_TEXT["credit_no_check_good"]
+        return -1, UI_TEXT["credit_no_check_good"]
+
+    def sale_negotiation_discount_for(self, prop: PropertyCase) -> int:
+        points = 0
+        if prop.price_cut_count >= 2:
+            points += 1
+        if prop.listed_days >= 60:
+            points += 1
+        if prop.sale_strategy_key == "strong":
+            points += 1
+        if not prop.rebuildable or prop.illegal_building:
+            points += 1
+        if prop.termite_damage or prop.flood_damage or prop.neighbor_trouble:
+            points += 1
+        if prop.parking_count == 0 or prop.age >= 40:
+            points += 1
+        if not prop.investigated:
+            points += 1
+        if not prop.heard_from_seller:
+            points += 1
+        if points <= 1:
+            return 0
+        rate = min(0.08, 0.015 * points)
+        return round((prop.listed_price * rate) / 100_000) * 100_000
+
+    def update_market_freshness(self, prop: PropertyCase) -> None:
+        if prop.listed_days > 90:
+            freshness = 65
+        elif prop.listed_days > 60:
+            freshness = 80
+        elif prop.listed_days > 30:
+            freshness = 90
+        else:
+            freshness = 100
+        freshness += min(12, prop.price_cut_count * 3)
+        prop.market_freshness = max(35, min(100, freshness))
+
     def has_known_high_risk(self, prop: PropertyCase) -> bool:
         checks = (
             (not prop.rebuildable, "rebuildable"),
@@ -966,6 +1079,7 @@ class ShimarisuRealEstateGame:
             return
         prop.listed_price = round(next_price / 100_000) * 100_000
         prop.price_cut_count += 1
+        prop.market_freshness = min(100, prop.market_freshness + (6 if amount >= 1_000_000 else 3))
         prop.last_sale_feedback = self.sale_feedback_reasons(prop)
         self.comment = SHIMARISU_COMMENTS["price_down"]
         self.add_log(UI_TEXT["log_price_down"].format(amount=yen(amount)))
@@ -1008,15 +1122,48 @@ class ShimarisuRealEstateGame:
             reasons.append(UI_TEXT["feedback_termite"])
         if prop.parking_count == 0:
             reasons.append(UI_TEXT["feedback_parking"])
+        elif prop.parking_count == 1:
+            reasons.append(UI_TEXT["feedback_suburban_one_parking"])
         if prop.age >= 40:
             reasons.append(UI_TEXT["feedback_old"])
         if prop.days_held >= 60:
             reasons.append(UI_TEXT["feedback_long"])
+        if prop.market_freshness < 90:
+            reasons.append(UI_TEXT["feedback_market_stale"])
+        if not prop.investigated:
+            reasons.append(UI_TEXT["feedback_under_investigated"])
+        if not prop.heard_from_seller:
+            reasons.append(UI_TEXT["feedback_under_heard"])
         if self.reputation < 45:
             reasons.append(UI_TEXT["feedback_reputation"])
         if self.buyer_finance_status(prop) in {"cash_center", "cash_only"}:
             reasons.append(UI_TEXT["feedback_cash_center"])
         return reasons[:4] or [UI_TEXT["feedback_normal"]]
+
+    def candidate_attention_points(self, prop: PropertyCase) -> list[str]:
+        points: list[str] = []
+        if not prop.investigated:
+            points.append(UI_TEXT["investigate_hint"])
+        if not prop.heard_from_seller:
+            points.append(UI_TEXT["hearing_hint"])
+        rough_profit = prop.expected_sale_price - prop.buy_price
+        if rough_profit < 2_000_000:
+            points.append(UI_TEXT["skip_reason_margin"])
+        if prop.parking_count == 0:
+            points.append(UI_TEXT["feedback_parking"])
+        if prop.age >= 40:
+            points.append(UI_TEXT["feedback_old"])
+        return points[:5]
+
+    def skip_reason_for(self, prop: PropertyCase) -> str:
+        if self.has_known_high_risk(prop):
+            return UI_TEXT["skip_reason_risk"]
+        rough_profit = prop.expected_sale_price - prop.buy_price
+        if rough_profit < 2_000_000:
+            return UI_TEXT["skip_reason_margin"]
+        if self.cash < prop.buy_price + (calc_brokerage_fee(prop.buy_price) if prop.source == "broker" else 0):
+            return UI_TEXT["skip_reason_cash"]
+        return UI_TEXT["skip_reason_optional"]
 
     def renovation_value_bonus(self, prop: PropertyCase) -> int:
         if prop.renovation_budget <= 0:
@@ -1102,6 +1249,15 @@ class ShimarisuRealEstateGame:
         if prop.neighbor_trouble:
             chance -= 0.02
         chance += min(0.04, prop.price_cut_count * 0.012)
+        if not prop.investigated and not prop.heard_from_seller:
+            chance -= 0.30
+        elif not prop.investigated:
+            chance -= 0.15
+        elif not prop.heard_from_seller:
+            chance -= 0.10
+        chance -= (100 - prop.market_freshness) * 0.0012
+        if prop.sale_strategy_key == "strong" and prop.market_freshness < 80:
+            chance -= 0.03
 
         if prop.days_held >= 90:
             chance -= 0.03
@@ -1176,7 +1332,7 @@ class ShimarisuRealEstateGame:
 
     def draw_result(self) -> None:
         self.screen.fill(COLORS["bg"])
-        panel = pygame.Rect(220, 72, 660, 560)
+        panel = pygame.Rect(190, 48, 800, 690)
         self.draw_panel(panel, COLORS["panel"])
         self.draw_text(UI_TEXT["result"], (panel.x + 32, panel.y + 28), 34, True)
 
@@ -1188,24 +1344,34 @@ class ShimarisuRealEstateGame:
             (UI_TEXT["sold_count"], f"{self.sold_count}件"),
             (UI_TEXT["skipped_count"], f"{self.skipped_count}件"),
             (UI_TEXT["unsold_count"], f"{self.unsold_count()}件"),
+            (UI_TEXT["loss_count"], f"{self.loss_count}件"),
+            (UI_TEXT["uninvestigated_sales"], f"{self.uninvestigated_sales}件"),
+            (UI_TEXT["unheard_sales"], f"{self.unheard_sales}件"),
             (UI_TEXT["best_profit"], self.best_profit_text()),
             (UI_TEXT["reputation"], f"{self.reputation}"),
         ]
         y = panel.y + 104
         for label, value in rows:
-            self.draw_key_value(label, value, pygame.Rect(panel.x + 42, y, 560, 32))
-            y += 36
+            self.draw_key_value(label, value, pygame.Rect(panel.x + 42, y, 700, 27))
+            y += 31
 
         if self.shimarisu:
-            self.draw_shimarisu_image(self.shimarisu, pygame.Rect(panel.x + 42, panel.y + 428, 96, 96))
+            self.draw_shimarisu_image(self.shimarisu, pygame.Rect(panel.x + 42, panel.y + 515, 96, 96))
+        self.draw_text(UI_TEXT["trust_evaluation"], (panel.x + 156, panel.y + 512), 17, True, COLORS["green_dark"])
         self.draw_wrapped_text(
-            self.result_detail_comment(),
-            pygame.Rect(panel.x + 156, panel.y + 424, 450, 96),
-            self.get_font(17),
+            self.trust_evaluation_comment(),
+            pygame.Rect(panel.x + 156, panel.y + 540, 560, 70),
+            self.get_font(16),
             COLORS["text"],
         )
-        self.add_button(pygame.Rect(panel.x + 188, panel.y + 500, 136, 48), UI_TEXT["restart"], "restart")
-        self.add_button(pygame.Rect(panel.x + 340, panel.y + 500, 136, 48), UI_TEXT["quit"], "quit")
+        self.draw_wrapped_text(
+            self.result_detail_comment(),
+            pygame.Rect(panel.x + 156, panel.y + 610, 560, 42),
+            self.get_font(13),
+            COLORS["muted"],
+        )
+        self.add_button(pygame.Rect(panel.x + 250, panel.y + 650, 136, 48), UI_TEXT["restart"], "restart")
+        self.add_button(pygame.Rect(panel.x + 410, panel.y + 650, 136, 48), UI_TEXT["quit"], "quit")
         self.draw_buttons()
 
     def best_profit_text(self) -> str:
@@ -1223,6 +1389,17 @@ class ShimarisuRealEstateGame:
         if self.cash < LOW_CASH_WARNING:
             return f"{self.comment}\n{UI_TEXT['cash_warning']}"
         return self.comment
+
+    def trust_evaluation_comment(self) -> str:
+        if self.reputation >= 58 and self.loss_count == 0 and self.uninvestigated_sales == 0 and self.unheard_sales == 0:
+            return UI_TEXT["trust_comment_good"]
+        if self.total_assets_estimate() >= INITIAL_CASH and (self.uninvestigated_sales or self.unheard_sales):
+            return UI_TEXT["trust_comment_mixed"]
+        if self.reputation < 45 or self.total_assets_estimate() < INITIAL_CASH or self.loss_count:
+            return UI_TEXT["trust_comment_bad"]
+        if self.unsold_count():
+            return SHIMARISU_COMMENTS["result_even"]
+        return UI_TEXT["trust_comment_good"]
 
     def draw_header(self) -> None:
         header = pygame.Rect(24, 18, 1132, 64)
@@ -1256,7 +1433,7 @@ class ShimarisuRealEstateGame:
         self.draw_office_area(pygame.Rect(panel.x + 18, panel.y + 320, 234, 142))
         self.draw_text(UI_TEXT["memo"], (panel.x + 18, panel.y + 486), 15, True, COLORS["muted"])
         log_y = panel.y + 514
-        for log in self.message_log[:3]:
+        for log in self.message_log[:2]:
             self.draw_wrapped_text(
                 f"・{log}",
                 pygame.Rect(panel.x + 18, log_y, 234, 28),
@@ -1316,13 +1493,18 @@ class ShimarisuRealEstateGame:
 
         if prop.status == "sold" and y + 76 < panel.bottom:
             banner = pygame.Rect(panel.x + 24, y + 12, 422, 62)
-            pygame.draw.rect(self.screen, COLORS["soft_green"], banner, border_radius=8)
-            pygame.draw.rect(self.screen, COLORS["green"], banner, 1, border_radius=8)
-            self.draw_text(UI_TEXT["sold_banner"], (banner.x + 16, banner.y + 10), 17, True, COLORS["green_dark"])
+            is_loss = prop.sold_profit < 0
+            banner_bg = (255, 235, 232) if is_loss else COLORS["soft_green"]
+            banner_line = COLORS["red"] if is_loss else COLORS["green"]
+            banner_color = COLORS["red"] if is_loss else COLORS["green_dark"]
+            profit_label = UI_TEXT["confirmed_loss"] if is_loss else UI_TEXT["confirmed_profit"]
+            pygame.draw.rect(self.screen, banner_bg, banner, border_radius=8)
+            pygame.draw.rect(self.screen, banner_line, banner, 1, border_radius=8)
+            self.draw_text(UI_TEXT["sold_banner"], (banner.x + 16, banner.y + 10), 17, True, banner_color)
             profit_surf = self.get_font(20, True).render(
-                f"{UI_TEXT['confirmed_profit']}: {yen(prop.sold_profit)}",
+                f"{profit_label}: {yen(prop.sold_profit)}",
                 True,
-                COLORS["green_dark"],
+                banner_color,
             )
             self.screen.blit(profit_surf, (banner.x + 16, banner.y + 34))
         elif self.pending_confirmation == "risk" and y + 64 < panel.bottom:
@@ -1340,9 +1522,19 @@ class ShimarisuRealEstateGame:
     def draw_right_panel(self) -> None:
         panel = pygame.Rect(804, 98, 352, 606)
         self.draw_panel(panel, COLORS["panel"])
-        self.draw_text(UI_TEXT["cost_profit"], (panel.x + 18, panel.y + 18), 20, True)
         prop = self.current_property
         if not prop:
+            return
+        self.draw_text(self.right_panel_title(prop), (panel.x + 18, panel.y + 18), 20, True)
+
+        if prop.status == "candidate":
+            self.draw_candidate_right_panel(panel, prop)
+            return
+        if prop.status == "skipped":
+            self.draw_skipped_right_panel(panel, prop)
+            return
+        if prop.status == "listed":
+            self.draw_listed_right_panel(panel, prop)
             return
 
         y = panel.y + 58
@@ -1360,27 +1552,35 @@ class ShimarisuRealEstateGame:
         if prop.status == "sold":
             y += 10
             profit_rect = pygame.Rect(panel.x + 18, y, 316, 76)
-            pygame.draw.rect(self.screen, COLORS["soft_green"], profit_rect, border_radius=8)
-            pygame.draw.rect(self.screen, COLORS["green"], profit_rect, 1, border_radius=8)
-            self.draw_text(UI_TEXT["sold_banner"], (profit_rect.x + 14, profit_rect.y + 10), 16, True, COLORS["green_dark"])
-            self.draw_text(UI_TEXT["confirmed_profit"], (profit_rect.x + 14, profit_rect.y + 42), 13, False, COLORS["muted"])
-            profit_surf = self.get_font(19, True).render(yen(prop.sold_profit), True, COLORS["green_dark"])
+            is_loss = prop.sold_profit < 0
+            box_bg = (255, 235, 232) if is_loss else COLORS["soft_green"]
+            box_line = COLORS["red"] if is_loss else COLORS["green"]
+            profit_label = UI_TEXT["confirmed_loss"] if is_loss else UI_TEXT["confirmed_profit"]
+            profit_color = COLORS["red"] if is_loss else COLORS["green_dark"]
+            pygame.draw.rect(self.screen, box_bg, profit_rect, border_radius=8)
+            pygame.draw.rect(self.screen, box_line, profit_rect, 1, border_radius=8)
+            self.draw_text(UI_TEXT["sold_banner"], (profit_rect.x + 14, profit_rect.y + 10), 16, True, profit_color)
+            self.draw_text(profit_label, (profit_rect.x + 14, profit_rect.y + 42), 13, False, COLORS["muted"])
+            profit_surf = self.get_font(19, True).render(yen(prop.sold_profit), True, profit_color)
             self.screen.blit(profit_surf, profit_surf.get_rect(midright=(profit_rect.right - 14, profit_rect.y + 52)))
             y += 94
 
             sold_rows = [
                 (UI_TEXT["sale_price"], yen(prop.sold_price)),
                 (UI_TEXT["total_cost"], yen(self.calculate_total_cost(prop))),
+                (UI_TEXT["sale_negotiation"], f"-{yen(prop.sale_negotiation_discount)}"),
                 (UI_TEXT["brokerage_income"], yen(prop.brokerage_income)),
                 (UI_TEXT["outside_fee"], yen(prop.outside_fee)),
                 (UI_TEXT["net_proceeds"], yen(prop.net_proceeds)),
-                (UI_TEXT["cash_delta"], f"+{yen(prop.net_proceeds)}"),
                 (UI_TEXT["sale_channel"], UI_TEXT[prop.sale_channel]),
+                (UI_TEXT["credit_delta"], self.signed_plain(prop.credit_delta)),
             ]
             self.draw_text(UI_TEXT["sold_result"], (panel.x + 18, y), 16, True, COLORS["muted"])
             y += 30
             for label, value in sold_rows:
-                value_color = COLORS["green_dark"] if label in {UI_TEXT["net_proceeds"], UI_TEXT["cash_delta"]} else COLORS["text"]
+                value_color = COLORS["green_dark"] if label == UI_TEXT["net_proceeds"] else COLORS["text"]
+                if label == UI_TEXT["credit_delta"]:
+                    value_color = COLORS["green_dark"] if prop.credit_delta >= 0 else COLORS["red"]
                 self.draw_key_value(
                     label,
                     value,
@@ -1389,8 +1589,8 @@ class ShimarisuRealEstateGame:
                     value_color=value_color,
                 )
                 y += 25
-            y += 8
-            self.draw_cash_memo(panel, y, sold=True)
+            if y + 48 < panel.bottom:
+                self.draw_wrapped_text(prop.credit_reason, pygame.Rect(panel.x + 18, y + 6, 316, 42), self.get_font(12), COLORS["muted"])
             return
 
         y += 10
@@ -1450,6 +1650,102 @@ class ShimarisuRealEstateGame:
         else:
             y += 10
             self.draw_cash_memo(panel, y)
+
+    def right_panel_title(self, prop: PropertyCase) -> str:
+        if prop.status == "candidate":
+            return UI_TEXT["case_memo"]
+        if prop.status == "skipped":
+            return UI_TEXT["skip_result"]
+        if prop.status == "renovating":
+            return UI_TEXT["renovating"]
+        if prop.status == "listed":
+            return UI_TEXT["listed"]
+        if prop.status == "sold":
+            return UI_TEXT["sold_result"]
+        return UI_TEXT["cost_profit"]
+
+    def draw_candidate_right_panel(self, panel: pygame.Rect, prop: PropertyCase) -> None:
+        y = panel.y + 58
+        rough_profit = prop.expected_sale_price - prop.buy_price
+        rows = [
+            (UI_TEXT["buy_price"], yen(prop.buy_price)),
+            (UI_TEXT["expected_sale"], yen(prop.expected_sale_price)),
+            (UI_TEXT["rough_profit"], yen(rough_profit)),
+            (UI_TEXT["investigation_state"], UI_TEXT["survey_done"] if prop.investigated else UI_TEXT["not_checked"]),
+            (UI_TEXT["hearing_state"], UI_TEXT["hearing_done"] if prop.heard_from_seller else UI_TEXT["not_checked"]),
+        ]
+        for label, value in rows:
+            self.draw_key_value(label, value, pygame.Rect(panel.x + 18, y, 316, 24), small=True)
+            y += 30
+
+        y += 8
+        self.draw_text(UI_TEXT["attention_points"], (panel.x + 18, y), 15, True, COLORS["muted"])
+        y += 26
+        points = self.candidate_attention_points(prop)
+        for point in points[:5]:
+            self.draw_wrapped_text(
+                f"・{point}",
+                pygame.Rect(panel.x + 18, y, 316, 24),
+                self.get_font(12),
+                COLORS["muted"],
+            )
+            y += 24
+
+        y += 8
+        self.draw_wrapped_text(UI_TEXT["investigate_hint"], pygame.Rect(panel.x + 18, y, 316, 38), self.get_font(12), COLORS["muted"])
+        y += 42
+        self.draw_wrapped_text(UI_TEXT["hearing_hint"], pygame.Rect(panel.x + 18, y, 316, 38), self.get_font(12), COLORS["muted"])
+
+    def draw_skipped_right_panel(self, panel: pygame.Rect, prop: PropertyCase) -> None:
+        y = panel.y + 58
+        self.draw_wrapped_text(UI_TEXT["skip_message"], pygame.Rect(panel.x + 18, y, 316, 34), self.get_font(15), COLORS["text"])
+        y += 48
+        rep_delta = "-1" if prop.source == "broker" and not self.has_known_high_risk(prop) else "なし"
+        rows = [
+            (UI_TEXT["buy_price"], yen(prop.buy_price)),
+            (UI_TEXT["expected_sale"], yen(prop.expected_sale_price)),
+            (UI_TEXT["skip_reason"], self.skip_reason_for(prop)),
+            (UI_TEXT["elapsed_days"], "+2日"),
+            (UI_TEXT["credit_delta"], rep_delta),
+        ]
+        for label, value in rows:
+            self.draw_key_value(label, value, pygame.Rect(panel.x + 18, y, 316, 24), small=True)
+            y += 31
+        y += 12
+        self.draw_text(UI_TEXT["cash_memo"], (panel.x + 18, y), 15, True, COLORS["muted"])
+        y += 28
+        self.draw_wrapped_text(self.comment, pygame.Rect(panel.x + 18, y, 316, 74), self.get_font(13), COLORS["muted"])
+
+    def draw_listed_right_panel(self, panel: pygame.Rect, prop: PropertyCase) -> None:
+        y = panel.y + 58
+        projected = self.projected_profit_for(prop) or 0
+        rows = [
+            (UI_TEXT["listed_price"], yen(prop.listed_price)),
+            (UI_TEXT["projected_profit"], yen(projected)),
+            (UI_TEXT["sale_chance"], f"{self.calculate_sale_chance(prop) * 100:.1f}%"),
+            (UI_TEXT["sales_days"], f"{prop.listed_days}日"),
+            (UI_TEXT["market_freshness"], f"{prop.market_freshness}"),
+        ]
+        for label, value in rows:
+            self.draw_key_value(label, value, pygame.Rect(panel.x + 18, y, 316, 23), small=True)
+            y += 28
+
+        y += 8
+        self.draw_sale_feedback(panel, y)
+        y += 110
+        self.draw_text(UI_TEXT["cash_assets"], (panel.x + 18, y), 15, True, COLORS["muted"])
+        y += 28
+        asset_rows = [
+            (UI_TEXT["cash_on_hand"], yen(self.cash)),
+            (UI_TEXT["holding_value"], yen(self.holding_value(prop))),
+            (UI_TEXT["total_assets"], yen(self.total_assets_estimate())),
+            (UI_TEXT["unrealized_profit"], self.signed_yen(self.unrealized_profit(prop))),
+        ]
+        for label, value in asset_rows:
+            self.draw_key_value(label, value, pygame.Rect(panel.x + 18, y, 316, 21), small=True)
+            y += 24
+        if self.cash < LOW_CASH_WARNING:
+            self.draw_wrapped_text(UI_TEXT["cash_warning"], pygame.Rect(panel.x + 18, y + 4, 316, 38), self.get_font(12), COLORS["red"])
 
     def draw_profit_targets(self, panel: pygame.Rect, y: int) -> None:
         prop = self.current_property
@@ -1545,6 +1841,11 @@ class ShimarisuRealEstateGame:
             return f"+{yen(value)}"
         return f"-{yen(abs(value))}"
 
+    def signed_plain(self, value: int) -> str:
+        if value > 0:
+            return f"+{value}"
+        return str(value)
+
     def draw_bottom_buttons(self) -> None:
         panel = pygame.Rect(24, 724, 1132, 72)
         self.draw_panel(panel, COLORS["panel"])
@@ -1580,8 +1881,8 @@ class ShimarisuRealEstateGame:
             return [(UI_TEXT["new_case"], "new_case", None, True)]
         if prop.status == "candidate":
             return [
-                (f"{UI_TEXT['investigate']}\n{UI_TEXT['investigate_hint']}", "investigate", None, not prop.known_flags.get("investigated")),
-                (f"{UI_TEXT['hearing']}\n{UI_TEXT['hearing_hint']}", "hearing", None, not prop.known_flags.get("hearing")),
+                (UI_TEXT["investigate"], "investigate", None, not prop.known_flags.get("investigated")),
+                (UI_TEXT["hearing"], "hearing", None, not prop.known_flags.get("hearing")),
                 (UI_TEXT["buy"], "buy", None, True),
                 (UI_TEXT["skip"], "skip", None, True),
             ]
