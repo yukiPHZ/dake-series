@@ -34,3 +34,4 @@ assets/screenshot.jpg
 booth_ready/Dake_Check_Stamp.zip
 
 # URL
+https://peakheadz.booth.pm/items/8448176

@@ -34,3 +34,4 @@ assets/screenshot.jpg
 booth_ready/DakePDF_Merge_Mini.zip
 
 # URL
+https://peakheadz.booth.pm/items/8448200

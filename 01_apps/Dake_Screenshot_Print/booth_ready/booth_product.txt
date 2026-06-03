@@ -34,3 +34,4 @@ assets/screenshot.jpg
 booth_ready/DakeScreenshot_Print.zip
 
 # URL
+https://peakheadz.booth.pm/items/8448262

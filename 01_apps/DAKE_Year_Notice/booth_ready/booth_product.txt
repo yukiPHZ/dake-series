@@ -33,3 +33,4 @@ assets/screenshot.jpg
 booth_ready/DakeYear_Notice.zip
 
 # URL
+https://peakheadz.booth.pm/items/8448289

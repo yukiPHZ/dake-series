@@ -34,3 +34,4 @@ assets/screenshot.jpg
 booth_ready/DakeSticky_Memo.zip
 
 # URL
+https://peakheadz.booth.pm/items/8448263

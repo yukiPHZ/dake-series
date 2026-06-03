@@ -34,3 +34,4 @@ assets/screenshot.jpg
 booth_ready/DakePDF_Split_One.zip
 
 # URL
+https://peakheadz.booth.pm/items/8448207

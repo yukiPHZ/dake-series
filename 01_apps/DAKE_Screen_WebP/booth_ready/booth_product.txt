@@ -33,3 +33,4 @@ assets/screenshot.jpg
 booth_ready/DakeScreen_WebP.zip
 
 # URL
+https://peakheadz.booth.pm/items/8448261

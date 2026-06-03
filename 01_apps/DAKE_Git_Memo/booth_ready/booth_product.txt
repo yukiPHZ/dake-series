@@ -36,3 +36,4 @@ assets/screenshot.jpg
 booth_ready/DakeGit_Memo.zip
 
 # URL
+https://peakheadz.booth.pm/items/8447593

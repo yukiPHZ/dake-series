@@ -34,3 +34,4 @@ assets/screenshot.jpg
 booth_ready/DakeColumn_Memo.zip
 
 # URL
+https://peakheadz.booth.pm/items/8447582

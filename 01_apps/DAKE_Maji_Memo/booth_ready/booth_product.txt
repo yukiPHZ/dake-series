@@ -34,3 +34,4 @@ assets/screenshot.jpg
 booth_ready/DakeMaji_Memo.zip
 
 # URL
+https://peakheadz.booth.pm/items/8448021
