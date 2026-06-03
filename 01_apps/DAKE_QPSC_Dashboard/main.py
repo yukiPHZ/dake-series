@@ -246,6 +246,7 @@ class AppRadar:
 @dataclass(frozen=True)
 class PackRadar:
     total: int = 0
+    booth_count: int = 0
     booth_missing: tuple[TargetItem, ...] = ()
     stale: tuple[TargetItem, ...] = ()
     ready_count: int = 0
@@ -624,6 +625,7 @@ def collect_pack_radar() -> tuple[PackRadar, tuple[str, ...]]:
         booth_missing: list[TargetItem] = []
         stale_targets: list[TargetItem] = []
         ready_count = 0
+        booth_count = 0
         total = 0
         for folder in sorted((child for child in DEFAULT_PACKS_ROOT.iterdir() if child.is_dir() and not child.name.startswith(".")), key=lambda item: item.name.lower()):
             meta, issue_key = extract_meta(folder / README_NAME, PACK_META_PATTERN)
@@ -633,13 +635,16 @@ def collect_pack_radar() -> tuple[PackRadar, tuple[str, ...]]:
             title = safe_text(meta.get("display_name", "")) or folder.name
             ready_dir = pack_ready_dir(folder)
             ready = ready_dir.exists() and pack_product_path(folder).exists() and (folder / "assets" / "booth_thumbnail.jpg").exists() and pack_zip_exists(folder)
+            booth_url = pack_booth_url(folder, meta)
+            if booth_url:
+                booth_count += 1
             if ready and not pack_stale(folder, meta):
                 ready_count += 1
-            if ready and not pack_booth_url(folder, meta):
+            if ready and not booth_url:
                 booth_missing.append(TargetItem(title, UI_TEXT["reason_pack_booth_missing"], ready_dir, folder.name, priority=PRIORITY_URGENT))
             if pack_stale(folder, meta):
                 stale_targets.append(TargetItem(title, UI_TEXT["reason_pack_stale"], ready_dir if ready_dir.exists() else folder, folder.name, priority=PRIORITY_ACTIVE))
-        return PackRadar(total=total, booth_missing=tuple(booth_missing), stale=tuple(stale_targets), ready_count=ready_count), ()
+        return PackRadar(total=total, booth_count=booth_count, booth_missing=tuple(booth_missing), stale=tuple(stale_targets), ready_count=ready_count), ()
     except Exception as exc:
         warning = UI_TEXT["source_error"].format(source=UI_TEXT["source_pack"])
         return PackRadar(error=UI_TEXT["error_scan_failed"].format(error=exc)), (warning,)
@@ -1547,7 +1552,7 @@ def run_launch_check() -> int:
         UI_TEXT["launch_check_template"].format(
             apps=summary.app.total,
             packs=summary.pack.total,
-            pack_booth=len(summary.pack.booth_missing),
+            pack_booth=summary.pack.booth_count,
             pack_stale=len(summary.pack.stale),
             booth_urgent=priority_count(summary.app.booth_missing, PRIORITY_URGENT),
             booth_total=len(summary.app.booth_missing),
