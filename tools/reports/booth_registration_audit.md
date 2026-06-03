@@ -9,8 +9,8 @@ Generated from DAKE app README metadata and booth_product.txt files.
 - registered: 51
 - not registered / check required: 1
 - REGISTERED: 51
-- READY_NO_URL: 0
-- MISSING_PRODUCT: 1
+- READY_NO_URL: 1
+- MISSING_PRODUCT: 0
 - MISSING_READY: 0
 - MISSING_ZIP: 0
 - CHECK_REQUIRED: 0
@@ -26,7 +26,7 @@ Generated from DAKE app README metadata and booth_product.txt files.
 
 | item | state | status | type | booth_url | note |
 | --- | --- | --- | --- | --- | --- |
-| 01_apps/DAKE_Video_Shorts_Cut | MISSING_PRODUCT | available |  |  |  |
+| 01_apps/DAKE_Video_Shorts_Cut | READY_NO_URL | available | market |  |  |
 
 ## Registered
 

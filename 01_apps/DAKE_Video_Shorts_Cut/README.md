@@ -198,7 +198,7 @@ python main.py --process-check "C:\path\to\sample.mp4" --center-crop
 ```json
 {
   "app_key": "video_shorts_cut",
-  "display_name": "ショート切り出し",
+  "display_name": "Dakeショート切り出し",
   "launcher_title": "ショート切り出し",
   "launcher_description": "MP4からショート候補とサムネを作成します。",
   "site_title": "Dakeショート切り出し",
@@ -206,7 +206,9 @@ python main.py --process-check "C:\path\to\sample.mp4" --center-crop
   "update_summary": "ウインドウアイコン反映を補正し、ショート候補の開始位置を分散する簡易探索を追加",
   "folder_name": "DAKE_Video_Shorts_Cut",
   "exe_name": "DakeVideo_Shorts_Cut.exe",
-  "release_url": "",
+  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Video_Shorts_Cut_v1.0.0",
+  "app_type": "market",
+  "completion_goal": "formal_release",
   "screenshot_path": "assets/screenshot.webp",
   "status": "available",
   "show_in_launcher": true,

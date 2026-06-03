@@ -54,7 +54,7 @@ app,01_apps/DAKE_Screenshot_Print,Dakeスクショ印刷,available,,,REGISTERED,
 app,01_apps/DAKE_Sticky_Memo,付箋メモ,available,,,REGISTERED,https://peakheadz.booth.pm/items/8448263,,https://peakheadz.booth.pm/items/8448263,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Sticky_Memo_v1.0.0,yes,yes,yes,yes,yes,yes,
 app,01_apps/DAKE_Time_AdvancedTimer,Dakeアドバンスドタイマー,available,market,formal_release,REGISTERED,https://peakheadz.booth.pm/items/8449210,https://peakheadz.booth.pm/items/8449210,https://peakheadz.booth.pm/items/8449210,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Time_AdvancedTimer_v1.0.0,yes,yes,yes,yes,yes,yes,
 app,01_apps/DAKE_TwoPerson_Memo,Dake二人メモ,available,,,REGISTERED,https://peakheadz.booth.pm/items/8448279,,https://peakheadz.booth.pm/items/8448279,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_TwoPerson_Memo_v1.0.0,yes,yes,yes,yes,yes,yes,
-app,01_apps/DAKE_Video_Shorts_Cut,ショート切り出し,available,,,MISSING_PRODUCT,,,,,no,no,no,no,no,no,
+app,01_apps/DAKE_Video_Shorts_Cut,Dakeショート切り出し,available,market,formal_release,READY_NO_URL,,,,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Video_Shorts_Cut_v1.0.0,yes,yes,yes,yes,yes,yes,
 app,01_apps/DAKE_Wake_Brainz,DAKE_Wake_Brainz,draft,qpcs,system_ready,SKIPPED_STATUS,,,,,no,yes,yes,yes,no,no,status=draft; app_type=qpcs
 app,01_apps/DAKE_Web_Dashboard,DAKE Web Dashboard,frozen,qpcs,system_ready,SKIPPED_STATUS,,,,,no,no,no,no,no,no,status=frozen; app_type=qpcs
 app,01_apps/DAKE_Web_Index,DAKE Web Index,internal,,,SKIPPED_STATUS,,,,,no,no,no,no,no,no,status=internal

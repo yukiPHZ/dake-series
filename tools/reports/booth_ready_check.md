@@ -1,6 +1,6 @@
 # DAKE BOOTH Ready Check v2
 
-Generated: 2026-06-04 05:59:56
+Generated: 2026-06-04 06:47:15
 
 ## Summary
 
@@ -9,9 +9,9 @@ Generated: 2026-06-04 05:59:56
 - closed ok: 49
 - not closed: 1
 - excluded by status: 15
-- release_url empty available: 1
+- release_url empty available: 0
 - show flag conflicts: 2
-- dakeapp.com publish candidates: 1
+- dakeapp.com publish candidates: 0
 
 ## Status Counts
 
@@ -26,20 +26,20 @@ Generated: 2026-06-04 05:59:56
 
 ## Available Asset Summary
 
-- screenshot.webp missing: 1
-- booth_thumbnail.jpg missing: 1
-- booth_product.txt missing: 1
-- booth_ready/ missing: 1
-- zip missing: 1
+- screenshot.webp missing: 0
+- booth_thumbnail.jpg missing: 0
+- booth_product.txt missing: 0
+- booth_ready/ missing: 0
+- zip missing: 0
 - icon build missing: 0
 - icon main missing: 0
 
 ## BOOTH URL
 
 - set: 49
-- empty: 0
+- empty: 1
 - url section missing: 0
-- booth_product missing: 1
+- booth_product missing: 0
 
 ## Git Ignore
 
@@ -54,17 +54,17 @@ Generated: 2026-06-04 05:59:56
 
 ## Release URL Empty Available
 
-- DAKE_Video_Shorts_Cut
+- none
 
 ## dakeapp.com Publish Candidates
 
-- DAKE_Video_Shorts_Cut
+- none
 
 ## Not Closed Available Apps
 
 | app | asset_ready | release_url | booth_url | next_action |
 | --- | --- | --- | --- | --- |
-| DAKE_Video_Shorts_Cut | NG | NG | booth_product_missing | generate release_body.md from README RELEASE_BODY<br>need screenshot: create assets/screenshot.webp<br>generate assets/booth_thumbnail.jpg with tools/make_booth_ready.py<br>generate booth_ready/booth_product.txt with tools/make_booth_ready.py<br>generate booth_ready/ with tools/make_booth_ready.py<br>generate BOOTH ready zip from dist/*.exe<br>fill README DAKE_META.release_url after GitHub Release |
+| DAKE_Video_Shorts_Cut | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
 
 ## Excluded By Status
 
