@@ -1,0 +1,58 @@
+{
+  "schema": "dake_pack_manifest_v1",
+  "generated_at": "2026-06-03T15:54:25+09:00",
+  "folder_name": "DAKE_Pack_Memo",
+  "display_name": "DAKE メモと記録パック",
+  "status": "available",
+  "price": 980,
+  "booth_url": "",
+  "included_apps": [
+    {
+      "folder": "DAKE_Sticky_Memo",
+      "display_name": "付箋メモ",
+      "status": "available",
+      "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Sticky_Memo_v1.0.0",
+      "booth_url": "https://peakheadz.booth.pm/items/8448263",
+      "source_zip": "01_apps/DAKE_Sticky_Memo/booth_ready/DakeSticky_Memo.zip",
+      "source_zip_name": "DakeSticky_Memo.zip",
+      "source_zip_size": 10228596,
+      "source_zip_sha256": "cd0a6245031d1c704d66d9341b4bc009474f6a9235c91cd8ca11c391eb22c695"
+    },
+    {
+      "folder": "DAKE_Maji_Memo",
+      "display_name": "マジでメモ",
+      "status": "available",
+      "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Maji_Memo_v1.0.0",
+      "booth_url": "https://peakheadz.booth.pm/items/8448021",
+      "source_zip": "01_apps/DAKE_Maji_Memo/booth_ready/DakeMaji_Memo.zip",
+      "source_zip_name": "DakeMaji_Memo.zip",
+      "source_zip_size": 7191052,
+      "source_zip_sha256": "cf60884c23ab5002487e270a61c34a0f033d7f60c621f7fc4c762ecc98740109"
+    },
+    {
+      "folder": "DAKE_Git_Memo",
+      "display_name": "DakeGitメモ",
+      "status": "available",
+      "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Git_Memo_v1.0.0",
+      "booth_url": "https://peakheadz.booth.pm/items/8447593",
+      "source_zip": "01_apps/DAKE_Git_Memo/booth_ready/DakeGit_Memo.zip",
+      "source_zip_name": "DakeGit_Memo.zip",
+      "source_zip_size": 10184592,
+      "source_zip_sha256": "8b83f9097223c2367a593ad1123450e81f970c9d27556d910e157df5a650a7bc"
+    },
+    {
+      "folder": "DAKE_Yesterday_Task_Memo",
+      "display_name": "Dake昨日タスクメモ",
+      "status": "available",
+      "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Yesterday_Task_Memo_v1.0.0",
+      "booth_url": "https://peakheadz.booth.pm/items/8448291",
+      "source_zip": "01_apps/DAKE_Yesterday_Task_Memo/booth_ready/DakeYesterday_Task_Memo.zip",
+      "source_zip_name": "DakeYesterday_Task_Memo.zip",
+      "source_zip_size": 10147072,
+      "source_zip_sha256": "c43ebbcf7e24f9c7d3c517c369bb28788957111ee940f0cb7736e3d59a9f8cdc"
+    }
+  ],
+  "pack_zip": "04_packs/DAKE_Pack_Memo/pack_ready/DAKE_Pack_Memo.zip",
+  "pack_zip_size": 37762217,
+  "pack_zip_sha256": "c00a3435711b156912386422440c31613c4a7a4e8d6c2b584e54cf5d53563d22"
+}

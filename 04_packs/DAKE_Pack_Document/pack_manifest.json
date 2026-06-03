@@ -1,0 +1,58 @@
+{
+  "schema": "dake_pack_manifest_v1",
+  "generated_at": "2026-06-03T15:54:24+09:00",
+  "folder_name": "DAKE_Pack_Document",
+  "display_name": "DAKE 書類整理パック",
+  "status": "available",
+  "price": 1480,
+  "booth_url": "",
+  "included_apps": [
+    {
+      "folder": "DAKE_PDF_Merge",
+      "display_name": "DakePDF結合",
+      "status": "available",
+      "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Merge_v1.0.0",
+      "booth_url": "https://peakheadz.booth.pm/items/8448196",
+      "source_zip": "01_apps/DAKE_PDF_Merge/booth_ready/DakePDF_Merge.zip",
+      "source_zip_name": "DakePDF_Merge.zip",
+      "source_zip_size": 46549859,
+      "source_zip_sha256": "ba29b1e7450a78c4a895b3256baa7a0fddd74f5c9f0a37c2d391eddf2d6f7139"
+    },
+    {
+      "folder": "DAKE_Image_ToPDF",
+      "display_name": "DakeImageToPDF",
+      "status": "available",
+      "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_ToPDF_v1.0.0",
+      "booth_url": "https://peakheadz.booth.pm/items/8397610",
+      "source_zip": "01_apps/DAKE_Image_ToPDF/booth_ready/DakeImageToPDF.zip",
+      "source_zip_name": "DakeImageToPDF.zip",
+      "source_zip_size": 26352395,
+      "source_zip_sha256": "3a198dee43f2a5c35775622b5570779dee266d4e7c4dab2e1504b62842b8068e"
+    },
+    {
+      "folder": "DAKE_Image_Resize",
+      "display_name": "Dake画像リサイズ",
+      "status": "available",
+      "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_Resize_v1.0.0",
+      "booth_url": "https://peakheadz.booth.pm/items/8397622",
+      "source_zip": "01_apps/DAKE_Image_Resize/booth_ready/Dake_Image_Resize.zip",
+      "source_zip_name": "Dake_Image_Resize.zip",
+      "source_zip_size": 26012227,
+      "source_zip_sha256": "ea8c19f3f3cc26b3da9b5f8ffb8b063c9e9b9bc2c4390509a2397f9582a77925"
+    },
+    {
+      "folder": "DAKE_Image_PasteA4",
+      "display_name": "貼る",
+      "status": "available",
+      "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_PasteA4_v1.0.0",
+      "booth_url": "https://peakheadz.booth.pm/items/8397628",
+      "source_zip": "01_apps/DAKE_Image_PasteA4/booth_ready/DakeImage_PasteA4.zip",
+      "source_zip_name": "DakeImage_PasteA4.zip",
+      "source_zip_size": 25908509,
+      "source_zip_sha256": "e81e94141048f5f0c38bf06e220d21ebb0db80504a0d5c18fab600c4e74cf334"
+    }
+  ],
+  "pack_zip": "04_packs/DAKE_Pack_Document/pack_ready/DAKE_Pack_Document.zip",
+  "pack_zip_size": 124859888,
+  "pack_zip_sha256": "9f611289fa9702a6a803e0ad0039e3ccf0d8b36106a96e334dff165a5f99d523"
+}

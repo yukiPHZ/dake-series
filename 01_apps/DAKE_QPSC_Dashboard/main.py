@@ -38,6 +38,7 @@ README_NAME = "README.md"
 RELEASE_BODY_NAME = "release_body.md"
 DEFAULT_SERIES_ROOT = Path(os.environ.get("DAKE_SERIES_ROOT", r"C:\Users\yukiz\devlop\DAKE_series"))
 DEFAULT_APPS_ROOT = Path(os.environ.get("QPSC_SERIES_APPS_ROOT", str(DEFAULT_SERIES_ROOT / "01_apps")))
+DEFAULT_PACKS_ROOT = Path(os.environ.get("QPSC_SERIES_PACKS_ROOT", str(DEFAULT_SERIES_ROOT / "04_packs")))
 WORKER_POLL_MS = 80
 MAX_NEXT_ACTIONS = 3
 MAX_WEB_SITE_ROWS = 5
@@ -82,6 +83,9 @@ UI_TEXT = {
     "label_system_count": "QPCS系",
     "label_personal_count": "ユキズ専用",
     "label_frozen_count": "凍結",
+    "label_pack_total": "パック商品",
+    "label_pack_booth_missing": "パックURL未設定",
+    "label_pack_stale": "パック再生成",
     "label_series_uncommitted": "DAKE_series 未commit件数",
     "label_series_untracked": "DAKE_series 未追跡件数",
     "value_waiting": "確認待ち",
@@ -109,6 +113,8 @@ UI_TEXT = {
     "dialog_readme_title": "README不足アプリ",
     "dialog_role_title": "分類別 要確認アプリ",
     "dialog_series_git_title": "DAKE_series Git状態",
+    "dialog_pack_booth_title": "BOOTH URL未設定パック",
+    "dialog_pack_stale_title": "再生成が必要なパック",
     "dialog_select_notice": "一覧から対象を選択してください。",
     "dialog_booth_notice": "BOOTH素材が存在し、\nbooth_url が未設定のアプリです。",
     "booth_waiting_items": "登録前チェック: {items}",
@@ -122,6 +128,8 @@ UI_TEXT = {
     "next_readme": "README不足のアプリ",
     "next_role": "分類別の確認が必要なアプリ",
     "next_series_git": "DAKE_seriesのGit確認",
+    "next_pack_booth": "パック商品のBOOTH URL未設定",
+    "next_pack_stale": "パック商品の再生成確認",
     "next_line": "{index}. {label}（{count}件）",
     "reason_booth_missing": "BOOTH素材あり / booth_url 未設定",
     "reason_booth_materials_missing": "BOOTH登録前の素材が不足",
@@ -154,9 +162,12 @@ UI_TEXT = {
     "completion_goal_frozen_closed": "凍結完了",
     "completion_goal_unknown": "未設定",
     "reason_series_git": "DAKE_seriesのGit状態",
+    "reason_pack_booth_missing": "pack_readyあり / booth_url 未設定",
+    "reason_pack_stale": "収録元またはmanifestが変わっています",
     "source_app": "App Dashboard",
     "source_web_index": "DAKE_Web_Index",
     "source_git": "DAKE_series",
+    "source_pack": "DAKE Packs",
     "source_error": "{source}: 状態取得に失敗しました",
     "error_missing_main": "main.py が見つかりません",
     "error_import_failed": "外部ノードを読み込めません: {error}",
@@ -164,7 +175,7 @@ UI_TEXT = {
     "error_scan_failed": "外部ノードの取得に失敗しました: {error}",
     "booth_assist_notice": "DAKE_BOOTH_Assistを起動しました: {folder}",
     "booth_assist_fallback": "DAKE_BOOTH_Assistが見つからないためフォルダを開きます。",
-    "launch_check_template": "LAUNCH CHECK OK: apps={apps} booth_url={booth_urgent}/{booth_total} release={release_urgent}/{release_total} screenshot={screenshot_urgent}/{screenshot_total} readme={readme_urgent}/{readme_total} role={role_urgent}/{role_total} web_sites={sites} series_git={series_git}",
+    "launch_check_template": "LAUNCH CHECK OK: apps={apps} packs={packs} pack_booth={pack_booth} pack_stale={pack_stale} booth_url={booth_urgent}/{booth_total} release={release_urgent}/{release_total} screenshot={screenshot_urgent}/{screenshot_total} readme={readme_urgent}/{readme_total} role={role_urgent}/{role_total} web_sites={sites} series_git={series_git}",
 }
 
 THEME = {
@@ -200,6 +211,7 @@ PRIORITY_ACTIVE = "active"
 PRIORITY_LATER = "later"
 PRIORITY_ORDER = (PRIORITY_URGENT, PRIORITY_ACTIVE, PRIORITY_LATER)
 DAKE_META_PATTERN = re.compile(r"##\s*DAKE_META\b.*?```(?:json)?\s*(\{.*?\})\s*```", re.IGNORECASE | re.DOTALL)
+PACK_META_PATTERN = re.compile(r"##\s*PACK_META\b.*?```(?:json)?\s*(\{.*?\})\s*```", re.IGNORECASE | re.DOTALL)
 
 
 @dataclass(frozen=True)
@@ -232,6 +244,15 @@ class AppRadar:
 
 
 @dataclass(frozen=True)
+class PackRadar:
+    total: int = 0
+    booth_missing: tuple[TargetItem, ...] = ()
+    stale: tuple[TargetItem, ...] = ()
+    ready_count: int = 0
+    error: str = ""
+
+
+@dataclass(frozen=True)
 class WebSiteItem:
     folder_name: str
     site_name: str
@@ -256,6 +277,7 @@ class GitRadar:
 @dataclass(frozen=True)
 class RadarSummary:
     app: AppRadar
+    pack: PackRadar
     site: SiteRadar
     git: GitRadar
     loaded_at: datetime
@@ -270,6 +292,8 @@ class RadarSummary:
             + priority_count(self.app.screenshot_missing, PRIORITY_URGENT)
             + priority_count(self.app.readme_missing, PRIORITY_URGENT)
             + priority_count(self.app.role_attention, PRIORITY_URGENT)
+            + priority_count(self.pack.booth_missing, PRIORITY_URGENT)
+            + priority_count(self.pack.stale, PRIORITY_URGENT)
             + self.git.series_uncommitted
             + self.git.series_untracked
             + len(self.warnings)
@@ -284,6 +308,8 @@ class RadarSummary:
             + len(self.app.screenshot_missing)
             + len(self.app.readme_missing)
             + len(self.app.role_attention)
+            + len(self.pack.booth_missing)
+            + len(self.pack.stale)
             + self.git.series_uncommitted
             + self.git.series_untracked
             + len(self.warnings)
@@ -555,6 +581,68 @@ def app_has_dist(record: object) -> bool:
         return any((folder / DIST_DIR_NAME).glob("*.exe"))
     except OSError:
         return False
+
+
+def pack_ready_dir(folder: Path) -> Path:
+    return folder / "pack_ready"
+
+
+def pack_product_path(folder: Path) -> Path:
+    return pack_ready_dir(folder) / "booth_product.txt"
+
+
+def pack_zip_exists(folder: Path) -> bool:
+    ready_dir = pack_ready_dir(folder)
+    return any(ready_dir.glob("*.zip")) if ready_dir.exists() else False
+
+
+def pack_stale(folder: Path, meta: dict[str, object]) -> bool:
+    manifest_path = folder / "pack_manifest.json"
+    if not manifest_path.exists():
+        return True
+    try:
+        manifest = json.loads(read_text_utf8(manifest_path))
+    except (OSError, json.JSONDecodeError):
+        return True
+    items = meta.get("included_apps", [])
+    manifest_items = manifest.get("included_apps", []) if isinstance(manifest, dict) else []
+    return isinstance(items, list) and len(items) != len(manifest_items)
+
+
+def pack_booth_url(folder: Path, meta: dict[str, object]) -> str:
+    meta_url = safe_text(meta.get("booth_url", ""))
+    if meta_url:
+        return meta_url
+    product_path = pack_product_path(folder)
+    return read_booth_url_from_product(product_path) if product_path.exists() else ""
+
+
+def collect_pack_radar() -> tuple[PackRadar, tuple[str, ...]]:
+    try:
+        if not DEFAULT_PACKS_ROOT.exists():
+            return PackRadar(), ()
+        booth_missing: list[TargetItem] = []
+        stale_targets: list[TargetItem] = []
+        ready_count = 0
+        total = 0
+        for folder in sorted((child for child in DEFAULT_PACKS_ROOT.iterdir() if child.is_dir() and not child.name.startswith(".")), key=lambda item: item.name.lower()):
+            meta, issue_key = extract_meta(folder / README_NAME, PACK_META_PATTERN)
+            if issue_key or safe_text(meta.get("status", "")).lower() != "available":
+                continue
+            total += 1
+            title = safe_text(meta.get("display_name", "")) or folder.name
+            ready_dir = pack_ready_dir(folder)
+            ready = ready_dir.exists() and pack_product_path(folder).exists() and (folder / "assets" / "booth_thumbnail.jpg").exists() and pack_zip_exists(folder)
+            if ready and not pack_stale(folder, meta):
+                ready_count += 1
+            if ready and not pack_booth_url(folder, meta):
+                booth_missing.append(TargetItem(title, UI_TEXT["reason_pack_booth_missing"], ready_dir, folder.name, priority=PRIORITY_URGENT))
+            if pack_stale(folder, meta):
+                stale_targets.append(TargetItem(title, UI_TEXT["reason_pack_stale"], ready_dir if ready_dir.exists() else folder, folder.name, priority=PRIORITY_ACTIVE))
+        return PackRadar(total=total, booth_missing=tuple(booth_missing), stale=tuple(stale_targets), ready_count=ready_count), ()
+    except Exception as exc:
+        warning = UI_TEXT["source_error"].format(source=UI_TEXT["source_pack"])
+        return PackRadar(error=UI_TEXT["error_scan_failed"].format(error=exc)), (warning,)
 
 
 def app_booth_product_candidates(folder: Path) -> tuple[Path, ...]:
@@ -966,8 +1054,9 @@ def collect_site_radar() -> tuple[SiteRadar, tuple[str, ...]]:
 
 def collect_radar_summary() -> RadarSummary:
     app_radar, git_radar, app_warnings = collect_app_radar()
+    pack_radar, pack_warnings = collect_pack_radar()
     site_radar, site_warnings = collect_site_radar()
-    return RadarSummary(app=app_radar, site=site_radar, git=git_radar, loaded_at=datetime.now(), warnings=tuple(app_warnings + site_warnings))
+    return RadarSummary(app=app_radar, pack=pack_radar, site=site_radar, git=git_radar, loaded_at=datetime.now(), warnings=tuple(app_warnings + pack_warnings + site_warnings))
 
 
 def launch_target(folder: Path, exe_name: str) -> Path:
@@ -1023,6 +1112,9 @@ class QpscDashboardApp:
             "system": tk.StringVar(value=UI_TEXT["value_waiting"]),
             "personal": tk.StringVar(value=UI_TEXT["value_waiting"]),
             "frozen": tk.StringVar(value=UI_TEXT["value_waiting"]),
+            "pack_total": tk.StringVar(value=UI_TEXT["value_waiting"]),
+            "pack_booth": tk.StringVar(value=UI_TEXT["value_waiting"]),
+            "pack_stale": tk.StringVar(value=UI_TEXT["value_waiting"]),
         }
         self.web_site_rows: list[tuple[tk.StringVar, tk.StringVar, tk.StringVar]] = []
         self.web_sites_total_var = tk.StringVar(value=UI_TEXT["value_waiting"])
@@ -1128,6 +1220,9 @@ class QpscDashboardApp:
                 (UI_TEXT["label_system_count"], self.app_vars["system"], None),
                 (UI_TEXT["label_personal_count"], self.app_vars["personal"], None),
                 (UI_TEXT["label_frozen_count"], self.app_vars["frozen"], None),
+                (UI_TEXT["label_pack_total"], self.app_vars["pack_total"], None),
+                (UI_TEXT["label_pack_booth_missing"], self.app_vars["pack_booth"], lambda: self.show_targets("pack_booth")),
+                (UI_TEXT["label_pack_stale"], self.app_vars["pack_stale"], lambda: self.show_targets("pack_stale")),
             ),
         )
         return frame
@@ -1271,6 +1366,9 @@ class QpscDashboardApp:
         self.app_vars["system"].set(str(summary.app.system_count))
         self.app_vars["personal"].set(str(summary.app.personal_count))
         self.app_vars["frozen"].set(str(summary.app.frozen_count))
+        self.app_vars["pack_total"].set(str(summary.pack.total))
+        self.app_vars["pack_booth"].set(priority_brief(summary.pack.booth_missing))
+        self.app_vars["pack_stale"].set(priority_brief(summary.pack.stale))
         self.web_sites_total_var.set(UI_TEXT["sites_count"].format(count=summary.site.total))
         for index, row_vars in enumerate(self.web_site_rows):
             item = summary.site.items[index] if index < len(summary.site.items) else None
@@ -1303,6 +1401,8 @@ class QpscDashboardApp:
         candidates = [
             ("next_role", len(summary.app.role_attention), "role"),
             ("next_booth", priority_count(summary.app.booth_missing, PRIORITY_URGENT), "booth"),
+            ("next_pack_booth", priority_count(summary.pack.booth_missing, PRIORITY_URGENT), "pack_booth"),
+            ("next_pack_stale", len(summary.pack.stale), "pack_stale"),
             ("next_series_git", summary.git.series_uncommitted + summary.git.series_untracked, "series_git"),
         ]
         return [item for item in candidates if item[1]][:MAX_NEXT_ACTIONS]
@@ -1323,6 +1423,10 @@ class QpscDashboardApp:
             return UI_TEXT["dialog_readme_title"], summary.app.readme_missing
         if key == "role":
             return UI_TEXT["dialog_role_title"], summary.app.role_attention
+        if key == "pack_booth":
+            return UI_TEXT["dialog_pack_booth_title"], summary.pack.booth_missing
+        if key == "pack_stale":
+            return UI_TEXT["dialog_pack_stale_title"], summary.pack.stale
         if key == "series_git":
             target = TargetItem(UI_TEXT["source_git"], UI_TEXT["reason_series_git"], DEFAULT_SERIES_ROOT, DEFAULT_SERIES_ROOT.name)
             return UI_TEXT["dialog_series_git_title"], (target,) if summary.git.series_uncommitted or summary.git.series_untracked or summary.git.error else ()
@@ -1442,6 +1546,9 @@ def run_launch_check() -> int:
     print(
         UI_TEXT["launch_check_template"].format(
             apps=summary.app.total,
+            packs=summary.pack.total,
+            pack_booth=len(summary.pack.booth_missing),
+            pack_stale=len(summary.pack.stale),
             booth_urgent=priority_count(summary.app.booth_missing, PRIORITY_URGENT),
             booth_total=len(summary.app.booth_missing),
             release_urgent=priority_count(summary.app.release_missing, PRIORITY_URGENT),

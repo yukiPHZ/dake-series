@@ -27,11 +27,14 @@ COPYRIGHT = "© 2026 しまリス不動産 / Vibe-Coded by Yukihiko Kikuta"
 UI_TEXT = {
     "main_title": "BOOTH登録を補助する",
     "main_description": "booth_product.txt と booth_ready から、登録作業を静かに進めます。",
-    "section_apps": "アプリ選択",
+    "section_apps": "商品選択",
     "section_product": "読み取り結果",
     "section_actions": "操作",
     "section_status": "ステータス",
-    "selected_app_label": "選択中アプリ",
+    "selected_app_label": "選択中商品",
+    "field_product_type": "商品種別",
+    "product_type_single": "単品",
+    "product_type_pack": "パック",
     "button_reload": "再読み込み",
     "button_launch_chrome": "ログイン済みChromeを起動",
     "button_start_assist": "Chrome接続で入力補助",
@@ -193,6 +196,10 @@ CHROME_PROFILE_PARENT_NAME = "DakeBOOTH_Assist"
 CHROME_PROFILE_DIR_NAME = "chrome_profile"
 PRODUCT_FILE_NAME = "booth_product.txt"
 READY_DIR_NAME = "booth_ready"
+PACKS_DIR_NAME = "04_packs"
+PACK_READY_DIR_NAME = "pack_ready"
+PRODUCT_TYPE_SINGLE = "single"
+PRODUCT_TYPE_PACK = "pack"
 THUMBNAIL_NAME = "booth_thumbnail.jpg"
 SCREENSHOT_NAME = "screenshot.webp"
 BOOTH_ADMIN_URL = "https://manage.booth.pm/items"
@@ -205,11 +212,14 @@ class AppEntry:
     name: str
     path: Path
     has_product: bool
+    product_type: str = PRODUCT_TYPE_SINGLE
+
 
 
 @dataclass(frozen=True)
 class ProductInfo:
     app_name: str
+    product_type: str
     app_dir: Path
     product_path: Path
     product_source: str
@@ -288,6 +298,7 @@ BOOTH_ITEM_ID_RE = re.compile(r"/items/(\d+)")
 BOOTH_URL_SAVE_KEYS = {"boothurl", "url"}
 GITHUB_RELEASE_RE = re.compile(r"https?://github\.com/[^\s)]+/releases/[^\s)]+", re.IGNORECASE)
 DAKE_META_RE = re.compile(r"##\s*DAKE_META\b.*?```(?:json)?\s*(\{.*?\})\s*```", re.IGNORECASE | re.DOTALL)
+PACK_META_RE = re.compile(r"##\s*PACK_META\b.*?```(?:json)?\s*(\{.*?\})\s*```", re.IGNORECASE | re.DOTALL)
 STOP_SECTION_LABELS = {
     "使い方",
     "注意事項",
@@ -352,6 +363,35 @@ def get_apps_root() -> Path:
         if candidate.name == "01_apps" and candidate.exists():
             return candidate
     return source_dir.parent
+
+
+def get_series_root() -> Path:
+    return get_apps_root().parent
+
+
+def get_packs_root() -> Path:
+    return get_series_root() / PACKS_DIR_NAME
+
+
+def is_pack_dir(product_dir: Path) -> bool:
+    if product_dir.parent.name == PACKS_DIR_NAME:
+        return True
+    readme_path = product_dir / "README.md"
+    if readme_path.exists() and PACK_META_RE.search(read_text_safely(readme_path)):
+        return True
+    return False
+
+
+def product_type_for(product_dir: Path) -> str:
+    return PRODUCT_TYPE_PACK if is_pack_dir(product_dir) else PRODUCT_TYPE_SINGLE
+
+
+def ready_dir_name_for(product_dir: Path) -> str:
+    return PACK_READY_DIR_NAME if is_pack_dir(product_dir) else READY_DIR_NAME
+
+
+def product_type_label(product_type: str) -> str:
+    return UI_TEXT["product_type_pack"] if product_type == PRODUCT_TYPE_PACK else UI_TEXT["product_type_single"]
 
 
 def get_config_path() -> Path:
@@ -479,12 +519,13 @@ def safe_text(value: object) -> str:
     return str(value).strip()
 
 
-def extract_readme_meta(app_dir: Path) -> dict[str, object]:
+def extract_readme_meta(app_dir: Path, pattern: re.Pattern[str] | None = None) -> dict[str, object]:
     readme_path = app_dir / "README.md"
     text = read_text_safely(readme_path)
     if not text:
         return {}
-    match = DAKE_META_RE.search(text)
+    pattern = pattern or (PACK_META_RE if is_pack_dir(app_dir) else DAKE_META_RE)
+    match = pattern.search(text)
     if not match:
         return {}
     try:
@@ -494,12 +535,17 @@ def extract_readme_meta(app_dir: Path) -> dict[str, object]:
     return loaded if isinstance(loaded, dict) else {}
 
 
-def find_booth_product_path(app_dir: Path) -> Path | None:
-    candidates = (
+def booth_product_candidates(app_dir: Path) -> tuple[Path, ...]:
+    if is_pack_dir(app_dir):
+        return (app_dir / PACK_READY_DIR_NAME / PRODUCT_FILE_NAME,)
+    return (
         app_dir / READY_DIR_NAME / PRODUCT_FILE_NAME,
         app_dir / PRODUCT_FILE_NAME,
     )
-    for candidate in candidates:
+
+
+def find_booth_product_path(app_dir: Path) -> Path | None:
+    for candidate in booth_product_candidates(app_dir):
         try:
             if candidate.is_file():
                 return candidate
@@ -720,12 +766,33 @@ def update_booth_url_text(text: str, url: str) -> str:
 
 
 def booth_url_save_targets(app_dir: Path) -> tuple[Path, ...]:
+    if is_pack_dir(app_dir):
+        targets = [app_dir / PACK_READY_DIR_NAME / PRODUCT_FILE_NAME]
+        readme_path = app_dir / "README.md"
+        if readme_path.exists():
+            targets.append(readme_path)
+        return tuple(targets)
     primary = app_dir / READY_DIR_NAME / PRODUCT_FILE_NAME
     root_product = app_dir / PRODUCT_FILE_NAME
     targets = [primary]
     if root_product.exists() and root_product != primary:
         targets.append(root_product)
     return tuple(targets)
+
+
+def update_pack_meta_booth_url(text: str, url: str) -> str:
+    match = PACK_META_RE.search(text)
+    if not match:
+        return text
+    try:
+        meta = json.loads(match.group(1))
+    except json.JSONDecodeError:
+        return text
+    if not isinstance(meta, dict):
+        return text
+    meta["booth_url"] = url
+    replacement = json.dumps(meta, ensure_ascii=False, indent=2)
+    return text[: match.start(1)] + replacement + text[match.end(1) :]
 
 
 def format_save_target(app_dir: Path, target: Path) -> str:
@@ -744,7 +811,10 @@ def save_booth_url_to_products(app_dir: Path, url: str) -> tuple[Path, ...]:
     for target in targets:
         target.parent.mkdir(parents=True, exist_ok=True)
         current_text = read_text_safely(target) if target.exists() else ""
-        target.write_text(update_booth_url_text(current_text, url), encoding="utf-8")
+        if is_pack_dir(app_dir) and target.name == "README.md":
+            target.write_text(update_pack_meta_booth_url(current_text, url), encoding="utf-8")
+        else:
+            target.write_text(update_booth_url_text(current_text, url), encoding="utf-8")
     return targets
 
 
@@ -849,6 +919,7 @@ def find_zip_files(ready_dir: Path) -> tuple[Path, ...]:
 
 
 def build_product_info(app_dir: Path) -> ProductInfo:
+    product_type = product_type_for(app_dir)
     found_product_path = find_booth_product_path(app_dir)
     product_path = found_product_path or app_dir / PRODUCT_FILE_NAME
     parsed = {
@@ -864,12 +935,15 @@ def build_product_info(app_dir: Path) -> ProductInfo:
     parsed.update(parse_booth_product(product_path))
     readme_meta = extract_readme_meta(app_dir)
     readme_title = safe_text(readme_meta.get("display_name")) or safe_text(readme_meta.get("site_title")) or safe_text(readme_meta.get("launcher_title"))
-    readme_description = safe_text(readme_meta.get("site_description")) or safe_text(readme_meta.get("update_summary"))
+    readme_description = safe_text(readme_meta.get("summary")) or safe_text(readme_meta.get("site_description")) or safe_text(readme_meta.get("update_summary"))
     parsed["title"] = parsed["title"] or readme_title
     parsed["description"] = parsed["description"] or readme_description
-    parsed["github_release"] = parsed["github_release"] or safe_text(readme_meta.get("release_url"))
+    parsed["price"] = parsed["price"] or safe_text(readme_meta.get("price"))
+    parsed["url"] = parsed["url"] or safe_text(readme_meta.get("booth_url"))
+    if product_type != PRODUCT_TYPE_PACK:
+        parsed["github_release"] = parsed["github_release"] or safe_text(readme_meta.get("release_url"))
     product_source = format_product_source(app_dir, found_product_path)
-    ready_dir = app_dir / READY_DIR_NAME
+    ready_dir = app_dir / ready_dir_name_for(app_dir)
     ready_exists = ready_dir.exists() and ready_dir.is_dir()
     zip_files = find_zip_files(ready_dir)
     zip_from_text = resolve_product_relative_path(app_dir, parsed.get("zip_path", ""))
@@ -887,6 +961,7 @@ def build_product_info(app_dir: Path) -> ProductInfo:
 
     return ProductInfo(
         app_name=app_dir.name,
+        product_type=product_type,
         app_dir=app_dir,
         product_path=product_path,
         product_source=product_source,
@@ -906,19 +981,18 @@ def build_product_info(app_dir: Path) -> ProductInfo:
 
 
 def discover_apps() -> list[AppEntry]:
-    apps_root = get_apps_root()
-    if not apps_root.exists():
-        return []
     entries: list[AppEntry] = []
-    try:
-        for child in apps_root.iterdir():
-            if child.is_dir() and not child.name.startswith("."):
-                product_path = find_booth_product_path(child)
-                entries.append(AppEntry(child.name, child, product_path is not None))
-    except OSError:
-        return []
-
-    return sorted(entries, key=lambda entry: (not entry.has_product, entry.name.lower()))
+    for root, product_type in ((get_apps_root(), PRODUCT_TYPE_SINGLE), (get_packs_root(), PRODUCT_TYPE_PACK)):
+        if not root.exists():
+            continue
+        try:
+            for child in root.iterdir():
+                if child.is_dir() and not child.name.startswith("."):
+                    product_path = find_booth_product_path(child)
+                    entries.append(AppEntry(child.name, child, product_path is not None, product_type))
+        except OSError:
+            continue
+    return sorted(entries, key=lambda entry: (entry.product_type != PRODUCT_TYPE_PACK, not entry.has_product, entry.name.lower()))
 
 
 def load_config() -> dict[str, str]:
@@ -1511,6 +1585,7 @@ class DakeBoothAssistApp:
         self.status_var = tk.StringVar(value=UI_TEXT["status_no_selection"])
         self.status_detail_var = tk.StringVar(value=UI_TEXT["detail_no_selection"])
         self.field_vars = {
+            "product_type": tk.StringVar(value=UI_TEXT["value_unset"]),
             "title": tk.StringVar(value=UI_TEXT["value_unset"]),
             "price": tk.StringVar(value=UI_TEXT["value_unset"]),
             "tags": tk.StringVar(value=UI_TEXT["value_unset"]),
@@ -1676,6 +1751,7 @@ class DakeBoothAssistApp:
         grid.pack(fill="x", padx=16)
         grid.grid_columnconfigure(1, weight=1)
         rows = (
+            ("field_product_type", "product_type"),
             ("field_title", "title"),
             ("field_price", "price"),
             ("field_tags", "tags"),
@@ -1900,7 +1976,8 @@ class DakeBoothAssistApp:
 
         for entry in self.apps:
             key = "list_has_product" if entry.has_product else "list_no_product"
-            self.app_listbox.insert(tk.END, UI_TEXT[key].format(name=entry.name))
+            label = f"{product_type_label(entry.product_type)}: {entry.name}"
+            self.app_listbox.insert(tk.END, UI_TEXT[key].format(name=label))
 
         if not self.apps:
             self.selected_product = None
@@ -1965,6 +2042,7 @@ class DakeBoothAssistApp:
         self.booth_url_var.set("")
 
     def _render_product(self, product: ProductInfo) -> None:
+        self.field_vars["product_type"].set(product_type_label(product.product_type))
         self.field_vars["title"].set(product.title or UI_TEXT["value_unset"])
         self.field_vars["price"].set(product.price or UI_TEXT["value_unset"])
         self.field_vars["tags"].set(product.tags or UI_TEXT["value_unset"])
@@ -2313,6 +2391,27 @@ def run_launch_check() -> int:
         if readme_fallback_product.github_release != "https://github.com/yukiPHZ/dake-series/releases/tag/Fallback_v1.0.0":
             raise RuntimeError("readme release_url fallback fixture failed")
 
+        pack_app = temp_root / "PackProduct"
+        pack_ready_dir = pack_app / PACK_READY_DIR_NAME
+        pack_ready_dir.mkdir(parents=True)
+        (pack_app / "README.md").write_text(
+            "## PACK_META\n\n```json\n{\"display_name\":\"Pack Sample\",\"summary\":\"Pack summary\",\"price\":980,\"booth_url\":\"\",\"included_apps\":[\"Sample\"]}\n```\n",
+            encoding="utf-8",
+        )
+        (pack_ready_dir / PRODUCT_FILE_NAME).write_text("# 商品名\nPack Ready\n\n# 価格案\n980円\n\n# URL\n", encoding="utf-8")
+        (pack_ready_dir / "pack.zip").write_bytes(b"")
+        pack_product = build_product_info(pack_app)
+        if pack_product.product_type != PRODUCT_TYPE_PACK or pack_product.product_source != f"{PACK_READY_DIR_NAME}/{PRODUCT_FILE_NAME}":
+            raise RuntimeError("pack product fixture failed")
+        pack_saved_url = "https://peakheadz.booth.pm/items/8417562"
+        pack_saved_targets = save_booth_url_to_products(pack_app, pack_saved_url)
+        if tuple(format_save_target(pack_app, target) for target in pack_saved_targets) != (f"{PACK_READY_DIR_NAME}/{PRODUCT_FILE_NAME}", "README.md"):
+            raise RuntimeError("pack booth url target fixture failed")
+        if pack_saved_url not in read_text_safely(pack_ready_dir / PRODUCT_FILE_NAME):
+            raise RuntimeError("pack product booth url save fixture failed")
+        if '"booth_url": "https://peakheadz.booth.pm/items/8417562"' not in read_text_safely(pack_app / "README.md"):
+            raise RuntimeError("pack readme booth url save fixture failed")
+
         url_app = temp_root / "UrlApp"
         url_ready_dir = url_app / READY_DIR_NAME
         url_ready_dir.mkdir(parents=True)
@@ -2394,6 +2493,7 @@ def run_launch_check() -> int:
         raise RuntimeError("playwright setup guidance fixture failed")
 
     product_apps = sum(1 for entry in apps if entry.has_product)
+    pack_products = sum(1 for entry in apps if entry.product_type == PRODUCT_TYPE_PACK)
     dake_backup_source = "missing"
     dake_backup_fields = "missing"
     dake_backup_tag_count = 0
@@ -2414,6 +2514,7 @@ def run_launch_check() -> int:
     print(f"apps_root={get_apps_root()}")
     print(f"apps={len(apps)}")
     print(f"product_apps={product_apps}")
+    print(f"pack_products={pack_products}")
     print(f"dake_backup_product={dake_backup_source}")
     print(f"dake_backup_fields={dake_backup_fields}")
     print(f"dake_backup_tag_count={dake_backup_tag_count}")
@@ -2421,7 +2522,7 @@ def run_launch_check() -> int:
     print(f"edit_url_hint={BOOTH_EDIT_URL_HINT}")
     print(f"chrome_path={find_chrome_executable() or 'missing'}")
     print(f"chrome_profile={get_chrome_profile_dir()}")
-    print("fixtures=missing_product, missing_ready, multiple_zip, missing_playwright_python, ready_product_lookup, ready_product_priority, factory_v2_product, readme_fallback, open_edit_url_only, bad_page_detection, tag_split, file_input_detection, manual_file_upload, booth_url_save")
+    print("fixtures=missing_product, missing_ready, multiple_zip, missing_playwright_python, ready_product_lookup, ready_product_priority, factory_v2_product, readme_fallback, open_edit_url_only, bad_page_detection, tag_split, file_input_detection, manual_file_upload, booth_url_save, pack_product")
     return 0
 
 

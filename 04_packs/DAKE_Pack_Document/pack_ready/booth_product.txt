@@ -1,0 +1,73 @@
+# 商品名
+DAKE 書類整理パック
+
+# 価格案
+1480円
+
+# 商品紹介文
+PDF結合、画像PDF化、画像リサイズ、A4貼り付けをまとめた書類整理向けパックです。
+
+### 概要
+
+PDFの結合、画像からPDF作成、画像リサイズ、画像のA4貼り付けをまとめたパックです。
+書類整理でよくある小さな作業を、ひとつずつ軽く処理できます。
+
+### できること
+
+- 複数PDFをひとつにまとめる
+- 画像ファイルをPDFにする
+- 画像サイズをまとめて調整する
+- 画像をA4用紙に配置して印刷しやすくする
+
+### 使い方
+
+1. パックZIPを解凍します。
+2. 使いたいアプリのZIPを解凍します。
+3. 各アプリの `.exe` を起動して使います。
+
+### 注意事項
+
+- Windows向けです。
+- 大切なファイルは事前にバックアップしてください。
+- 各アプリの詳しい使い方は、収録アプリ側のREADMEを確認してください。
+
+# 収録アプリ
+・DakePDF結合 / https://peakheadz.booth.pm/items/8448196
+・DakeImageToPDF / https://peakheadz.booth.pm/items/8397610
+・Dake画像リサイズ / https://peakheadz.booth.pm/items/8397622
+・貼る / https://peakheadz.booth.pm/items/8397628
+
+# 使い方
+1. パックZIPを解凍します。
+2. appsフォルダ内の各アプリZIPを解凍します。
+3. 使いたいアプリのexeを起動します。
+
+# 注意事項
+Windows向けです。大切なファイルは事前にバックアップしてください。収録アプリの詳しい使い方は各アプリのREADMEを確認してください。
+
+# 対象
+日常業務で小さな作業をまとめて処理したい方。
+
+# 配布物
+・apps/DAKE_PDF_Merge/DakePDF_Merge.zip
+・apps/DAKE_Image_ToPDF/DakeImageToPDF.zip
+・apps/DAKE_Image_Resize/Dake_Image_Resize.zip
+・apps/DAKE_Image_PasteA4/DakeImage_PasteA4.zip
+・README.txt
+・注意事項.txt
+
+# 免責
+本ソフトウェアの利用によって発生した損害について、作者は責任を負いません。
+
+# コピーライト
+PEAKHEADZ / Vibe-Coded by Yukihiko Kikuta
+
+# タグ
+PDF
+画像
+書類整理
+Windows
+実務
+ツール
+
+# URL

@@ -21,6 +21,7 @@ qpsc_notifications.json
 
 # BOOTH generated archives
 **/booth_ready/*.zip
+**/pack_ready/*.zip
 
 # DakeBOOTH assist local browser profile
 playwright_profile/

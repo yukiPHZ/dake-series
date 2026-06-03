@@ -1,0 +1,4 @@
+DAKE_PDF_Merge
+DAKE_Image_ToPDF
+DAKE_Image_Resize
+DAKE_Image_PasteA4

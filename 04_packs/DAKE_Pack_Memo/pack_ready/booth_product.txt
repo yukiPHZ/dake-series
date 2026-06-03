@@ -1,0 +1,73 @@
+# 商品名
+DAKE メモと記録パック
+
+# 価格案
+980円
+
+# 商品紹介文
+付箋、短文メモ、Gitメモ、昨日タスクの記録をまとめたメモ運用パックです。
+
+### 概要
+
+付箋メモ、短文メモ、Git作業メモ、昨日タスクの記録をまとめたパックです。
+軽いメモを用途ごとに分けて、毎日の仕事を止めずに記録できます。
+
+### できること
+
+- 付箋のように短いメモを残す
+- その場の要点を素早く記録する
+- Git作業のメモを整理する
+- 昨日のタスクを振り返って残す
+
+### 使い方
+
+1. パックZIPを解凍します。
+2. 使いたいアプリのZIPを解凍します。
+3. 各アプリの `.exe` を起動して使います。
+
+### 注意事項
+
+- Windows向けです。
+- 業務利用前に、保存先やファイル名を確認してください。
+- 各アプリの詳しい使い方は、収録アプリ側のREADMEを確認してください。
+
+# 収録アプリ
+・付箋メモ / https://peakheadz.booth.pm/items/8448263
+・マジでメモ / https://peakheadz.booth.pm/items/8448021
+・DakeGitメモ / https://peakheadz.booth.pm/items/8447593
+・Dake昨日タスクメモ / https://peakheadz.booth.pm/items/8448291
+
+# 使い方
+1. パックZIPを解凍します。
+2. appsフォルダ内の各アプリZIPを解凍します。
+3. 使いたいアプリのexeを起動します。
+
+# 注意事項
+Windows向けです。大切なファイルは事前にバックアップしてください。収録アプリの詳しい使い方は各アプリのREADMEを確認してください。
+
+# 対象
+日常業務で小さな作業をまとめて処理したい方。
+
+# 配布物
+・apps/DAKE_Sticky_Memo/DakeSticky_Memo.zip
+・apps/DAKE_Maji_Memo/DakeMaji_Memo.zip
+・apps/DAKE_Git_Memo/DakeGit_Memo.zip
+・apps/DAKE_Yesterday_Task_Memo/DakeYesterday_Task_Memo.zip
+・README.txt
+・注意事項.txt
+
+# 免責
+本ソフトウェアの利用によって発生した損害について、作者は責任を負いません。
+
+# コピーライト
+PEAKHEADZ / Vibe-Coded by Yukihiko Kikuta
+
+# タグ
+メモ
+記録
+Windows
+実務
+ツール
+軽量
+
+# URL

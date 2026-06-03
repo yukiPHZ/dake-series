@@ -1,0 +1,4 @@
+DAKE_Sticky_Memo
+DAKE_Maji_Memo
+DAKE_Git_Memo
+DAKE_Yesterday_Task_Memo

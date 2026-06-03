@@ -39,6 +39,9 @@ README_NAME = "README.md"
 RELEASE_BODY_NAME = "release_body.md"
 BOOTH_PRODUCT_NAME = "booth_product.txt"
 BOOTH_READY_NAME = "booth_ready"
+PACKS_DIR_NAME = "04_packs"
+PACK_READY_NAME = "pack_ready"
+PACK_MANIFEST_NAME = "pack_manifest.json"
 SCREENSHOT_RELATIVE = Path("assets") / "screenshot.webp"
 SCREENSHOT_JPG_RELATIVE = Path("assets") / "screenshot.jpg"
 BOOTH_THUMBNAIL_RELATIVE = Path("assets") / "booth_thumbnail.jpg"
@@ -223,12 +226,16 @@ UI_TEXT = {
     "qpsc_readme_missing": "README不足",
     "qpsc_card_classification_title": "分類",
     "qpsc_card_unresolved_title": "未処理",
+    "qpsc_card_pack_title": "パック",
     "qpsc_unshipped": "未出荷",
     "qpsc_booth_materials_missing": "BOOTH素材不足",
     "qpsc_booth_thumbnail_missing": "thumbnail未作成",
     "qpsc_booth_product_missing": "booth_product未作成",
     "qpsc_booth_ready_missing": "booth_ready未作成",
     "qpsc_booth_registration_ready": "BOOTH登録可能",
+    "qpsc_pack_total": "パック",
+    "qpsc_pack_booth_missing": "パックURL未設定",
+    "qpsc_pack_stale": "パック再生成",
     "qpsc_booth_missing": "BOOTH未準備",
     "qpsc_release_missing": "Release未作成",
     "git_card_title": "Git状態",
@@ -504,6 +511,26 @@ class FileChecks:
 
 
 @dataclass(frozen=True)
+class PackRecord:
+    folder_name: str
+    folder_path: Path
+    display_name: str
+    status: str
+    booth_url: str
+    has_thumbnail: bool
+    has_product: bool
+    has_ready_dir: bool
+    has_pack_zip: bool
+    has_manifest: bool
+    stale: bool
+    missing_keys: tuple[str, ...]
+
+    @property
+    def materials_count(self) -> int:
+        return sum((self.has_thumbnail, self.has_product, self.has_ready_dir))
+
+
+@dataclass(frozen=True)
 class AppRecord:
     folder_name: str
     folder_path: Path
@@ -549,6 +576,10 @@ def apps_root() -> Path:
 
 def series_root() -> Path:
     return apps_root().parent
+
+
+def packs_root() -> Path:
+    return series_root() / PACKS_DIR_NAME
 
 
 def icon_path() -> Path:
@@ -915,6 +946,10 @@ def booth_product_candidates(folder: Path) -> tuple[Path, ...]:
     )
 
 
+def pack_product_candidates(folder: Path) -> tuple[Path, ...]:
+    return (folder / PACK_READY_NAME / BOOTH_PRODUCT_NAME,)
+
+
 def find_booth_product_path(folder: Path) -> Path | None:
     for candidate in booth_product_candidates(folder):
         if candidate.is_file():
@@ -1134,6 +1169,78 @@ def error_record(folder: Path, exc: Exception) -> AppRecord:
         issue_messages=(issue,),
         last_modified=latest_mtime([folder / README_NAME], folder),
     )
+
+
+def extract_pack_meta(readme_path: Path) -> dict[str, object]:
+    if not readme_path.exists():
+        return {}
+    try:
+        text = read_text_utf8(readme_path)
+    except OSError:
+        return {}
+    match = re.search(r"(?s)^##\s+PACK_META\s*```json\s*(.*?)\s*```", text, re.MULTILINE)
+    if not match:
+        return {}
+    try:
+        loaded = json.loads(match.group(1))
+    except json.JSONDecodeError:
+        return {}
+    return loaded if isinstance(loaded, dict) else {}
+
+
+def pack_booth_url(folder: Path, meta: dict[str, object]) -> str:
+    meta_url = safe_text(meta.get("booth_url", ""))
+    if meta_url:
+        return meta_url
+    product_path = folder / PACK_READY_NAME / BOOTH_PRODUCT_NAME
+    return read_booth_url_from_product(product_path) if product_path.exists() else ""
+
+
+def scan_pack_folder(folder: Path) -> PackRecord:
+    meta = extract_pack_meta(folder / README_NAME)
+    ready_dir = folder / PACK_READY_NAME
+    product_path = ready_dir / BOOTH_PRODUCT_NAME
+    has_pack_zip = any(ready_dir.glob("*.zip")) if ready_dir.exists() else False
+    manifest_path = folder / PACK_MANIFEST_NAME
+    missing: list[str] = []
+    has_thumbnail = (folder / BOOTH_THUMBNAIL_RELATIVE).exists()
+    has_product = product_path.exists()
+    has_ready_dir = ready_dir.is_dir()
+    has_manifest = manifest_path.exists()
+    for key, present in (("PACK_META", bool(meta)), ("booth_thumbnail", has_thumbnail), ("booth_product", has_product), ("pack_ready", has_ready_dir), ("pack_zip", has_pack_zip), ("pack_manifest", has_manifest)):
+        if not present:
+            missing.append(key)
+    stale = False
+    if has_manifest:
+        try:
+            manifest = json.loads(read_text_utf8(manifest_path))
+            manifest_sources = manifest.get("included_apps", []) if isinstance(manifest, dict) else []
+            stale = len(manifest_sources) != len(meta.get("included_apps", [])) if isinstance(meta.get("included_apps"), list) else False
+        except (OSError, json.JSONDecodeError):
+            stale = True
+    return PackRecord(
+        folder_name=folder.name,
+        folder_path=folder,
+        display_name=safe_text(meta.get("display_name", "")) or folder.name,
+        status=safe_text(meta.get("status", "")) or "unknown",
+        booth_url=pack_booth_url(folder, meta),
+        has_thumbnail=has_thumbnail,
+        has_product=has_product,
+        has_ready_dir=has_ready_dir,
+        has_pack_zip=has_pack_zip,
+        has_manifest=has_manifest,
+        stale=stale,
+        missing_keys=tuple(missing),
+    )
+
+
+def scan_packs(root: Path) -> list[PackRecord]:
+    if not root.exists():
+        return []
+    records: list[PackRecord] = []
+    for folder in sorted((child for child in root.iterdir() if child.is_dir() and not child.name.startswith(".")), key=lambda item: item.name.lower()):
+        records.append(scan_pack_folder(folder))
+    return records
 
 
 def scan_apps(root: Path) -> list[AppRecord]:
@@ -1361,6 +1468,9 @@ class DashboardApp:
             "qpcs": tk.StringVar(value="0"),
             "personal": tk.StringVar(value="0"),
             "frozen": tk.StringVar(value="0"),
+            "pack_total": tk.StringVar(value="0"),
+            "pack_booth_missing": tk.StringVar(value="0"),
+            "pack_stale": tk.StringVar(value="0"),
         }
         self.qpsc_status_var = tk.StringVar(value=UI_TEXT["qpsc_card_subtitle"])
         self.git_vars = {
@@ -1387,6 +1497,7 @@ class DashboardApp:
         self.pending_reload_folder: str | None = None
         self.booth_working_folder: str | None = None
         self.booth_highlight_job: str | None = None
+        self.pack_records: list[PackRecord] = []
 
         self.root.title(WINDOW_TITLE)
         self.root.geometry("1280x820")
@@ -1599,6 +1710,14 @@ class DashboardApp:
                     ("booth_registration_ready", "qpsc_booth_registration_ready"),
                     ("booth_materials_missing", "qpsc_booth_materials_missing"),
                     ("readme_missing", "qpsc_readme_missing"),
+                ],
+            ),
+            (
+                "qpsc_card_pack_title",
+                [
+                    ("pack_total", "qpsc_pack_total"),
+                    ("pack_booth_missing", "qpsc_pack_booth_missing"),
+                    ("pack_stale", "qpsc_pack_stale"),
                 ],
             ),
         ]
@@ -2219,12 +2338,14 @@ class DashboardApp:
 
     def scan_worker(self, source: str, changed_folder: str | None) -> None:
         records = scan_apps(apps_root())
+        pack_records = scan_packs(packs_root())
         git_status = read_git_status(series_root())
         self.worker_queue.put(
             (
                 "scan_done",
                 {
                     "records": records,
+                    "pack_records": pack_records,
                     "git_status": git_status,
                     "source": source,
                     "changed_folder": changed_folder,
@@ -2255,6 +2376,7 @@ class DashboardApp:
     def handle_scan_done(self, payload: object) -> None:
         if isinstance(payload, dict):
             records = payload.get("records", [])
+            pack_records = payload.get("pack_records", [])
             git_status = payload.get("git_status")
             source = str(payload.get("source", "manual"))
             changed_folder = payload.get("changed_folder")
@@ -2263,9 +2385,11 @@ class DashboardApp:
             git_status = None
             source = "manual"
             changed_folder = None
+            pack_records = []
 
         previous_map = dict(self.previous_record_map)
         self.records = list(records) if isinstance(records, list) else []
+        self.pack_records = list(pack_records) if isinstance(pack_records, list) else []
         current_map = record_map(self.records)
         self.reload_button.configure(state="normal")
         loaded_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -2328,6 +2452,9 @@ class DashboardApp:
         self.qpsc_vars["qpcs"].set(str(sum(1 for record in self.records if record.app_type == "qpcs")))
         self.qpsc_vars["personal"].set(str(sum(1 for record in self.records if record.app_type == "personal")))
         self.qpsc_vars["frozen"].set(str(sum(1 for record in self.records if record.app_type == "frozen")))
+        self.qpsc_vars["pack_total"].set(str(len(self.pack_records)))
+        self.qpsc_vars["pack_booth_missing"].set(str(sum(1 for record in self.pack_records if not record.booth_url)))
+        self.qpsc_vars["pack_stale"].set(str(sum(1 for record in self.pack_records if record.stale or record.missing_keys)))
 
     def update_git_card(self, status: GitStatus) -> None:
         if status.error:

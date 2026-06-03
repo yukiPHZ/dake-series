@@ -1,0 +1,3 @@
+folder,display_name,status,price,included_count,booth_url,thumbnail,booth_product,pack_ready,readme_txt,notice,pack_zip,manifest,source_zip_count,source_zip_stale_count,booth_score,missing,stale,next_step
+DAKE_Pack_Document,DAKE 書類整理パック,available,1480,4,,True,True,True,True,True,DAKE_Pack_Document.zip,True,4,0,3/3,,,booth_register
+DAKE_Pack_Memo,DAKE メモと記録パック,available,980,4,,True,True,True,True,True,DAKE_Pack_Memo.zip,True,4,0,3/3,,,booth_register
