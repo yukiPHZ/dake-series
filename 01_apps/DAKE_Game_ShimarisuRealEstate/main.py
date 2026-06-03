@@ -57,16 +57,16 @@ UI_TEXT = {
     "appraisal_offer_title": "査定金額提示",
     "appraisal_price": "提示査定金額",
     "recommended_appraisal": "推奨査定価格",
+    "appraisal_acceptance_chance": "成立見込み",
+    "appraisal_select_amount": "下のボタンで選択",
     "recommended_after_check": "調査後に表示",
     "appraisal_reason": "査定理由",
     "appraisal_passed": "仕入契約がまとまりました。",
     "appraisal_rejected": "査定金額は通りませんでした。",
     "appraisal_rejected_note": "売主との条件が合わず、案件は終了しました。",
     "offer_at_asking": "希望価格のまま提示",
-    "offer_minus_30": "30万円下げて提示",
-    "offer_minus_50": "50万円下げて提示",
-    "offer_minus_80": "80万円下げて提示",
     "offer_minus_100": "100万円下げて提示",
+    "offer_minus_200": "200万円下げて提示",
     "offer_risk_adjusted": "リスク反映価格で提示",
     "appraisal_warning": "調査前の提示は危険です。見えていないリスクを含んだ金額になります。",
     "appraisal_warning_hearing": "ヒアリング前の提示は危険です。売主しか知らない事情を見落としやすいです。",
@@ -74,6 +74,8 @@ UI_TEXT = {
     "appraisal_lowball_reason": "大きな問題が見えない中で低い提示です。",
     "appraisal_risk_reason": "判明したリスクを価格に反映しました。",
     "appraisal_high_risk_reason": "リスクに対して高めの仕入れです。",
+    "appraisal_low_no_risk_reason": "問題が薄いのに安く出すと、信用も案件も落とします。",
+    "appraisal_risk_same_price_reason": "リスクがあるなら、希望価格のまま買う方が危険です。",
     "operating_cost": "営業コスト",
     "daily_operating_cost": "営業コスト",
     "operating_cost_total": "営業コスト合計",
@@ -375,7 +377,10 @@ SHIMARISU_COMMENTS = {
     "investigated": "法的なところが見えてきました。出口の広さを確認しましょう。",
     "hearing": "聞いていないことが、あとから出てくることがあります。",
     "bought": "握りました。ここからは原価をふくらませすぎない勝負です。",
-    "appraisal_mode": "査定金額を一度だけ提示します。調査と聞き取りの材料で勝負しましょう。",
+    "appraisal_mode": "査定は一度だけです。調査と聞き取りの材料で勝負しましょう。",
+    "appraisal_no_risk_lowball": "問題が薄いのに安く出すと、信用も案件も落とします。",
+    "appraisal_risk_price": "リスクがあるなら、希望価格のまま買う方が危険です。",
+    "appraisal_exit_price": "買える金額ではなく、売り切れる金額で見ましょう。",
     "appraisal_passed": "仕入契約がまとまりました。ここから出口設計の責任が始まります。",
     "appraisal_rejected": "売主と条件が合いませんでした。次の案件に切り替えましょう。",
     "skipped": "この案件は、握らない強さかもしれません。",
@@ -400,8 +405,8 @@ SHIMARISU_COMMENTS = {
     "price_down": "値下げしました。利益は減りますが、反響は少し増えそうです。",
     "price_down_blocked": "これ以上下げると、利益がほとんど残りません。",
     "renovating_offer": "工事中でも申込が入るのは、出口が見えている証拠です。",
-    "offer_received": "購入申込です。指値を受ける理由があるか、次の買主がいるかを見ましょう。",
-    "offer_accept": "痛い指値でも、資金を戻して次へ進めるなら出口です。",
+    "offer_received": "ここからは買主側の指値交渉です。",
+    "offer_accept": "この指値を飲むなら、資金回収と利益目標を見ましょう。",
     "offer_reject": "断るなら、次の買主がいる根拠を見ましょう。",
     "lowball_market": "安い理由を買主も見ています。価格の下げ方には注意です。",
     "risk_retreat": "これは利益ではなく撤退です。買わないことが仕事です。",
@@ -543,6 +548,7 @@ class PropertyCase:
     appraisal_result: str = ""
     appraisal_reason: str = ""
     appraisal_credit_delta: int = 0
+    appraisal_acceptance_chance: float = 0.0
     appraisal_mode: bool = False
     overpaid_purchase: bool = False
     renovation_label_key: str = ""
@@ -1031,7 +1037,7 @@ class ShimarisuRealEstateGame:
             self.skip_banned_property()
             return
         prop.appraisal_mode = True
-        self.comment = SHIMARISU_COMMENTS["appraisal_mode"]
+        self.comment = self.appraisal_start_comment(prop)
 
     def submit_appraisal_offer(self, appraisal_price: int) -> None:
         prop = self.current_property
@@ -1047,11 +1053,13 @@ class ShimarisuRealEstateGame:
             self.add_log(UI_TEXT["log_cash_short"].format(amount=yen(appraisal_price + fee)))
             return
 
-        accepted = random.random() < self.calculate_appraisal_acceptance(prop, appraisal_price)
+        acceptance_chance = self.calculate_appraisal_acceptance(prop, appraisal_price)
+        accepted = random.random() < acceptance_chance
         credit_delta, reason = self.appraisal_credit_change(prop, appraisal_price, accepted)
         prop.appraisal_price = appraisal_price
         prop.appraisal_reason = reason
         prop.appraisal_credit_delta = credit_delta
+        prop.appraisal_acceptance_chance = acceptance_chance
         prop.appraisal_mode = False
         self.reputation = max(0, min(100, self.reputation + credit_delta))
 
@@ -1786,6 +1794,8 @@ class ShimarisuRealEstateGame:
     def calculate_appraisal_acceptance(self, prop: PropertyCase, appraisal_price: int) -> float:
         asking = max(1, prop.seller_asking_price or prop.buy_price)
         ratio = appraisal_price / asking
+        discount = max(0, asking - appraisal_price)
+        risk_score = self.known_risk_score(prop)
         if ratio >= 0.98:
             chance = 0.95
         elif ratio >= 0.90:
@@ -1825,8 +1835,16 @@ class ShimarisuRealEstateGame:
             chance += 0.05
         if prop.parking_count == 0:
             chance += 0.05
-        if self.known_risk_score(prop) <= 1 and ratio < 0.80:
-            chance -= 0.10
+        if risk_score <= 1:
+            if discount >= 2_000_000:
+                chance -= 0.30
+            elif discount >= 1_000_000:
+                chance -= 0.10
+        elif risk_score >= 3:
+            if discount >= 2_000_000:
+                chance += 0.10
+            elif discount >= 1_000_000:
+                chance += 0.05
         if self.reputation >= 70:
             chance += 0.05
         elif self.reputation < 40:
@@ -1836,8 +1854,11 @@ class ShimarisuRealEstateGame:
     def appraisal_credit_change(self, prop: PropertyCase, appraisal_price: int, accepted: bool) -> tuple[int, str]:
         asking = max(1, prop.seller_asking_price or prop.buy_price)
         ratio = appraisal_price / asking
+        discount = max(0, asking - appraisal_price)
         risk_score = self.known_risk_score(prop)
         recommended_low, recommended_high, reason = self.recommended_appraisal_range(prop)
+        if risk_score <= 1 and discount >= 2_000_000:
+            return -3 if not accepted else -2, UI_TEXT["appraisal_low_no_risk_reason"]
         if risk_score <= 1:
             if ratio < 0.60:
                 return -6, UI_TEXT["appraisal_lowball_reason"]
@@ -1848,7 +1869,9 @@ class ShimarisuRealEstateGame:
         if accepted and prop.investigated and prop.heard_from_seller and recommended_low <= appraisal_price <= recommended_high:
             return 1, reason
         if accepted and risk_score >= 3 and ratio >= 0.90:
-            return 0, UI_TEXT["appraisal_high_risk_reason"]
+            return 0, UI_TEXT["appraisal_risk_same_price_reason"]
+        if not accepted and discount >= 1_000_000 and risk_score <= 1:
+            return -1, UI_TEXT["appraisal_low_no_risk_reason"]
         if not accepted and ratio < 0.80:
             return -1, UI_TEXT["appraisal_lowball_reason"]
         return 0, reason
@@ -1863,11 +1886,12 @@ class ShimarisuRealEstateGame:
         asking = prop.seller_asking_price or prop.buy_price
         options: list[tuple[str, int]] = [
             (UI_TEXT["offer_at_asking"], asking),
-            (UI_TEXT["offer_minus_30"], asking - 300_000),
-            (UI_TEXT["offer_minus_50"], asking - 500_000),
-            (UI_TEXT["offer_minus_80"], asking - 800_000),
             (UI_TEXT["offer_minus_100"], asking - 1_000_000),
+            (UI_TEXT["offer_minus_200"], asking - 2_000_000),
         ]
+        risk_price = self.risk_adjusted_appraisal_option_price(prop)
+        if risk_price is not None:
+            options.append((UI_TEXT["offer_risk_adjusted"], risk_price))
 
         deduped: list[tuple[str, int]] = []
         seen: set[int] = set()
@@ -1877,7 +1901,27 @@ class ShimarisuRealEstateGame:
                 continue
             seen.add(rounded)
             deduped.append((label, rounded))
-        return deduped[:5]
+        return deduped[:4]
+
+    def risk_adjusted_appraisal_option_price(self, prop: PropertyCase) -> int | None:
+        if not self.appraisal_visible(prop):
+            return None
+        asking = prop.seller_asking_price or prop.buy_price
+        low, high, _ = self.recommended_appraisal_range(prop)
+        risk_price = round(((low + high) // 2) / 100_000) * 100_000
+        if risk_price > asking - 1_200_000:
+            return None
+        return max(500_000, risk_price)
+
+    def appraisal_start_comment(self, prop: PropertyCase) -> str:
+        if not self.appraisal_visible(prop):
+            return SHIMARISU_COMMENTS["appraisal_mode"]
+        risk_score = self.known_risk_score(prop)
+        if risk_score <= 1:
+            return SHIMARISU_COMMENTS["appraisal_no_risk_lowball"]
+        if risk_score >= 3:
+            return SHIMARISU_COMMENTS["appraisal_risk_price"]
+        return SHIMARISU_COMMENTS["appraisal_exit_price"]
 
     def calculate_credit_change(self, prop: PropertyCase, profit: int) -> tuple[int, str]:
         if profit < 0:
@@ -2683,7 +2727,7 @@ class ShimarisuRealEstateGame:
 
         if self.pending_confirmation == "appraisal_accepted" and prop.appraisal_result == "accepted":
             y += 10
-            box = pygame.Rect(panel.x + 18, y, 316, 166)
+            box = pygame.Rect(panel.x + 18, y, 316, 198)
             pygame.draw.rect(self.screen, COLORS["soft_green"], box, border_radius=8)
             pygame.draw.rect(self.screen, COLORS["green"], box, 1, border_radius=8)
             self.draw_text(UI_TEXT["appraisal_passed"], (box.x + 14, box.y + 10), 15, True, COLORS["green_dark"])
@@ -2691,6 +2735,7 @@ class ShimarisuRealEstateGame:
                 (UI_TEXT["seller_asking_price"], yen(prop.seller_asking_price or prop.buy_price)),
                 (UI_TEXT["appraisal_price"], yen(prop.appraisal_price)),
                 (UI_TEXT["purchase_price"], yen(prop.buy_price)),
+                (UI_TEXT["appraisal_acceptance_chance"], self.percent_text(prop.appraisal_acceptance_chance)),
                 (UI_TEXT["credit_delta"], self.signed_plain(prop.appraisal_credit_delta)),
             ]
             row_y = box.y + 42
@@ -2853,6 +2898,10 @@ class ShimarisuRealEstateGame:
             self.draw_key_value(label, value, pygame.Rect(panel.x + 18, y, 316, 24), small=True)
             y += 28
 
+        if prop.appraisal_mode:
+            self.draw_appraisal_mode_right_panel(panel, prop, y + 4)
+            return
+
         y += 4
         self.draw_text(UI_TEXT["recommended_appraisal"], (panel.x + 18, y), 15, True, COLORS["muted"])
         y += 26
@@ -2895,6 +2944,58 @@ class ShimarisuRealEstateGame:
         elif not prop.heard_from_seller:
             self.draw_wrapped_text(UI_TEXT["appraisal_warning_hearing"], pygame.Rect(panel.x + 18, y, 316, 38), self.get_font(11), COLORS["red"])
 
+    def draw_appraisal_mode_right_panel(self, panel: pygame.Rect, prop: PropertyCase, y: int) -> None:
+        self.draw_text(UI_TEXT["appraisal_offer_title"], (panel.x + 18, y), 15, True, COLORS["muted"])
+        y += 28
+        if self.appraisal_visible(prop):
+            low, high, reason = self.recommended_appraisal_range(prop)
+            self.draw_key_value(
+                UI_TEXT["recommended_appraisal"],
+                f"{yen(low)} - {yen(high)}",
+                pygame.Rect(panel.x + 18, y, 316, 22),
+                small=True,
+                value_color=COLORS["green_dark"],
+            )
+            y += 25
+            self.draw_key_value(
+                UI_TEXT["appraisal_price"],
+                UI_TEXT["appraisal_select_amount"],
+                pygame.Rect(panel.x + 18, y, 316, 22),
+                small=True,
+                value_color=COLORS["muted"],
+            )
+            y += 28
+            self.draw_text(UI_TEXT["appraisal_reason"], (panel.x + 18, y), 12, True, COLORS["muted"])
+            y += 19
+            self.draw_wrapped_text(reason, pygame.Rect(panel.x + 18, y, 316, 38), self.get_font(11), COLORS["muted"])
+            y += 44
+        else:
+            self.draw_key_value(
+                UI_TEXT["appraisal_price"],
+                UI_TEXT["appraisal_select_amount"],
+                pygame.Rect(panel.x + 18, y, 316, 22),
+                small=True,
+                value_color=COLORS["muted"],
+            )
+            y += 27
+            self.draw_wrapped_text(UI_TEXT["recommended_after_check"], pygame.Rect(panel.x + 18, y, 316, 30), self.get_font(12), COLORS["muted"])
+            y += 36
+
+        self.draw_text(UI_TEXT["appraisal_acceptance_chance"], (panel.x + 18, y), 12, True, COLORS["muted"])
+        y += 22
+        for label, price in self.appraisal_options(prop):
+            chance = self.calculate_appraisal_acceptance(prop, price)
+            self.draw_key_value(
+                label,
+                f"{yen(price)} / {self.percent_text(chance)}",
+                pygame.Rect(panel.x + 18, y, 316, 22),
+                small=True,
+                value_color=COLORS["green_dark"] if chance >= 0.65 else COLORS["red"],
+            )
+            y += 25
+        y += 8
+        self.draw_wrapped_text(self.comment, pygame.Rect(panel.x + 18, y, 316, 58), self.get_font(12), COLORS["muted"])
+
     def draw_skipped_right_panel(self, panel: pygame.Rect, prop: PropertyCase) -> None:
         y = panel.y + 58
         message = UI_TEXT["appraisal_rejected"] if prop.appraisal_result == "rejected" else UI_TEXT["skip_message"]
@@ -2916,11 +3017,13 @@ class ShimarisuRealEstateGame:
         ]
         if prop.appraisal_price:
             rows.insert(2, (UI_TEXT["appraisal_price"], yen(prop.appraisal_price)))
+            rows.insert(3, (UI_TEXT["appraisal_acceptance_chance"], self.percent_text(prop.appraisal_acceptance_chance)))
         for label, value in rows:
             self.draw_key_value(label, value, pygame.Rect(panel.x + 18, y, 316, 24), small=True)
             y += 29
         y += 12
-        self.draw_text(UI_TEXT["cash_memo"], (panel.x + 18, y), 15, True, COLORS["muted"])
+        detail_title = UI_TEXT["appraisal_reason"] if prop.appraisal_result == "rejected" else UI_TEXT["cash_memo"]
+        self.draw_text(detail_title, (panel.x + 18, y), 15, True, COLORS["muted"])
         y += 28
         detail = prop.appraisal_reason if prop.appraisal_result == "rejected" else self.comment
         self.draw_wrapped_text(detail, pygame.Rect(panel.x + 18, y, 316, 74), self.get_font(13), COLORS["muted"])
@@ -3089,6 +3192,9 @@ class ShimarisuRealEstateGame:
         if value > 0:
             return f"+{value}"
         return str(value)
+
+    def percent_text(self, value: float) -> str:
+        return f"{int(round(value * 100))}%"
 
     def draw_bottom_buttons(self) -> None:
         panel = pygame.Rect(24, 724, 1132, 72)
