@@ -198,6 +198,15 @@ PRODUCT_FILE_NAME = "booth_product.txt"
 READY_DIR_NAME = "booth_ready"
 PACKS_DIR_NAME = "04_packs"
 PACK_READY_DIR_NAME = "pack_ready"
+SHIMARISU_PACK_ROOT_NAME = "SHIMARISU"
+SHIMARISU_PACK_ENTRY_NAME = "SHIMARISU Pack v1.0"
+SHIMARISU_PACK_IMAGE_ORDER = (
+    "booth_thumbnail.jpg",
+    "01_start.jpg",
+    "02_checking.jpg",
+    "03_decision.jpg",
+    "screenshot.jpg",
+)
 PRODUCT_TYPE_SINGLE = "single"
 PRODUCT_TYPE_PACK = "pack"
 THUMBNAIL_NAME = "booth_thumbnail.jpg"
@@ -234,6 +243,7 @@ class ProductInfo:
     zip_files: tuple[Path, ...]
     selected_zip: Path | None
     thumbnail_path: Path | None
+    image_paths: tuple[Path, ...]
     screenshot_path: Path | None
 
 
@@ -373,7 +383,37 @@ def get_packs_root() -> Path:
     return get_series_root() / PACKS_DIR_NAME
 
 
+def get_shimarisu_pack_root() -> Path:
+    return get_series_root().parent / SHIMARISU_PACK_ROOT_NAME
+
+
+def get_external_pack_dirs() -> tuple[Path, ...]:
+    candidates = (get_shimarisu_pack_root(),)
+    return tuple(
+        candidate
+        for candidate in candidates
+        if (candidate / READY_DIR_NAME / PRODUCT_FILE_NAME).is_file()
+    )
+
+
+def is_external_pack_dir(product_dir: Path) -> bool:
+    try:
+        resolved = product_dir.resolve()
+    except OSError:
+        resolved = product_dir
+    for candidate in get_external_pack_dirs():
+        try:
+            if resolved == candidate.resolve():
+                return True
+        except OSError:
+            if product_dir == candidate:
+                return True
+    return False
+
+
 def is_pack_dir(product_dir: Path) -> bool:
+    if is_external_pack_dir(product_dir):
+        return True
     if product_dir.parent.name == PACKS_DIR_NAME:
         return True
     readme_path = product_dir / "README.md"
@@ -387,6 +427,8 @@ def product_type_for(product_dir: Path) -> str:
 
 
 def ready_dir_name_for(product_dir: Path) -> str:
+    if is_external_pack_dir(product_dir):
+        return READY_DIR_NAME
     return PACK_READY_DIR_NAME if is_pack_dir(product_dir) else READY_DIR_NAME
 
 
@@ -537,6 +579,8 @@ def extract_readme_meta(app_dir: Path, pattern: re.Pattern[str] | None = None) -
 
 def booth_product_candidates(app_dir: Path) -> tuple[Path, ...]:
     if is_pack_dir(app_dir):
+        if is_external_pack_dir(app_dir):
+            return (app_dir / READY_DIR_NAME / PRODUCT_FILE_NAME,)
         return (app_dir / PACK_READY_DIR_NAME / PRODUCT_FILE_NAME,)
     return (
         app_dir / READY_DIR_NAME / PRODUCT_FILE_NAME,
@@ -766,6 +810,8 @@ def update_booth_url_text(text: str, url: str) -> str:
 
 
 def booth_url_save_targets(app_dir: Path) -> tuple[Path, ...]:
+    if is_external_pack_dir(app_dir):
+        return (app_dir / READY_DIR_NAME / PRODUCT_FILE_NAME,)
     if is_pack_dir(app_dir):
         targets = [app_dir / PACK_READY_DIR_NAME / PRODUCT_FILE_NAME]
         readme_path = app_dir / "README.md"
@@ -918,6 +964,42 @@ def find_zip_files(ready_dir: Path) -> tuple[Path, ...]:
         return ()
 
 
+def shimarisu_pack_defaults() -> dict[str, str]:
+    return {
+        "title": "しまりすくん 実務判断Pack",
+        "price": "3,000円",
+        "description": (
+            "PDFや画像を投げると、内容を見て、次にできることを静かに出す実務判断Pack。\n\n"
+            "PDF結合、PDF圧縮、PDF画像化、画像PDF化、画像リサイズなどを、しまりすくん経由で進められます。"
+        ),
+        "tags": "Windows, PDF, 画像変換, 業務効率化, 実務ツール, DAKE, しまりすくん, 不動産実務, 書類整理, デスクトップアプリ",
+        "zip_path": "booth_ready/SHIMARISU_Pack.zip",
+        "thumbnail_path": "booth_ready/images/booth_thumbnail.jpg",
+    }
+
+
+def apply_external_pack_defaults(app_dir: Path, parsed: dict[str, str]) -> dict[str, str]:
+    if not is_external_pack_dir(app_dir):
+        return parsed
+    merged = dict(parsed)
+    defaults = shimarisu_pack_defaults()
+    for key in ("title", "price", "description", "tags", "zip_path", "thumbnail_path"):
+        merged[key] = defaults[key]
+    return merged
+
+
+def ordered_pack_image_paths(ready_dir: Path) -> tuple[Path, ...]:
+    image_dir = ready_dir / "images"
+    if not image_dir.exists():
+        return ()
+    paths: list[Path] = []
+    for name in SHIMARISU_PACK_IMAGE_ORDER:
+        path_item = find_file_case_insensitive(image_dir, name)
+        if path_item is not None:
+            paths.append(path_item)
+    return tuple(paths)
+
+
 def build_product_info(app_dir: Path) -> ProductInfo:
     product_type = product_type_for(app_dir)
     found_product_path = find_booth_product_path(app_dir)
@@ -933,6 +1015,7 @@ def build_product_info(app_dir: Path) -> ProductInfo:
         "thumbnail_path": "",
     }
     parsed.update(parse_booth_product(product_path))
+    parsed = apply_external_pack_defaults(app_dir, parsed)
     readme_meta = extract_readme_meta(app_dir)
     readme_title = safe_text(readme_meta.get("display_name")) or safe_text(readme_meta.get("site_title")) or safe_text(readme_meta.get("launcher_title"))
     readme_description = safe_text(readme_meta.get("summary")) or safe_text(readme_meta.get("site_description")) or safe_text(readme_meta.get("update_summary"))
@@ -949,15 +1032,29 @@ def build_product_info(app_dir: Path) -> ProductInfo:
     zip_from_text = resolve_product_relative_path(app_dir, parsed.get("zip_path", ""))
     selected_zip = zip_files[0] if zip_files else zip_from_text
 
-    thumbnail_path = find_file_case_insensitive(ready_dir, THUMBNAIL_NAME)
-    if thumbnail_path is None:
+    if product_type == PRODUCT_TYPE_PACK and not is_external_pack_dir(app_dir):
         thumbnail_path = find_file_case_insensitive(app_dir / "assets", THUMBNAIL_NAME)
+        if thumbnail_path is None:
+            thumbnail_path = find_file_case_insensitive(ready_dir, THUMBNAIL_NAME)
+        if thumbnail_path is None:
+            thumbnail_path = find_file_case_insensitive(ready_dir / "images", THUMBNAIL_NAME)
+    else:
+        thumbnail_path = find_file_case_insensitive(ready_dir, THUMBNAIL_NAME)
+        if thumbnail_path is None:
+            thumbnail_path = find_file_case_insensitive(ready_dir / "images", THUMBNAIL_NAME)
+        if thumbnail_path is None:
+            thumbnail_path = find_file_case_insensitive(app_dir / "assets", THUMBNAIL_NAME)
     if thumbnail_path is None:
         thumbnail_path = resolve_product_relative_path(app_dir, parsed.get("thumbnail_path", ""))
+    image_paths = ordered_pack_image_paths(ready_dir)
+    if not image_paths and thumbnail_path is not None:
+        image_paths = (thumbnail_path,)
 
     screenshot_path = find_file_case_insensitive(app_dir / "assets", SCREENSHOT_NAME)
     if screenshot_path is None:
         screenshot_path = find_file_case_insensitive(ready_dir, SCREENSHOT_NAME)
+    if screenshot_path is None:
+        screenshot_path = find_file_case_insensitive(ready_dir / "images", "screenshot.jpg")
 
     return ProductInfo(
         app_name=app_dir.name,
@@ -976,6 +1073,7 @@ def build_product_info(app_dir: Path) -> ProductInfo:
         zip_files=zip_files,
         selected_zip=selected_zip,
         thumbnail_path=thumbnail_path,
+        image_paths=image_paths,
         screenshot_path=screenshot_path,
     )
 
@@ -992,6 +1090,9 @@ def discover_apps() -> list[AppEntry]:
                     entries.append(AppEntry(child.name, child, product_path is not None, product_type))
         except OSError:
             continue
+    for pack_dir in get_external_pack_dirs():
+        product_path = find_booth_product_path(pack_dir)
+        entries.append(AppEntry(SHIMARISU_PACK_ENTRY_NAME, pack_dir, product_path is not None, PRODUCT_TYPE_PACK))
     return sorted(entries, key=lambda entry: (entry.product_type != PRODUCT_TYPE_PACK, not entry.has_product, entry.name.lower()))
 
 
@@ -2100,7 +2201,10 @@ class DakeBoothAssistApp:
             self._set_status("status_no_selection", UI_TEXT["detail_no_selection"])
             return
 
-        value = getattr(self.selected_product, attribute, "")
+        if attribute == "thumbnail_path" and self.selected_product.image_paths:
+            value = "\n".join(str(path_item) for path_item in self.selected_product.image_paths)
+        else:
+            value = getattr(self.selected_product, attribute, "")
         label = UI_TEXT[label_key]
         if not value:
             self._set_status("status_ready", UI_TEXT["detail_copy_empty"].format(label=label))
@@ -2400,9 +2504,14 @@ def run_launch_check() -> int:
         )
         (pack_ready_dir / PRODUCT_FILE_NAME).write_text("# 商品名\nPack Ready\n\n# 価格案\n980円\n\n# URL\n", encoding="utf-8")
         (pack_ready_dir / "pack.zip").write_bytes(b"")
+        pack_image_dir = pack_ready_dir / "images"
+        pack_image_dir.mkdir()
+        (pack_image_dir / THUMBNAIL_NAME).write_bytes(b"")
         pack_product = build_product_info(pack_app)
         if pack_product.product_type != PRODUCT_TYPE_PACK or pack_product.product_source != f"{PACK_READY_DIR_NAME}/{PRODUCT_FILE_NAME}":
             raise RuntimeError("pack product fixture failed")
+        if not pack_product.image_paths:
+            raise RuntimeError("pack image path fixture failed")
         pack_saved_url = "https://peakheadz.booth.pm/items/8417562"
         pack_saved_targets = save_booth_url_to_products(pack_app, pack_saved_url)
         if tuple(format_save_target(pack_app, target) for target in pack_saved_targets) != (f"{PACK_READY_DIR_NAME}/{PRODUCT_FILE_NAME}", "README.md"):
@@ -2494,6 +2603,16 @@ def run_launch_check() -> int:
 
     product_apps = sum(1 for entry in apps if entry.has_product)
     pack_products = sum(1 for entry in apps if entry.product_type == PRODUCT_TYPE_PACK)
+    shimarisu_pack = next((build_product_info(entry.path) for entry in apps if entry.name == SHIMARISU_PACK_ENTRY_NAME), None)
+    if shimarisu_pack is not None:
+        if shimarisu_pack.title != "しまりすくん 実務判断Pack":
+            raise RuntimeError("shimarisu pack title fixture failed")
+        if shimarisu_pack.price != "3,000円":
+            raise RuntimeError("shimarisu pack price fixture failed")
+        if shimarisu_pack.selected_zip is None or shimarisu_pack.selected_zip.name != "SHIMARISU_Pack.zip":
+            raise RuntimeError("shimarisu pack zip fixture failed")
+        if not shimarisu_pack.image_paths or shimarisu_pack.image_paths[0].name != THUMBNAIL_NAME:
+            raise RuntimeError("shimarisu pack image fixture failed")
     dake_backup_source = "missing"
     dake_backup_fields = "missing"
     dake_backup_tag_count = 0
@@ -2515,6 +2634,7 @@ def run_launch_check() -> int:
     print(f"apps={len(apps)}")
     print(f"product_apps={product_apps}")
     print(f"pack_products={pack_products}")
+    print(f"shimarisu_pack={'ready' if shimarisu_pack is not None else 'missing'}")
     print(f"dake_backup_product={dake_backup_source}")
     print(f"dake_backup_fields={dake_backup_fields}")
     print(f"dake_backup_tag_count={dake_backup_tag_count}")
