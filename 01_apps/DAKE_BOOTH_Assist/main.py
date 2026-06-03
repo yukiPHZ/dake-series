@@ -2573,7 +2573,9 @@ def run_launch_check() -> int:
         raise RuntimeError("zip file input fixture failed")
     if looks_like_zip_file_input(image_file_info):
         raise RuntimeError("file input separation fixture failed")
-    manual_upload_path = Path(__file__).resolve()
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as manual_upload_file:
+        manual_upload_file.write(b"fixture")
+        manual_upload_path = Path(manual_upload_file.name)
     image_manual_result = set_product_image_file(None, UI_TEXT["field_product_image"], manual_upload_path, ())
     if image_manual_result != UI_TEXT["assist_manual_set"].format(label=UI_TEXT["field_product_image"]):
         raise RuntimeError("manual image upload fixture failed")
@@ -2582,6 +2584,7 @@ def run_launch_check() -> int:
         raise RuntimeError("manual zip upload fixture failed")
     if not format_path_result("field_product_image_path", manual_upload_path).startswith(UI_TEXT["field_product_image_path"]):
         raise RuntimeError("manual path result fixture failed")
+    manual_upload_path.unlink(missing_ok=True)
 
     real_import = builtins.__import__
 
