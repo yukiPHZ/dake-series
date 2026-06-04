@@ -139,7 +139,25 @@ store.dakeapp.com      自社販売ビュー
 
 派生ビューを直接編集した場合は、必要に応じて `ORIGINAL.md` へ戻す。
 
-## 12. アプリ別任意セクション
+## 12. Pack商品のORIGINAL
+
+Pack商品は、単品アプリとは別の `ORIGINAL.md` を持つ。
+
+```text
+単品アプリ ORIGINAL
+= そのアプリ自体の正本
+
+Pack ORIGINAL
+= 複数アプリ・素材・説明・価格・zip構成を束ねる商品の正本
+```
+
+Pack側には、Packとしての価値、構成、価格、zip構成、販売方針、更新時の扱いを置く。
+
+構成アプリの詳しい機能、注意事項、Release URL、BOOTH URL、スクリーンショット方針は、各アプリ側の `ORIGINAL.md` を優先する。
+
+Pack側で構成アプリの説明を過剰に重複させない。
+
+## 13. アプリ別任意セクション
 
 アプリの性質により、`ORIGINAL.md` には任意セクションを追加してよい。
 
@@ -161,7 +179,7 @@ store.dakeapp.com      自社販売ビュー
 
 ただし、`ORIGINAL.md` が真の正本であり、README、DAKE_META、release_body、booth_product、Store表示が派生ビューであるという位置づけは変えない。
 
-## 13. 今回のPhase 1でやらないこと
+## 14. 今回のPhase 1でやらないこと
 
 このルール策定Phaseでは、以下を行わない。
 
