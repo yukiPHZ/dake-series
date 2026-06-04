@@ -57,6 +57,8 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 
 25分集中、5分休憩、15分休憩、カスタム時間に対応したWindows向けタイマーです。
 
+実務の流れを、少し静かにするための道具です。
+
 ## README生成用情報
 
 - 概要: 集中時間と休憩時間をすぐに始めるための静かなタイマー。
@@ -108,6 +110,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
   - 25分 / 5分 / 15分 / カスタム時間に対応
   - 静かなDAKE UI
   - Windows向けexe
+  - 実務の流れを、少し静かにするための道具です。
 - タグ:
   - Windows
   - 実務
@@ -125,6 +128,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 
 - 商品名: Dakeアドバンスドタイマー
 - キャッチ: 集中時間と休憩時間をすぐに始められる静かなタイマー。
+- キャッチ補足: 実務の流れを、少し静かにするための道具です。
 - 説明: 25分集中、5分休憩、15分休憩、カスタム時間に対応したWindows向けタイマーです。
 - 価格: 300円
 - 画像: assets/booth_thumbnail.jpg / assets/screenshot.webp
