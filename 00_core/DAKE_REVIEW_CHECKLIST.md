@@ -2,8 +2,10 @@
 
 ## DAKE正式出荷ライン
 
-- [ ] `README.md` が正本として整っている。
-- [ ] `release_body.md` がREADMEの `RELEASE_BODY` と一致している。
+- [ ] `ORIGINAL.md` がある場合は真の正本として整っている。
+- [ ] `ORIGINAL.md` 未導入の既存アプリでは `README.md` を暫定参照できる。
+- [ ] `README.md` はGitHub公開用ビューとして整っている。
+- [ ] `release_body.md` が `ORIGINAL.md` 由来、または移行前READMEの `RELEASE_BODY` と一致している。
 - [ ] `assets/screenshot.webp` がある。
 - [ ] `assets/booth_thumbnail.jpg` がある。
 - [ ] `booth_ready/booth_product.txt` がある。
@@ -16,7 +18,7 @@
 - [ ] BOOTH ready素材が揃っている。
 - [ ] BOOTH掲載準備が完了している。
 - [ ] BOOTH公開後のURL欄が保持されている。
-- [ ] dakeapp.com掲載に必要な項目がREADMEから読める。
+- [ ] dakeapp.com掲載に必要な項目が `ORIGINAL.md` 由来、または移行前README / DAKE_METAから読める。
 - [ ] dakeapp.comに表示されている。
 - [ ] Cloudflare反映確認済み。
 - [ ] GitHub Releaseのみで出荷完了と扱っていない。

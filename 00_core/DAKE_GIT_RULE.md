@@ -4,7 +4,8 @@ DAKEシリーズのGit運用と除外ルールです。
 
 ## 基本方針
 
-- Gitの正本はソース、README、仕様、スクリーンショット。
+- Gitで管理する主要素材は、ソース、仕様、`ORIGINAL.md`、README公開ビュー、スクリーンショット。
+- アプリの真の正本は `ORIGINAL.md`。未導入の既存アプリではREADMEを暫定参照する。
 - exeはGitに入れず、GitHub Releaseで配布する。
 - build成果物は再生成できるものとして扱う。
 - 個人設定やローカル環境依存ファイルを入れない。
@@ -51,7 +52,7 @@ desktop.ini
 
 - `dist/<exe_name>.exe` はGitHub Releaseへ添付する。
 - Release説明文は `release_body.md` を使う。
-- Release作成後、READMEの `DAKE_META.release_url` を更新する。
+- Release作成後、READMEの `DAKE_META.release_url` を更新する。`ORIGINAL.md` 導入済みアプリでは、正本へ戻すべき公開情報か確認する。
 
 ## commit前確認
 
@@ -59,7 +60,7 @@ desktop.ini
 - `*.exe` が含まれていない。
 - 個人情報や環境依存パスが入っていない。
 - READMEの `DAKE_META` が壊れていない。
-- `release_body.md` がREADMEと一致している。
+- `release_body.md` が `ORIGINAL.md` 由来、または移行前READMEの `RELEASE_BODY` と一致している。
 - `assets/screenshot.webp` が最新。
 
 ## ブランチと作業

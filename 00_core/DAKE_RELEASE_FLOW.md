@@ -5,6 +5,8 @@
 DAKEの正式出荷ラインは以下で固定します。
 
 ```text
+ORIGINAL.md
+↓
 README.md
 ↓
 release_body.md
@@ -35,7 +37,8 @@ Cloudflare反映確認
 GitHub Release公開のみでは正式出荷完了とはしません。
 以下が揃って初めて正式出荷とします。
 
-- `README.md` が最新
+- `ORIGINAL.md` が最新（未導入の既存アプリでは `README.md` を暫定参照）
+- `README.md` がGitHub公開用ビューとして最新
 - `release_body.md` が最新
 - `assets/screenshot.webp` が存在する
 - `assets/booth_thumbnail.jpg` が存在する
@@ -43,7 +46,7 @@ GitHub Release公開のみでは正式出荷完了とはしません。
 - `booth_ready/` が生成されている
 - `dist/*.exe` が生成されている
 - GitHub Release が作成され、exeが添付されている
-- README の `DAKE_META.release_url` が更新済み
+- README の `DAKE_META.release_url` が派生ビューとして更新済み
 - BOOTH掲載準備が完了している
 - dakeapp.com に反映されている
 - Cloudflare反映確認済み
@@ -61,6 +64,7 @@ GitHub Release作成のみで出荷完了と報告しません。
 - `booth_ready/` を生成・確認する。
 - `dist/*.exe` をGitHub Releaseへ添付する。
 - READMEの `DAKE_META.release_url` をRelease作成後に更新する。
+- README / DAKE_META / release_body / booth_product を直接編集する場合は、`ORIGINAL.md` に戻すべき一次情報かを確認する。
 - dakeapp.com掲載に必要な `display_name`、`site_title`、`site_description`、`update_summary`、`release_url`、`screenshot_path` を確認する。
 - dakeapp.com反映後、Cloudflare上の本番URLで200、スクショ、Releaseリンクを確認する。
 
@@ -72,8 +76,9 @@ DAKEアプリ完成後の公開手順です。
 ## 前提
 
 - GitHub Release本体の編集は、明示された公開作業時だけ行う。
-- Release説明文の正本は各アプリREADMEの `RELEASE_BODY`。
-- `release_body.md` はREADMEから生成する貼り付け用ファイル。
+- Release説明文の元情報は `ORIGINAL.md`。
+- `ORIGINAL.md` 未導入の既存アプリでは、各アプリREADMEの `RELEASE_BODY` を暫定参照する。
+- `release_body.md` はGitHub Releaseへ貼るための派生ビュー。
 - `release_url` はRelease作成後にREADMEへ後入れする。
 
 ## 1. 完成確認
@@ -88,7 +93,7 @@ DAKEアプリ完成後の公開手順です。
 
 ## 2. README整備
 
-各アプリREADMEに以下を置く:
+各アプリREADMEはGitHub公開用ビューとして以下を置く:
 
 - `DAKE_META`
 - `RELEASE_BODY`
@@ -102,7 +107,7 @@ DAKEアプリ完成後の公開手順です。
 
 ## 3. release_body.md生成
 
-- READMEの `RELEASE_BODY` を読み取る。
+- `ORIGINAL.md` のRelease用情報を優先する。未導入アプリではREADMEの `RELEASE_BODY` を読み取る。
 - 各アプリフォルダ直下に `release_body.md` を生成する。
 - 3〜5行の箇条書きにする。
 - 長い説明は書かない。
@@ -153,12 +158,13 @@ Release説明欄には `release_body.md` を貼る。
 Release作成後:
 
 - 各アプリREADMEの `DAKE_META.release_url` にRelease URLを入れる。
+- `ORIGINAL.md` 導入済みアプリでは、Release URLや公開状態が正本へ戻すべき情報か確認する。
 - `update_summary` に公開内容を短く反映する。
 - `status` は問題なければ `available` のままにする。
 
 ## 10. dakeapp.com反映
 
-- READMEの `DAKE_META` を読み込む。
+- READMEの `DAKE_META` を機械利用ビューとして読み込む。
 - `site_title`、`site_description`、`release_url`、`screenshot_path` を反映する。
 - `show_on_site: true` のアプリだけ掲載する。
 - スクリーンショットは `assets/screenshot.webp` を使う。

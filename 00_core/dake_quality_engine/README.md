@@ -83,7 +83,7 @@ python 00_core\dake_quality_engine\quality_check.py --app 01_apps\DAKE_PDF_Merge
 1. 代表アプリ1本へ Reliability Kit / Atomic IO / Config を導入
 2. `--launch-check` を `run_launch_check()` に寄せる
 3. `quality_check.py` を出荷前チェックへ組み込む
-4. BOOTH ready / VersionInfo / README正本チェックと接続する
+4. BOOTH ready / VersionInfo / ORIGINAL・README派生ビュー整合チェックと接続する
 
 ## exe後にも効く項目
 

@@ -3,9 +3,11 @@
 ## DAKE正式出荷ライン
 
 DAKEの正式出荷は、GitHub Release公開だけでは完了としません。
-README正本、スクリーンショット、BOOTH販売素材、dakeapp.com掲載までを1本の出荷ラインとして扱います。
+ORIGINAL.md真の正本、README公開ビュー、スクリーンショット、BOOTH販売素材、dakeapp.com掲載までを1本の出荷ラインとして扱います。
 
 ```text
+ORIGINAL.md
+↓
 README.md
 ↓
 release_body.md
@@ -46,6 +48,8 @@ DAKEシリーズ全体で参照する共通仕様ファイル置き場です。
 
 | ファイル | 役割 |
 | --- | --- |
+| `DAKE_ORIGINAL_RULE.md` | `ORIGINAL.md` を真の正本とし、README / DAKE_META / release_body / booth_product / Store表示を派生ビューとして扱うルールです。 |
+| `DAKE_ORIGINAL_TEMPLATE_APP.md` | DAKEアプリへ `ORIGINAL.md` を導入するためのテンプレートです。 |
 | `DAKE_COMMON_SPEC.md` | DAKEシリーズの最上位共通仕様。迷ったら最初に読む正本です。 |
 | `DAKE_UI_GUIDE.md` | 見た目、操作感、初期表示、余白、ボタン、フッターの基準です。 |
 | `DAKE_RELEASE_FLOW.md` | buildからGitHub Release、BOOTH、dakeapp.com、Cloudflare反映確認までの公開手順です。 |
@@ -63,16 +67,21 @@ DAKEシリーズ全体で参照する共通仕様ファイル置き場です。
 
 1. 新規アプリを作る: `DAKE_COMMON_SPEC.md` → `DAKE_APP_TEMPLATE.md` → `DAKE_UI_GUIDE.md` → `DAKE_BUILD_RULE.md`
 2. 既存アプリをレビューする: `DAKE_REVIEW_CHECKLIST.md` → `DAKE_UI_TEXT_RULE.md` → `DAKE_SCREENSHOT_RULE.md`
-3. 公開作業をする: `DAKE_RELEASE_FLOW.md` → `DAKE_GIT_RULE.md` → 各アプリの `README.md`
+3. 公開作業をする: `DAKE_ORIGINAL_RULE.md` → 対象の `ORIGINAL.md` → `DAKE_RELEASE_FLOW.md` → `DAKE_GIT_RULE.md` → 各アプリの `README.md`
 4. 判断に迷ったとき: `DAKE_COMMON_SPEC.md` を優先する
 
 ## 正本の考え方
 
 - シリーズ共通仕様の正本: `00_core/*.md`
-- アプリごとの正本: `01_apps/<app>/README.md`
+- アプリごとの真の正本: `01_apps/<app>/ORIGINAL.md`
+- ORIGINAL.md未導入の既存アプリ: `01_apps/<app>/README.md` を暫定参照する
+- `README.md`: GitHub公開用ビューであり、真の正本ではない
+- `DAKE_META`: Launcher / サイト / 管理ツール向けの機械利用ビュー
+- `release_body.md`: GitHub Release用ビュー
+- `booth_product.txt`: BOOTH登録用ビュー
 - スクリーンショット正本: `01_apps/<app>/assets/screenshot.webp`
 - BOOTH商品画像: `01_apps/<app>/assets/booth_thumbnail.jpg`
-- Release説明文の生成元: 各アプリREADMEの `RELEASE_BODY`
+- Release説明文の元情報: `ORIGINAL.md`。未導入アプリでは各アプリREADMEの `RELEASE_BODY` を暫定参照する
 
 ## BOOTH登録
 

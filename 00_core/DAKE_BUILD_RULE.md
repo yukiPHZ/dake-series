@@ -7,7 +7,7 @@ PyInstallerと `build.bat` の共通ルールです。
 - Windows向けexeを `dist` に出力する。
 - 1アプリ1exeを基本にする。
 - exe名はREADMEの `DAKE_META.exe_name` と一致させる。
-- build成果物はRelease配布用であり、Gitの正本にしない。
+- build成果物はRelease配布用であり、Git管理対象にしない。
 
 ## build.bat基本形
 

@@ -3,9 +3,11 @@
 ## DAKE正式出荷ライン
 
 DAKEシリーズの正式出荷は、GitHub Release公開だけでは完了としません。
-README正本運用、BOOTH販売素材、dakeapp.com掲載までを含めて、初めて正式出荷とします。
+ORIGINAL.md正本運用、README公開ビュー、BOOTH販売素材、dakeapp.com掲載までを含めて、初めて正式出荷とします。
 
 ```text
+ORIGINAL.md
+↓
 README.md
 ↓
 release_body.md
@@ -42,6 +44,7 @@ Cloudflare反映確認
 
 正式出荷に必要なもの:
 
+- `ORIGINAL.md`（移行済みアプリ。未導入の既存アプリでは `README.md` を暫定参照）
 - `README.md`
 - `release_body.md`
 - `assets/screenshot.webp`
@@ -90,16 +93,30 @@ DAKEシリーズの最上位共通仕様です。個別仕様や実装判断で�
 - exe名はReleaseで見ても分かる英数字中心の名前にする。
 - 表示名は日本語でよい。短く、用途が一瞬で分かる名前にする。
 - READMEの `DAKE_META.folder_name` と実フォルダ名を一致させる。
-- READMEの `DAKE_META.exe_name` と `dist` 内の正本exe名を一致させる。
+- READMEの `DAKE_META.exe_name` と `dist` 内の配布exe名を一致させる。
 
-## README正本
+## ORIGINAL.md と派生ビュー
 
-各アプリの `README.md` は、そのアプリ自身が語る正本です。
+各アプリの真の正本は `ORIGINAL.md` です。
+
+`README.md` はGitHub公開用ビューであり、真の正本ではありません。
+ただし、まだ `ORIGINAL.md` がない既存アプリでは、移行までの暫定参照として `README.md` を読んでよいものとします。
+
+Codex作業時の確認順:
+
+1. `ORIGINAL.md`
+2. `README.md`
+3. `DAKE_META`
+4. `release_body.md`
+5. `booth_product.txt`
+6. 関連仕様ファイル
+
+README / DAKE_META / release_body / booth_product を直接編集する場合は、その変更が `ORIGINAL.md` に戻すべき一次情報かを確認します。
 
 必須ブロック:
 
-- `DAKE_META`: ランチャー、dakeapp.com、Release連携用のJSON。
-- `RELEASE_BODY`: GitHub Release説明欄に貼る3〜5行の短文。
+- `DAKE_META`: ランチャー、dakeapp.com、Release連携用の機械利用ビュー。
+- `RELEASE_BODY`: GitHub Release説明欄に貼る3〜5行の短文ビュー。
 
 `DAKE_META` の必須項目:
 
@@ -161,7 +178,8 @@ DAKEシリーズの最上位共通仕様です。個別仕様や実装判断で�
 - 文字化けを放置しない。
 - 過去プロジェクトを丸ごと流用しない。
 - Release用exeをGit管理の正本にしない。
-- README以外の別台帳を増やさない。
+- `ORIGINAL.md` 以外の別台帳を増やさない。
+- README / DAKE_META / release_body / booth_product を真の正本として扱わない。
 
 
 ## DAKE_META Status Model

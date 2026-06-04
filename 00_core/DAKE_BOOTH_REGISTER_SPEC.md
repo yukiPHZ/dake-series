@@ -8,10 +8,13 @@ BOOTHは単なる後作業ではなく、ユーザーが触れる状態へ届け
 GitHub Releaseは配布物公開、BOOTH登録はユーザーが見つけて理解し取得できる状態へ近づける工程です。
 DAKEでは、BOOTH readyとBOOTH登録確認までを正式出荷ラインに含める。
 
-## 正本
+## 情報源とビュー
 
-BOOTH登録に使う正本は以下。
+BOOTH登録の真の正本は `ORIGINAL.md` です。
+ただし、`ORIGINAL.md` 未導入の既存アプリでは、移行までREADME由来の情報を暫定参照します。
+BOOTH登録に使う派生ビューは以下。
 
+- `ORIGINAL.md`
 - `README.md`
 - `release_body.md`
 - `booth_product.txt`（通常は `booth_ready/booth_product.txt`）
@@ -129,8 +132,8 @@ BOOTH URL が登録済みなら UPDATE 候補として扱う。
 
 ## 不足時の扱い
 
-- `release_body.md` がない場合は、READMEの `RELEASE_BODY` から生成する。
-- `booth_product.txt` がない場合は、READMEの `DAKE_META` と `RELEASE_BODY` から暫定生成する。
+- `release_body.md` がない場合は、`ORIGINAL.md` のRelease用情報から生成する。未導入アプリではREADMEの `RELEASE_BODY` から暫定生成する。
+- `booth_product.txt` がない場合は、`ORIGINAL.md` のBOOTH用情報から生成する。未導入アプリではREADMEの `DAKE_META` と `RELEASE_BODY` から暫定生成する。
 - `assets/booth_thumbnail.jpg` がない場合は、`tools/make_booth_ready.py` で生成する。
 - `assets/screenshot.webp` がない場合は、自動撮影できる場合のみ作成し、難しい場合は要スクショとして止める。
 - `booth_ready/` がない場合は、`tools/make_booth_ready.py` の既存仕様に従って生成する。

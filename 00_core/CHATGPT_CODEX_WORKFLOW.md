@@ -4,7 +4,7 @@
 
 チャットは記憶庫ではなく、作業机として扱う。
 
-完了した作業は、README・Git・レポート・成果物に反映し、チャット自体は必要に応じてアーカイブする。
+完了した作業は、ORIGINAL.md・README・Git・レポート・成果物に反映し、チャット自体は必要に応じてアーカイブする。
 
 ## 役割
 
@@ -27,12 +27,12 @@
 - push
 - レポート作成
 
-### README
+### ORIGINAL.md / README
 
-- 現在の仕様
-- 現在の思想
-- 現在の状態
-- 外部から見た正本
+- `ORIGINAL.md`: 現在の仕様、思想、状態をまとめる真の正本
+- `README.md`: GitHub公開用ビュー
+- `DAKE_META`: Launcher / サイト / 管理ツール向けの機械利用ビュー
+- `release_body.md` / `booth_product.txt`: Release / BOOTH向けの派生ビュー
 
 ### Git
 
@@ -78,7 +78,7 @@ tools/reports/current_status_review_YYYYMMDD.md
 
 以下を満たしたチャットはアーカイブ候補。
 
-- READMEに反映済み
+- ORIGINAL.mdまたはREADMEに反映済み
 - Git commit済み
 - push済み
 - 必要なレポートが保存済み
@@ -88,9 +88,11 @@ tools/reports/current_status_review_YYYYMMDD.md
 
 Codexは作業前に必要に応じて以下を確認する。
 
+- ORIGINAL.md
 - README.md
 - DAKE_META
 - release_body.md
+- booth_product.txt
 - tools/reports/current_status_review_*.md
 - git status
 - git log --oneline -5
@@ -99,7 +101,7 @@ Codexは作業前に必要に応じて以下を確認する。
 
 - チャットだけを正本にしない
 - 完了報告だけで終わらせない
-- READMEやGitに反映しないまま記憶に頼らない
+- ORIGINAL.md、README、Gitに反映しないまま記憶に頼らない
 - 対象repo不明のまま作業しない
 - git add . を安易に使わない
 
@@ -107,7 +109,8 @@ Codexは作業前に必要に応じて以下を確認する。
 
 ChatGPTは考える場所。
 Codexは動かす場所。
-READMEは正本。
+ORIGINAL.mdは真の正本。
+READMEはGitHub公開用ビュー。
 Gitは履歴。
 status_reviewは現在地。
 チャットは作業机。
