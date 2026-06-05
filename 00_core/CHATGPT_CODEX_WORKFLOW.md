@@ -132,3 +132,92 @@ status_reviewは現在地。
 チャットは作業机。
 
 終わったら片付ける。
+
+## Codex標準作業ルール v2
+
+DAKEシリーズでは、`ORIGINAL.md` を真の正本として扱います。CodexはREADME正本時代の前提で作業せず、対象アプリ・サイト・Packの作業前に、原則として次の順で確認します。
+
+1. `ORIGINAL.md`
+2. `README.md`
+3. `DAKE_META`
+4. `release_body.md`
+5. `booth_product.txt`
+6. 関連仕様ファイル
+
+存在しないファイルがある場合のみ次へ進みます。`ORIGINAL.md` が存在する対象では、矛盾があれば必ず `ORIGINAL.md` を優先します。
+
+優先順位は次の通りです。
+
+```text
+ORIGINAL.md
+↓
+README.md
+↓
+DAKE_META
+↓
+release_body.md
+↓
+booth_product.txt
+```
+
+`README.md` はGitHub公開ビューであり、真の正本ではありません。READMEにしか存在しない重要情報を見つけた場合は、その情報を `ORIGINAL.md` へ戻すべきか確認します。
+
+派生ビューの位置づけは次の通りです。
+
+- `README.md` = GitHub公開ビュー
+- `DAKE_META` = Launcher / サイト / 管理ツール向け機械利用ビュー
+- `release_body.md` = GitHub Releaseビュー
+- `booth_product.txt` = BOOTH登録ビュー
+- `store.dakeapp.com` = 販売ビュー
+
+上記はすべて派生物であり、正本ではありません。Store側で商品名、価格、説明文、Stripe Payment Link、BOOTH URLを直接編集しません。
+
+正式出荷時は、次の順で確認します。
+
+```text
+ORIGINAL.md確認
+↓
+README整合確認
+↓
+release_body整合確認
+↓
+booth_product整合確認
+↓
+Store generated JSON更新
+↓
+Store同期
+↓
+GitHub Release
+↓
+BOOTH
+↓
+dakeapp.com
+↓
+store.dakeapp.com
+↓
+出荷完了
+```
+
+Store確認では、次を標準項目とします。
+
+- `store_products.generated.json` 更新確認
+- Store同期確認
+- Store商品詳細URL確認
+- `payment_status` 確認
+- Stripe導線確認
+- BOOTH導線確認
+- Cloudflare反映確認
+
+Codexの完了報告には、正式出荷・Store反映が関係する場合、次を含めます。
+
+- `ORIGINAL.md` 確認有無
+- README / release_body / booth_product 整合確認
+- Store同期結果
+- Store商品詳細URL
+- `payment_status`
+- Stripe導線
+- BOOTH導線
+- Cloudflare反映確認
+- final git status
+
+過渡期ルールとして、`ORIGINAL.md` がまだ存在しない既存アプリでは `README.md` を暫定参照してよいものとします。ただし、今後の移行対象であれば `ORIGINAL.md` 作成を提案します。
