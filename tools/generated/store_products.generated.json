@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-05T13:10:07+09:00",
+  "generated_at": "2026-06-05T13:40:12+09:00",
   "source_policy": "ORIGINAL.md is the source of truth. This file is generated and must not be edited manually.",
   "schema_version": "1.0.0",
   "do_not_edit": true,
@@ -35,6 +35,8 @@
       "support_policy": null,
       "disclaimer": "【注意事項】\n\n・Windows向けアプリです\n・ご利用は自己責任でお願いいたします\n・大切なファイルは事前にバックアップを推奨します\n・本ソフトウェアの無断転載・再配布を禁止します\n・環境によっては起動時にWindowsの警告が表示される場合があります\n\nPEAKHEADZ\nhttps://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -70,6 +72,8 @@
       "support_policy": null,
       "disclaimer": "BOOTH ready内の注意事項、または既存READMEの注意事項を元にします。\n\n- Windows向けアプリです。\n- ご利用は自己責任でお願いいたします。\n- 大切なファイルは事前にバックアップを推奨します。\n- 本ソフトウェアの無断転載・再配布を禁止します。",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -107,6 +111,8 @@
       "support_policy": null,
       "disclaimer": "- 【注意事項】\n- Windows向けアプリです\n- ご利用は自己責任でお願いいたします\n- 大切なファイルは事前にバックアップを推奨します\n- 本ソフトウェアの無断転載・再配布を禁止します\n- 環境によっては起動時にWindowsの警告が表示される場合があります\n- https://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -143,6 +149,8 @@
       "support_policy": null,
       "disclaimer": "【注意事項】\n\n・Windows向けアプリです\n・ご利用は自己責任でお願いいたします\n・大切なファイルは事前にバックアップを推奨します\n・本ソフトウェアの無断転載・再配布を禁止します\n・環境によっては起動時にWindowsの警告が表示される場合があります\n\nPEAKHEADZ\nhttps://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -179,6 +187,8 @@
       "support_policy": null,
       "disclaimer": "【注意事項】\n\n・Windows向けアプリです\n・ご利用は自己責任でお願いいたします\n・大切なファイルは事前にバックアップを推奨します\n・本ソフトウェアの無断転載・再配布を禁止します\n・環境によっては起動時にWindowsの警告が表示される場合があります\n\nPEAKHEADZ\nhttps://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -216,6 +226,8 @@
       "support_policy": null,
       "disclaimer": "- 【注意事項】\n- Windows向けアプリです\n- ご利用は自己責任でお願いいたします\n- 大切なファイルは事前にバックアップを推奨します\n- 本ソフトウェアの無断転載・再配布を禁止します\n- 環境によっては起動時にWindowsの警告が表示される場合があります\n- https://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -252,6 +264,8 @@
       "support_policy": null,
       "disclaimer": "- 【注意事項】\n- Windows向けアプリです\n- ご利用は自己責任でお願いいたします\n- 大切なファイルは事前にバックアップを推奨します\n- 本ソフトウェアの無断転載・再配布を禁止します\n- 環境によっては起動時にWindowsの警告が表示される場合があります\n- https://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -288,6 +302,8 @@
       "support_policy": null,
       "disclaimer": "BOOTH ready内の注意事項、または既存READMEの注意事項を元にします。\n\n- 初期版では保存しない。\n- 色変更、検索、タグ、画像添付、エクスポート、分類は行わない。\n- 付箋位置はウインドウ外へ出ないよう制限する。",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -324,6 +340,8 @@
       "support_policy": null,
       "disclaimer": "【注意事項】\n\n・Windows向けアプリです\n・ご利用は自己責任でお願いいたします\n・大切なファイルは事前にバックアップを推奨します\n・本ソフトウェアの無断転載・再配布を禁止します\n・環境によっては起動時にWindowsの警告が表示される場合があります\n\nPEAKHEADZ\nhttps://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -359,6 +377,8 @@
       "support_policy": null,
       "disclaimer": "【注意事項】\n\n・Windows向けアプリです\n・ご利用は自己責任でお願いいたします\n・大切なファイルは事前にバックアップを推奨します\n・本ソフトウェアの無断転載・再配布を禁止します\n・環境によっては起動時にWindowsの警告が表示される場合があります\n\nPEAKHEADZ\nhttps://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -395,6 +415,8 @@
       "support_policy": null,
       "disclaimer": "【注意事項】\n\n・Windows向けアプリです\n・ご利用は自己責任でお願いいたします\n・大切なファイルは事前にバックアップを推奨します\n・本ソフトウェアの無断転載・再配布を禁止します\n・環境によっては起動時にWindowsの警告が表示される場合があります\n\nPEAKHEADZ\nhttps://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -431,6 +453,8 @@
       "support_policy": null,
       "disclaimer": "【注意事項】\n\n・Windows向けアプリです\n・ご利用は自己責任でお願いいたします\n・大切なファイルは事前にバックアップを推奨します\n・本ソフトウェアの無断転載・再配布を禁止します\n・環境によっては起動時にWindowsの警告が表示される場合があります\n\nPEAKHEADZ\nhttps://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -467,6 +491,8 @@
       "support_policy": null,
       "disclaimer": "【注意事項】\n\n・Windows向けアプリです\n・ご利用は自己責任でお願いいたします\n・大切なファイルは事前にバックアップを推奨します\n・本ソフトウェアの無断転載・再配布を禁止します\n・環境によっては起動時にWindowsの警告が表示される場合があります\n\nPEAKHEADZ\nhttps://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -502,6 +528,8 @@
       "support_policy": null,
       "disclaimer": "BOOTH ready内の注意事項、または既存READMEの注意事項を元にします。\n\n- ファイルの編集、削除、移動、リネームは行わない。\n- ファイル内容の読み取り、検索、分類は行わない。\n- アクセスできないフォルダはスキップし、集計にスキップ件数を表示する。",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -538,6 +566,8 @@
       "support_policy": null,
       "disclaimer": "- 【注意事項】\n- Windows向けアプリです\n- ご利用は自己責任でお願いいたします\n- 大切なファイルは事前にバックアップを推奨します\n- 本ソフトウェアの無断転載・再配布を禁止します\n- 環境によっては起動時にWindowsの警告が表示される場合があります\n- https://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -574,6 +604,8 @@
       "support_policy": null,
       "disclaimer": "【注意事項】\n\n・Windows向けアプリです\n・ご利用は自己責任でお願いいたします\n・大切なファイルは事前にバックアップを推奨します\n・本ソフトウェアの無断転載・再配布を禁止します\n・環境によっては起動時にWindowsの警告が表示される場合があります\n\nPEAKHEADZ\nhttps://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -610,6 +642,8 @@
       "support_policy": null,
       "disclaimer": "【注意事項】\n\n・Windows向けアプリです\n・ご利用は自己責任でお願いいたします\n・大切なファイルは事前にバックアップを推奨します\n・本ソフトウェアの無断転載・再配布を禁止します\n・環境によっては起動時にWindowsの警告が表示される場合があります\n\nPEAKHEADZ\nhttps://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -646,6 +680,8 @@
       "support_policy": null,
       "disclaimer": "BOOTH ready内の注意事項、または既存READMEの注意事項を元にします。\n\n- 出力はJPEG固定。\n- 長辺は1600pxを上限にし、比率を維持する。\n- 元画像は上書きしない。\n- HEIC / HEIF は初期版では非対応。",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -683,6 +719,8 @@
       "support_policy": null,
       "disclaimer": "- 【注意事項】\n- Windows向けアプリです\n- ご利用は自己責任でお願いいたします\n- 大切なファイルは事前にバックアップを推奨します\n- 本ソフトウェアの無断転載・再配布を禁止します\n- 環境によっては起動時にWindowsの警告が表示される場合があります\n- https://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -718,6 +756,8 @@
       "support_policy": null,
       "disclaimer": "【注意事項】\n\n・Windows向けアプリです\n・ご利用は自己責任でお願いいたします\n・大切なファイルは事前にバックアップを推奨します\n・本ソフトウェアの無断転載・再配布を禁止します\n・環境によっては起動時にWindowsの警告が表示される場合があります\n\nPEAKHEADZ\nhttps://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -754,6 +794,8 @@
       "support_policy": null,
       "disclaimer": "【注意事項】\n\n・Windows向けアプリです\n・ご利用は自己責任でお願いいたします\n・大切なファイルは事前にバックアップを推奨します\n・本ソフトウェアの無断転載・再配布を禁止します\n・環境によっては起動時にWindowsの警告が表示される場合があります\n\nPEAKHEADZ\nhttps://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -790,6 +832,8 @@
       "support_policy": null,
       "disclaimer": "【注意事項】\n\n・Windows向けアプリです\n・ご利用は自己責任でお願いいたします\n・大切なファイルは事前にバックアップを推奨します\n・本ソフトウェアの無断転載・再配布を禁止します\n・環境によっては起動時にWindowsの警告が表示される場合があります\n\nPEAKHEADZ\nhttps://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -828,6 +872,8 @@
       "support_policy": null,
       "disclaimer": "- 【注意事項】\n- Windows向けアプリです\n- ご利用は自己責任でお願いいたします\n- 大切なファイルは事前にバックアップを推奨します\n- 本ソフトウェアの無断転載・再配布を禁止します\n- 環境によっては起動時にWindowsの警告が表示される場合があります\n- https://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -864,6 +910,8 @@
       "support_policy": null,
       "disclaimer": "- 【注意事項】\n- Windows向けアプリです\n- ご利用は自己責任でお願いいたします\n- 大切なファイルは事前にバックアップを推奨します\n- 本ソフトウェアの無断転載・再配布を禁止します\n- 環境によっては起動時にWindowsの警告が表示される場合があります\n- https://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -900,6 +948,8 @@
       "support_policy": null,
       "disclaimer": "【注意事項】\n\n・Windows向けアプリです\n・ご利用は自己責任でお願いいたします\n・大切なファイルは事前にバックアップを推奨します\n・本ソフトウェアの無断転載・再配布を禁止します\n・環境によっては起動時にWindowsの警告が表示される場合があります\n\nPEAKHEADZ\nhttps://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -936,6 +986,8 @@
       "support_policy": null,
       "disclaimer": "BOOTH ready内の注意事項、または既存READMEの注意事項を元にします。\n\n- Windows向けアプリです。\n- ご利用は自己責任でお願いいたします。\n- 大切なファイルは事前にバックアップを推奨します。\n- 本ソフトウェアの無断転載・再配布を禁止します。",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -972,6 +1024,8 @@
       "support_policy": null,
       "disclaimer": "【注意事項】\n\n・Windows向けアプリです\n・ご利用は自己責任でお願いいたします\n・大切なファイルは事前にバックアップを推奨します\n・本ソフトウェアの無断転載・再配布を禁止します\n・環境によっては起動時にWindowsの警告が表示される場合があります\n\nPEAKHEADZ\nhttps://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -1008,6 +1062,8 @@
       "support_policy": null,
       "disclaimer": "【注意事項】\n\n・Windows向けアプリです\n・ご利用は自己責任でお願いいたします\n・大切なファイルは事前にバックアップを推奨します\n・本ソフトウェアの無断転載・再配布を禁止します\n・環境によっては起動時にWindowsの警告が表示される場合があります\n\nPEAKHEADZ\nhttps://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -1044,6 +1100,8 @@
       "support_policy": null,
       "disclaimer": "【注意事項】\n\n・Windows向けアプリです\n・ご利用は自己責任でお願いいたします\n・大切なファイルは事前にバックアップを推奨します\n・本ソフトウェアの無断転載・再配布を禁止します\n・環境によっては起動時にWindowsの警告が表示される場合があります\n\nPEAKHEADZ\nhttps://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -1080,6 +1138,8 @@
       "support_policy": null,
       "disclaimer": "- 【注意事項】\n- Windows向けアプリです\n- ご利用は自己責任でお願いいたします\n- 大切なファイルは事前にバックアップを推奨します\n- 本ソフトウェアの無断転載・再配布を禁止します\n- 環境によっては起動時にWindowsの警告が表示される場合があります\n- https://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -1116,6 +1176,8 @@
       "support_policy": null,
       "disclaimer": "【注意事項】\n\n・Windows向けアプリです\n・ご利用は自己責任でお願いいたします\n・大切なファイルは事前にバックアップを推奨します\n・本ソフトウェアの無断転載・再配布を禁止します\n・環境によっては起動時にWindowsの警告が表示される場合があります\n\nPEAKHEADZ\nhttps://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -1152,6 +1214,8 @@
       "support_policy": null,
       "disclaimer": "- 【注意事項】\n- Windows向けアプリです\n- ご利用は自己責任でお願いいたします\n- 大切なファイルは事前にバックアップを推奨します\n- 本ソフトウェアの無断転載・再配布を禁止します\n- 環境によっては起動時にWindowsの警告が表示される場合があります\n- https://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -1188,6 +1252,8 @@
       "support_policy": null,
       "disclaimer": "【注意事項】\n\n・Windows向けアプリです\n・ご利用は自己責任でお願いいたします\n・大切なファイルは事前にバックアップを推奨します\n・本ソフトウェアの無断転載・再配布を禁止します\n・環境によっては起動時にWindowsの警告が表示される場合があります\n\nPEAKHEADZ\nhttps://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -1224,6 +1290,8 @@
       "support_policy": null,
       "disclaimer": "【注意事項】\n\n・Windows向けアプリです\n・ご利用は自己責任でお願いいたします\n・大切なファイルは事前にバックアップを推奨します\n・本ソフトウェアの無断転載・再配布を禁止します\n・環境によっては起動時にWindowsの警告が表示される場合があります\n\nPEAKHEADZ\nhttps://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -1260,6 +1328,8 @@
       "support_policy": null,
       "disclaimer": "【注意事項】\n\n・Windows向けアプリです\n・ご利用は自己責任でお願いいたします\n・大切なファイルは事前にバックアップを推奨します\n・本ソフトウェアの無断転載・再配布を禁止します\n・環境によっては起動時にWindowsの警告が表示される場合があります\n\nPEAKHEADZ\nhttps://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -1297,6 +1367,8 @@
       "support_policy": null,
       "disclaimer": "【注意事項】\n\n・Windows向けアプリです\n・ご利用は自己責任でお願いいたします\n・大切なファイルは事前にバックアップを推奨します\n・本ソフトウェアの無断転載・再配布を禁止します\n・環境によっては起動時にWindowsの警告が表示される場合があります\n\nPEAKHEADZ\nhttps://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -1333,6 +1405,8 @@
       "support_policy": null,
       "disclaimer": "【注意事項】\n\n・Windows向けアプリです\n・ご利用は自己責任でお願いいたします\n・大切なファイルは事前にバックアップを推奨します\n・本ソフトウェアの無断転載・再配布を禁止します\n・環境によっては起動時にWindowsの警告が表示される場合があります\n\nPEAKHEADZ\nhttps://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -1368,6 +1442,8 @@
       "support_policy": null,
       "disclaimer": "- 【注意事項】\n- Windows向けアプリです\n- ご利用は自己責任でお願いいたします\n- 大切なファイルは事前にバックアップを推奨します\n- 本ソフトウェアの無断転載・再配布を禁止します\n- 環境によっては起動時にWindowsの警告が表示される場合があります\n- https://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -1403,6 +1479,8 @@
       "support_policy": null,
       "disclaimer": "- 【注意事項】\n- Windows向けアプリです\n- ご利用は自己責任でお願いいたします\n- 大切なファイルは事前にバックアップを推奨します\n- 本ソフトウェアの無断転載・再配布を禁止します\n- 環境によっては起動時にWindowsの警告が表示される場合があります\n- https://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -1439,6 +1517,8 @@
       "support_policy": null,
       "disclaimer": "【注意事項】\n\n・Windows向けアプリです\n・ご利用は自己責任でお願いいたします\n・大切なファイルは事前にバックアップを推奨します\n・本ソフトウェアの無断転載・再配布を禁止します\n・環境によっては起動時にWindowsの警告が表示される場合があります\n\nPEAKHEADZ\nhttps://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -1474,6 +1554,8 @@
       "support_policy": null,
       "disclaimer": "【注意事項】\n\n・Windows向けアプリです\n・ご利用は自己責任でお願いいたします\n・大切なファイルは事前にバックアップを推奨します\n・本ソフトウェアの無断転載・再配布を禁止します\n・環境によっては起動時にWindowsの警告が表示される場合があります\n\nPEAKHEADZ\nhttps://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -1510,6 +1592,8 @@
       "support_policy": null,
       "disclaimer": "【注意事項】\n\n・Windows向けアプリです\n・ご利用は自己責任でお願いいたします\n・大切なファイルは事前にバックアップを推奨します\n・本ソフトウェアの無断転載・再配布を禁止します\n・環境によっては起動時にWindowsの警告が表示される場合があります\n\nPEAKHEADZ\nhttps://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -1546,6 +1630,8 @@
       "support_policy": null,
       "disclaimer": "【注意事項】\n\n・Windows向けアプリです\n・ご利用は自己責任でお願いいたします\n・大切なファイルは事前にバックアップを推奨します\n・本ソフトウェアの無断転載・再配布を禁止します\n・環境によっては起動時にWindowsの警告が表示される場合があります\n\nPEAKHEADZ\nhttps://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -1582,6 +1668,8 @@
       "support_policy": null,
       "disclaimer": "- 【注意事項】\n- Windows向けアプリです\n- ご利用は自己責任でお願いいたします\n- 大切なファイルは事前にバックアップを推奨します\n- 本ソフトウェアの無断転載・再配布を禁止します\n- 環境によっては起動時にWindowsの警告が表示される場合があります\n- https://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -1617,6 +1705,8 @@
       "support_policy": null,
       "disclaimer": "【注意事項】\n\n・Windows向けアプリです\n・ご利用は自己責任でお願いいたします\n・大切なファイルは事前にバックアップを推奨します\n・本ソフトウェアの無断転載・再配布を禁止します\n・環境によっては起動時にWindowsの警告が表示される場合があります\n\nPEAKHEADZ\nhttps://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -1652,6 +1742,8 @@
       "support_policy": null,
       "disclaimer": "【注意事項】\n\n・Windows向けアプリです\n・ご利用は自己責任でお願いいたします\n・大切なファイルは事前にバックアップを推奨します\n・本ソフトウェアの無断転載・再配布を禁止します\n・環境によっては起動時にWindowsの警告が表示される場合があります\n\nPEAKHEADZ\nhttps://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -1687,6 +1779,8 @@
       "support_policy": null,
       "disclaimer": "- 【注意事項】\n- Windows向けアプリです\n- ご利用は自己責任でお願いいたします\n- 大切なファイルは事前にバックアップを推奨します\n- 本ソフトウェアの無断転載・再配布を禁止します\n- 環境によっては起動時にWindowsの警告が表示される場合があります\n- https://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -1722,6 +1816,8 @@
       "support_policy": null,
       "disclaimer": "- 【注意事項】\n- Windows向けアプリです\n- ご利用は自己責任でお願いいたします\n- 大切なファイルは事前にバックアップを推奨します\n- 本ソフトウェアの無断転載・再配布を禁止します\n- 環境によっては起動時にWindowsの警告が表示される場合があります\n- https://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -1757,6 +1853,8 @@
       "support_policy": null,
       "disclaimer": "BOOTH ready内の注意事項を元にします。\n\n- Windows向けアプリです。\n- ご利用は自己責任でお願いいたします。\n- 大切なファイルは事前にバックアップを推奨します。\n- 本ソフトウェアの無断転載・再配布を禁止します。\n- 環境によっては起動時にWindowsの警告が表示される場合があります。",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -1794,6 +1892,8 @@
       "support_policy": null,
       "disclaimer": "- 【注意事項】\n- Windows向けアプリです\n- ご利用は自己責任でお願いいたします\n- 大切なファイルは事前にバックアップを推奨します\n- 本ソフトウェアの無断転載・再配布を禁止します\n- 環境によっては起動時にWindowsの警告が表示される場合があります\n- https://peakheadz.com",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "preparing",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -1858,6 +1958,8 @@
           "original": "未作成（当面は `01_apps/DAKE_Image_PasteA4/README.md` を暫定参照）"
         }
       ],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -1922,6 +2024,8 @@
           "original": "未作成（当面は `01_apps/DAKE_Yesterday_Task_Memo/README.md` を暫定参照）"
         }
       ],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null
@@ -2018,6 +2122,8 @@
           "original": "SHIMARISU Pack ORIGINAL"
         }
       ],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "source_kind": "original",
       "is_generated": true,
       "stripe_price_id": null

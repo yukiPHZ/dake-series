@@ -128,6 +128,8 @@ MVPの推奨構造。
       "support_policy": null,
       "disclaimer": "",
       "included_items": [],
+      "stripe_payment_link": null,
+      "payment_status": "booth_only",
       "stripe_price_id": null,
       "source_kind": "original",
       "is_generated": true
@@ -167,6 +169,8 @@ MVPの推奨構造。
 | `support_policy` | no | サポート方針。未確定なら `null`。 |
 | `disclaimer` | no | 注意事項・免責。 |
 | `included_items` | no | Packなどの構成物。単品アプリでは空配列でよい。 |
+| `stripe_payment_link` | no | Stripe Payment Link。未設定なら `null`。SecretやAPIキーは絶対に含めない。 |
+| `payment_status` | yes | Storeの購入導線状態。`stripe_ready` / `booth_only` / `preparing` / `free_download` / `not_for_sale`。 |
 | `stripe_price_id` | no | Stripe接続用の任意項目。MVPでは `null`。 |
 | `source_kind` | yes | 原則 `original`。 |
 | `is_generated` | yes | 常に `true`。 |
@@ -202,8 +206,9 @@ asset
 - Store URL
 - Storeダウンロード導線
 - Storeサポート方針
-- Store用画像
+- Stripe Payment Link
 - Stripe Price ID
+- Store用画像
 - `download_url`
 
 未確定値は `null` を推奨する。
@@ -242,6 +247,56 @@ Stripe Price ID はMVP仕様では必須にしない。
 `ORIGINAL.md` に Stripe 内部IDを混ぜることは避ける。
 
 Stripe接続情報は、Store実装側の環境変数、設定、または別の安全な接続層で扱う。
+
+### Stripe Payment Link
+
+Stripe Payment Link は、Store静的MVPで使える販売導線として generated JSON に任意項目で持たせる。
+
+```json
+{
+  "stripe_payment_link": null,
+  "payment_status": "booth_only"
+}
+```
+
+`stripe_payment_link` が `null` の場合、Store側はStripe購入ボタンを出してはいけない。
+
+Stripe Secret Key、Webhook Secret、APIキーは、generated JSON、静的HTML、JavaScript、`ORIGINAL.md` に含めない。
+
+### payment_status
+
+`payment_status` は、Store UI の購入導線を安全に出し分けるための状態値である。
+
+```text
+stripe_ready
+= Stripe Payment Link があり、StoreからStripe購入へ進める。
+
+booth_only
+= Stripe Payment Link は未設定だが、BOOTH URL がある。
+
+preparing
+= Stripe Payment Link も BOOTH URL も未設定で、販売準備中。
+
+free_download
+= 無料配布想定。
+
+not_for_sale
+= Store販売対象外。
+```
+
+MVPの自動判定。
+
+```text
+stripe_payment_link あり
+→ stripe_ready
+
+stripe_payment_link なし + booth_url あり
+→ booth_only
+
+stripe_payment_link なし + booth_url なし
+→ preparing
+```
+
 
 ## download_urlの扱い
 

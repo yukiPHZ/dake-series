@@ -36,7 +36,7 @@ ROOT = repo_root()
 GENERATED_DIR = ROOT / "tools" / "generated"
 REPORT_DIR = ROOT / "tools" / "reports"
 OUTPUT_JSON = GENERATED_DIR / "store_products.generated.json"
-OUTPUT_REPORT = REPORT_DIR / "original_phase47_store_generated_build.md"
+OUTPUT_REPORT = REPORT_DIR / "original_phase52_stripe_payment_link_ready.md"
 SHIMARISU_ORIGINAL = Path(r"C:\Users\yukiz\devlop\SHIMARISU\ORIGINAL.md")
 
 
@@ -201,6 +201,26 @@ def classify_source(path: Path) -> tuple[str, str]:
     return "unknown", "DAKE_series"
 
 
+
+def payment_status(stripe_payment_link: str | None, booth_url: str | None) -> str:
+    if stripe_payment_link:
+        return "stripe_ready"
+    if booth_url:
+        return "booth_only"
+    return "preparing"
+
+
+def stripe_payment_link_from(store: dict[str, Any], booth: dict[str, Any]) -> str | None:
+    return first_non_null(
+        url_from_text(store.get("Stripe Payment Link")),
+        url_from_text(store.get("stripe_payment_link")),
+        url_from_text(store.get("Payment Link")),
+        url_from_text(store.get("Stripe URL")),
+        url_from_text(booth.get("Stripe Payment Link")),
+        url_from_text(booth.get("stripe_payment_link")),
+    )
+
+
 def extract_item(path: Path) -> tuple[dict[str, Any] | None, dict[str, str] | None, dict[str, Any]]:
     item_type, source_repo = classify_source(path)
     markdown = read_text(path)
@@ -261,6 +281,7 @@ def extract_item(path: Path) -> tuple[dict[str, Any] | None, dict[str, str] | No
     )
     support_policy = first_non_null(store.get("サポート方針"))
     disclaimer = section_text(sections, "免責・注意事項")
+    stripe_payment_link = stripe_payment_link_from(store, booth)
 
     included_items: list[dict[str, str]] = []
     if item_type in {"pack", "shimarisu_pack"}:
@@ -290,6 +311,8 @@ def extract_item(path: Path) -> tuple[dict[str, Any] | None, dict[str, str] | No
         "support_policy": support_policy,
         "disclaimer": disclaimer,
         "included_items": included_items,
+        "stripe_payment_link": stripe_payment_link,
+        "payment_status": payment_status(stripe_payment_link, booth_url),
         "source_kind": "original",
         "is_generated": True,
         "stripe_price_id": None,
@@ -326,18 +349,19 @@ def build_report(
     type_counts = Counter(item["type"] for item in items)
     unresolved = Counter()
     for item in items:
-        for key in ["download_url", "store_url", "support_policy", "image", "thumbnail", "stripe_price_id"]:
+        for key in ["download_url", "store_url", "support_policy", "image", "thumbnail", "stripe_payment_link", "stripe_price_id"]:
             if item.get(key) is None:
                 unresolved[key] += 1
 
+    payment_counts = Counter(item.get("payment_status") for item in items)
     shimarisu_result = "included" if any(item["type"] == "shimarisu_pack" for item in items) else "skipped"
 
     lines = [
-        "# ORIGINAL Phase4-7 Store Generated Build",
+        "# ORIGINAL Phase5-2 Stripe Payment Link Ready",
         "",
         "## 目的",
         "",
-        "`ORIGINAL.md` 由来の Store 表示用 generated JSON を実生成し、Store構築前にデータ生成基盤を確認する。",
+        "`ORIGINAL.md` 由来の Store 表示用 generated JSON に Stripe Payment Link 用フィールドを追加し、Store UI の購入導線出し分け準備を確認する。",
         "",
         "## 生成スクリプト",
         "",
@@ -368,6 +392,10 @@ def build_report(
         for row in skipped:
             lines.append(f"| `{row['source_original']}` | {row['reason']} |")
         lines.append("")
+    lines.extend(["## payment_status別件数", ""])
+    for status_name in ["stripe_ready", "booth_only", "preparing", "free_download", "not_for_sale"]:
+        lines.append(f"- {status_name}: {payment_counts.get(status_name, 0)}")
+    lines.append("")
     lines.extend(["## 主な未確定項目", ""])
     for key, count in unresolved.items():
         lines.append(f"- {key}: {count}")
@@ -384,14 +412,15 @@ def build_report(
             "- `store_products.generated.json` は正本ではなく、手編集禁止の生成物。",
             "- Store表示を変更する場合は、各商品の `ORIGINAL.md` を修正する。",
             "- 未確定値はJSON上では `null` に正規化した。",
-            "- Storeサイト、Stripe、Cloudflare Pages、download_url確定は今回未実施。",
+            "- Stripe Payment Linkが未設定の商品には、Stripe購入ボタンを出さない。",
+            "- Stripe Checkout API、Pages Functions、Webhook、R2、download_url確定は今回未実施。",
             "",
             "## 次Phase提案",
             "",
-            "1. Store側でこのJSONを読む最小UIを作る。",
-            "2. 画像パスをStore公開URLへ変換する方針を決める。",
-            "3. `download_type` の正式値と表示文言を固める。",
-            "4. Stripe接続情報を generated に含めるか、Store設定に逃がすかを決める。",
+            "1. Stripe Payment Linkを付ける商品を絞る。",
+            "2. Payment Linkを `ORIGINAL.md` へ戻す運用を決める。",
+            "3. Store本番反映前にPayment Linkあり商品のみ `Stripeで購入` を目視確認する。",
+            "4. Checkout API / Webhook / R2 は別Phaseで検討する。",
         ]
     )
     return "\n".join(lines) + "\n"
