@@ -139,6 +139,14 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 
 Storeは未構築のため、Store専用の商品正本は作りません。
 
+
+## 購入後導線・サポート方針
+
+- MVPではStripe購入後の自動ダウンロード発行は未実装。
+- GitHub Release / BOOTH導線を案内候補とする。
+- 将来的にStore購入後URLまたはR2連携を検討する。
+- ダウンロード不備、不具合報告には可能な範囲で対応する。
+- 個別環境での完全な動作保証はしない。
 ## 価格・販売方針
 
 - BOOTH価格案: 300円
