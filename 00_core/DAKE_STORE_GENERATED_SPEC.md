@@ -399,6 +399,16 @@ generated だけを直しても、次回生成で消える。
 - Cloudflare Pages / R2 / Functions の役割
 - Store公開前の検証チェック
 
+
+## Store同期フロー
+
+Store反映時は `tools/store/sync_store_to_site.py` で generated JSON を再生成し、`dake-store-site` へ同期する。
+
+この同期スクリプトは、`ORIGINAL.md` 由来の `store_products.generated.json` を検証し、`source_policy`、`do_not_edit: true`、`shimarisu_pack` の存在、件数、`payment_status` 件数を確認する。
+
+同期スクリプトは自動commit / pushを行わない。複数repoをまたぐため、表示された差分と次のgit手順を確認してから人間がcommit / pushする。
+
+`generated_at` だけの差分はStoreの商品情報差分として扱わない。
 ## 今回やらないこと
 
 今回のPhase 4-6では以下を行わない。
