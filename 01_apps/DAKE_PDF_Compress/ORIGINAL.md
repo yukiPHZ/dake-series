@@ -134,6 +134,8 @@ PDFを追加してファイルサイズを軽くします。
 - 画像: assets/booth_thumbnail.jpg / assets/screenshot.webp
 - ダウンロード導線: 未確定
 - サポート方針: 既存ファイルに記載なし
+- Stripe Payment Link: https://buy.stripe.com/aFa6oHeIh3ZZ6Kse250gw02
+- Store販売状態: stripe_ready
 
 Storeは未構築のため、Store専用の商品正本は作りません。
 
