@@ -3,7 +3,7 @@
 ## DAKE正式出荷ライン
 
 DAKEシリーズの正式出荷は、GitHub Release公開だけでは完了としません。
-ORIGINAL.md正本運用、README公開ビュー、BOOTH販売素材、dakeapp.com掲載までを含めて、初めて正式出荷とします。
+ORIGINAL.md正本運用、README公開ビュー、BOOTH販売素材、dakeapp.com掲載、store.dakeapp.com掲載までを含めて、初めて正式出荷とします。
 
 ```text
 ORIGINAL.md
@@ -30,6 +30,14 @@ BOOTH
 ↓
 dakeapp.com
 ↓
+store_products.generated.json 再生成
+↓
+dake-store-site 同期
+↓
+store.dakeapp.com 商品詳細確認
+↓
+payment_status 確認
+↓
 Cloudflare反映確認
 ↓
 正式出荷完了
@@ -40,7 +48,7 @@ Cloudflare反映確認
 - Release = GitHub上の配布物公開。
 - 出荷 = ユーザーが触れる状態。
 - GitHub Release公開のみでは、DAKEの正式出荷完了とは扱わない。
-- ユーザーが一覧で見つけ、スクショで理解し、BOOTHまたはdakeapp.comから迷わず取得できる状態までを正式出荷とする。
+- ユーザーが一覧で見つけ、スクショで理解し、BOOTH、dakeapp.com、store.dakeapp.comから迷わず取得できる状態までを正式出荷とする。
 
 正式出荷に必要なもの:
 
@@ -56,11 +64,26 @@ Cloudflare反映確認
 - BOOTH ready
 - BOOTH掲載または掲載準備
 - dakeapp.com掲載状態
+- store.dakeapp.com掲載状態
+- `store_products.generated.json` 再生成・dake-store-site同期
+- Storeの商品詳細URLと `payment_status` 確認
 - Cloudflare反映確認
 
 Releaseだけ、exeだけ、READMEだけの状態は正式出荷完了とは扱いません。
 
 DAKEシリーズの最上位共通仕様です。個別仕様や実装判断で迷った場合は、このファイルを優先します。
+
+
+
+## Store掲載と正式出荷
+
+Store掲載は、DAKE正式出荷の一部である。
+
+Storeは正本ではなく、`ORIGINAL.md` 由来の `store_products.generated.json` を読む販売ビューとして扱う。
+
+正式出荷時は、`tools/store/sync_store_to_site.py` を実行し、generated JSONの再生成、dake-store-siteへの同期、store.dakeapp.comの商品詳細確認、`payment_status` 確認を行う。
+
+Store側で商品名、価格、説明、Stripe Payment Link、BOOTH URLを手編集しない。
 
 ## DAKEシリーズの考え方
 

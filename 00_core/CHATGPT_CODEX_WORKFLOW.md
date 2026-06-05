@@ -33,6 +33,7 @@
 - `README.md`: GitHub公開用ビュー
 - `DAKE_META`: Launcher / サイト / 管理ツール向けの機械利用ビュー
 - `release_body.md` / `booth_product.txt`: Release / BOOTH向けの派生ビュー
+- `store_products.generated.json` / `store.dakeapp.com`: Store向けの生成データと販売ビュー
 
 ### Git
 
@@ -74,6 +75,20 @@ tools/reports/current_status_review_YYYYMMDD.md
 - やってはいけないこと
 - commit / push の有無
 
+
+
+## Store反映作業
+
+DAKE正式出荷でStoreへ反映する場合、Codexは `DAKE_series` で以下を実行して同期する。
+
+```powershell
+python tools\store\sync_store_to_site.py
+```
+
+Storeは正本ではない。商品情報をStore側で手編集せず、必要な変更は各商品の `ORIGINAL.md` へ戻す。
+
+完了報告では、Store商品詳細URL、`payment_status`、Stripe Payment Link有無、BOOTH導線有無、dake-store-site同期結果、Cloudflare Pages反映確認を報告する。
+
 ## アーカイブ基準
 
 以下を満たしたチャットはアーカイブ候補。
@@ -93,6 +108,7 @@ Codexは作業前に必要に応じて以下を確認する。
 - DAKE_META
 - release_body.md
 - booth_product.txt
+- store_products.generated.json
 - tools/reports/current_status_review_*.md
 - git status
 - git log --oneline -5

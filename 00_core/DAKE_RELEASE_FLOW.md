@@ -29,6 +29,14 @@ BOOTH
 ↓
 dakeapp.com
 ↓
+store_products.generated.json 再生成
+↓
+dake-store-site 同期
+↓
+store.dakeapp.com 商品詳細確認
+↓
+payment_status 確認
+↓
 Cloudflare反映確認
 ↓
 正式出荷完了
@@ -49,6 +57,9 @@ GitHub Release公開のみでは正式出荷完了とはしません。
 - README の `DAKE_META.release_url` が派生ビューとして更新済み
 - BOOTH掲載準備が完了している
 - dakeapp.com に反映されている
+- `tools/store/sync_store_to_site.py` で `store_products.generated.json` を再生成し、dake-store-siteへ同期している
+- store.dakeapp.comの商品詳細ページを確認している
+- `payment_status`（`stripe_ready` / `booth_only` / `preparing` / `not_for_sale`）を確認している
 - Cloudflare反映確認済み
 
 上記が揃って初めて「正式出荷完了」とします。
@@ -67,6 +78,7 @@ GitHub Release作成のみで出荷完了と報告しません。
 - README / DAKE_META / release_body / booth_product を直接編集する場合は、`ORIGINAL.md` に戻すべき一次情報かを確認する。
 - dakeapp.com掲載に必要な `display_name`、`site_title`、`site_description`、`update_summary`、`release_url`、`screenshot_path` を確認する。
 - dakeapp.com反映後、Cloudflare上の本番URLで200、スクショ、Releaseリンクを確認する。
+- Store反映時は `tools/store/sync_store_to_site.py` を実行し、`store_products.generated.json` 再生成、dake-store-site同期、store.dakeapp.com商品詳細、`payment_status` を確認する。
 
 BOOTH登録最適化の正本は `DAKE_BOOTH_REGISTER_SPEC.md` です。
 DakeBOOTHアシストは登録入力補助に使えますが、公開ボタンは押さず、最終公開は人間が確認します。
@@ -232,3 +244,44 @@ Priority:
 2. If `--launch-check` is not implemented yet, run a short GUI smoke launch and close it.
 
 New DAKE apps should implement `--launch-check` by default. The command must only verify launchability, return quickly, and exit with code `0` on success. It must not run file conversion, publishing, sending, browser automation, BOOTH operations, or other external side effects. Failures should exit with code `1` and a short stderr message.
+
+
+## DAKE正式出荷定義 v2（Store対応）
+
+今後のDAKE正式出荷は、GitHub Release、BOOTH、dakeapp.comに加えて、store.dakeapp.comへの掲載・同期・本番確認までを含める。
+
+Storeは正本ではない。真の正本は各商品の `ORIGINAL.md` である。
+
+```text
+ORIGINAL.md
+↓
+store_products.generated.json
+↓
+dake-store-site
+↓
+store.dakeapp.com
+```
+
+正式出荷時は以下を確認する。
+
+1. `ORIGINAL.md` 更新。
+2. `README.md` / `DAKE_META` / `release_body.md` / `booth_product.txt` の整合確認。
+3. GitHub Release URL確認。
+4. BOOTH URLまたはBOOTH導線確認。
+5. dakeapp.com掲載URL確認。
+6. `python tools/store/sync_store_to_site.py` によるStore generated JSON再生成・同期。
+7. store.dakeapp.comの商品詳細URL確認。
+8. `payment_status` 確認。
+9. Stripe Payment Link有無、BOOTH導線有無、準備中表示確認。
+10. Cloudflare Pages反映確認。
+
+`payment_status` の扱い:
+
+- `stripe_ready`: Stripe Payment Linkあり。
+- `booth_only`: BOOTH導線のみ。
+- `preparing`: 準備中。
+- `not_for_sale`: 販売対象外。
+
+Stripe Secret、APIキー、Webhook Secretは、公開repo、generated JSON、Store JavaScriptへ絶対に入れない。
+
+Codexの正式出荷完了報告には、store.dakeapp.com商品詳細URL、`payment_status`、Stripe Payment Link有無、BOOTH導線有無、Store同期結果、Cloudflare Pages反映確認を含める。

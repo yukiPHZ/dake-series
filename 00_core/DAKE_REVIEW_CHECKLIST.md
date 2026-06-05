@@ -20,11 +20,32 @@
 - [ ] BOOTH公開後のURL欄が保持されている。
 - [ ] dakeapp.com掲載に必要な項目が `ORIGINAL.md` 由来、または移行前README / DAKE_METAから読める。
 - [ ] dakeapp.comに表示されている。
+- [ ] `tools/store/sync_store_to_site.py` を実行している。
+- [ ] `store_products.generated.json` が再生成・検証されている。
+- [ ] dake-store-siteへgenerated JSONが同期されている。
+- [ ] store.dakeapp.comの商品詳細ページが表示されている。
+- [ ] `payment_status` を確認している。
+- [ ] Stripe Payment Link有無とBOOTH導線有無を確認している。
+- [ ] Stripe Secret / APIキー / Webhook Secretを公開repoへ入れていない。
 - [ ] Cloudflare反映確認済み。
 - [ ] GitHub Releaseのみで出荷完了と扱っていない。
 
 GitHub Release公開のみでは正式出荷完了とはしません。
-BOOTH ready、BOOTH、dakeapp.com、Cloudflare反映確認まで含めて確認します。
+BOOTH ready、BOOTH、dakeapp.com、store.dakeapp.com、Cloudflare反映確認まで含めて確認します。
+
+
+
+## Store出荷チェック
+
+- [ ] Storeは正本ではなく、`ORIGINAL.md` 由来の派生ビューとして扱っている。
+- [ ] `python tools/store/sync_store_to_site.py` を実行した。
+- [ ] items件数、type別件数、`payment_status` 件数を確認した。
+- [ ] `source_policy` と `do_not_edit: true` を確認した。
+- [ ] `shimarisu_pack` が必要に応じて含まれている。
+- [ ] store.dakeapp.comの商品詳細URLを確認した。
+- [ ] `stripe_ready` / `booth_only` / `preparing` / `not_for_sale` の状態が実態と一致している。
+- [ ] Stripe Secret、APIキー、Webhook Secretを扱っていない。
+- [ ] 完了報告にStore同期結果、商品詳細URL、`payment_status`、Cloudflare Pages反映確認を含めた。
 
 ## BOOTH素材
 
