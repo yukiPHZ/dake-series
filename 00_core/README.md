@@ -48,6 +48,7 @@ DAKEシリーズ全体で参照する共通仕様ファイル置き場です。
 
 | ファイル | 役割 |
 | --- | --- |
+| `DAKE_SOURCE_OF_TRUTH_ENGINE_V02.md` | `ORIGINAL.md` を中心に、変換・利用・販売・運用までを含めた正本主義エンジン v0.2 の上位思想です。 |
 | `DAKE_ORIGINAL_RULE.md` | `ORIGINAL.md` を真の正本とし、README / DAKE_META / release_body / booth_product / Store表示を派生ビューとして扱うルールです。 |
 | `DAKE_ORIGINAL_TEMPLATE_APP.md` | DAKEアプリへ `ORIGINAL.md` を導入するためのテンプレートです。 |
 | `DAKE_COMMON_SPEC.md` | DAKEシリーズの最上位共通仕様。迷ったら最初に読む正本です。 |
