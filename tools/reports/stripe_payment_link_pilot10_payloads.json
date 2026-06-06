@@ -1,0 +1,517 @@
+{
+  "dry_run": true,
+  "notice": "DRY RUN ONLY. This file does not call Stripe API.",
+  "source": "tools/reports/stripe_payment_link_pilot10_selection.csv",
+  "created_at": "2026-06-06T12:58:34+09:00",
+  "count": 10,
+  "items": [
+    {
+      "id": "dake_pdf_viewer",
+      "title": "DakePDF見る",
+      "product_payload": {
+        "name": "DakePDF見る",
+        "description": "PDFを探してすぐ確認する軽量ビューワーです。 ・軽量PDFビューワー ・フォルダ内PDF一覧に対応 ・ページ表示・拡大縮小に対応 ・Windows向けexe 実務の流れを、 少し静かにするための道具です。",
+        "metadata": {
+          "dake_item_id": "dake_pdf_viewer",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_PDF_Viewer/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_pdf_viewer",
+          "booth_url": "https://peakheadz.booth.pm/items/8448219",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Viewer_v1.0.0"
+        },
+        "tax_code": "txcd_10202003"
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 500,
+        "product": "__PRODUCT_ID_FROM_CREATED_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_pdf_viewer"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_CREATED_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_pdf_viewer",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_PDF_Viewer/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_pdf_viewer",
+          "booth_url": "https://peakheadz.booth.pm/items/8448219",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Viewer_v1.0.0"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_pdf_viewer",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_PDF_Viewer/ORIGINAL.md"
+          }
+        }
+      }
+    },
+    {
+      "id": "dake_pdf_reorder",
+      "title": "DakePDFページ並べ替え",
+      "product_payload": {
+        "name": "DakePDFページ並べ替え",
+        "description": "PDFページ順をドラッグで並べ替えます。 ・PDFページ並べ替えアプリ ・サムネイルのドラッグ操作に対応 ・別名PDFとして保存 ・Windows向けexe 実務の流れを、 少し静かにするための道具です。",
+        "metadata": {
+          "dake_item_id": "dake_pdf_reorder",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_PDF_Reorder/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_pdf_reorder",
+          "booth_url": "https://peakheadz.booth.pm/items/8448206",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Reorder_v1.0.0"
+        },
+        "tax_code": "txcd_10202003"
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 500,
+        "product": "__PRODUCT_ID_FROM_CREATED_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_pdf_reorder"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_CREATED_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_pdf_reorder",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_PDF_Reorder/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_pdf_reorder",
+          "booth_url": "https://peakheadz.booth.pm/items/8448206",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Reorder_v1.0.0"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_pdf_reorder",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_PDF_Reorder/ORIGINAL.md"
+          }
+        }
+      }
+    },
+    {
+      "id": "dake_pdf_splitone",
+      "title": "DakePDF分割One",
+      "product_payload": {
+        "name": "DakePDF分割One",
+        "description": "PDFを全ページ1枚ずつに自動分割します。 ・PDF全ページ分割アプリ ・1ページずつ自動保存 ・ドラッグ＆ドロップ対応 ・Windows向けexe 実務の流れを、 少し静かにするための道具です。",
+        "metadata": {
+          "dake_item_id": "dake_pdf_splitone",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_PDF_SplitOne/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_pdf_splitone",
+          "booth_url": "https://peakheadz.booth.pm/items/8448207",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitOne_v1.0.0"
+        },
+        "tax_code": "txcd_10202003"
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 500,
+        "product": "__PRODUCT_ID_FROM_CREATED_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_pdf_splitone"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_CREATED_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_pdf_splitone",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_PDF_SplitOne/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_pdf_splitone",
+          "booth_url": "https://peakheadz.booth.pm/items/8448207",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitOne_v1.0.0"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_pdf_splitone",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_PDF_SplitOne/ORIGINAL.md"
+          }
+        }
+      }
+    },
+    {
+      "id": "dake_image_heictojpg",
+      "title": "HEIC→JPG変換",
+      "product_payload": {
+        "name": "HEIC→JPG変換",
+        "description": "HEIC画像をJPGへ変換します。 ・HEIC→JPG変換アプリ ・複数ファイル・フォルダ追加に対応 ・元ファイルと同じ場所へ保存 ・Windows向けexe 実務の流れを、 少し静かにするための道具です。",
+        "metadata": {
+          "dake_item_id": "dake_image_heictojpg",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Image_HEICtoJPG/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_image_heictojpg",
+          "booth_url": "https://peakheadz.booth.pm/items/8447596",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_HEICtoJPG_v1.0.0"
+        },
+        "tax_code": "txcd_10202003"
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 500,
+        "product": "__PRODUCT_ID_FROM_CREATED_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_image_heictojpg"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_CREATED_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_image_heictojpg",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Image_HEICtoJPG/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_image_heictojpg",
+          "booth_url": "https://peakheadz.booth.pm/items/8447596",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_HEICtoJPG_v1.0.0"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_image_heictojpg",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_Image_HEICtoJPG/ORIGINAL.md"
+          }
+        }
+      }
+    },
+    {
+      "id": "dake_image_topdf",
+      "title": "DakeImageToPDF",
+      "product_payload": {
+        "name": "DakeImageToPDF",
+        "description": "画像1枚をA4のPDFに変換します。 ・画像→PDF変換アプリ ・ドラッグ＆ドロップ対応 ・A4縦横の自動判定 ・Windows向けexe 実務の流れを、 少し静かにするための道具です。",
+        "metadata": {
+          "dake_item_id": "dake_image_topdf",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Image_ToPDF/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_image_topdf",
+          "booth_url": "https://peakheadz.booth.pm/items/8397610",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_ToPDF_v1.0.0"
+        },
+        "tax_code": "txcd_10202003"
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 500,
+        "product": "__PRODUCT_ID_FROM_CREATED_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_image_topdf"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_CREATED_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_image_topdf",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Image_ToPDF/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_image_topdf",
+          "booth_url": "https://peakheadz.booth.pm/items/8397610",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_ToPDF_v1.0.0"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_image_topdf",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_Image_ToPDF/ORIGINAL.md"
+          }
+        }
+      }
+    },
+    {
+      "id": "DAKE_Sticky_Memo",
+      "title": "付箋メモ",
+      "product_payload": {
+        "name": "付箋メモ",
+        "description": "アプリ内に付箋を作成し、自由に動かし、不要になったら消せるWindows向け軽量メモアプリです。",
+        "metadata": {
+          "dake_item_id": "DAKE_Sticky_Memo",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Sticky_Memo/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=DAKE_Sticky_Memo",
+          "booth_url": "https://peakheadz.booth.pm/items/8448263",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Sticky_Memo_v1.0.0"
+        },
+        "tax_code": "txcd_10202003"
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 300,
+        "product": "__PRODUCT_ID_FROM_CREATED_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "DAKE_Sticky_Memo"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_CREATED_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "DAKE_Sticky_Memo",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Sticky_Memo/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=DAKE_Sticky_Memo",
+          "booth_url": "https://peakheadz.booth.pm/items/8448263",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Sticky_Memo_v1.0.0"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "DAKE_Sticky_Memo",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_Sticky_Memo/ORIGINAL.md"
+          }
+        }
+      }
+    },
+    {
+      "id": "DAKE_Mail_Draft",
+      "title": "Dakeメール下書き",
+      "product_payload": {
+        "name": "Dakeメール下書き",
+        "description": "CSV名簿から、Outlookの個別下書きを作ります。 ・Outlook下書き作成のみ ・自動送信なし ・件名、本文、添付ファイルに対応 ・送信前にOutlookで確認 ・Windows向け 送信を急がず、 下書きだけを静かに整える道具です。",
+        "metadata": {
+          "dake_item_id": "DAKE_Mail_Draft",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Mail_Draft/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=DAKE_Mail_Draft",
+          "booth_url": "https://peakheadz.booth.pm/items/8448001",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_Draft_v1.0.0"
+        },
+        "tax_code": "txcd_10202003"
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 300,
+        "product": "__PRODUCT_ID_FROM_CREATED_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "DAKE_Mail_Draft"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_CREATED_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "DAKE_Mail_Draft",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Mail_Draft/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=DAKE_Mail_Draft",
+          "booth_url": "https://peakheadz.booth.pm/items/8448001",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_Draft_v1.0.0"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "DAKE_Mail_Draft",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_Mail_Draft/ORIGINAL.md"
+          }
+        }
+      }
+    },
+    {
+      "id": "DAKE_Backup",
+      "title": "Dakeバックアップ",
+      "product_payload": {
+        "name": "Dakeバックアップ",
+        "description": "ローカル正本フォルダを、指定した避難先フォルダへ一方向にコピー保存するWindows向けアプリです。",
+        "metadata": {
+          "dake_item_id": "DAKE_Backup",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Backup/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=DAKE_Backup",
+          "booth_url": "https://peakheadz.booth.pm/items/8447578",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Backup_v1.0.0"
+        },
+        "tax_code": "txcd_10202003"
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 500,
+        "product": "__PRODUCT_ID_FROM_CREATED_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "DAKE_Backup"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_CREATED_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "DAKE_Backup",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Backup/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=DAKE_Backup",
+          "booth_url": "https://peakheadz.booth.pm/items/8447578",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Backup_v1.0.0"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "DAKE_Backup",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_Backup/ORIGINAL.md"
+          }
+        }
+      }
+    },
+    {
+      "id": "dake_folder_list",
+      "title": "Dakeフォルダ一覧",
+      "product_payload": {
+        "name": "Dakeフォルダ一覧",
+        "description": "指定フォルダの構成、ファイル名、拡張子、サイズ、更新日時を一覧化できるWindows向けアプリです。",
+        "metadata": {
+          "dake_item_id": "dake_folder_list",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Folder_List/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_folder_list",
+          "booth_url": "https://peakheadz.booth.pm/items/8447591",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Folder_List_v1.0.0"
+        },
+        "tax_code": "txcd_10202003"
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 300,
+        "product": "__PRODUCT_ID_FROM_CREATED_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_folder_list"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_CREATED_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_folder_list",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Folder_List/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_folder_list",
+          "booth_url": "https://peakheadz.booth.pm/items/8447591",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Folder_List_v1.0.0"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_folder_list",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_Folder_List/ORIGINAL.md"
+          }
+        }
+      }
+    },
+    {
+      "id": "dake_year_age",
+      "title": "Dake築年数",
+      "product_payload": {
+        "name": "Dake築年数",
+        "description": "西暦・和暦から築年数を確認します。 ・築年数確認アプリ ・西暦・和暦入力に対応 ・入力すると即時計算 ・Windows向けexe 実務の流れを、 少し静かにするための道具です。",
+        "metadata": {
+          "dake_item_id": "dake_year_age",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Year_Age/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_year_age",
+          "booth_url": "https://peakheadz.booth.pm/items/8448286",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Year_Age_v1.0.0"
+        },
+        "tax_code": "txcd_10202003"
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 300,
+        "product": "__PRODUCT_ID_FROM_CREATED_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_year_age"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_CREATED_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_year_age",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Year_Age/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_year_age",
+          "booth_url": "https://peakheadz.booth.pm/items/8448286",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Year_Age_v1.0.0"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_year_age",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_Year_Age/ORIGINAL.md"
+          }
+        }
+      }
+    }
+  ],
+  "errors": [],
+  "safety": [
+    "No Stripe API call is made.",
+    "No Stripe Secret Key is read.",
+    "No Payment Link is created.",
+    "No Product is created.",
+    "No Price is created."
+  ]
+}
