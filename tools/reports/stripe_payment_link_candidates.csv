@@ -1,0 +1,405 @@
+﻿store_id,type,title,price,currency,description,payment_status,classification,category,booth_url,github_release_url,source_repo,source_original,source_original_exists,stripe_product_name,stripe_price_amount,stripe_payment_link_target,tax_code_candidate,tax_code_memo,store_url,metadata_json,memo
+DAKE_App_Doko,app,アプリどこ,300,JPY,"PC内に散らばったDAKE系アプリを探します。
+
+・アプリどこ
+・PC内のDAKE系exeを探します
+・README正本を読み取って表示します
+・忘れていたアプリを発掘できます
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。",booth_only,stripe_candidate,補助ツール,https://peakheadz.booth.pm/items/8447573,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_App_Doko_v1.0.0,DAKE_series,01_apps/DAKE_App_Doko/ORIGINAL.md,yes,アプリどこ,300,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=DAKE_App_Doko,"{""booth_url"": ""https://peakheadz.booth.pm/items/8447573"", ""dake_item_id"": ""DAKE_App_Doko"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_App_Doko_v1.0.0"", ""source_original"": ""01_apps/DAKE_App_Doko/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=DAKE_App_Doko""}",ready for Stripe Payment Link planning
+DAKE_Backup,app,Dakeバックアップ,500,JPY,ローカル正本フォルダを、指定した避難先フォルダへ一方向にコピー保存するWindows向けアプリです。,booth_only,stripe_candidate,バックアップ / 保全,https://peakheadz.booth.pm/items/8447578,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Backup_v1.0.0,DAKE_series,01_apps/DAKE_Backup/ORIGINAL.md,yes,Dakeバックアップ,500,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=DAKE_Backup,"{""booth_url"": ""https://peakheadz.booth.pm/items/8447578"", ""dake_item_id"": ""DAKE_Backup"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Backup_v1.0.0"", ""source_original"": ""01_apps/DAKE_Backup/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=DAKE_Backup""}",ready for Stripe Payment Link planning
+DAKE_Git_Memo,app,DakeGitメモ,500,JPY,"書くたびに、変更が残るメモです。
+
+・書くたびに変更が残る、1メモだけの軽量メモアプリです。
+・自動保存、Ctrl + S、終了時保存に対応しています。
+・履歴から変更を確認し、必要な時点に戻せます。
+・Git未インストール環境でも使えるスナップショット方式です。
+・Windows向けexeです。
+
+実務の流れを、
+少し静かにするための道具です。",booth_only,stripe_candidate,メモ/開発記録,https://peakheadz.booth.pm/items/8447593,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Git_Memo_v1.0.0,DAKE_series,01_apps/DAKE_Git_Memo/ORIGINAL.md,yes,DakeGitメモ,500,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=DAKE_Git_Memo,"{""booth_url"": ""https://peakheadz.booth.pm/items/8447593"", ""dake_item_id"": ""DAKE_Git_Memo"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Git_Memo_v1.0.0"", ""source_original"": ""01_apps/DAKE_Git_Memo/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=DAKE_Git_Memo""}",ready for Stripe Payment Link planning
+DAKE_Image_PasteA4,app,貼る,500,JPY,"見えているウインドウを貼って、A4画像にします。
+
+・見えているウインドウを貼ってA4画像にします。
+・移動・拡大縮小・PNG出力だけに絞った資料化アプリです。
+・Windows向けexeです。
+
+実務の流れを、
+少し静かにするための道具です。",booth_only,stripe_candidate,画像,https://peakheadz.booth.pm/items/8397628,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_PasteA4_v1.0.0,DAKE_series,01_apps/DAKE_Image_PasteA4/ORIGINAL.md,yes,貼る,500,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=DAKE_Image_PasteA4,"{""booth_url"": ""https://peakheadz.booth.pm/items/8397628"", ""dake_item_id"": ""DAKE_Image_PasteA4"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_PasteA4_v1.0.0"", ""source_original"": ""01_apps/DAKE_Image_PasteA4/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=DAKE_Image_PasteA4""}",ready for Stripe Payment Link planning
+DAKE_Mail_Address_Format,app,Dakeメールアドレス整形,300,JPY,"貼り付けたメールアドレスを、カンマ区切りに整えます。
+
+・Dakeメールアドレス整形
+・貼り付けた宛先を自動抽出
+・カンマ区切りでコピー
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。",booth_only,stripe_candidate,メール,https://peakheadz.booth.pm/items/8447996,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_Address_Format_v1.0.0,DAKE_series,01_apps/DAKE_Mail_Address_Format/ORIGINAL.md,yes,Dakeメールアドレス整形,300,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=DAKE_Mail_Address_Format,"{""booth_url"": ""https://peakheadz.booth.pm/items/8447996"", ""dake_item_id"": ""DAKE_Mail_Address_Format"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_Address_Format_v1.0.0"", ""source_original"": ""01_apps/DAKE_Mail_Address_Format/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=DAKE_Mail_Address_Format""}",ready for Stripe Payment Link planning
+DAKE_Mail_Draft,app,Dakeメール下書き,300,JPY,"CSV名簿から、Outlookの個別下書きを作ります。
+
+・Outlook下書き作成のみ
+・自動送信なし
+・件名、本文、添付ファイルに対応
+・送信前にOutlookで確認
+・Windows向け
+
+送信を急がず、
+下書きだけを静かに整える道具です。",booth_only,stripe_candidate,メール,https://peakheadz.booth.pm/items/8448001,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_Draft_v1.0.0,DAKE_series,01_apps/DAKE_Mail_Draft/ORIGINAL.md,yes,Dakeメール下書き,300,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=DAKE_Mail_Draft,"{""booth_url"": ""https://peakheadz.booth.pm/items/8448001"", ""dake_item_id"": ""DAKE_Mail_Draft"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_Draft_v1.0.0"", ""source_original"": ""01_apps/DAKE_Mail_Draft/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=DAKE_Mail_Draft""}",ready for Stripe Payment Link planning
+DAKE_Maji_Memo,app,マジでメモ,300,JPY,"保存を気にせず、今の考えをそのまま置いておくメモです。
+
+・保存を気にせず使える実務用メモアプリです。
+・閉じても前回のメモがそのまま残ります。
+・左の補助メモ、右のメインメモを個別にリフレッシュできます。
+・Windows向けexeです。
+
+実務の流れを、
+少し静かにするための道具です。",booth_only,stripe_candidate,メモ,https://peakheadz.booth.pm/items/8448021,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Maji_Memo_v1.0.0,DAKE_series,01_apps/DAKE_Maji_Memo/ORIGINAL.md,yes,マジでメモ,300,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=DAKE_Maji_Memo,"{""booth_url"": ""https://peakheadz.booth.pm/items/8448021"", ""dake_item_id"": ""DAKE_Maji_Memo"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Maji_Memo_v1.0.0"", ""source_original"": ""01_apps/DAKE_Maji_Memo/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=DAKE_Maji_Memo""}",ready for Stripe Payment Link planning
+DAKE_Sticky_Memo,app,付箋メモ,300,JPY,アプリ内に付箋を作成し、自由に動かし、不要になったら消せるWindows向け軽量メモアプリです。,booth_only,stripe_candidate,メモ / 付箋,https://peakheadz.booth.pm/items/8448263,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Sticky_Memo_v1.0.0,DAKE_series,01_apps/DAKE_Sticky_Memo/ORIGINAL.md,yes,付箋メモ,300,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=DAKE_Sticky_Memo,"{""booth_url"": ""https://peakheadz.booth.pm/items/8448263"", ""dake_item_id"": ""DAKE_Sticky_Memo"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Sticky_Memo_v1.0.0"", ""source_original"": ""01_apps/DAKE_Sticky_Memo/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=DAKE_Sticky_Memo""}",ready for Stripe Payment Link planning
+DAKE_Yesterday_Task_Memo,app,Dake昨日タスクメモ,300,JPY,"前営業日のメモを見ながら、今日やることを整理します。
+
+・昨日のメモを、今日のタスクに変える実務メモです。
+・前営業日のメモを左側に表示します。
+・今日のメモ・今日やることを右側で整理できます。
+・日付ごとに自動保存します。
+・Windows向けexeです。
+
+実務の流れを、
+少し静かにするための道具です。",booth_only,stripe_candidate,メモ,https://peakheadz.booth.pm/items/8448291,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Yesterday_Task_Memo_v1.0.0,DAKE_series,01_apps/DAKE_Yesterday_Task_Memo/ORIGINAL.md,yes,Dake昨日タスクメモ,300,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=DAKE_Yesterday_Task_Memo,"{""booth_url"": ""https://peakheadz.booth.pm/items/8448291"", ""dake_item_id"": ""DAKE_Yesterday_Task_Memo"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Yesterday_Task_Memo_v1.0.0"", ""source_original"": ""01_apps/DAKE_Yesterday_Task_Memo/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=DAKE_Yesterday_Task_Memo""}",ready for Stripe Payment Link planning
+dake_booth_assist,app,BOOTHアシスト,300,JPY,"BOOTH登録に必要な商品情報と素材を確認し、開いているBOOTH編集画面への入力作業を補助します。
+
+・DakeBOOTHアシスト
+・BOOTH登録用の商品情報と素材を確認
+・開いているBOOTH編集画面へ接続して入力作業を補助
+・最終公開は人間確認
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。",booth_only,stripe_candidate,補助ツール,https://peakheadz.booth.pm/items/8447580,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_BOOTH_Assist_v1.0.0,DAKE_series,01_apps/DAKE_BOOTH_Assist/ORIGINAL.md,yes,BOOTHアシスト,300,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=dake_booth_assist,"{""booth_url"": ""https://peakheadz.booth.pm/items/8447580"", ""dake_item_id"": ""dake_booth_assist"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_BOOTH_Assist_v1.0.0"", ""source_original"": ""01_apps/DAKE_BOOTH_Assist/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=dake_booth_assist""}",ready for Stripe Payment Link planning
+dake_column_memo,app,ずっとメモ,300,JPY,"1本のメモを、列に流して見渡します。
+
+・1本のメモを列に流して表示します。
+・1～4列の段組表示に切り替えできます。
+・自動保存・起動時復元に対応しています。
+・Windows向けexeです。
+
+実務の流れを、
+少し静かにするための道具です。",booth_only,stripe_candidate,メモ,https://peakheadz.booth.pm/items/8447582,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Column_Memo_v1.0.0,DAKE_series,01_apps/DAKE_Column_Memo/ORIGINAL.md,yes,ずっとメモ,300,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=dake_column_memo,"{""booth_url"": ""https://peakheadz.booth.pm/items/8447582"", ""dake_item_id"": ""dake_column_memo"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Column_Memo_v1.0.0"", ""source_original"": ""01_apps/DAKE_Column_Memo/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=dake_column_memo""}",ready for Stripe Payment Link planning
+dake_document_cover,app,Dake書類送付状,500,JPY,"相手方と本文を入力してA4送付状PDFを作成します。
+
+・書類送付状PDF作成アプリ
+・宛先・送付内容・作成者情報に対応
+・A4縦PDF出力
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。",booth_only,stripe_candidate,書類,https://peakheadz.booth.pm/items/8447586,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Document_Cover-v1.0.0,DAKE_series,01_apps/DAKE_Document_Cover/ORIGINAL.md,yes,Dake書類送付状,500,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=dake_document_cover,"{""booth_url"": ""https://peakheadz.booth.pm/items/8447586"", ""dake_item_id"": ""dake_document_cover"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Document_Cover-v1.0.0"", ""source_original"": ""01_apps/DAKE_Document_Cover/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=dake_document_cover""}",ready for Stripe Payment Link planning
+dake_fax_cover,app,DakeFAX送付状,500,JPY,"送信先と内容を入力してA4縦のFAX送付状PDFを作成します。
+
+・FAX送付状PDF作成アプリ
+・送信先・FAX情報・送信内容に対応
+・A4縦PDF出力
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。",booth_only,stripe_candidate,書類,https://peakheadz.booth.pm/items/8447589,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_FAX_Cover_v1.0.0,DAKE_series,01_apps/DAKE_FAX_Cover/ORIGINAL.md,yes,DakeFAX送付状,500,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=dake_fax_cover,"{""booth_url"": ""https://peakheadz.booth.pm/items/8447589"", ""dake_item_id"": ""dake_fax_cover"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_FAX_Cover_v1.0.0"", ""source_original"": ""01_apps/DAKE_FAX_Cover/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=dake_fax_cover""}",ready for Stripe Payment Link planning
+dake_folder_list,app,Dakeフォルダ一覧,300,JPY,指定フォルダの構成、ファイル名、拡張子、サイズ、更新日時を一覧化できるWindows向けアプリです。,booth_only,stripe_candidate,ファイル / 一覧,https://peakheadz.booth.pm/items/8447591,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Folder_List_v1.0.0,DAKE_series,01_apps/DAKE_Folder_List/ORIGINAL.md,yes,Dakeフォルダ一覧,300,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=dake_folder_list,"{""booth_url"": ""https://peakheadz.booth.pm/items/8447591"", ""dake_item_id"": ""dake_folder_list"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Folder_List_v1.0.0"", ""source_original"": ""01_apps/DAKE_Folder_List/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=dake_folder_list""}",ready for Stripe Payment Link planning
+dake_image_heictojpg,app,HEIC→JPG変換,500,JPY,"HEIC画像をJPGへ変換します。
+
+・HEIC→JPG変換アプリ
+・複数ファイル・フォルダ追加に対応
+・元ファイルと同じ場所へ保存
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。",booth_only,stripe_candidate,画像,https://peakheadz.booth.pm/items/8447596,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_HEICtoJPG_v1.0.0,DAKE_series,01_apps/DAKE_Image_HEICtoJPG/ORIGINAL.md,yes,HEIC→JPG変換,500,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=dake_image_heictojpg,"{""booth_url"": ""https://peakheadz.booth.pm/items/8447596"", ""dake_item_id"": ""dake_image_heictojpg"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_HEICtoJPG_v1.0.0"", ""source_original"": ""01_apps/DAKE_Image_HEICtoJPG/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=dake_image_heictojpg""}",ready for Stripe Payment Link planning
+dake_image_iphonetopc,app,Dake画像iPhoneToPC,500,JPY,"QRコード経由でiPhone写真をPCへ送ります。
+
+・iPhone写真受信アプリ
+・QRコード読み取りで接続
+・同じWi-Fi上でPCへ保存
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。",booth_only,stripe_candidate,画像,https://peakheadz.booth.pm/items/8447598,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_iPhoneToPC_v1.0.0,DAKE_series,01_apps/DAKE_Image_iPhoneToPC/ORIGINAL.md,yes,Dake画像iPhoneToPC,500,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=dake_image_iphonetopc,"{""booth_url"": ""https://peakheadz.booth.pm/items/8447598"", ""dake_item_id"": ""dake_image_iphonetopc"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_iPhoneToPC_v1.0.0"", ""source_original"": ""01_apps/DAKE_Image_iPhoneToPC/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=dake_image_iphonetopc""}",ready for Stripe Payment Link planning
+dake_image_receiver,app,DakeImage_Receiver,500,JPY,"スマホから画像をこのPCへ送ります。
+
+・スマホ画像受信アプリ
+・QRコード接続に対応
+・画像をPC側へ保存
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。",booth_only,stripe_candidate,画像,https://peakheadz.booth.pm/items/8447600,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_Receiver_v1.0.0,DAKE_series,01_apps/DAKE_Image_Receiver/ORIGINAL.md,yes,DakeImage_Receiver,500,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=dake_image_receiver,"{""booth_url"": ""https://peakheadz.booth.pm/items/8447600"", ""dake_item_id"": ""dake_image_receiver"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_Receiver_v1.0.0"", ""source_original"": ""01_apps/DAKE_Image_Receiver/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=dake_image_receiver""}",ready for Stripe Payment Link planning
+dake_image_topdf,app,DakeImageToPDF,500,JPY,"画像1枚をA4のPDFに変換します。
+
+・画像→PDF変換アプリ
+・ドラッグ＆ドロップ対応
+・A4縦横の自動判定
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。",booth_only,stripe_candidate,画像/PDF,https://peakheadz.booth.pm/items/8397610,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_ToPDF_v1.0.0,DAKE_series,01_apps/DAKE_Image_ToPDF/ORIGINAL.md,yes,DakeImageToPDF,500,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=dake_image_topdf,"{""booth_url"": ""https://peakheadz.booth.pm/items/8397610"", ""dake_item_id"": ""dake_image_topdf"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_ToPDF_v1.0.0"", ""source_original"": ""01_apps/DAKE_Image_ToPDF/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=dake_image_topdf""}",ready for Stripe Payment Link planning
+dake_launcher,app,Dakeランチャー,300,JPY,"DAKEシリーズ各アプリを1クリックで起動します。
+
+・DAKEシリーズ各アプリを1クリックで起動するランチャー
+・各アプリの `README.md` にある `DAKE_META` から一覧生成
+・exe 未検出時の場所指定に対応
+・最近使ったアプリを最大2件まで記録
+・勝手な整理・移動・削除は行いません
+
+実務の流れを、
+少し静かにするための道具です。",booth_only,stripe_candidate,補助ツール,https://peakheadz.booth.pm/items/8447994,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Launcher_v1.0.0,DAKE_series,01_apps/DAKE_Launcher/ORIGINAL.md,yes,Dakeランチャー,300,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=dake_launcher,"{""booth_url"": ""https://peakheadz.booth.pm/items/8447994"", ""dake_item_id"": ""dake_launcher"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Launcher_v1.0.0"", ""source_original"": ""01_apps/DAKE_Launcher/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=dake_launcher""}",ready for Stripe Payment Link planning
+dake_mail_allstaff,app,Dake全社員メール起動,300,JPY,"宛先、CC、件名入りの全社員宛メール作成画面を開きます。
+
+・全社員宛メールを開くアプリ
+・宛先・CC・件名を保存可能
+・メールアドレス貼り付け自動整形
+・本文なし・自動送信なし
+・実務向け軽量ツール
+
+実務の流れを、
+少し静かにするための道具です。",booth_only,stripe_candidate,メール,https://peakheadz.booth.pm/items/8447998,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_AllStaff_v1.0.0,DAKE_series,01_apps/DAKE_Mail_AllStaff/ORIGINAL.md,yes,Dake全社員メール起動,300,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=dake_mail_allstaff,"{""booth_url"": ""https://peakheadz.booth.pm/items/8447998"", ""dake_item_id"": ""dake_mail_allstaff"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_AllStaff_v1.0.0"", ""source_original"": ""01_apps/DAKE_Mail_AllStaff/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=dake_mail_allstaff""}",ready for Stripe Payment Link planning
+dake_mail_kikuta,app,Dake菊田メール,300,JPY,"菊田宛のメール作成画面を開きます。
+
+・菊田宛メール起動アプリ
+・件名・本文入力に対応
+・既定メーラーで作成画面を開く
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。",booth_only,stripe_candidate,メール,https://peakheadz.booth.pm/items/8448003,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_Kikuta_v1.0.0,DAKE_series,01_apps/DAKE_Mail_Kikuta/ORIGINAL.md,yes,Dake菊田メール,300,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=dake_mail_kikuta,"{""booth_url"": ""https://peakheadz.booth.pm/items/8448003"", ""dake_item_id"": ""dake_mail_kikuta"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_Kikuta_v1.0.0"", ""source_original"": ""01_apps/DAKE_Mail_Kikuta/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=dake_mail_kikuta""}",ready for Stripe Payment Link planning
+dake_mail_list,app,Dakeメールリスト,300,JPY,"Outlookの.msgメールから、
+会社名・お名前・メールアドレスをCSVに整理します。
+
+・.msg からCSV整理
+・メール送信なし
+・会社名、お名前、メールアドレスだけ抽出
+・ローカル完結
+・Windows向け
+
+集めたメールを、
+実務で扱いやすい一覧にします。",booth_only,stripe_candidate,メール,https://peakheadz.booth.pm/items/8448014,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_List_v1.0.0,DAKE_series,01_apps/DAKE_Mail_List/ORIGINAL.md,yes,Dakeメールリスト,300,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=dake_mail_list,"{""booth_url"": ""https://peakheadz.booth.pm/items/8448014"", ""dake_item_id"": ""dake_mail_list"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_List_v1.0.0"", ""source_original"": ""01_apps/DAKE_Mail_List/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=dake_mail_list""}",ready for Stripe Payment Link planning
+dake_mansion_schedule,app,マンション工程表,500,JPY,"マンション管理会社へ提出するための、リフォーム工事工程表を作成します。
+工事進捗管理ではなく、管理会社提出用の工程表作成アプリです。
+
+・土日を含む45日間の工期内で、合計28営業日の初期工程を自動入力
+・土日は表示し、工事バーは平日のみに表示
+・チェックした工事だけをPDF出力
+・自由工事欄に任意の工事を追加可能
+・PDFは出力日時付きファイル名で保存
+
+実務の流れを、
+少し静かにするための道具です。",booth_only,stripe_candidate,作業補助,https://peakheadz.booth.pm/items/8448169,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mansion_Schedule_v1.0.0,DAKE_series,01_apps/DAKE_Mansion_Schedule/ORIGINAL.md,yes,マンション工程表,500,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=dake_mansion_schedule,"{""booth_url"": ""https://peakheadz.booth.pm/items/8448169"", ""dake_item_id"": ""dake_mansion_schedule"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mansion_Schedule_v1.0.0"", ""source_original"": ""01_apps/DAKE_Mansion_Schedule/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=dake_mansion_schedule""}",ready for Stripe Payment Link planning
+dake_pdf_checkstamp,app,Dake確認印,500,JPY,"PDFに名字と日付入りの確認印を押します。
+
+・PDF確認印アプリ
+・名字と日付入りの印影に対応
+・クリック位置へ押印
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。",booth_only,stripe_candidate,PDF,https://peakheadz.booth.pm/items/8448176,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_CheckStamp_v1.0.0,DAKE_series,01_apps/DAKE_PDF_CheckStamp/ORIGINAL.md,yes,Dake確認印,500,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=dake_pdf_checkstamp,"{""booth_url"": ""https://peakheadz.booth.pm/items/8448176"", ""dake_item_id"": ""dake_pdf_checkstamp"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_CheckStamp_v1.0.0"", ""source_original"": ""01_apps/DAKE_PDF_CheckStamp/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=dake_pdf_checkstamp""}",ready for Stripe Payment Link planning
+dake_pdf_crop,app,DakePDFトリミング,500,JPY,"PDFをドラッグ指定した範囲でトリミングします。
+
+・PDFトリミングアプリ
+・ドラッグ範囲指定に対応
+・別名PDFとして保存
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。",booth_only,stripe_candidate,PDF,https://peakheadz.booth.pm/items/8448182,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Crop_v1.0.0,DAKE_series,01_apps/DAKE_PDF_Crop/ORIGINAL.md,yes,DakePDFトリミング,500,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=dake_pdf_crop,"{""booth_url"": ""https://peakheadz.booth.pm/items/8448182"", ""dake_item_id"": ""dake_pdf_crop"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Crop_v1.0.0"", ""source_original"": ""01_apps/DAKE_PDF_Crop/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=dake_pdf_crop""}",ready for Stripe Payment Link planning
+dake_pdf_lookhere,app,DakePDFここ見て,500,JPY,"PDFに赤い丸と矢印を付けます。
+
+・PDF注目箇所マークアプリ
+・赤い丸・矢印に対応
+・元PDFとは別名で保存
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。",booth_only,stripe_candidate,PDF,https://peakheadz.booth.pm/items/8448187,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_LookHere_v1.0.0,DAKE_series,01_apps/DAKE_PDF_LookHere/ORIGINAL.md,yes,DakePDFここ見て,500,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=dake_pdf_lookhere,"{""booth_url"": ""https://peakheadz.booth.pm/items/8448187"", ""dake_item_id"": ""dake_pdf_lookhere"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_LookHere_v1.0.0"", ""source_original"": ""01_apps/DAKE_PDF_LookHere/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=dake_pdf_lookhere""}",ready for Stripe Payment Link planning
+dake_pdf_marker,app,DakePDFマーカー,500,JPY,"PDFにピンクの半透明マーカーを付けます。
+
+・PDFマーカーアプリ
+・半透明ピンクマーカーに対応
+・PDFへ注記して保存
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。",booth_only,stripe_candidate,PDF,https://peakheadz.booth.pm/items/8448193,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Marker_v1.0.0,DAKE_series,01_apps/DAKE_PDF_Marker/ORIGINAL.md,yes,DakePDFマーカー,500,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=dake_pdf_marker,"{""booth_url"": ""https://peakheadz.booth.pm/items/8448193"", ""dake_item_id"": ""dake_pdf_marker"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Marker_v1.0.0"", ""source_original"": ""01_apps/DAKE_PDF_Marker/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=dake_pdf_marker""}",ready for Stripe Payment Link planning
+dake_pdf_merge_mini,app,DakePDF結合mini,500,JPY,"最大5ファイルまでのPDFを並べ替えて結合します。
+
+・PDF結合miniアプリ
+・最大5ファイルまで対応
+・サムネイル並べ替え対応
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。",booth_only,stripe_candidate,PDF,https://peakheadz.booth.pm/items/8448200,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Merge_Mini_v1.0.0,DAKE_series,01_apps/DAKE_PDF_Merge_Mini/ORIGINAL.md,yes,DakePDF結合mini,500,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=dake_pdf_merge_mini,"{""booth_url"": ""https://peakheadz.booth.pm/items/8448200"", ""dake_item_id"": ""dake_pdf_merge_mini"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Merge_Mini_v1.0.0"", ""source_original"": ""01_apps/DAKE_PDF_Merge_Mini/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=dake_pdf_merge_mini""}",ready for Stripe Payment Link planning
+dake_pdf_rename,app,DakePDFファイル名整理,500,JPY,"PDF名の前後に任意テキストを追加します。
+
+・PDFファイル名整理アプリ
+・前後へのテキスト追加に対応
+・複数PDFをまとめて処理
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。",booth_only,stripe_candidate,PDF,https://peakheadz.booth.pm/items/8448204,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Rename_v1.0.0,DAKE_series,01_apps/DAKE_PDF_Rename/ORIGINAL.md,yes,DakePDFファイル名整理,500,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=dake_pdf_rename,"{""booth_url"": ""https://peakheadz.booth.pm/items/8448204"", ""dake_item_id"": ""dake_pdf_rename"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Rename_v1.0.0"", ""source_original"": ""01_apps/DAKE_PDF_Rename/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=dake_pdf_rename""}",ready for Stripe Payment Link planning
+dake_pdf_reorder,app,DakePDFページ並べ替え,500,JPY,"PDFページ順をドラッグで並べ替えます。
+
+・PDFページ並べ替えアプリ
+・サムネイルのドラッグ操作に対応
+・別名PDFとして保存
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。",booth_only,stripe_candidate,PDF,https://peakheadz.booth.pm/items/8448206,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Reorder_v1.0.0,DAKE_series,01_apps/DAKE_PDF_Reorder/ORIGINAL.md,yes,DakePDFページ並べ替え,500,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=dake_pdf_reorder,"{""booth_url"": ""https://peakheadz.booth.pm/items/8448206"", ""dake_item_id"": ""dake_pdf_reorder"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Reorder_v1.0.0"", ""source_original"": ""01_apps/DAKE_PDF_Reorder/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=dake_pdf_reorder""}",ready for Stripe Payment Link planning
+dake_pdf_splitone,app,DakePDF分割One,500,JPY,"PDFを全ページ1枚ずつに自動分割します。
+
+・PDF全ページ分割アプリ
+・1ページずつ自動保存
+・ドラッグ＆ドロップ対応
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。",booth_only,stripe_candidate,PDF,https://peakheadz.booth.pm/items/8448207,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitOne_v1.0.0,DAKE_series,01_apps/DAKE_PDF_SplitOne/ORIGINAL.md,yes,DakePDF分割One,500,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=dake_pdf_splitone,"{""booth_url"": ""https://peakheadz.booth.pm/items/8448207"", ""dake_item_id"": ""dake_pdf_splitone"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitOne_v1.0.0"", ""source_original"": ""01_apps/DAKE_PDF_SplitOne/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=dake_pdf_splitone""}",ready for Stripe Payment Link planning
+dake_pdf_splitselect,app,DakePDF分割Select,500,JPY,"PDFから必要ページだけを選んで保存します。
+
+・PDFページ選択保存アプリ
+・サムネイル選択に対応
+・範囲入力にも対応
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。",booth_only,stripe_candidate,PDF,https://peakheadz.booth.pm/items/8448213,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitSelect_v1.0.0,DAKE_series,01_apps/DAKE_PDF_SplitSelect/ORIGINAL.md,yes,DakePDF分割Select,500,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=dake_pdf_splitselect,"{""booth_url"": ""https://peakheadz.booth.pm/items/8448213"", ""dake_item_id"": ""dake_pdf_splitselect"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitSelect_v1.0.0"", ""source_original"": ""01_apps/DAKE_PDF_SplitSelect/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=dake_pdf_splitselect""}",ready for Stripe Payment Link planning
+dake_pdf_toimages,app,DakePDFto画像,500,JPY,"PDFの各ページをPNG画像に変換します。
+
+・PDF→画像変換アプリ
+・ページごとのPNG保存に対応
+・複数PDFの追加に対応
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。",booth_only,stripe_candidate,PDF,https://peakheadz.booth.pm/items/8448216,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_ToImages_v1.0.0,DAKE_series,01_apps/DAKE_PDF_ToImages/ORIGINAL.md,yes,DakePDFto画像,500,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=dake_pdf_toimages,"{""booth_url"": ""https://peakheadz.booth.pm/items/8448216"", ""dake_item_id"": ""dake_pdf_toimages"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_ToImages_v1.0.0"", ""source_original"": ""01_apps/DAKE_PDF_ToImages/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=dake_pdf_toimages""}",ready for Stripe Payment Link planning
+dake_pdf_viewer,app,DakePDF見る,500,JPY,"PDFを探してすぐ確認する軽量ビューワーです。
+
+・軽量PDFビューワー
+・フォルダ内PDF一覧に対応
+・ページ表示・拡大縮小に対応
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。",booth_only,stripe_candidate,PDF,https://peakheadz.booth.pm/items/8448219,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Viewer_v1.0.0,DAKE_series,01_apps/DAKE_PDF_Viewer/ORIGINAL.md,yes,DakePDF見る,500,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=dake_pdf_viewer,"{""booth_url"": ""https://peakheadz.booth.pm/items/8448219"", ""dake_item_id"": ""dake_pdf_viewer"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Viewer_v1.0.0"", ""source_original"": ""01_apps/DAKE_PDF_Viewer/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=dake_pdf_viewer""}",ready for Stripe Payment Link planning
+dake_price_apportionment,app,Dake価格按分,300,JPY,"売買価格を土地・建物評価額比率で参考按分します。
+
+・不動産価格按分アプリ
+・土地・建物評価額比率で計算
+・結果コピー・印刷用表示に対応
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。",booth_only,stripe_candidate,計算,https://peakheadz.booth.pm/items/8448222,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Price_Apportionment_v1.0.0,DAKE_series,01_apps/DAKE_Price_Apportionment/ORIGINAL.md,yes,Dake価格按分,300,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=dake_price_apportionment,"{""booth_url"": ""https://peakheadz.booth.pm/items/8448222"", ""dake_item_id"": ""dake_price_apportionment"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Price_Apportionment_v1.0.0"", ""source_original"": ""01_apps/DAKE_Price_Apportionment/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=dake_price_apportionment""}",ready for Stripe Payment Link planning
+dake_price_fixedtax,app,Dake固都税計算,300,JPY,"固定資産税・都市計画税の概算年税額を計算します。
+
+・固都税概算計算アプリ
+・土地・建物評価額入力に対応
+・税率変更と住宅用地区分に対応
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。",booth_only,stripe_candidate,計算,https://peakheadz.booth.pm/items/8448259,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Price_FixedTax_v1.0.0,DAKE_series,01_apps/DAKE_Price_FixedTax/ORIGINAL.md,yes,Dake固都税計算,300,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=dake_price_fixedtax,"{""booth_url"": ""https://peakheadz.booth.pm/items/8448259"", ""dake_item_id"": ""dake_price_fixedtax"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Price_FixedTax_v1.0.0"", ""source_original"": ""01_apps/DAKE_Price_FixedTax/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=dake_price_fixedtax""}",ready for Stripe Payment Link planning
+dake_reform_progress,app,リフォーム進捗管理,500,JPY,"工程の進捗に合わせて、A4縦の最新版カレンダーPDFを作成します。
+
+・Dakeリフォーム進捗管理
+・工程の進捗に合わせて最新版PDFを作成
+・A4縦カレンダー風PDF出力
+・ドラッグ操作と日付入力に対応
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。",booth_only,stripe_candidate,進捗管理,https://peakheadz.booth.pm/items/8448260,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Reform_Progress_v1.0.0,DAKE_series,01_apps/DAKE_Reform_Progress/ORIGINAL.md,yes,リフォーム進捗管理,500,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=dake_reform_progress,"{""booth_url"": ""https://peakheadz.booth.pm/items/8448260"", ""dake_item_id"": ""dake_reform_progress"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Reform_Progress_v1.0.0"", ""source_original"": ""01_apps/DAKE_Reform_Progress/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=dake_reform_progress""}",ready for Stripe Payment Link planning
+dake_screen_webp,app,DakeScreen_WebP,300,JPY,"選んだウインドウをWebPで保存します。
+
+・ウインドウスクショWebP保存アプリ
+・横幅1200px以内で保存
+・ショートカット操作に対応
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。",booth_only,stripe_candidate,スクリーンショット,https://peakheadz.booth.pm/items/8448261,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Screen_WebP_v1.0.0,DAKE_series,01_apps/DAKE_Screen_WebP/ORIGINAL.md,yes,DakeScreen_WebP,300,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=dake_screen_webp,"{""booth_url"": ""https://peakheadz.booth.pm/items/8448261"", ""dake_item_id"": ""dake_screen_webp"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Screen_WebP_v1.0.0"", ""source_original"": ""01_apps/DAKE_Screen_WebP/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=dake_screen_webp""}",ready for Stripe Payment Link planning
+dake_screenshot_print,app,Dakeスクショ印刷,500,JPY,"クリップボードのスクリーンショットをA4縦で印刷します。
+
+・スクリーンショット印刷アプリ
+・クリップボード画像の取得に対応
+・A4縦プレビュー付き
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。",booth_only,stripe_candidate,スクリーンショット,https://peakheadz.booth.pm/items/8448262,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Screenshot_Print_v1.0.0,DAKE_series,01_apps/DAKE_Screenshot_Print/ORIGINAL.md,yes,Dakeスクショ印刷,500,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=dake_screenshot_print,"{""booth_url"": ""https://peakheadz.booth.pm/items/8448262"", ""dake_item_id"": ""dake_screenshot_print"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Screenshot_Print_v1.0.0"", ""source_original"": ""01_apps/DAKE_Screenshot_Print/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=dake_screenshot_print""}",ready for Stripe Payment Link planning
+dake_two_person_memo,app,Dake二人メモ,300,JPY,"2人で使う、ぶつからない共同メモ。
+
+・2人で使う、ぶつからない共同メモです。
+・左右それぞれのメモブロックを追加できます。
+・相手の本文は編集せず、確認だけを残せます。
+・同じLAN内で簡易同期できます。
+・Windows向けexeです。
+
+実務の流れを、
+少し静かにするための道具です。",booth_only,stripe_candidate,メモ,https://peakheadz.booth.pm/items/8448279,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_TwoPerson_Memo_v1.0.0,DAKE_series,01_apps/DAKE_TwoPerson_Memo/ORIGINAL.md,yes,Dake二人メモ,300,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=dake_two_person_memo,"{""booth_url"": ""https://peakheadz.booth.pm/items/8448279"", ""dake_item_id"": ""dake_two_person_memo"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_TwoPerson_Memo_v1.0.0"", ""source_original"": ""01_apps/DAKE_TwoPerson_Memo/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=dake_two_person_memo""}",ready for Stripe Payment Link planning
+dake_work_calendar,app,Dake工程カレンダー,500,JPY,"指定期間の日付枠をA4縦PDFに並べます。
+
+・工程カレンダーPDF作成アプリ
+・指定期間の日付枠に対応
+・A4縦PDF出力
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。",booth_only,stripe_candidate,作業補助,https://peakheadz.booth.pm/items/8448282,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Work_Calendar_v1.0.0,DAKE_series,01_apps/DAKE_Work_Calendar/ORIGINAL.md,yes,Dake工程カレンダー,500,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=dake_work_calendar,"{""booth_url"": ""https://peakheadz.booth.pm/items/8448282"", ""dake_item_id"": ""dake_work_calendar"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Work_Calendar_v1.0.0"", ""source_original"": ""01_apps/DAKE_Work_Calendar/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=dake_work_calendar""}",ready for Stripe Payment Link planning
+dake_year_age,app,Dake築年数,300,JPY,"西暦・和暦から築年数を確認します。
+
+・築年数確認アプリ
+・西暦・和暦入力に対応
+・入力すると即時計算
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。",booth_only,stripe_candidate,年数・日付,https://peakheadz.booth.pm/items/8448286,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Year_Age_v1.0.0,DAKE_series,01_apps/DAKE_Year_Age/ORIGINAL.md,yes,Dake築年数,300,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=dake_year_age,"{""booth_url"": ""https://peakheadz.booth.pm/items/8448286"", ""dake_item_id"": ""dake_year_age"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Year_Age_v1.0.0"", ""source_original"": ""01_apps/DAKE_Year_Age/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=dake_year_age""}",ready for Stripe Payment Link planning
+dake_year_notice,app,Dake今年の注意点,300,JPY,"閏年と固定資産税評価替え年を確認します。
+
+・今年の注意点確認アプリ
+・閏年判定に対応
+・固定資産税評価替え年を表示
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。",booth_only,stripe_candidate,年数・日付,https://peakheadz.booth.pm/items/8448289,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Year_Notice_v1.0.0,DAKE_series,01_apps/DAKE_Year_Notice/ORIGINAL.md,yes,Dake今年の注意点,300,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=dake_year_notice,"{""booth_url"": ""https://peakheadz.booth.pm/items/8448289"", ""dake_item_id"": ""dake_year_notice"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Year_Notice_v1.0.0"", ""source_original"": ""01_apps/DAKE_Year_Notice/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=dake_year_notice""}",ready for Stripe Payment Link planning
+game_alien_road,app,DakeAlien Road,300,JPY,"左右移動だけで遊べる、LCD携帯ゲーム風ミニゲーム。
+
+・左右移動だけで遊べるレトロ風ミニゲーム
+・5レーンの回避アクション
+・ベストスコア保存
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。",booth_only,stripe_candidate,ゲーム,https://peakheadz.booth.pm/items/8449213,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Game_Alien_Road_v1.0.0,DAKE_series,01_apps/DAKE_Game_Alien_Road/ORIGINAL.md,yes,DakeAlien Road,300,yes,txcd_10201000,downloadable video game candidate; confirm before Stripe Tax use,https://store.dakeapp.com/product/?id=game_alien_road,"{""booth_url"": ""https://peakheadz.booth.pm/items/8449213"", ""dake_item_id"": ""game_alien_road"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Game_Alien_Road_v1.0.0"", ""source_original"": ""01_apps/DAKE_Game_Alien_Road/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=game_alien_road""}",ready for Stripe Payment Link planning
+game_diver_catch,app,Dake潜って捕る,300,JPY,"潜って捕って、船へ戻るレトロ風ミニゲーム。
+
+・潜って捕って、船へ戻るレトロ風ミニゲーム
+・NORMAL / TIMELESS モード
+・ベストスコア保存
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。",booth_only,stripe_candidate,ゲーム,https://peakheadz.booth.pm/items/8449218,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Game_Diver_Catch_v1.0.0,DAKE_series,01_apps/DAKE_Game_Diver_Catch/ORIGINAL.md,yes,Dake潜って捕る,300,yes,txcd_10201000,downloadable video game candidate; confirm before Stripe Tax use,https://store.dakeapp.com/product/?id=game_diver_catch,"{""booth_url"": ""https://peakheadz.booth.pm/items/8449218"", ""dake_item_id"": ""game_diver_catch"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Game_Diver_Catch_v1.0.0"", ""source_original"": ""01_apps/DAKE_Game_Diver_Catch/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=game_diver_catch""}",ready for Stripe Payment Link planning
+video_shorts_cut,app,Dakeショート切り出し,500,JPY,"MP4からショート候補とサムネを作成します。
+
+・MP4からショート動画候補を作成
+・サムネ画像とタイトル案も同時出力
+・QRコードでスマホへ転送
+・Windows向けexe
+
+実務の流れを、
+少し静かにするための道具です。",preparing,preparing,動画,,https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Video_Shorts_Cut_v1.0.0,DAKE_series,01_apps/DAKE_Video_Shorts_Cut/ORIGINAL.md,yes,Dakeショート切り出し,500,no,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=video_shorts_cut,"{""dake_item_id"": ""video_shorts_cut"", ""dake_type"": ""app"", ""github_release_url"": ""https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Video_Shorts_Cut_v1.0.0"", ""source_original"": ""01_apps/DAKE_Video_Shorts_Cut/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=video_shorts_cut""}",preparing item; do not create Stripe link yet
+DAKE_Pack_Document,pack,DAKE 書類整理パック,1480,JPY,PDF結合、画像PDF化、画像リサイズ、A4貼り付けをまとめた書類整理向けパックです。,booth_only,stripe_candidate,書類整理Pack,https://peakheadz.booth.pm/items/8448353,,DAKE_series,04_packs/DAKE_Pack_Document/ORIGINAL.md,yes,DAKE 書類整理パック,1480,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=DAKE_Pack_Document,"{""booth_url"": ""https://peakheadz.booth.pm/items/8448353"", ""dake_item_id"": ""DAKE_Pack_Document"", ""dake_type"": ""pack"", ""source_original"": ""04_packs/DAKE_Pack_Document/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=DAKE_Pack_Document""}",github_release_url missing; acceptable for packs if delivery policy is separate
+DAKE_Pack_Memo,pack,DAKE メモと記録パック,980,JPY,付箋、短文メモ、Gitメモ、昨日タスクの記録をまとめたメモ運用パックです。,booth_only,stripe_candidate,メモ運用Pack,https://peakheadz.booth.pm/items/8449208,,DAKE_series,04_packs/DAKE_Pack_Memo/ORIGINAL.md,yes,DAKE メモと記録パック,980,yes,txcd_10202003,downloadable prewritten software for business use candidate; confirm tax treatment,https://store.dakeapp.com/product/?id=DAKE_Pack_Memo,"{""booth_url"": ""https://peakheadz.booth.pm/items/8449208"", ""dake_item_id"": ""DAKE_Pack_Memo"", ""dake_type"": ""pack"", ""source_original"": ""04_packs/DAKE_Pack_Memo/ORIGINAL.md"", ""source_repo"": ""DAKE_series"", ""store_url"": ""https://store.dakeapp.com/product/?id=DAKE_Pack_Memo""}",github_release_url missing; acceptable for packs if delivery policy is separate
