@@ -1,41 +1,21 @@
 # encoding: utf-8
 
-【絶対ルール】
-すべてのファイルはUTF-8で扱うこと。
-文字コードを確認する質問は禁止。
+【DAKE正式出荷ライン｜2026-06-12 現行】
 
-【DAKE正式出荷ライン】
+## 基本定義
 
-■ 基本思想
+DAKEシリーズでは、GitHub Release公開だけでは正式出荷完了としない。
 
-DAKEシリーズでは、
-GitHub Release公開のみを「出荷完了」と扱わない。
+正式出荷とは、正本から派生ビューが生成または整合され、必要な出荷先へ届いている状態である。
 
-Releaseは「配布物公開」。
+## 正式出荷ライン
 
-正式出荷とは、
-ユーザーが一覧で見つけ、
-スクリーンショットで理解し、
-BOOTHまたはdakeapp.comから迷わず取得できる状態を指す。
-
-DAKEでは、
-「ユーザーが触れる状態」までを正式出荷と定義する。
-
----
-
-■ 定義
-
-Release
-＝ GitHub上の配布物公開
-
-出荷
-＝ ユーザーが触れる状態
-
----
-
-■ DAKE正式出荷ライン
-
+```text
+ORIGINAL.md
+↓
 README.md
+↓
+DAKE_META
 ↓
 release_body.md
 ↓
@@ -43,7 +23,7 @@ assets/screenshot.webp
 ↓
 assets/booth_thumbnail.jpg
 ↓
-booth_product.txt
+booth_product.txt / booth_ready
 ↓
 build
 ↓
@@ -51,160 +31,77 @@ dist/*.exe
 ↓
 GitHub Release
 ↓
-BOOTH ready
-↓
 BOOTH
 ↓
 dakeapp.com
 ↓
+store_products.generated.json
+↓
+dake-store-site同期
+↓
+store.dakeapp.com商品詳細確認
+↓
+payment_status確認
+↓
 Cloudflare反映確認
 ↓
 正式出荷完了
+```
 
----
+## Storeの扱い
 
-■ CLOSED条件
+store.dakeapp.com は正本ではない。
 
-以下が揃うまで、
-「正式出荷完了」「CLOSED」と扱わない。
+販売ビューである。
 
-・README.md が最新
-・release_body.md が最新
-・assets/screenshot.webp が存在する
-・assets/booth_thumbnail.jpg が存在する
-・booth_product.txt が存在する
-・booth_ready/ が生成されている
-・dist/*.exe が生成されている
-・GitHub Release が存在する
-・Releaseへexe添付済み
-・README の release_url 更新済み
-・BOOTH掲載準備完了
-・dakeapp.com 反映済み
-・Cloudflare本番反映確認済み
+ただし、正式出荷先に含める。
 
----
+Store表示は ORIGINAL.md 由来の generated JSON から作る。
 
-■ screenshot.webp の役割
+## CLOSED条件
 
-役割：
-「実際に動く感」
+次が揃うまで正式出荷完了として扱わない。
 
-用途：
-・README
-・dakeapp.com
-・GitHub Release
-・Launcher
+- ORIGINAL.md 確認
+- README / DAKE_META / release_body / booth_product 整合確認
+- screenshot.webp
+- booth_thumbnail.jpg
+- booth_ready
+- dist/*.exe
+- GitHub Release
+- BOOTH導線
+- dakeapp.com掲載
+- store_products.generated.json再生成
+- dake-store-site同期
+- store.dakeapp.com商品詳細確認
+- payment_status確認
+- Cloudflare反映確認
 
-ルール：
-・実際の起動画面を使用
-・アプリウインドウのみ
-・デスクトップを含めない
-・実務中の自然状態
-・UI全体が見える状態
-・横幅1200px超のみ縮小
-・引き延ばし禁止
+## Store同期
 
----
+正式出荷時は次を実行する。
 
-■ booth_thumbnail.jpg の役割
+```powershell
+python tools\store\sync_store_to_site.py
+```
 
-役割：
-「一覧で止まる感」
+同期後に確認する。
 
-用途：
-・BOOTH一覧
-・商品一覧
-・booth_ready
+- items件数
+- payment_status件数
+- stripe_ready
+- booth_only
+- preparing
+- not_for_sale
+- source_policy
+- do_not_edit: true
+- shimarisu_pack
 
-ルール：
-・1200x1200
-・正方形
-・小サイズでも潰れない
-・一覧で用途が分かる
-・DAKE共通空気感を維持
-・過剰演出禁止
-・実務道具感を優先
+## 禁止
 
----
-
-■ BOOTH素材
-
-正式出荷物として扱う：
-
-・assets/booth_thumbnail.jpg
-・booth_product.txt
-・booth_ready/
-
-これらは、
-GitHub Release後の任意作業ではない。
-
----
-
-■ dakeapp.com
-
-正式出荷では、
-dakeapp.com掲載確認まで行う。
-
-確認項目：
-
-・アプリ一覧表示
-・詳細ページ表示
-・スクリーンショット表示
-・Release URL
-・更新一覧反映
-・sitemap反映
-・Cloudflare反映確認
-
----
-
-■ Codex出荷指示ルール
-
-出荷指示時は、
-以下を必須確認項目とする。
-
-・screenshot.webp
-・booth_thumbnail.jpg
-・booth_product.txt
-・booth_ready
-・Release URL
-・dakeapp.com反映
-・Cloudflare反映確認
-
----
-
-■ 禁止
-
-・GitHub Releaseのみで出荷完了扱いする
-・スクリーンショット無しで出荷する
-・BOOTH素材未生成のままCLOSEDにする
-・dakeapp.com未反映で完了扱いする
-・Cloudflare未確認で完了扱いする
-
----
-
-■ 判断基準
-
-・ユーザーが迷わず辿り着けるか
-・一覧で用途が分かるか
-・スクショで理解できるか
-・BOOTHで止まらないか
-・サイト上で自然に見つけられるか
-・正式出荷後に追加作業が残っていないか
-
----
-
-■ 結論
-
-DAKEの正式出荷とは、
-「配布物を公開した状態」ではない。
-
-README、
-スクリーンショット、
-BOOTH、
-dakeapp.com、
-Cloudflare本番確認まで含めて、
-
-ユーザーが自然に触れられる状態。
-
-そこまで到達して初めて、
-正式出荷完了とする。
+- GitHub Releaseだけで完了扱いする
+- BOOTHだけで完了扱いする
+- Storeだけで完了扱いする
+- generated JSONを手編集する
+- Store側で商品情報を直接編集する
+- Stripe Secret / APIキー / Webhook Secretを公開repoへ入れる

@@ -1,0 +1,95 @@
+# encoding: utf-8
+
+【DAKE情報源更新レポート｜2026-06-12】
+
+## 更新対象
+
+C:\Users\yukiz\devlop\DAKE_series\03_docs\DAKE_series_情報源\00_active
+
+## 更新したファイル
+
+- 00_DAKE_開発哲学.txt
+- 01_DAKE_共通開発運用ルール.txt
+- 05_DAKE_収益化と導線.txt
+- 16_DAKE_正式出荷ライン.txt
+- 99_DAKE_禁止事項.txt
+- GitHub README.txt
+
+## 更新しなかったファイル
+
+以下は、UI、デザイン、アイコン、Git、UI_TEXTなどの既存ルールが主対象であり、今回の正本・Store・Stripe運用変更の直接影響が小さいため未変更。
+
+- 02_DAKE_実装原則_応答性とUI.txt
+- 03_DAKE_共通デザインとテーマ.txt
+- 04_DAKE_ブランド定義と差し替え項目.txt
+- 06_DAKE_統一アイコン実装仕様.txt
+- 13_DAKE_Git運用と除外ルール.txt
+- 14_DAKE_UI_TEXT運用ルール.txt
+- 15_DAKE_UI_TEXT共通テンプレート.txt
+
+## 変更概要
+
+Phase 1〜14で確定した現在の運用状態を、外部情報源の00_activeへ反映した。
+
+主な反映内容：
+
+- ORIGINAL.md を真の正本として扱う
+- README / DAKE_META / release_body / booth_product / Store表示は派生ビューとして扱う
+- generated JSON は正本ではなく手編集禁止
+- store.dakeapp.com は販売ビューであり正式出荷先
+- Store同期は `python tools\store\sync_store_to_site.py` を使う
+- payment_status を正式定義として扱う
+- Stripe Payment Link は利用可
+- Stripe Secret / APIキー / Webhook Secret は公開repo、generated JSON、Store JSへ保存しない
+
+## 旧README中心運用からの変更点
+
+古い表現では README.md が一次情報の置き場として扱われていた。
+
+現行運用では、README.md はGitHub公開ビューであり、真の基準は ORIGINAL.md に置く。
+
+README側にしか存在しない重要情報を見つけた場合は、ORIGINAL.mdへ戻すべきか確認する。
+
+## Store正式出荷化の反映内容
+
+正式出荷ラインに次を追加した。
+
+- store_products.generated.json 再生成
+- dake-store-site同期
+- store.dakeapp.com商品詳細確認
+- payment_status確認
+- Stripe導線確認
+- BOOTH導線確認
+
+## Stripe / Payment Linkの反映内容
+
+Stripe Payment LinkはStore購入導線として利用できる。
+
+ただし、次は保存禁止：
+
+- Stripe Secret
+- APIキー
+- Webhook Secret
+
+## 検証結果
+
+実施コマンド：
+
+```powershell
+rg "README.*正本|README正本" 03_docs/DAKE_series_情報源/00_active
+rg "ORIGINAL.md|store.dakeapp.com|payment_status|Stripe|正式出荷|generated" 03_docs/DAKE_series_情報源/00_active
+```
+
+期待状態：
+
+- 旧README中心運用の強い表現が残っていない
+- ORIGINAL.md中心運用が入っている
+- store.dakeapp.comが正式出荷先に含まれている
+- payment_status定義が入っている
+- Stripe Secret禁止が入っている
+
+## 今後の注意
+
+DAKE_series/00_core が正本側であり、03_docs/DAKE_series_情報源/00_active は外部情報源ビューとして扱う。
+
+今後00_core側の運用が変わった場合は、この情報源側も同期確認する。

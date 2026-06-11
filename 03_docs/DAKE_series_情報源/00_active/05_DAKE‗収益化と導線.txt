@@ -1,57 +1,71 @@
 # encoding: utf-8
 
-【絶対ルール】
-すべてのファイルはUTF-8で扱うこと。
-文字コードを確認する質問は禁止。
+【DAKE収益化と導線｜2026-06-12 現行】
 
-【04_DAKE_収益化と導線.txt】
+## 基本思想
 
-【DAKEシリーズ収益化と導線】
+DAKEの収益化は、単純な売り場ではなく、DAKEエコシステム内の導線として扱う。
 
-■ 基本思想
-・exe単体で稼ぐのではなく「導線」で稼ぐ
-・単機能 × 軽量 × 爆速 を最優先
-・開発スピードを上げて数を出し、当たりを引く
-・ユーザーは現場の実務者に特化する
+販売導線は重要だが、商品情報の中心ではない。
 
-■ 本質
-・ツール = 人を集める装置
-・収益の本命 = 不動産案件
-・差別化 = 現場理解 × 実用性
+商品情報の中心は ORIGINAL.md に置く。
 
-■ 収益構造
-① 無料で配る
-② 少し不便にする
-③ 楽したい人にProを売る
-④ ごく一部を本業に繋げる
+## 主要導線
 
-■ 収益モデル
-① 無料版（集客）
-② Pro版（個人課金）
-③ 法人ライセンス（組織課金）
-④ 不動産導線（本業収益）
+DAKEで扱う導線：
 
-■ 販売チャネル
-・BOOTH
-・自社LP
+- GitHub Release
+- BOOTH
+- dakeapp.com
+- store.dakeapp.com
+- Stripe Payment Link
 
-■ 集客導線
-・YouTube
-・Instagram
-・ブログ
+## Store
 
-■ 不動産導線
-・メニュー内に設置
-・処理完了後に軽く表示
-・営業ではなく相談導線として扱う
+store.dakeapp.com は販売ビューである。
 
-■ 信頼対策
-・ウイルスチェック済み明記
-・ZIP形式で配布
-・説明文を明確に記載
-・将来的にコード署名導入
+正本ではない。
 
-■ 成長戦略
-① 単機能アプリを量産する
-② 反応の良い機能を特定する
-③ 必要に応じて統合版を開発する
+ただし、正式出荷先の一つである。
+
+Store表示は ORIGINAL.md 由来の store_products.generated.json を読む。
+
+## BOOTH
+
+BOOTHは外部販売・配布導線として扱う。
+
+booth_product.txt と booth_ready はBOOTH登録用ビューであり、正本ではない。
+
+BOOTH URLは、公開後に必要な派生ビューへ戻す。
+
+## Stripe Payment Link
+
+Stripe Payment Linkは、自社Storeの購入導線として利用できる。
+
+ただし、Stripeは正本ではない。
+
+次の情報は公開repo、generated JSON、Store JSへ保存しない。
+
+- Stripe Secret
+- APIキー
+- Webhook Secret
+
+## payment_status
+
+Storeの購入導線は payment_status で扱う。
+
+```text
+stripe_ready  = Stripe Payment Linkあり
+booth_only    = BOOTH導線のみ
+preparing     = 準備中
+not_for_sale  = 販売対象外
+```
+
+## 今回未実装のもの
+
+次は将来拡張として扱う。
+
+- Stripe API
+- Webhook
+- Cloudflare R2
+- 購入後自動ダウンロード発行

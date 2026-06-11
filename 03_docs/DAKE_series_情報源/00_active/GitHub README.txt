@@ -1,6 +1,9 @@
+# encoding: utf-8
+
 # DAKE Series by しまりす不動産
 
-Simple, fast, single-purpose desktop apps for real work.  
+Simple, fast, single-purpose desktop apps for real work.
+
 Vibe-coded by Yukihiko Kikuta.
 
 ## Concept
@@ -17,108 +20,58 @@ The core idea is simple:
 - no heavy effects
 - local-first and practical
 
-This project is built around the philosophy:
+## Source Policy
 
-**「現場で止まらない道具」**  
-Tools that keep real work moving without interruption.
+The project uses `ORIGINAL.md` as the true source of truth for each app, Pack, and product.
 
----
+`README.md`, `DAKE_META`, `release_body.md`, `booth_product.txt`, generated JSON, BOOTH pages, and Store pages are derived views.
 
-## Product Direction
+If an important fact exists only in a derived view, it should be reviewed and moved back to `ORIGINAL.md` when appropriate.
 
-DAKE Series focuses on:
+## Store
 
-- single-purpose desktop apps
-- minimal decision-making for the user
-- low-friction workflows
-- responsive UI
-- practical usability over flashy features
+`store.dakeapp.com` is a sales view, not the source of truth.
 
-Integrated tools may be considered later, but the current priority is:
+Store data is generated from `ORIGINAL.md` into `store_products.generated.json` and synced to `dake-store-site`.
 
-**small, focused, reliable apps**
+Store sync command:
 
----
+```powershell
+python tools\store\sync_store_to_site.py
+```
 
-## Design Principles
+## Shipping
 
-- light and clean UI
-- flat and simple modern design
-- easy Japanese readability
-- soft and practical wording
-- stable behavior over visual effects
+Formal DAKE shipping includes:
 
-### Theme
+- GitHub Release
+- BOOTH
+- dakeapp.com
+- store.dakeapp.com
+- payment_status confirmation
+- Cloudflare confirmation
 
-- Background: `#F6F7F9`
-- Card: `#FFFFFF`
-- Text: `#1E2430`
-- Border: `#E6EAF0`
-- Accent: `#2F6FED`
-- Success: `#12B76A`
+GitHub Release alone is not treated as formal shipping completion.
 
-### Font Priority
+## Payment Links
 
-- BIZ UDPGothic
-- Yu Gothic UI
-- Meiryo
+Stripe Payment Link can be used for Store purchase flow.
 
----
+Stripe Secret, API keys, and Webhook Secret must not be stored in the public repo, generated JSON, or Store JavaScript.
 
-## Development Principles
-
-- UI must not freeze
-- heavy processing must not run on the main UI thread
-- progress and state should be visible
-- simpler is better
-- faster is better
-- less is better
-
-When in doubt:
-
-- choose the simpler option
-- choose the faster option
-- choose the option that makes the user think less
-
----
-
-## Current App Structure
+## Project Structure
 
 ```text
 00_core/
 01_apps/
 02_assets/
 03_docs/
+04_packs/
+tools/
 ```
-
-Planned apps include:
-
-- DAKE PDF Merge
-- DAKE Image to PDF
-
-More single-purpose tools may be added over time.
-
----
-
-## Branding
-
-DAKE Series is part of the broader しまりす不動産 product concept.
-
-- DAKE = single-purpose entry tools
-- しまりす = broader integrated direction for the future
-
----
-
-## Notes
-
-This repository is focused on practical desktop utility development.
-Old ST-series ideas and structures are archived and not used as a base for new DAKE development.
-
----
 
 ## Copyright
 
 © 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta
-Unauthorized reproduction or redistribution is prohibited.
 
----
+Unauthorized reproduction or redistribution is prohibited.
