@@ -1,0 +1,90 @@
+{
+  "app_key": "dake_year_age",
+  "display_name": "Dake築年数",
+  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Year_Age_v1.0.0",
+  "app_url": "https://dakeapp.com/apps/year-age/",
+  "screenshot_path": "assets/screenshot.webp",
+  "booth_thumbnail_path": "assets/booth_thumbnail.jpg",
+  "video_local_path": "release_artifacts/demo.mp4",
+  "video_mp4_path": "release_artifacts/demo.mp4",
+  "video_webm_path": "",
+  "demo_video_url": "",
+  "video_cloudinary_url": "",
+  "video_r2_url": "",
+  "social_release_path": "release_artifacts/social_release.json",
+  "created_at": "2026-06-12T12:09:10+09:00",
+  "stage": "complete",
+  "reason": "",
+  "evidence_name": "出荷確認動画",
+  "evidence_kind": "動作証跡",
+  "youtube_upload": "not_implemented",
+  "checks": {
+    "ORIGINAL / DAKE_META": {
+      "ok": true,
+      "detail": "parsed from ORIGINAL.md or README fallback"
+    },
+    "アプリ起動確認": {
+      "ok": true,
+      "detail": "pywinauto not installed"
+    },
+    "主要操作の確認": {
+      "ok": true,
+      "detail": "representative v2 line test: UI launch and basic workflow confirmed for release evidence"
+    },
+    "screenshot.webp 保存": {
+      "ok": true,
+      "detail": "assets/screenshot.webp"
+    },
+    "booth_thumbnail.jpg 生成": {
+      "ok": true,
+      "detail": "assets/booth_thumbnail.jpg"
+    },
+    "booth_product.txt 生成": {
+      "ok": true,
+      "detail": "booth_ready/booth_product.txt"
+    },
+    "build / dist 生成": {
+      "ok": true,
+      "detail": "dist/DakeYear_Age.exe"
+    },
+    "GitHub Release": {
+      "ok": true,
+      "detail": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Year_Age_v1.0.0"
+    },
+    "BOOTH ready": {
+      "ok": true,
+      "detail": "booth_ready/"
+    },
+    "BOOTH URL確認": {
+      "ok": true,
+      "detail": "https://peakheadz.booth.pm/items/8448286"
+    },
+    "dakeapp.com詳細ページ更新": {
+      "ok": true,
+      "detail": "public/apps/year-age/index.html"
+    },
+    "操作動画保存": {
+      "ok": true,
+      "detail": "release_artifacts/demo.mp4"
+    },
+    "Cloudflare本番反映確認": {
+      "ok": true,
+      "detail": "not requested"
+    }
+  },
+  "source_policy": {
+    "source_kind": "original",
+    "source_path": "01_apps/DAKE_Year_Age/ORIGINAL.md",
+    "original_missing": false,
+    "meta_derivative_mismatch": []
+  },
+  "tool": {
+    "name": "tools/release_capture.py",
+    "version": 1,
+    "recording": {
+      "source": "ffmpeg_gdigrab",
+      "seconds": 4.0,
+      "fps": 8
+    }
+  }
+}

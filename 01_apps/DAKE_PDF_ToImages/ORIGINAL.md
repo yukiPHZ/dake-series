@@ -136,7 +136,10 @@ PDFを追加して保存先を選ぶだけで、各ページをPNG画像とし�
   "show_in_launcher": true,
   "show_on_site": true,
   "app_type": "",
-  "completion_goal": ""
+  "completion_goal": "",
+  "demo_video_path": "release_artifacts/demo.mp4",
+  "demo_video_url": "",
+  "social_release_path": "release_artifacts/social_release.json"
 }
 ```
 

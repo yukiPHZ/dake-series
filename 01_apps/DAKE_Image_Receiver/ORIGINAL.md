@@ -136,7 +136,10 @@ PCに表示したQRコードをスマホで読み取り、画像をWindows PCへ
   "show_in_launcher": true,
   "show_on_site": true,
   "app_type": "",
-  "completion_goal": ""
+  "completion_goal": "",
+  "demo_video_path": "release_artifacts/demo.mp4",
+  "demo_video_url": "",
+  "social_release_path": "release_artifacts/social_release.json"
 }
 ```
 

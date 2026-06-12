@@ -99,7 +99,10 @@ DAKE 共通アイコン `C:\Users\yukiz\devlop\DAKE_series\02_assets\dake_icon.i
   "screenshot_path": "assets/screenshot.webp",
   "status": "internal",
   "show_in_launcher": false,
-  "show_on_site": false
+  "show_on_site": false,
+  "demo_video_path": "release_artifacts/demo.mp4",
+  "demo_video_url": "",
+  "social_release_path": "release_artifacts/social_release.json"
 }
 ```
 

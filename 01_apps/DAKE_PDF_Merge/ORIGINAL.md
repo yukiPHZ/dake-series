@@ -112,7 +112,10 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
   "screenshot_path": "assets/screenshot.webp",
   "status": "available",
   "show_in_launcher": true,
-  "show_on_site": true
+  "show_on_site": true,
+  "demo_video_path": "release_artifacts/demo.mp4",
+  "demo_video_url": "",
+  "social_release_path": "release_artifacts/social_release.json"
 }
 ```
 

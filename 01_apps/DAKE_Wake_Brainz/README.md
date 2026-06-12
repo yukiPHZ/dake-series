@@ -161,7 +161,10 @@ This app is a QPCS/operations app, not a market-facing standalone product. Its c
   "app_type": "qpcs",
   "completion_goal": "system_ready",
   "show_in_launcher": false,
-  "show_on_site": false
+  "show_on_site": false,
+  "demo_video_path": "release_artifacts/demo.mp4",
+  "demo_video_url": "",
+  "social_release_path": "release_artifacts/social_release.json"
 }
 ```
 

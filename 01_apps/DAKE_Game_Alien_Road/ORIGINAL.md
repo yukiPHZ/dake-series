@@ -117,7 +117,10 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
   "launcher_title": "DakeAlien Road",
   "launcher_description": "左右移動だけで遊べる、LCD携帯ゲーム風ミニゲーム。",
   "app_type": "market",
-  "completion_goal": "formal_release"
+  "completion_goal": "formal_release",
+  "demo_video_path": "release_artifacts/demo.mp4",
+  "demo_video_url": "",
+  "social_release_path": "release_artifacts/social_release.json"
 }
 ```
 

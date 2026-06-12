@@ -280,7 +280,10 @@ Not part of the current mainline workflow.
   "screenshot_path": "assets/screenshot.webp",
   "status": "frozen",
   "show_in_launcher": false,
-  "show_on_site": false
+  "show_on_site": false,
+  "demo_video_path": "release_artifacts/demo.mp4",
+  "demo_video_url": "",
+  "social_release_path": "release_artifacts/social_release.json"
 }
 ```
 

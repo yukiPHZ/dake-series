@@ -61,7 +61,10 @@ DAKEシリーズ共通アイコンは `../../02_assets/dake_icon.ico` を参照�
   "screenshot_path": "assets/screenshot.webp",
   "status": "available",
   "show_in_launcher": true,
-  "show_on_site": true
+  "show_on_site": true,
+  "demo_video_path": "release_artifacts/demo.mp4",
+  "demo_video_url": "",
+  "social_release_path": "release_artifacts/social_release.json"
 }
 ```
 

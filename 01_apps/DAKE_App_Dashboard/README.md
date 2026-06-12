@@ -135,6 +135,9 @@ DAKE Dashboard は `DAKE_META` の `app_type` と `completion_goal` を読み取
   "app_type": "qpcs",
   "completion_goal": "system_ready",
   "show_in_launcher": false,
-  "show_on_site": false
+  "show_on_site": false,
+  "demo_video_path": "release_artifacts/demo.mp4",
+  "demo_video_url": "",
+  "social_release_path": "release_artifacts/social_release.json"
 }
 ```

@@ -93,7 +93,10 @@ PyInstaller で `dist\Dake_Launcher.exe` を作成します。共通アイコン
   "screenshot_path": "assets/screenshot.webp",
   "status": "available",
   "show_in_launcher": false,
-  "show_on_site": true
+  "show_on_site": true,
+  "demo_video_path": "release_artifacts/demo.mp4",
+  "demo_video_url": "",
+  "social_release_path": "release_artifacts/social_release.json"
 }
 ```
 

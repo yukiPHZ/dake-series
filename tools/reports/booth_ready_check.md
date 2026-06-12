@@ -1,13 +1,17 @@
 # DAKE BOOTH Ready Check v2
 
-Generated: 2026-06-04 06:47:15
+Generated: 2026-06-12 12:37:31
 
 ## Summary
 
 - checked: 65
 - available checked: 50
-- closed ok: 49
-- not closed: 1
+- legacy_closed ok: 49
+- legacy_not_closed: 1
+- v2_closed ok: 0
+- v2_pending: 50
+- original_missing: 0
+- meta_derivative_mismatch: 0
 - excluded by status: 15
 - release_url empty available: 0
 - show flag conflicts: 2
@@ -33,6 +37,9 @@ Generated: 2026-06-04 06:47:15
 - zip missing: 0
 - icon build missing: 0
 - icon main missing: 0
+- release capture missing: 49
+- social draft missing: 49
+- social buffer missing: 50
 
 ## BOOTH URL
 
@@ -60,82 +67,137 @@ Generated: 2026-06-04 06:47:15
 
 - none
 
-## Not Closed Available Apps
+## Legacy Not Closed Available Apps
 
-| app | asset_ready | release_url | booth_url | next_action |
-| --- | --- | --- | --- | --- |
-| DAKE_Video_Shorts_Cut | OK | OK | empty | fill BOOTH URL in booth_product.txt after publication |
+| app | asset_ready | release_capture | release_url | booth_url | social | next_action |
+| --- | --- | --- | --- | --- | --- | --- |
+| DAKE_Video_Shorts_Cut | OK | NG | OK | empty | NG | capture operation evidence with tools/release_capture.py<br>generate SNS dry-run posts with tools/release_social.py<br>create SNS Buffer posts with tools/release_social.py --post-to-buffer<br>fill BOOTH URL in booth_product.txt after publication |
 
 ## Excluded By Status
 
 | app | status | show_in_launcher | show_on_site | note |
 | --- | --- | --- | --- | --- |
-| DAKE_App_Dashboard | internal | False | False | excluded from regular shipping check |
-| DAKE_Approve_Brainz | frozen | False | False | excluded from regular shipping check |
-| DAKE_BGM_Loop | frozen | False | False | excluded from regular shipping check |
-| DAKE_Brainz_OIKAWA | frozen | False | False | excluded from regular shipping check |
-| DAKE_Brainz_Search | frozen | False | False | excluded from regular shipping check |
-| DAKE_Game_ShimarisuRealEstate | prototype | False | False | excluded from regular shipping check |
-| DAKE_HolidayJinja_Post | internal | False | False | excluded from regular shipping check |
-| DAKE_Music_Otooku | frozen | False | False | excluded from regular shipping check |
-| DAKE_Note_Inbox | unknown | None | None | excluded from regular shipping check |
-| DAKE_QPSC_Dashboard | internal | True | False | fix show_in_launcher/show_on_site for non-available status |
-| DAKE_Wake_Brainz | draft | False | False | excluded from regular shipping check |
-| DAKE_Web_Dashboard | frozen | False | False | excluded from regular shipping check |
-| DAKE_Web_Index | internal | True | False | fix show_in_launcher/show_on_site for non-available status |
-| DAKE_Yukiz_KadouChu | draft | False | False | excluded from regular shipping check |
-| DAKE_YukizBlog_Post | internal | False | False | excluded from regular shipping check |
+| DAKE_App_Dashboard | internal | False | False | original_missing<br>excluded from regular shipping check |
+| DAKE_Approve_Brainz | frozen | False | False | original_missing<br>excluded from regular shipping check |
+| DAKE_BGM_Loop | frozen | False | False | original_missing<br>excluded from regular shipping check |
+| DAKE_Brainz_OIKAWA | frozen | False | False | original_missing<br>excluded from regular shipping check |
+| DAKE_Brainz_Search | frozen | False | False | original_missing<br>excluded from regular shipping check |
+| DAKE_Game_ShimarisuRealEstate | prototype | False | False | original_missing<br>excluded from regular shipping check |
+| DAKE_HolidayJinja_Post | internal | False | False | original_missing<br>excluded from regular shipping check |
+| DAKE_Music_Otooku | frozen | False | False | original_missing<br>excluded from regular shipping check |
+| DAKE_Note_Inbox | unknown | None | None | original_missing<br>excluded from regular shipping check |
+| DAKE_QPSC_Dashboard | internal | True | False | original_missing<br>fix show_in_launcher/show_on_site for non-available status |
+| DAKE_Wake_Brainz | draft | False | False | original_missing<br>excluded from regular shipping check |
+| DAKE_Web_Dashboard | frozen | False | False | original_missing<br>excluded from regular shipping check |
+| DAKE_Web_Index | internal | True | False | original_missing<br>fix show_in_launcher/show_on_site for non-available status |
+| DAKE_Yukiz_KadouChu | draft | False | False | original_missing<br>excluded from regular shipping check |
+| DAKE_YukizBlog_Post | internal | False | False | original_missing<br>excluded from regular shipping check |
 
-## Closed OK
+## V2 Readiness
+
+| app | legacy_closed | release_capture_ready | social_draft_ready | social_buffer_ready | v2_closed | pending_reason |
+| --- | --- | --- | --- | --- | --- | --- |
+| DAKE_App_Doko | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_Backup | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_BOOTH_Assist | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_Column_Memo | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_Document_Cover | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_FAX_Cover | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_Folder_List | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_Game_Alien_Road | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_Game_Diver_Catch | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_Git_Memo | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_Image_HEICtoJPG | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_Image_iPhoneToPC | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_Image_PasteA4 | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_Image_Receiver | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_Image_Resize | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_Image_ToPDF | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_Launcher | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_Mail_Address_Format | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_Mail_AllStaff | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_Mail_Draft | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_Mail_Kikuta | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_Mail_List | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_Maji_Memo | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_Mansion_Schedule | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_PDF_CheckStamp | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_PDF_Compress | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_PDF_Crop | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_PDF_LookHere | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_PDF_Marker | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_PDF_Merge | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_PDF_Merge_Mini | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_PDF_Rename | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_PDF_Reorder | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_PDF_SplitOne | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_PDF_SplitSelect | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_PDF_ToImages | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_PDF_Viewer | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_Price_Apportionment | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_Price_FixedTax | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_Reform_Progress | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_Screen_WebP | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_Screenshot_Print | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_Sticky_Memo | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_Time_AdvancedTimer | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_TwoPerson_Memo | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_Video_Shorts_Cut | NG | NG | NG | NG | NG | legacy, capture, social_draft, social_buffer |
+| DAKE_Work_Calendar | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_Year_Age | OK | OK | OK | NG | NG | social_buffer |
+| DAKE_Year_Notice | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+| DAKE_Yesterday_Task_Memo | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
+
+## Legacy Closed OK
 
 | app | status |
 | --- | --- |
-| DAKE_App_Doko | CLOSED |
-| DAKE_Backup | CLOSED |
-| DAKE_BOOTH_Assist | CLOSED |
-| DAKE_Column_Memo | CLOSED |
-| DAKE_Document_Cover | CLOSED |
-| DAKE_FAX_Cover | CLOSED |
-| DAKE_Folder_List | CLOSED |
-| DAKE_Game_Alien_Road | CLOSED |
-| DAKE_Game_Diver_Catch | CLOSED |
-| DAKE_Git_Memo | CLOSED |
-| DAKE_Image_HEICtoJPG | CLOSED |
-| DAKE_Image_iPhoneToPC | CLOSED |
-| DAKE_Image_PasteA4 | CLOSED |
-| DAKE_Image_Receiver | CLOSED |
-| DAKE_Image_Resize | CLOSED |
-| DAKE_Image_ToPDF | CLOSED |
-| DAKE_Launcher | CLOSED |
-| DAKE_Mail_Address_Format | CLOSED |
-| DAKE_Mail_AllStaff | CLOSED |
-| DAKE_Mail_Draft | CLOSED |
-| DAKE_Mail_Kikuta | CLOSED |
-| DAKE_Mail_List | CLOSED |
-| DAKE_Maji_Memo | CLOSED |
-| DAKE_Mansion_Schedule | CLOSED |
-| DAKE_PDF_CheckStamp | CLOSED |
-| DAKE_PDF_Compress | CLOSED |
-| DAKE_PDF_Crop | CLOSED |
-| DAKE_PDF_LookHere | CLOSED |
-| DAKE_PDF_Marker | CLOSED |
-| DAKE_PDF_Merge | CLOSED |
-| DAKE_PDF_Merge_Mini | CLOSED |
-| DAKE_PDF_Rename | CLOSED |
-| DAKE_PDF_Reorder | CLOSED |
-| DAKE_PDF_SplitOne | CLOSED |
-| DAKE_PDF_SplitSelect | CLOSED |
-| DAKE_PDF_ToImages | CLOSED |
-| DAKE_PDF_Viewer | CLOSED |
-| DAKE_Price_Apportionment | CLOSED |
-| DAKE_Price_FixedTax | CLOSED |
-| DAKE_Reform_Progress | CLOSED |
-| DAKE_Screen_WebP | CLOSED |
-| DAKE_Screenshot_Print | CLOSED |
-| DAKE_Sticky_Memo | CLOSED |
-| DAKE_Time_AdvancedTimer | CLOSED |
-| DAKE_TwoPerson_Memo | CLOSED |
-| DAKE_Work_Calendar | CLOSED |
-| DAKE_Year_Age | CLOSED |
-| DAKE_Year_Notice | CLOSED |
-| DAKE_Yesterday_Task_Memo | CLOSED |
+| DAKE_App_Doko | LEGACY_CLOSED |
+| DAKE_Backup | LEGACY_CLOSED |
+| DAKE_BOOTH_Assist | LEGACY_CLOSED |
+| DAKE_Column_Memo | LEGACY_CLOSED |
+| DAKE_Document_Cover | LEGACY_CLOSED |
+| DAKE_FAX_Cover | LEGACY_CLOSED |
+| DAKE_Folder_List | LEGACY_CLOSED |
+| DAKE_Game_Alien_Road | LEGACY_CLOSED |
+| DAKE_Game_Diver_Catch | LEGACY_CLOSED |
+| DAKE_Git_Memo | LEGACY_CLOSED |
+| DAKE_Image_HEICtoJPG | LEGACY_CLOSED |
+| DAKE_Image_iPhoneToPC | LEGACY_CLOSED |
+| DAKE_Image_PasteA4 | LEGACY_CLOSED |
+| DAKE_Image_Receiver | LEGACY_CLOSED |
+| DAKE_Image_Resize | LEGACY_CLOSED |
+| DAKE_Image_ToPDF | LEGACY_CLOSED |
+| DAKE_Launcher | LEGACY_CLOSED |
+| DAKE_Mail_Address_Format | LEGACY_CLOSED |
+| DAKE_Mail_AllStaff | LEGACY_CLOSED |
+| DAKE_Mail_Draft | LEGACY_CLOSED |
+| DAKE_Mail_Kikuta | LEGACY_CLOSED |
+| DAKE_Mail_List | LEGACY_CLOSED |
+| DAKE_Maji_Memo | LEGACY_CLOSED |
+| DAKE_Mansion_Schedule | LEGACY_CLOSED |
+| DAKE_PDF_CheckStamp | LEGACY_CLOSED |
+| DAKE_PDF_Compress | LEGACY_CLOSED |
+| DAKE_PDF_Crop | LEGACY_CLOSED |
+| DAKE_PDF_LookHere | LEGACY_CLOSED |
+| DAKE_PDF_Marker | LEGACY_CLOSED |
+| DAKE_PDF_Merge | LEGACY_CLOSED |
+| DAKE_PDF_Merge_Mini | LEGACY_CLOSED |
+| DAKE_PDF_Rename | LEGACY_CLOSED |
+| DAKE_PDF_Reorder | LEGACY_CLOSED |
+| DAKE_PDF_SplitOne | LEGACY_CLOSED |
+| DAKE_PDF_SplitSelect | LEGACY_CLOSED |
+| DAKE_PDF_ToImages | LEGACY_CLOSED |
+| DAKE_PDF_Viewer | LEGACY_CLOSED |
+| DAKE_Price_Apportionment | LEGACY_CLOSED |
+| DAKE_Price_FixedTax | LEGACY_CLOSED |
+| DAKE_Reform_Progress | LEGACY_CLOSED |
+| DAKE_Screen_WebP | LEGACY_CLOSED |
+| DAKE_Screenshot_Print | LEGACY_CLOSED |
+| DAKE_Sticky_Memo | LEGACY_CLOSED |
+| DAKE_Time_AdvancedTimer | LEGACY_CLOSED |
+| DAKE_TwoPerson_Memo | LEGACY_CLOSED |
+| DAKE_Work_Calendar | LEGACY_CLOSED |
+| DAKE_Year_Age | LEGACY_CLOSED |
+| DAKE_Year_Notice | LEGACY_CLOSED |
+| DAKE_Yesterday_Task_Memo | LEGACY_CLOSED |

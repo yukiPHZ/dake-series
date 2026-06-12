@@ -136,7 +136,10 @@ PDFプレビュー上で位置を選び、名字と日付入りの確認印を1�
   "show_in_launcher": true,
   "show_on_site": true,
   "app_type": "",
-  "completion_goal": ""
+  "completion_goal": "",
+  "demo_video_path": "release_artifacts/demo.mp4",
+  "demo_video_url": "",
+  "social_release_path": "release_artifacts/social_release.json"
 }
 ```
 

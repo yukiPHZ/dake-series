@@ -562,7 +562,10 @@ Smart Horizontal Edit の fallback sequence を強化しました。3秒程度�
   "screenshot_path": "assets/screenshot.webp",
   "status": "draft",
   "show_in_launcher": false,
-  "show_on_site": false
+  "show_on_site": false,
+  "demo_video_path": "release_artifacts/demo.mp4",
+  "demo_video_url": "",
+  "social_release_path": "release_artifacts/social_release.json"
 }
 ```
 

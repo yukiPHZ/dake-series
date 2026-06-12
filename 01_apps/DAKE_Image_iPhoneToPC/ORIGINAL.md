@@ -136,7 +136,10 @@ PC画面のQRコードをiPhoneで読み取り、同じWi-Fi上で写真をWindo
   "show_in_launcher": true,
   "show_on_site": true,
   "app_type": "",
-  "completion_goal": ""
+  "completion_goal": "",
+  "demo_video_path": "release_artifacts/demo.mp4",
+  "demo_video_url": "",
+  "social_release_path": "release_artifacts/social_release.json"
 }
 ```
 

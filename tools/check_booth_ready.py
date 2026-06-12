@@ -5,8 +5,9 @@ candidates. Frozen, draft, experimental, private, and internal apps are
 listed, but they are not counted as ordinary missing BOOTH assets.
 
 Formal shipping is not closed by GitHub Release alone. An available app is
-closed only when release assets, BOOTH ready assets, a GitHub Release URL, and
-the BOOTH ``# URL`` field are all present.
+closed only when release assets, BOOTH ready assets, a GitHub Release URL,
+the BOOTH ``# URL`` field, local operation evidence, and Buffer social
+post IDs are all present.
 """
 
 from __future__ import annotations
@@ -20,6 +21,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+from release_source_policy import read_app_source
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -64,6 +67,20 @@ class AppCheck:
     dist_exe: bool = False
     icon_build: bool = False
     icon_main: bool = False
+    release_json: bool = False
+    release_stage: str = ""
+    video_local_path: str = ""
+    demo_video: bool = False
+    social_posts: bool = False
+    social_release: bool = False
+    social_stage: str = ""
+    buffer_x_id: bool = False
+    buffer_threads_id: bool = False
+    buffer_instagram_id: bool = False
+    source_kind: str = ""
+    source_path: str = ""
+    original_missing: bool = False
+    meta_derivative_mismatch: str = ""
     actions: list[str] = field(default_factory=list)
 
     @property
@@ -105,7 +122,51 @@ class AppCheck:
         return self.booth_url_state == "set"
 
     @property
-    def closed_ready(self) -> bool:
+    def release_capture_ready(self) -> bool:
+        return (
+            self.release_json
+            and self.release_stage == "complete"
+            and bool(self.video_local_path)
+            and self.demo_video
+        )
+
+    @property
+    def social_draft_ready(self) -> bool:
+        return (
+            self.social_posts
+            and self.social_release
+            and self.social_stage in {"dry_run", "complete"}
+        )
+
+    @property
+    def social_buffer_ready(self) -> bool:
+        return (
+            self.social_draft_ready
+            and self.social_stage == "complete"
+            and self.buffer_x_id
+            and self.buffer_threads_id
+            and self.buffer_instagram_id
+        )
+
+    @property
+    def social_ready(self) -> bool:
+        return self.social_buffer_ready
+
+    @property
+    def v2_pending_reason(self) -> str:
+        reasons: list[str] = []
+        if not self.legacy_closed:
+            reasons.append("legacy")
+        if not self.release_capture_ready:
+            reasons.append("capture")
+        if not self.social_draft_ready:
+            reasons.append("social_draft")
+        if not self.social_buffer_ready:
+            reasons.append("social_buffer")
+        return ", ".join(reasons)
+
+    @property
+    def legacy_closed(self) -> bool:
         return (
             self.shipping_candidate
             and self.asset_ready
@@ -114,8 +175,16 @@ class AppCheck:
         )
 
     @property
+    def v2_closed(self) -> bool:
+        return self.legacy_closed and self.release_capture_ready and self.social_ready
+
+    @property
+    def closed_ready(self) -> bool:
+        return self.legacy_closed
+
+    @property
     def ok(self) -> bool:
-        return self.closed_ready
+        return self.legacy_closed
 
 
 def read_text(path: Path) -> str:
@@ -178,6 +247,48 @@ def read_booth_url(app_dir: Path) -> tuple[str, str, str]:
     return "set", url, str(product_path.relative_to(app_dir))
 
 
+def read_json_file(path: Path) -> dict[str, Any]:
+    return json.loads(read_text(path))
+
+
+def buffer_update_id(record: dict[str, Any], platform: str) -> str:
+    item = record.get("buffer", {}).get(platform, {})
+    if not isinstance(item, dict):
+        return ""
+    for key in ("buffer_update_id", "update_id", "id"):
+        if item.get(key):
+            return str(item[key])
+    return ""
+
+
+def apply_release_artifact_flags(app_dir: Path, result: AppCheck) -> None:
+    release_dir = app_dir / "release_artifacts"
+    release_json = release_dir / "release.json"
+    social_release = release_dir / "social_release.json"
+    result.demo_video = (release_dir / "demo.mp4").exists() or (release_dir / "demo.webm").exists()
+    result.release_json = release_json.exists()
+    if release_json.exists():
+        try:
+            release_record = read_json_file(release_json)
+            result.release_stage = str(release_record.get("stage") or "")
+            result.video_local_path = str(release_record.get("video_local_path") or "")
+            if result.video_local_path:
+                result.demo_video = result.demo_video and (app_dir / result.video_local_path).exists()
+        except Exception as exc:
+            result.release_stage = f"invalid: {exc}"
+    result.social_posts = (release_dir / "social_posts.md").exists()
+    result.social_release = social_release.exists()
+    if social_release.exists():
+        try:
+            social_record = read_json_file(social_release)
+            result.social_stage = str(social_record.get("stage") or "")
+            result.buffer_x_id = bool(buffer_update_id(social_record, "x"))
+            result.buffer_threads_id = bool(buffer_update_id(social_record, "threads"))
+            result.buffer_instagram_id = bool(buffer_update_id(social_record, "instagram"))
+        except Exception as exc:
+            result.social_stage = f"invalid: {exc}"
+
+
 def check_icon_build(build_text: str) -> bool:
     return "--icon" in build_text and has_common_icon(build_text)
 
@@ -207,6 +318,11 @@ def add_action(result: AppCheck, condition: bool, action: str) -> None:
 def check_app(app_dir: Path) -> AppCheck:
     result = AppCheck(app=app_dir.name)
 
+    source = read_app_source(app_dir, ROOT)
+    result.source_kind = source.source_kind
+    result.source_path = source.source_label
+    result.original_missing = source.original_missing
+    result.meta_derivative_mismatch = ",".join(source.derivative_mismatches)
     readme_path = app_dir / "README.md"
     release_body_path = app_dir / "release_body.md"
     screenshot_path = app_dir / "assets" / "screenshot.webp"
@@ -225,12 +341,17 @@ def check_app(app_dir: Path) -> AppCheck:
         result.meta_error = meta_error
         readme_has_release = has_release_body(readme_text)
         if meta is not None:
-            result.status = str(meta.get("status") or "unknown")
-            result.show_in_launcher = meta.get("show_in_launcher")
-            result.show_on_site = meta.get("show_on_site")
-            result.release_url = str(meta.get("release_url") or "")
+            pass
     else:
         result.meta_error = "README.md missing"
+
+    if source.meta:
+        result.status = str(source.meta.get("status") or "unknown")
+        result.show_in_launcher = source.meta.get("show_in_launcher")
+        result.show_on_site = source.meta.get("show_on_site")
+        result.release_url = str(source.meta.get("release_url") or "")
+    elif source.error:
+        result.meta_error = source.error
 
     result.release_body = release_body_path.exists()
     result.screenshot = screenshot_path.exists()
@@ -243,12 +364,18 @@ def check_app(app_dir: Path) -> AppCheck:
     result.build_bat = build_path.exists()
     result.main_py = main_path.exists()
     result.dist_exe = dist_dir.exists() and any(dist_dir.glob("*.exe"))
+    apply_release_artifact_flags(app_dir, result)
 
     if result.build_bat:
         result.icon_build = check_icon_build(read_text(build_path))
 
     if result.main_py:
         result.icon_main = check_icon_main(read_text(main_path))
+
+    if result.original_missing:
+        result.actions.append("original_missing")
+    if result.meta_derivative_mismatch:
+        result.actions.append("sync README DAKE_META from ORIGINAL.md: " + result.meta_derivative_mismatch)
 
     if result.flag_conflict:
         result.actions.append("fix show_in_launcher/show_on_site for non-available status")
@@ -280,6 +407,9 @@ def check_app(app_dir: Path) -> AppCheck:
     add_action(result, result.icon_build, "add common --icon setting to build.bat")
     add_action(result, result.icon_main, "add safe common icon setting to main.py")
     add_action(result, result.release_ready, "fill README DAKE_META.release_url after GitHub Release")
+    add_action(result, result.release_capture_ready, "capture operation evidence with tools/release_capture.py")
+    add_action(result, result.social_draft_ready, "generate SNS dry-run posts with tools/release_social.py")
+    add_action(result, result.social_buffer_ready, "create SNS Buffer posts with tools/release_social.py --post-to-buffer")
 
     if result.booth_url_state == "url_section_missing":
         result.actions.append("add # URL section to booth_product.txt")
@@ -337,8 +467,8 @@ def booth_url_summary(results: list[AppCheck]) -> Counter[str]:
 
 def write_markdown(results: list[AppCheck], missing_gitignore: list[str], path: Path) -> None:
     shipping = available_results(results)
-    closed = [result for result in shipping if result.closed_ready]
-    not_closed = [result for result in shipping if not result.closed_ready]
+    closed = [result for result in shipping if result.legacy_closed]
+    not_closed = [result for result in shipping if not result.legacy_closed]
     excluded = non_shipping_results(results)
     counts = status_counts(results)
     booth_counts = booth_url_summary(results)
@@ -355,8 +485,12 @@ def write_markdown(results: list[AppCheck], missing_gitignore: list[str], path: 
         "",
         f"- checked: {len(results)}",
         f"- available checked: {len(shipping)}",
-        f"- closed ok: {len(closed)}",
-        f"- not closed: {len(not_closed)}",
+        f"- legacy_closed ok: {len(closed)}",
+        f"- legacy_not_closed: {len(not_closed)}",
+        f"- v2_closed ok: {sum(result.v2_closed for result in shipping)}",
+        f"- v2_pending: {sum(not result.v2_closed for result in shipping)}",
+        f"- original_missing: {sum(result.original_missing for result in shipping)}",
+        f"- meta_derivative_mismatch: {sum(bool(result.meta_derivative_mismatch) for result in shipping)}",
         f"- excluded by status: {len(excluded)}",
         f"- release_url empty available: {len(release_empty)}",
         f"- show flag conflicts: {len(conflicts)}",
@@ -383,6 +517,9 @@ def write_markdown(results: list[AppCheck], missing_gitignore: list[str], path: 
             f"- zip missing: {sum(not r.zip_file for r in shipping)}",
             f"- icon build missing: {sum(not r.icon_build for r in shipping)}",
             f"- icon main missing: {sum(not r.icon_main for r in shipping)}",
+            f"- release capture missing: {sum(not r.release_capture_ready for r in shipping)}",
+            f"- social draft missing: {sum(not r.social_draft_ready for r in shipping)}",
+            f"- social buffer missing: {sum(not r.social_buffer_ready for r in shipping)}",
             "",
             "## BOOTH URL",
             "",
@@ -432,10 +569,10 @@ def write_markdown(results: list[AppCheck], missing_gitignore: list[str], path: 
     lines.extend(
         [
             "",
-            "## Not Closed Available Apps",
+            "## Legacy Not Closed Available Apps",
             "",
-            "| app | asset_ready | release_url | booth_url | next_action |",
-            "| --- | --- | --- | --- | --- |",
+            "| app | asset_ready | release_capture | release_url | booth_url | social | next_action |",
+            "| --- | --- | --- | --- | --- | --- | --- |",
         ]
     )
     for result in not_closed:
@@ -446,8 +583,10 @@ def write_markdown(results: list[AppCheck], missing_gitignore: list[str], path: 
                 [
                     result.app,
                     yn(result.asset_ready),
+                    yn(result.release_capture_ready),
                     yn(result.release_ready),
                     result.booth_url_state,
+                    yn(result.social_ready),
                     action,
                 ]
             )
@@ -469,9 +608,13 @@ def write_markdown(results: list[AppCheck], missing_gitignore: list[str], path: 
             f"| {result.app} | {result.status} | {result.show_in_launcher} | {result.show_on_site} | {note} |"
         )
 
-    lines.extend(["", "## Closed OK", "", "| app | status |", "| --- | --- |"])
+    lines.extend(["", "## V2 Readiness", "", "| app | legacy_closed | release_capture_ready | social_draft_ready | social_buffer_ready | v2_closed | pending_reason |", "| --- | --- | --- | --- | --- | --- | --- |"])
+    for result in shipping:
+        lines.append(f"| {result.app} | {yn(result.legacy_closed)} | {yn(result.release_capture_ready)} | {yn(result.social_draft_ready)} | {yn(result.social_buffer_ready)} | {yn(result.v2_closed)} | {result.v2_pending_reason or '-'} |")
+
+    lines.extend(["", "## Legacy Closed OK", "", "| app | status |", "| --- | --- |"])
     for result in closed:
-        lines.append(f"| {result.app} | CLOSED |")
+        lines.append(f"| {result.app} | LEGACY_CLOSED |")
 
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
@@ -481,7 +624,8 @@ def write_csv(results: list[AppCheck], path: Path) -> None:
         "app",
         "status",
         "shipping_candidate",
-        "closed_ready",
+        "legacy_closed",
+        "v2_closed",
         "asset_ready",
         "release_url",
         "booth_url_state",
@@ -502,6 +646,23 @@ def write_csv(results: list[AppCheck], path: Path) -> None:
         "dist_exe",
         "icon_build",
         "icon_main",
+        "release_json",
+        "release_stage",
+        "video_local_path",
+        "demo_video",
+        "social_posts",
+        "social_release",
+        "social_stage",
+        "social_draft_ready",
+        "social_buffer_ready",
+        "v2_pending_reason",
+        "buffer_x_id",
+        "buffer_threads_id",
+        "buffer_instagram_id",
+        "source_kind",
+        "source_path",
+        "original_missing",
+        "meta_derivative_mismatch",
         "actions",
     ]
     with path.open("w", encoding="utf-8", newline="") as handle:
@@ -513,7 +674,8 @@ def write_csv(results: list[AppCheck], path: Path) -> None:
                     "app": result.app,
                     "status": result.status,
                     "shipping_candidate": result.shipping_candidate,
-                    "closed_ready": result.closed_ready,
+                    "legacy_closed": result.legacy_closed,
+                    "v2_closed": result.v2_closed,
                     "asset_ready": result.asset_ready,
                     "release_url": result.release_url,
                     "booth_url_state": result.booth_url_state,
@@ -534,6 +696,23 @@ def write_csv(results: list[AppCheck], path: Path) -> None:
                     "dist_exe": result.dist_exe,
                     "icon_build": result.icon_build,
                     "icon_main": result.icon_main,
+                    "release_json": result.release_json,
+                    "release_stage": result.release_stage,
+                    "video_local_path": result.video_local_path,
+                    "demo_video": result.demo_video,
+                    "social_posts": result.social_posts,
+                    "social_release": result.social_release,
+                    "social_stage": result.social_stage,
+                    "social_draft_ready": result.social_draft_ready,
+                    "social_buffer_ready": result.social_buffer_ready,
+                    "v2_pending_reason": result.v2_pending_reason,
+                    "buffer_x_id": result.buffer_x_id,
+                    "buffer_threads_id": result.buffer_threads_id,
+                    "buffer_instagram_id": result.buffer_instagram_id,
+                    "source_kind": result.source_kind,
+                    "source_path": result.source_path,
+                    "original_missing": result.original_missing,
+                    "meta_derivative_mismatch": result.meta_derivative_mismatch,
                     "actions": "; ".join(result.actions),
                 }
             )
@@ -560,7 +739,7 @@ def main() -> int:
     write_csv(results, csv_path)
 
     shipping = available_results(results)
-    closed_count = sum(result.closed_ready for result in shipping)
+    closed_count = sum(result.legacy_closed for result in shipping)
     not_closed_count = len(shipping) - closed_count
     counts = status_counts(results)
     booth_counts = booth_url_summary(results)
@@ -574,8 +753,10 @@ def main() -> int:
     for status in STATUS_DISPLAY_ORDER:
         print(f"  {status}: {counts.get(status, 0)}")
     print(f"available checked: {len(shipping)}")
-    print(f"closed ok: {closed_count}")
-    print(f"not closed: {not_closed_count}")
+    print(f"legacy_closed ok: {closed_count}")
+    print(f"v2_closed ok: {sum(result.v2_closed for result in shipping)}")
+    print(f"legacy_not_closed: {not_closed_count}")
+    print(f"v2_pending: {sum(not result.v2_closed for result in shipping)}")
     print(f"screenshot.webp missing: {sum(not r.screenshot for r in shipping)}")
     print(f"booth_thumbnail.jpg missing: {sum(not r.thumbnail for r in shipping)}")
     print(f"booth_product.txt missing: {sum(not r.booth_product for r in shipping)}")
@@ -583,6 +764,11 @@ def main() -> int:
     print(f"zip missing: {sum(not r.zip_file for r in shipping)}")
     print(f"icon build missing: {sum(not r.icon_build for r in shipping)}")
     print(f"icon main missing: {sum(not r.icon_main for r in shipping)}")
+    print(f"release capture missing: {sum(not r.release_capture_ready for r in shipping)}")
+    print(f"social draft missing: {sum(not r.social_draft_ready for r in shipping)}")
+    print(f"social buffer missing: {sum(not r.social_buffer_ready for r in shipping)}")
+    print(f"original_missing: {sum(r.original_missing for r in shipping)}")
+    print(f"meta_derivative_mismatch: {sum(bool(r.meta_derivative_mismatch) for r in shipping)}")
     print("BOOTH URL:")
     print(f"  set: {booth_counts.get('set', 0)}")
     print(f"  empty: {booth_counts.get('empty', 0)}")
@@ -608,9 +794,9 @@ def main() -> int:
     print(f"report: {md_path}")
     print(f"csv: {csv_path}")
     if not_closed_count:
-        print("not closed available apps:")
+        print("legacy not closed available apps:")
         for result in shipping:
-            if not result.closed_ready:
+            if not result.legacy_closed:
                 print(f"- {result.app}: {', '.join(result.actions)}")
     return 0
 

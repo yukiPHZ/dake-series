@@ -26,3 +26,6 @@ qpsc_notifications.json
 # DakeBOOTH assist local browser profile
 playwright_profile/
 **/playwright_profile/
+# Local release evidence videos
+**/release_artifacts/*.mp4
+**/release_artifacts/*.webm

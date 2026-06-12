@@ -1,0 +1,46 @@
+{
+  "app_key": "dake_year_age",
+  "display_name": "Dake築年数",
+  "app_url": "https://dakeapp.com/apps/year-age/",
+  "created_at": "2026-06-12T12:08:14+09:00",
+  "stage": "dry_run",
+  "reason": "Buffer posting not requested; generated social_posts.md only",
+  "social_posts_path": "release_artifacts/social_posts.md",
+  "link_policy": "dakeapp.com detail page only",
+  "dry_run": true,
+  "posts": {
+    "x": "Dake築年数 を公開しました。\n西暦・和暦から築年数を確認します。\nhttps://dakeapp.com/apps/year-age/",
+    "threads": "Dake築年数 を公開しました。\n\nREADMEメタ情報とRelease本文を整備。スクリーンショットをassets/screenshot.webpに作成。\n配布物だけでなく、動いている姿を確認できるところまで整えて出荷しています。\n\nhttps://dakeapp.com/apps/year-age/",
+    "instagram": "Dake築年数\n\n西暦・和暦から築年数を確認します。\n\n詳細: https://dakeapp.com/apps/year-age/\n\n#DAKE #Windowsアプリ #作業効率化"
+  },
+  "buffer": {
+    "x": {
+      "platform": "x",
+      "success": false,
+      "buffer_update_id": "",
+      "reason": "dry run"
+    },
+    "threads": {
+      "platform": "threads",
+      "success": false,
+      "buffer_update_id": "",
+      "reason": "dry run"
+    },
+    "instagram": {
+      "platform": "instagram",
+      "success": false,
+      "buffer_update_id": "",
+      "reason": "dry run"
+    }
+  },
+  "source_policy": {
+    "source_kind": "original",
+    "source_path": "01_apps/DAKE_Year_Age/ORIGINAL.md",
+    "original_missing": false,
+    "meta_derivative_mismatch": []
+  },
+  "tool": {
+    "name": "tools/release_social.py",
+    "version": 1
+  }
+}

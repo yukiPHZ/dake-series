@@ -120,7 +120,10 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
   "show_in_launcher": true,
   "show_on_site": true,
   "app_type": "market",
-  "completion_goal": "formal_release"
+  "completion_goal": "formal_release",
+  "demo_video_path": "release_artifacts/demo.mp4",
+  "demo_video_url": "",
+  "social_release_path": "release_artifacts/social_release.json"
 }
 ```
 

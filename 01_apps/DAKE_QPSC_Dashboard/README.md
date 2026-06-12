@@ -140,6 +140,9 @@ Web資産数と更新情報だけを表示し、
   "app_type": "qpcs",
   "completion_goal": "system_ready",
   "show_in_launcher": true,
-  "show_on_site": false
+  "show_on_site": false,
+  "demo_video_path": "release_artifacts/demo.mp4",
+  "demo_video_url": "",
+  "social_release_path": "release_artifacts/social_release.json"
 }
 ```
