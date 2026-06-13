@@ -1,0 +1,188 @@
+{
+  "mode": "test",
+  "created_at": "2026-06-14T06:35:41+09:00",
+  "count": 10,
+  "items": [
+    {
+      "id": "dake_pdf_viewer",
+      "title": "DakePDF見る",
+      "product_id": "prod_UhNzuV6tkw3Fdr",
+      "price_id": "price_1ThzDDHrsJubFuDOvMOrv0Wz",
+      "payment_link_id": "plink_1ThzDEHrsJubFuDOnxXouGon",
+      "payment_link_url": "https://buy.stripe.com/test_5kQdR9eIh8gfgl25vz0gw00",
+      "metadata": {
+        "dake_item_id": "dake_pdf_viewer",
+        "dake_type": "app",
+        "source_repo": "DAKE_series",
+        "source_original": "01_apps/DAKE_PDF_Viewer/ORIGINAL.md",
+        "store_url": "https://store.dakeapp.com/product/?id=dake_pdf_viewer",
+        "booth_url": "https://peakheadz.booth.pm/items/8448219",
+        "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Viewer_v1.0.0"
+      },
+      "livemode": false
+    },
+    {
+      "id": "dake_pdf_reorder",
+      "title": "DakePDFページ並べ替え",
+      "product_id": "prod_UhNz5SmMSvinql",
+      "price_id": "price_1ThzDEHrsJubFuDOg51ihuVx",
+      "payment_link_id": "plink_1ThzDFHrsJubFuDOujTBnxC1",
+      "payment_link_url": "https://buy.stripe.com/test_9B6fZh0Rr2VV6Ksf690gw01",
+      "metadata": {
+        "dake_item_id": "dake_pdf_reorder",
+        "dake_type": "app",
+        "source_repo": "DAKE_series",
+        "source_original": "01_apps/DAKE_PDF_Reorder/ORIGINAL.md",
+        "store_url": "https://store.dakeapp.com/product/?id=dake_pdf_reorder",
+        "booth_url": "https://peakheadz.booth.pm/items/8448206",
+        "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Reorder_v1.0.0"
+      },
+      "livemode": false
+    },
+    {
+      "id": "dake_pdf_splitone",
+      "title": "DakePDF分割One",
+      "product_id": "prod_UhNzZhwhGDhh8Z",
+      "price_id": "price_1ThzDGHrsJubFuDOgksKSrS5",
+      "payment_link_id": "plink_1ThzDGHrsJubFuDOtbqv8z4G",
+      "payment_link_url": "https://buy.stripe.com/test_aFa6oHeIh3ZZ6Kse250gw02",
+      "metadata": {
+        "dake_item_id": "dake_pdf_splitone",
+        "dake_type": "app",
+        "source_repo": "DAKE_series",
+        "source_original": "01_apps/DAKE_PDF_SplitOne/ORIGINAL.md",
+        "store_url": "https://store.dakeapp.com/product/?id=dake_pdf_splitone",
+        "booth_url": "https://peakheadz.booth.pm/items/8448207",
+        "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitOne_v1.0.0"
+      },
+      "livemode": false
+    },
+    {
+      "id": "dake_image_heictojpg",
+      "title": "HEIC→JPG変換",
+      "product_id": "prod_UhNzXTGmw6S9Gj",
+      "price_id": "price_1ThzDHHrsJubFuDOiIiCwmbX",
+      "payment_link_id": "plink_1ThzDHHrsJubFuDOwmPWFI7p",
+      "payment_link_url": "https://buy.stripe.com/test_5kQ5kD7fP8gf7Owf690gw03",
+      "metadata": {
+        "dake_item_id": "dake_image_heictojpg",
+        "dake_type": "app",
+        "source_repo": "DAKE_series",
+        "source_original": "01_apps/DAKE_Image_HEICtoJPG/ORIGINAL.md",
+        "store_url": "https://store.dakeapp.com/product/?id=dake_image_heictojpg",
+        "booth_url": "https://peakheadz.booth.pm/items/8447596",
+        "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_HEICtoJPG_v1.0.0"
+      },
+      "livemode": false
+    },
+    {
+      "id": "dake_image_topdf",
+      "title": "DakeImageToPDF",
+      "product_id": "prod_UhNzqXx9aXHzJB",
+      "price_id": "price_1ThzDIHrsJubFuDOAzOOIyml",
+      "payment_link_id": "plink_1ThzDIHrsJubFuDO8fZojEi6",
+      "payment_link_url": "https://buy.stripe.com/test_4gM9AT57H7cbc4M3nr0gw04",
+      "metadata": {
+        "dake_item_id": "dake_image_topdf",
+        "dake_type": "app",
+        "source_repo": "DAKE_series",
+        "source_original": "01_apps/DAKE_Image_ToPDF/ORIGINAL.md",
+        "store_url": "https://store.dakeapp.com/product/?id=dake_image_topdf",
+        "booth_url": "https://peakheadz.booth.pm/items/8397610",
+        "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_ToPDF_v1.0.0"
+      },
+      "livemode": false
+    },
+    {
+      "id": "DAKE_Sticky_Memo",
+      "title": "付箋メモ",
+      "product_id": "prod_UhNz12E7iuJJR8",
+      "price_id": "price_1ThzDJHrsJubFuDOrc8zRagJ",
+      "payment_link_id": "plink_1ThzDJHrsJubFuDOuwJ8zWJA",
+      "payment_link_url": "https://buy.stripe.com/test_8x200j6bL1RRecU0bf0gw05",
+      "metadata": {
+        "dake_item_id": "DAKE_Sticky_Memo",
+        "dake_type": "app",
+        "source_repo": "DAKE_series",
+        "source_original": "01_apps/DAKE_Sticky_Memo/ORIGINAL.md",
+        "store_url": "https://store.dakeapp.com/product/?id=DAKE_Sticky_Memo",
+        "booth_url": "https://peakheadz.booth.pm/items/8448263",
+        "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Sticky_Memo_v1.0.0"
+      },
+      "livemode": false
+    },
+    {
+      "id": "DAKE_Mail_Draft",
+      "title": "Dakeメール下書き",
+      "product_id": "prod_UhNzSrpik7P0sW",
+      "price_id": "price_1ThzDKHrsJubFuDOsYGzJ9py",
+      "payment_link_id": "plink_1ThzDKHrsJubFuDORuyh7OMO",
+      "payment_link_url": "https://buy.stripe.com/test_eVq00j43D9kjc4Me250gw06",
+      "metadata": {
+        "dake_item_id": "DAKE_Mail_Draft",
+        "dake_type": "app",
+        "source_repo": "DAKE_series",
+        "source_original": "01_apps/DAKE_Mail_Draft/ORIGINAL.md",
+        "store_url": "https://store.dakeapp.com/product/?id=DAKE_Mail_Draft",
+        "booth_url": "https://peakheadz.booth.pm/items/8448001",
+        "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_Draft_v1.0.0"
+      },
+      "livemode": false
+    },
+    {
+      "id": "DAKE_Backup",
+      "title": "Dakeバックアップ",
+      "product_id": "prod_UhNzvtWiLxQ0zV",
+      "price_id": "price_1ThzDLHrsJubFuDO1FkV06O0",
+      "payment_link_id": "plink_1ThzDLHrsJubFuDOdNEYd0sB",
+      "payment_link_url": "https://buy.stripe.com/test_aFacN56bL3ZZ3yg7DH0gw07",
+      "metadata": {
+        "dake_item_id": "DAKE_Backup",
+        "dake_type": "app",
+        "source_repo": "DAKE_series",
+        "source_original": "01_apps/DAKE_Backup/ORIGINAL.md",
+        "store_url": "https://store.dakeapp.com/product/?id=DAKE_Backup",
+        "booth_url": "https://peakheadz.booth.pm/items/8447578",
+        "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Backup_v1.0.0"
+      },
+      "livemode": false
+    },
+    {
+      "id": "dake_folder_list",
+      "title": "Dakeフォルダ一覧",
+      "product_id": "prod_UhNzBRhhGpczlU",
+      "price_id": "price_1ThzDMHrsJubFuDOnrYnrAra",
+      "payment_link_id": "plink_1ThzDMHrsJubFuDO7eNaLWve",
+      "payment_link_url": "https://buy.stripe.com/test_6oU6oH8jT3ZZd8Q1fj0gw08",
+      "metadata": {
+        "dake_item_id": "dake_folder_list",
+        "dake_type": "app",
+        "source_repo": "DAKE_series",
+        "source_original": "01_apps/DAKE_Folder_List/ORIGINAL.md",
+        "store_url": "https://store.dakeapp.com/product/?id=dake_folder_list",
+        "booth_url": "https://peakheadz.booth.pm/items/8447591",
+        "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Folder_List_v1.0.0"
+      },
+      "livemode": false
+    },
+    {
+      "id": "dake_year_age",
+      "title": "Dake築年数",
+      "product_id": "prod_UhNzfigeHWfstC",
+      "price_id": "price_1ThzDNHrsJubFuDOYTGXJsS8",
+      "payment_link_id": "plink_1ThzDNHrsJubFuDOfVvbTaLF",
+      "payment_link_url": "https://buy.stripe.com/test_fZu3cvbw57cbc4Mf690gw09",
+      "metadata": {
+        "dake_item_id": "dake_year_age",
+        "dake_type": "app",
+        "source_repo": "DAKE_series",
+        "source_original": "01_apps/DAKE_Year_Age/ORIGINAL.md",
+        "store_url": "https://store.dakeapp.com/product/?id=dake_year_age",
+        "booth_url": "https://peakheadz.booth.pm/items/8448286",
+        "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Year_Age_v1.0.0"
+      },
+      "livemode": false
+    }
+  ],
+  "errors": []
+}
