@@ -13,7 +13,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from release_source_policy import read_app_source
+from release_source_policy import app_url_for, read_app_source
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -32,6 +32,8 @@ class SocialCheck:
     social_release: bool = False
     social_stage: str = ""
     social_reason: str = ""
+    social_posts_valid: bool = False
+    forbidden_links: bool = False
     buffer_x_id: str = ""
     buffer_threads_id: str = ""
     buffer_instagram_id: str = ""
@@ -47,12 +49,7 @@ class SocialCheck:
 
     @property
     def social_draft_ready(self) -> bool:
-        return (
-            self.shipping_candidate
-            and self.social_posts
-            and self.social_release
-            and self.social_stage in {"dry_run", "complete"}
-        )
+        return self.shipping_candidate and self.social_posts and self.social_posts_valid
 
     @property
     def social_buffer_ready(self) -> bool:
@@ -85,10 +82,22 @@ def buffer_id(record: dict[str, Any], platform: str) -> str:
     item = record.get("buffer", {}).get(platform, {})
     if not isinstance(item, dict):
         return ""
-    for key in ("buffer_update_id", "update_id", "id"):
+    for key in ("buffer_post_id", "buffer_update_id", "update_id", "id"):
         if item.get(key):
             return str(item[key])
     return ""
+
+
+def validate_social_posts(path: Path, app_url: str) -> tuple[bool, bool]:
+    if not path.exists():
+        return False, False
+    text = read_text(path)
+    urls = re.findall(r"https?://[^\s)]+", text)
+    expected = app_url.rstrip("/")
+    forbidden = any(("github.com" in url.lower() or "booth.pm" in url.lower() or url.rstrip(".,").rstrip("/") != expected) for url in urls)
+    required = ("## X", "## THREADS", "## INSTAGRAM")
+    has_sections = all(section in text for section in required)
+    return has_sections and not forbidden, forbidden
 
 
 def check_app(app_dir: Path, only_available: bool) -> SocialCheck:
@@ -114,10 +123,12 @@ def check_app(app_dir: Path, only_available: bool) -> SocialCheck:
         return result
     if meta_error:
         result.actions.append(meta_error)
+    app_url = app_url_for(app_dir, meta, ROOT.parent / "dakeapp-site")
     release_dir = app_dir / "release_artifacts"
     posts = release_dir / "social_posts.md"
     release = release_dir / "social_release.json"
     result.social_posts = posts.exists()
+    result.social_posts_valid, result.forbidden_links = validate_social_posts(posts, app_url)
     result.social_release = release.exists()
     if release.exists():
         try:
@@ -131,6 +142,8 @@ def check_app(app_dir: Path, only_available: bool) -> SocialCheck:
             result.actions.append(f"social_release.json parse failed: {exc}")
     if not result.social_posts:
         result.actions.append("generate social_posts.md with tools/release_social.py")
+    elif not result.social_posts_valid:
+        result.actions.append("fix social post body/link policy")
     if not result.social_release:
         result.actions.append("generate dry-run social_release.json with tools/release_social.py")
     if result.social_release and result.social_stage not in {"dry_run", "complete"}:
@@ -157,6 +170,8 @@ def write_csv(results: list[SocialCheck], path: Path) -> None:
         "social_draft_ready",
         "social_buffer_ready",
         "social_posts",
+        "social_posts_valid",
+        "forbidden_links",
         "social_release",
         "social_stage",
         "social_reason",

@@ -1,6 +1,6 @@
 # DAKE BOOTH Ready Check v2
 
-Generated: 2026-06-12 12:37:31
+Generated: 2026-06-14 06:43:00
 
 ## Summary
 
@@ -8,8 +8,8 @@ Generated: 2026-06-12 12:37:31
 - available checked: 50
 - legacy_closed ok: 49
 - legacy_not_closed: 1
-- v2_closed ok: 0
-- v2_pending: 50
+- v2_closed ok: 1
+- v2_pending: 49
 - original_missing: 0
 - meta_derivative_mismatch: 0
 - excluded by status: 15
@@ -39,7 +39,7 @@ Generated: 2026-06-12 12:37:31
 - icon main missing: 0
 - release capture missing: 49
 - social draft missing: 49
-- social buffer missing: 50
+- social buffer missing: 49
 
 ## BOOTH URL
 
@@ -144,7 +144,7 @@ Generated: 2026-06-12 12:37:31
 | DAKE_TwoPerson_Memo | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
 | DAKE_Video_Shorts_Cut | NG | NG | NG | NG | NG | legacy, capture, social_draft, social_buffer |
 | DAKE_Work_Calendar | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
-| DAKE_Year_Age | OK | OK | OK | NG | NG | social_buffer |
+| DAKE_Year_Age | OK | OK | OK | OK | OK | - |
 | DAKE_Year_Notice | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
 | DAKE_Yesterday_Task_Memo | OK | NG | NG | NG | NG | capture, social_draft, social_buffer |
 

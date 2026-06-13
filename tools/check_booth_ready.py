@@ -22,7 +22,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from release_source_policy import read_app_source
+from release_source_policy import app_url_for, read_app_source
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -74,6 +74,8 @@ class AppCheck:
     social_posts: bool = False
     social_release: bool = False
     social_stage: str = ""
+    social_posts_valid: bool = False
+    social_forbidden_links: bool = False
     buffer_x_id: bool = False
     buffer_threads_id: bool = False
     buffer_instagram_id: bool = False
@@ -132,11 +134,7 @@ class AppCheck:
 
     @property
     def social_draft_ready(self) -> bool:
-        return (
-            self.social_posts
-            and self.social_release
-            and self.social_stage in {"dry_run", "complete"}
-        )
+        return self.social_posts and self.social_posts_valid
 
     @property
     def social_buffer_ready(self) -> bool:
@@ -255,10 +253,21 @@ def buffer_update_id(record: dict[str, Any], platform: str) -> str:
     item = record.get("buffer", {}).get(platform, {})
     if not isinstance(item, dict):
         return ""
-    for key in ("buffer_update_id", "update_id", "id"):
+    for key in ("buffer_post_id", "buffer_update_id", "update_id", "id"):
         if item.get(key):
             return str(item[key])
     return ""
+
+
+def validate_social_posts(path: Path) -> tuple[bool, bool]:
+    if not path.exists():
+        return False, False
+    text = read_text(path)
+    urls = re.findall(r"https?://[^\s)]+", text)
+    forbidden = any(("github.com" in url.lower() or "booth.pm" in url.lower() or not url.rstrip(".,").startswith("https://dakeapp.com/apps/")) for url in urls)
+    required = ("## X", "## THREADS", "## INSTAGRAM")
+    has_sections = all(section in text for section in required)
+    return has_sections and not forbidden, forbidden
 
 
 def apply_release_artifact_flags(app_dir: Path, result: AppCheck) -> None:
@@ -276,7 +285,9 @@ def apply_release_artifact_flags(app_dir: Path, result: AppCheck) -> None:
                 result.demo_video = result.demo_video and (app_dir / result.video_local_path).exists()
         except Exception as exc:
             result.release_stage = f"invalid: {exc}"
-    result.social_posts = (release_dir / "social_posts.md").exists()
+    social_posts_path = release_dir / "social_posts.md"
+    result.social_posts = social_posts_path.exists()
+    result.social_posts_valid, result.social_forbidden_links = validate_social_posts(social_posts_path)
     result.social_release = social_release.exists()
     if social_release.exists():
         try:
@@ -651,6 +662,8 @@ def write_csv(results: list[AppCheck], path: Path) -> None:
         "video_local_path",
         "demo_video",
         "social_posts",
+        "social_posts_valid",
+        "social_forbidden_links",
         "social_release",
         "social_stage",
         "social_draft_ready",
@@ -701,6 +714,8 @@ def write_csv(results: list[AppCheck], path: Path) -> None:
                     "video_local_path": result.video_local_path,
                     "demo_video": result.demo_video,
                     "social_posts": result.social_posts,
+                    "social_posts_valid": result.social_posts_valid,
+                    "social_forbidden_links": result.social_forbidden_links,
                     "social_release": result.social_release,
                     "social_stage": result.social_stage,
                     "social_draft_ready": result.social_draft_ready,

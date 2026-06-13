@@ -2,12 +2,13 @@
   "app_key": "dake_year_age",
   "display_name": "Dake築年数",
   "app_url": "https://dakeapp.com/apps/year-age/",
-  "created_at": "2026-06-12T12:08:14+09:00",
-  "stage": "dry_run",
-  "reason": "Buffer posting not requested; generated social_posts.md only",
+  "created_at": "2026-06-14T06:42:30+09:00",
+  "stage": "complete",
+  "reason": "",
   "social_posts_path": "release_artifacts/social_posts.md",
   "link_policy": "dakeapp.com detail page only",
-  "dry_run": true,
+  "dry_run": false,
+  "save_to_draft": true,
   "posts": {
     "x": "Dake築年数 を公開しました。\n西暦・和暦から築年数を確認します。\nhttps://dakeapp.com/apps/year-age/",
     "threads": "Dake築年数 を公開しました。\n\nREADMEメタ情報とRelease本文を整備。スクリーンショットをassets/screenshot.webpに作成。\n配布物だけでなく、動いている姿を確認できるところまで整えて出荷しています。\n\nhttps://dakeapp.com/apps/year-age/",
@@ -15,22 +16,22 @@
   },
   "buffer": {
     "x": {
-      "platform": "x",
-      "success": false,
-      "buffer_update_id": "",
-      "reason": "dry run"
+      "channel": "x",
+      "status": "skipped_existing",
+      "success": true,
+      "buffer_post_id": "6a2dcbe3adc07817f41488d5"
     },
     "threads": {
-      "platform": "threads",
-      "success": false,
-      "buffer_update_id": "",
-      "reason": "dry run"
+      "channel": "threads",
+      "status": "skipped_existing",
+      "success": true,
+      "buffer_post_id": "6a2dcbe408bd17e5f3ab748f"
     },
     "instagram": {
-      "platform": "instagram",
-      "success": false,
-      "buffer_update_id": "",
-      "reason": "dry run"
+      "channel": "instagram",
+      "status": "skipped_existing",
+      "success": true,
+      "buffer_post_id": "6a2dccd261b0aab8c161e18b"
     }
   },
   "source_policy": {
@@ -41,6 +42,6 @@
   },
   "tool": {
     "name": "tools/release_social.py",
-    "version": 1
+    "version": 2
   }
 }

@@ -1,6 +1,6 @@
 # DAKE Release Social Check
 
-Generated: 2026-06-12 12:37:31
+Generated: 2026-06-14 06:43:00
 
 ## Summary
 
@@ -8,16 +8,16 @@ Generated: 2026-06-12 12:37:31
 - available checked: 50
 - original_missing: 0
 - meta_derivative_mismatch: 0
-- social ok: 0
+- social ok: 1
 - social_draft_ready: 1
-- social_buffer_ready: 0
-- social missing or failed: 50
+- social_buffer_ready: 1
+- social missing or failed: 49
 - social_posts.md missing: 49
 - social_release.json missing: 49
 
 ## Stage Counts
 
-- dry_run: 1
+- complete: 1
 - missing: 49
 
 ## Not Complete
@@ -71,7 +71,6 @@ Generated: 2026-06-12 12:37:31
 | DAKE_TwoPerson_Memo | - | False | False | False | False | False | generate social_posts.md with tools/release_social.py<br>generate dry-run social_release.json with tools/release_social.py<br>x Buffer ID missing<br>threads Buffer ID missing<br>instagram Buffer ID missing |
 | DAKE_Video_Shorts_Cut | - | False | False | False | False | False | generate social_posts.md with tools/release_social.py<br>generate dry-run social_release.json with tools/release_social.py<br>x Buffer ID missing<br>threads Buffer ID missing<br>instagram Buffer ID missing |
 | DAKE_Work_Calendar | - | False | False | False | False | False | generate social_posts.md with tools/release_social.py<br>generate dry-run social_release.json with tools/release_social.py<br>x Buffer ID missing<br>threads Buffer ID missing<br>instagram Buffer ID missing |
-| DAKE_Year_Age | dry_run | True | False | False | False | False | create Buffer posts with tools/release_social.py --post-to-buffer<br>x Buffer ID missing<br>threads Buffer ID missing<br>instagram Buffer ID missing |
 | DAKE_Year_Notice | - | False | False | False | False | False | generate social_posts.md with tools/release_social.py<br>generate dry-run social_release.json with tools/release_social.py<br>x Buffer ID missing<br>threads Buffer ID missing<br>instagram Buffer ID missing |
 | DAKE_Yesterday_Task_Memo | - | False | False | False | False | False | generate social_posts.md with tools/release_social.py<br>generate dry-run social_release.json with tools/release_social.py<br>x Buffer ID missing<br>threads Buffer ID missing<br>instagram Buffer ID missing |
 
@@ -79,3 +78,4 @@ Generated: 2026-06-12 12:37:31
 
 | app | X | Threads | Instagram |
 | --- | --- | --- | --- |
+| DAKE_Year_Age | 6a2dcbe3adc07817f41488d5 | 6a2dcbe408bd17e5f3ab748f | 6a2dccd261b0aab8c161e18b |
