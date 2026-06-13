@@ -37,6 +37,7 @@ class SocialCheck:
     buffer_x_id: str = ""
     buffer_threads_id: str = ""
     buffer_instagram_id: str = ""
+    requested_channels: str = "x,threads,instagram"
     source_kind: str = ""
     source_path: str = ""
     original_missing: bool = False
@@ -56,10 +57,21 @@ class SocialCheck:
         return (
             self.social_draft_ready
             and self.social_stage == "complete"
-            and bool(self.buffer_x_id)
-            and bool(self.buffer_threads_id)
-            and bool(self.buffer_instagram_id)
+            and all(self.buffer_id_for(channel) for channel in self.requested_channel_list)
         )
+
+    @property
+    def requested_channel_list(self) -> list[str]:
+        return [item for item in self.requested_channels.split(",") if item]
+
+    def buffer_id_for(self, channel: str) -> str:
+        if channel == "x":
+            return self.buffer_x_id
+        if channel == "threads":
+            return self.buffer_threads_id
+        if channel == "instagram":
+            return self.buffer_instagram_id
+        return ""
 
     @property
     def ok(self) -> bool:
@@ -88,14 +100,23 @@ def buffer_id(record: dict[str, Any], platform: str) -> str:
     return ""
 
 
-def validate_social_posts(path: Path, app_url: str) -> tuple[bool, bool]:
+def requested_channels_from_record(record: dict[str, Any]) -> list[str]:
+    raw = record.get("requested_channels")
+    if isinstance(raw, list):
+        channels = [str(item).strip().lower() for item in raw if str(item).strip().lower() in PLATFORMS]
+        if channels:
+            return list(dict.fromkeys(channels))
+    return list(PLATFORMS)
+
+
+def validate_social_posts(path: Path, app_url: str, requested_channels: list[str]) -> tuple[bool, bool]:
     if not path.exists():
         return False, False
     text = read_text(path)
     urls = re.findall(r"https?://[^\s)]+", text)
     expected = app_url.rstrip("/")
     forbidden = any(("github.com" in url.lower() or "booth.pm" in url.lower() or url.rstrip(".,").rstrip("/") != expected) for url in urls)
-    required = ("## X", "## THREADS", "## INSTAGRAM")
+    required = tuple(f"## {channel.upper()}" for channel in requested_channels)
     has_sections = all(section in text for section in required)
     return has_sections and not forbidden, forbidden
 
@@ -128,11 +149,13 @@ def check_app(app_dir: Path, only_available: bool) -> SocialCheck:
     posts = release_dir / "social_posts.md"
     release = release_dir / "social_release.json"
     result.social_posts = posts.exists()
-    result.social_posts_valid, result.forbidden_links = validate_social_posts(posts, app_url)
     result.social_release = release.exists()
+    requested_channels = list(PLATFORMS)
     if release.exists():
         try:
             record = json.loads(read_text(release))
+            requested_channels = requested_channels_from_record(record)
+            result.requested_channels = ",".join(requested_channels)
             result.social_stage = str(record.get("stage") or "")
             result.social_reason = str(record.get("reason") or "")
             result.buffer_x_id = buffer_id(record, "x")
@@ -140,6 +163,7 @@ def check_app(app_dir: Path, only_available: bool) -> SocialCheck:
             result.buffer_instagram_id = buffer_id(record, "instagram")
         except Exception as exc:
             result.actions.append(f"social_release.json parse failed: {exc}")
+    result.social_posts_valid, result.forbidden_links = validate_social_posts(posts, app_url, requested_channels)
     if not result.social_posts:
         result.actions.append("generate social_posts.md with tools/release_social.py")
     elif not result.social_posts_valid:
@@ -150,8 +174,8 @@ def check_app(app_dir: Path, only_available: bool) -> SocialCheck:
         result.actions.append(f"social stage is {result.social_stage or 'empty'}: {result.social_reason}")
     if result.social_draft_ready and not result.social_buffer_ready:
         result.actions.append("create Buffer posts with tools/release_social.py --post-to-buffer")
-    for platform, value in (("x", result.buffer_x_id), ("threads", result.buffer_threads_id), ("instagram", result.buffer_instagram_id)):
-        if not value:
+    for platform in result.requested_channel_list:
+        if not result.buffer_id_for(platform):
             result.actions.append(f"{platform} Buffer ID missing")
     return result
 
@@ -178,6 +202,7 @@ def write_csv(results: list[SocialCheck], path: Path) -> None:
         "buffer_x_id",
         "buffer_threads_id",
         "buffer_instagram_id",
+        "requested_channels",
         "source_kind",
         "source_path",
         "original_missing",
@@ -226,12 +251,12 @@ def write_markdown(results: list[SocialCheck], path: Path) -> None:
         "",
         "## Not Complete",
         "",
-        "| app | stage | draft | buffer | X | Threads | Instagram | action |",
-        "| --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| app | stage | requested | draft | buffer | X | Threads | Instagram | action |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ])
     for item in not_ok:
         lines.append(
-            f"| {item.app} | {item.social_stage or '-'} | {item.social_draft_ready} | {item.social_buffer_ready} | {bool(item.buffer_x_id)} | {bool(item.buffer_threads_id)} | {bool(item.buffer_instagram_id)} | {'<br>'.join(item.actions) or '-'} |"
+            f"| {item.app} | {item.social_stage or '-'} | {item.requested_channels} | {item.social_draft_ready} | {item.social_buffer_ready} | {bool(item.buffer_x_id)} | {bool(item.buffer_threads_id)} | {bool(item.buffer_instagram_id)} | {'<br>'.join(item.actions) or '-'} |"
         )
     lines.extend(["", "## Complete", "", "| app | X | Threads | Instagram |", "| --- | --- | --- | --- |"])
     for item in ok:

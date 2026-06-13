@@ -79,6 +79,7 @@ class AppCheck:
     buffer_x_id: bool = False
     buffer_threads_id: bool = False
     buffer_instagram_id: bool = False
+    requested_social_channels: str = "x,threads,instagram"
     source_kind: str = ""
     source_path: str = ""
     original_missing: bool = False
@@ -141,10 +142,21 @@ class AppCheck:
         return (
             self.social_draft_ready
             and self.social_stage == "complete"
-            and self.buffer_x_id
-            and self.buffer_threads_id
-            and self.buffer_instagram_id
+            and all(self.buffer_ready_for(channel) for channel in self.requested_social_channel_list)
         )
+
+    @property
+    def requested_social_channel_list(self) -> list[str]:
+        return [item for item in self.requested_social_channels.split(",") if item]
+
+    def buffer_ready_for(self, channel: str) -> bool:
+        if channel == "x":
+            return self.buffer_x_id
+        if channel == "threads":
+            return self.buffer_threads_id
+        if channel == "instagram":
+            return self.buffer_instagram_id
+        return False
 
     @property
     def social_ready(self) -> bool:
@@ -259,13 +271,22 @@ def buffer_update_id(record: dict[str, Any], platform: str) -> str:
     return ""
 
 
-def validate_social_posts(path: Path) -> tuple[bool, bool]:
+def requested_channels_from_record(record: dict[str, Any]) -> list[str]:
+    raw = record.get("requested_channels")
+    if isinstance(raw, list):
+        channels = [str(item).strip().lower() for item in raw if str(item).strip().lower() in {"x", "threads", "instagram"}]
+        if channels:
+            return list(dict.fromkeys(channels))
+    return ["x", "threads", "instagram"]
+
+
+def validate_social_posts(path: Path, requested_channels: list[str]) -> tuple[bool, bool]:
     if not path.exists():
         return False, False
     text = read_text(path)
     urls = re.findall(r"https?://[^\s)]+", text)
     forbidden = any(("github.com" in url.lower() or "booth.pm" in url.lower() or not url.rstrip(".,").startswith("https://dakeapp.com/apps/")) for url in urls)
-    required = ("## X", "## THREADS", "## INSTAGRAM")
+    required = tuple(f"## {channel.upper()}" for channel in requested_channels)
     has_sections = all(section in text for section in required)
     return has_sections and not forbidden, forbidden
 
@@ -287,17 +308,20 @@ def apply_release_artifact_flags(app_dir: Path, result: AppCheck) -> None:
             result.release_stage = f"invalid: {exc}"
     social_posts_path = release_dir / "social_posts.md"
     result.social_posts = social_posts_path.exists()
-    result.social_posts_valid, result.social_forbidden_links = validate_social_posts(social_posts_path)
     result.social_release = social_release.exists()
+    requested_channels = ["x", "threads", "instagram"]
     if social_release.exists():
         try:
             social_record = read_json_file(social_release)
+            requested_channels = requested_channels_from_record(social_record)
+            result.requested_social_channels = ",".join(requested_channels)
             result.social_stage = str(social_record.get("stage") or "")
             result.buffer_x_id = bool(buffer_update_id(social_record, "x"))
             result.buffer_threads_id = bool(buffer_update_id(social_record, "threads"))
             result.buffer_instagram_id = bool(buffer_update_id(social_record, "instagram"))
         except Exception as exc:
             result.social_stage = f"invalid: {exc}"
+    result.social_posts_valid, result.social_forbidden_links = validate_social_posts(social_posts_path, requested_channels)
 
 
 def check_icon_build(build_text: str) -> bool:
@@ -672,6 +696,7 @@ def write_csv(results: list[AppCheck], path: Path) -> None:
         "buffer_x_id",
         "buffer_threads_id",
         "buffer_instagram_id",
+        "requested_social_channels",
         "source_kind",
         "source_path",
         "original_missing",
@@ -724,6 +749,7 @@ def write_csv(results: list[AppCheck], path: Path) -> None:
                     "buffer_x_id": result.buffer_x_id,
                     "buffer_threads_id": result.buffer_threads_id,
                     "buffer_instagram_id": result.buffer_instagram_id,
+                    "requested_social_channels": result.requested_social_channels,
                     "source_kind": result.source_kind,
                     "source_path": result.source_path,
                     "original_missing": result.original_missing,

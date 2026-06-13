@@ -105,3 +105,20 @@ python tools\store\sync_store_to_site.py
 - generated JSONを手編集する
 - Store側で商品情報を直接編集する
 - Stripe Secret / APIキー / Webhook Secretを公開repoへ入れる
+
+## SNS投稿と予約設定（v2補足）
+
+通常出荷ではSNS予約を行わず、Buffer下書き作成までを標準とする。
+
+通常出荷のSNS工程は、媒体別投稿文生成、指定媒体のBuffer下書き作成、終了とする。
+この工程では即時公開、予約公開、Queue投入を行わない。
+
+予約設定は、ユーザーが対象アプリ・媒体・日時を明示し、予約計画を確認した後に限り実行する。
+
+媒体はX・Threads・Instagramから任意に選択できる。
+指定がない場合はX・Threads・Instagramの3媒体を標準対象とする。
+
+Codexは通常出荷時に即時公開または自動予約を行わない。
+
+v2_closedは、出荷証跡とBuffer下書きが揃い、人間が投稿・予約・修正・見送りを判断できる状態を表す。
+予約済み・公開済みであることはv2_closedの必須条件にしない。
