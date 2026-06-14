@@ -194,6 +194,8 @@ PC画面のQRコードをiPhoneで読み取り、同じWi-Fi上で写真をWindo
 - 画像: assets/booth_thumbnail.jpg
 - ダウンロード導線: 未確定
 - サポート方針: 未確定
+- Stripe Payment Link: https://buy.stripe.com/cNicN5fMlgML9WE1fj0gw0k
+- Store雋ｩ螢ｲ迥ｶ諷・ stripe_ready
 
 ## 価格・販売方針
 

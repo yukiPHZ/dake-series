@@ -194,6 +194,8 @@ PDF上の必要箇所にピンクの半透明マーカーを付けて保存で�
 - 画像: assets/booth_thumbnail.jpg
 - ダウンロード導線: 未確定
 - サポート方針: 未確定
+- Stripe Payment Link: https://buy.stripe.com/fZu8wP2ZzeED3yg3nr0gw0v
+- Store雋ｩ螢ｲ迥ｶ諷・ stripe_ready
 
 ## 価格・販売方針
 

@@ -198,6 +198,8 @@ DAKEアプリのBOOTH登録作業を、商品情報の確認と開いているBO
 - 画像: assets/booth_thumbnail.jpg
 - ダウンロード導線: 未確定
 - サポート方針: 未確定
+- Stripe Payment Link: https://buy.stripe.com/dRmcN557H8gf0m4gad0gw0e
+- Store雋ｩ螢ｲ迥ｶ諷・ stripe_ready
 
 ## 価格・販売方針
 

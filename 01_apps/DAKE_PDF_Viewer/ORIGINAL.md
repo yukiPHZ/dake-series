@@ -194,6 +194,8 @@ PDFを探してすぐ確認する軽量ビューワーです。
 - 画像: assets/booth_thumbnail.jpg
 - ダウンロード導線: 未確定
 - サポート方針: 未確定
+- Stripe Payment Link: https://buy.stripe.com/cNi8wPcA9dAzc4M0bf0gw0C
+- Store雋ｩ螢ｲ迥ｶ諷・ stripe_ready
 
 ## 価格・販売方針
 

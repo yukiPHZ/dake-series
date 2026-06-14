@@ -198,6 +198,8 @@ DAKEシリーズ各アプリを迷わず1クリックで起動する入口アプ
 - 画像: assets/booth_thumbnail.jpg
 - ダウンロード導線: 未確定
 - サポート方針: 未確定
+- Stripe Payment Link: https://buy.stripe.com/8x228r8jTgML5GoaPT0gw0n
+- Store雋ｩ螢ｲ迥ｶ諷・ stripe_ready
 
 ## 価格・販売方針
 

@@ -194,6 +194,8 @@ PDFに赤い丸や矢印を付けて、確認してほしい箇所を伝えら�
 - 画像: assets/booth_thumbnail.jpg
 - ダウンロード導線: 未確定
 - サポート方針: 未確定
+- Stripe Payment Link: https://buy.stripe.com/bJe9AT6bL2VV0m46zD0gw0u
+- Store雋ｩ螢ｲ迥ｶ諷・ stripe_ready
 
 ## 価格・販売方針
 

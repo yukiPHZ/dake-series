@@ -194,6 +194,8 @@ PDFプレビュー上で残したい範囲をドラッグし、トリミング�
 - 画像: assets/booth_thumbnail.jpg
 - ダウンロード導線: 未確定
 - サポート方針: 未確定
+- Stripe Payment Link: https://buy.stripe.com/00w7sL43D6877Ow4rv0gw0t
+- Store雋ｩ螢ｲ迥ｶ諷・ stripe_ready
 
 ## 価格・販売方針
 

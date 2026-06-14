@@ -194,6 +194,8 @@ PDFを1ファイル追加すると、全ページを1枚ずつのPDFへ自動分
 - 画像: assets/booth_thumbnail.jpg
 - ダウンロード導線: 未確定
 - サポート方針: 未確定
+- Stripe Payment Link: https://buy.stripe.com/28E14ndEd7cb0m47DH0gw0z
+- Store雋ｩ螢ｲ迥ｶ諷・ stripe_ready
 
 ## 価格・販売方針
 

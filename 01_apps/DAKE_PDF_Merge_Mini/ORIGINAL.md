@@ -194,6 +194,8 @@ PDFを最大5ファイルまで選択し、表示順に1つのPDFへ結合でき
 - 画像: assets/booth_thumbnail.jpg
 - ダウンロード導線: 未確定
 - サポート方針: 未確定
+- Stripe Payment Link: https://buy.stripe.com/00w6oH57H6870m48HL0gw0w
+- Store雋ｩ螢ｲ迥ｶ諷・ stripe_ready
 
 ## 価格・販売方針
 

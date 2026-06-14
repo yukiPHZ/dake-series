@@ -191,6 +191,8 @@ PC内に散らばったDAKE系アプリを探します。
 - 画像: assets/booth_thumbnail.jpg
 - ダウンロード導線: 未確定
 - サポート方針: 未確定
+- Stripe Payment Link: https://buy.stripe.com/8x200j6bL1RRecU0bf0gw05
+- Store雋ｩ螢ｲ迥ｶ諷・ stripe_ready
 
 ## 価格・販売方針
 

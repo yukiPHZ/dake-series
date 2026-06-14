@@ -171,6 +171,8 @@ Windows
 - 画像: assets/booth_thumbnail.jpg（存在: あり）
 - ダウンロード導線: 未確定
 - サポート方針: 既存ファイルに記載なし
+- Stripe Payment Link: https://buy.stripe.com/aFa7sLgQp9kj1q85vz0gw0x
+- Store雋ｩ螢ｲ迥ｶ諷・ stripe_ready
 
 ## 価格・販売方針
 
