@@ -64,12 +64,23 @@ def read_selection(path: Path) -> dict[str, dict[str, str]]:
         return {row["id"]: row for row in csv.DictReader(handle)}
 
 
-def object_to_dict(obj: Any) -> dict[str, Any]:
-    if hasattr(obj, "to_dict_recursive"):
-        return obj.to_dict_recursive()
+def object_to_dict(obj: Any) -> Any:
+    """Convert Stripe SDK objects and nested containers to plain Python values."""
+    to_dict = getattr(obj, "to_dict", None)
+    if callable(to_dict):
+        return object_to_dict(to_dict())
+
+    legacy_to_dict_recursive = getattr(obj, "to_dict_recursive", None)
+    if callable(legacy_to_dict_recursive):
+        return object_to_dict(legacy_to_dict_recursive())
+
     if isinstance(obj, dict):
-        return obj
-    return dict(obj)
+        return {key: object_to_dict(value) for key, value in obj.items()}
+    if isinstance(obj, list):
+        return [object_to_dict(value) for value in obj]
+    if isinstance(obj, tuple):
+        return [object_to_dict(value) for value in obj]
+    return obj
 
 
 def validate_secret_key() -> str:
