@@ -1,0 +1,11 @@
+id,browser_check,title_check,price_check,currency_check,one_time_display_check,wording_check,review_method,reviewed_at,notes
+dake_pdf_viewer,ok,ok,ok,ok,ok,ok,human_browser,2026-06-14,user confirmed all 10 Stripe sandbox checkout pages
+dake_pdf_reorder,ok,ok,ok,ok,ok,ok,human_browser,2026-06-14,user confirmed all 10 Stripe sandbox checkout pages
+dake_pdf_splitone,ok,ok,ok,ok,ok,ok,human_browser,2026-06-14,user confirmed all 10 Stripe sandbox checkout pages
+dake_image_heictojpg,ok,ok,ok,ok,ok,ok,human_browser,2026-06-14,user confirmed all 10 Stripe sandbox checkout pages
+dake_image_topdf,ok,ok,ok,ok,ok,ok,human_browser,2026-06-14,user confirmed all 10 Stripe sandbox checkout pages
+DAKE_Sticky_Memo,ok,ok,ok,ok,ok,ok,human_browser,2026-06-14,user confirmed all 10 Stripe sandbox checkout pages
+DAKE_Mail_Draft,ok,ok,ok,ok,ok,ok,human_browser,2026-06-14,user confirmed all 10 Stripe sandbox checkout pages
+DAKE_Backup,ok,ok,ok,ok,ok,ok,human_browser,2026-06-14,user confirmed all 10 Stripe sandbox checkout pages
+dake_folder_list,ok,ok,ok,ok,ok,ok,human_browser,2026-06-14,user confirmed all 10 Stripe sandbox checkout pages
+dake_year_age,ok,ok,ok,ok,ok,ok,human_browser,2026-06-14,user confirmed all 10 Stripe sandbox checkout pages

@@ -1,0 +1,11 @@
+id,title,technical_ready,browser_check,tax_code_check,pilot_validation,live_ready,technical_notes,browser_notes
+dake_pdf_viewer,DakePDF見る,yes,ok,actual_matches_candidate,passed,conditional,browser checkout page is not verified by this script,user confirmed all 10 Stripe sandbox checkout pages
+dake_pdf_reorder,DakePDFページ並べ替え,yes,ok,actual_matches_candidate,passed,conditional,browser checkout page is not verified by this script,user confirmed all 10 Stripe sandbox checkout pages
+dake_pdf_splitone,DakePDF分割One,yes,ok,actual_matches_candidate,passed,conditional,browser checkout page is not verified by this script,user confirmed all 10 Stripe sandbox checkout pages
+dake_image_heictojpg,HEIC→JPG変換,yes,ok,actual_matches_candidate,passed,conditional,browser checkout page is not verified by this script,user confirmed all 10 Stripe sandbox checkout pages
+dake_image_topdf,DakeImageToPDF,yes,ok,actual_matches_candidate,passed,conditional,browser checkout page is not verified by this script,user confirmed all 10 Stripe sandbox checkout pages
+DAKE_Sticky_Memo,付箋メモ,yes,ok,actual_matches_candidate,passed,conditional,browser checkout page is not verified by this script,user confirmed all 10 Stripe sandbox checkout pages
+DAKE_Mail_Draft,Dakeメール下書き,yes,ok,actual_matches_candidate,passed,conditional,browser checkout page is not verified by this script,user confirmed all 10 Stripe sandbox checkout pages
+DAKE_Backup,Dakeバックアップ,yes,ok,actual_matches_candidate,passed,conditional,browser checkout page is not verified by this script,user confirmed all 10 Stripe sandbox checkout pages
+dake_folder_list,Dakeフォルダ一覧,yes,ok,actual_matches_candidate,passed,conditional,browser checkout page is not verified by this script,user confirmed all 10 Stripe sandbox checkout pages
+dake_year_age,Dake築年数,yes,ok,actual_matches_candidate,passed,conditional,browser checkout page is not verified by this script,user confirmed all 10 Stripe sandbox checkout pages

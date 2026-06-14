@@ -1,0 +1,3160 @@
+{
+  "dry_run": true,
+  "notice": "DRY RUN ONLY. NO STRIPE API CALL. NO LIVE OBJECT IS CREATED.",
+  "created_at": "2026-06-14T21:44:20+09:00",
+  "sources": {
+    "rollout_review": "tools/reports/stripe_payment_link_rollout_review.csv",
+    "generated_store": "tools/generated/store_products.generated.json",
+    "final_pilot_review": "tools/reports/stripe_payment_link_pilot10_final_review.csv"
+  },
+  "candidate_count": 45,
+  "count": 45,
+  "items": [
+    {
+      "id": "DAKE_App_Doko",
+      "type": "app",
+      "title": "アプリどこ",
+      "price": 300,
+      "currency": "jpy",
+      "category": "補助ツール",
+      "source_original": "01_apps/DAKE_App_Doko/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8447573",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_App_Doko_v1.0.0",
+      "product_name": "アプリどこ",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "アプリどこ",
+        "description": "PC内に散らばったDAKE系アプリを探します。 ・アプリどこ ・PC内のDAKE系exeを探します ・README正本を読み取って表示します ・忘れていたアプリを発掘できます ・Windows向けexe 実務の流れを、 少し静かにするための道具です。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "DAKE_App_Doko",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_App_Doko/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=DAKE_App_Doko",
+          "booth_url": "https://peakheadz.booth.pm/items/8447573",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_App_Doko_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 300,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "DAKE_App_Doko"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "DAKE_App_Doko",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_App_Doko/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "DAKE_App_Doko",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_App_Doko/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "e67f6c529612bc95d84a94b3db2dc087229618c4604ba4236b1173ec3a64fc13",
+      "price_payload_sha256": "deba607783c060a3a9a41489310b023bfa3f965242966cbc922ffa6c97fda3b0",
+      "payment_link_payload_sha256": "e6b2523744afa18f93e7b6c925bba500708c1fd5cf761202823f39fc349ca590",
+      "product_idempotency_key": "dake-live-product-v1-DAKE_App_Doko-e67f6c529612",
+      "price_idempotency_key": "dake-live-price-v1-DAKE_App_Doko-deba607783c0",
+      "payment_link_idempotency_key": "dake-live-link-v1-DAKE_App_Doko-e6b2523744af",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "DAKE_Backup",
+      "type": "app",
+      "title": "Dakeバックアップ",
+      "price": 500,
+      "currency": "jpy",
+      "category": "バックアップ / 保全",
+      "source_original": "01_apps/DAKE_Backup/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8447578",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Backup_v1.0.0",
+      "product_name": "Dakeバックアップ",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "Dakeバックアップ",
+        "description": "ローカル正本フォルダを、指定した避難先フォルダへ一方向にコピー保存するWindows向けアプリです。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "DAKE_Backup",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Backup/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=DAKE_Backup",
+          "booth_url": "https://peakheadz.booth.pm/items/8447578",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Backup_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 500,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "DAKE_Backup"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "DAKE_Backup",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_Backup/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "DAKE_Backup",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_Backup/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "5a79e4048ca4ffb86c7027acc6712cf2d749f2e56945d7cf5d85f4e49eb33a0c",
+      "price_payload_sha256": "3abbce0a11bd5e331893a947ba9507c178dbf9b9946bbe9bd7402e316c13c4fb",
+      "payment_link_payload_sha256": "309eff6b6258141dd644cb011745696cea7568356039072fcff14b1ef3e22a5b",
+      "product_idempotency_key": "dake-live-product-v1-DAKE_Backup-5a79e4048ca4",
+      "price_idempotency_key": "dake-live-price-v1-DAKE_Backup-3abbce0a11bd",
+      "payment_link_idempotency_key": "dake-live-link-v1-DAKE_Backup-309eff6b6258",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "DAKE_Git_Memo",
+      "type": "app",
+      "title": "DakeGitメモ",
+      "price": 500,
+      "currency": "jpy",
+      "category": "メモ/開発記録",
+      "source_original": "01_apps/DAKE_Git_Memo/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8447593",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Git_Memo_v1.0.0",
+      "product_name": "DakeGitメモ",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "DakeGitメモ",
+        "description": "書くたびに、変更が残るメモです。 ・書くたびに変更が残る、1メモだけの軽量メモアプリです。 ・自動保存、Ctrl + S、終了時保存に対応しています。 ・履歴から変更を確認し、必要な時点に戻せます。 ・Git未インストール環境でも使えるスナップショット方式です。 ・Windows向けexeです。 実務の流れを、 少し静かにするための道具です。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "DAKE_Git_Memo",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Git_Memo/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=DAKE_Git_Memo",
+          "booth_url": "https://peakheadz.booth.pm/items/8447593",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Git_Memo_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 500,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "DAKE_Git_Memo"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "DAKE_Git_Memo",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_Git_Memo/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "DAKE_Git_Memo",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_Git_Memo/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "7ace0c674e21e5799c691868bb0aa8733c92dbe7a95a30e1b6d586558a8f7b74",
+      "price_payload_sha256": "e84bb74411ad4246a6aa45b36fff530c70fa85b3660749dc04541eada7bf3cde",
+      "payment_link_payload_sha256": "bcc0e9e1ef2914ea74aa82323eaf79c24a60b82ea5776b1a1b377a28de30627e",
+      "product_idempotency_key": "dake-live-product-v1-DAKE_Git_Memo-7ace0c674e21",
+      "price_idempotency_key": "dake-live-price-v1-DAKE_Git_Memo-e84bb74411ad",
+      "payment_link_idempotency_key": "dake-live-link-v1-DAKE_Git_Memo-bcc0e9e1ef29",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "DAKE_Image_PasteA4",
+      "type": "app",
+      "title": "貼る",
+      "price": 500,
+      "currency": "jpy",
+      "category": "画像",
+      "source_original": "01_apps/DAKE_Image_PasteA4/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8397628",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_PasteA4_v1.0.0",
+      "product_name": "貼る",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "貼る",
+        "description": "見えているウインドウを貼って、A4画像にします。 ・見えているウインドウを貼ってA4画像にします。 ・移動・拡大縮小・PNG出力だけに絞った資料化アプリです。 ・Windows向けexeです。 実務の流れを、 少し静かにするための道具です。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "DAKE_Image_PasteA4",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Image_PasteA4/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=DAKE_Image_PasteA4",
+          "booth_url": "https://peakheadz.booth.pm/items/8397628",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_PasteA4_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 500,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "DAKE_Image_PasteA4"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "DAKE_Image_PasteA4",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_Image_PasteA4/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "DAKE_Image_PasteA4",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_Image_PasteA4/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "1f88bb6b89e4efc46d48ea908a37b227da9daf8806d324a6d4dfcf8c32025a2a",
+      "price_payload_sha256": "ee1475b5988704f7f868bba874050dc3947fce849307ac9be2f9aab903ece288",
+      "payment_link_payload_sha256": "8d40c42226685d65f2e009a14d0208be5932b9b102bda4f9f36b43cf6b0406fa",
+      "product_idempotency_key": "dake-live-product-v1-DAKE_Image_PasteA4-1f88bb6b89e4",
+      "price_idempotency_key": "dake-live-price-v1-DAKE_Image_PasteA4-ee1475b59887",
+      "payment_link_idempotency_key": "dake-live-link-v1-DAKE_Image_PasteA4-8d40c4222668",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "DAKE_Mail_Address_Format",
+      "type": "app",
+      "title": "Dakeメールアドレス整形",
+      "price": 300,
+      "currency": "jpy",
+      "category": "メール",
+      "source_original": "01_apps/DAKE_Mail_Address_Format/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8447996",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_Address_Format_v1.0.0",
+      "product_name": "Dakeメールアドレス整形",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "Dakeメールアドレス整形",
+        "description": "貼り付けたメールアドレスを、カンマ区切りに整えます。 ・Dakeメールアドレス整形 ・貼り付けた宛先を自動抽出 ・カンマ区切りでコピー ・Windows向けexe 実務の流れを、 少し静かにするための道具です。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "DAKE_Mail_Address_Format",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Mail_Address_Format/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=DAKE_Mail_Address_Format",
+          "booth_url": "https://peakheadz.booth.pm/items/8447996",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_Address_Format_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 300,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "DAKE_Mail_Address_Format"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "DAKE_Mail_Address_Format",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_Mail_Address_Format/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "DAKE_Mail_Address_Format",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_Mail_Address_Format/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "634ee903b6001222280a76c93b20cf5b6072cfd740d26c8a1653369435aa756e",
+      "price_payload_sha256": "be0c513e1d4328c86fb125b77d95f4392c719a96ea72116fc08cd271420c042e",
+      "payment_link_payload_sha256": "312f44985930c21f98895902b9a422621c2aac1d00f554165139ffda253d4b32",
+      "product_idempotency_key": "dake-live-product-v1-DAKE_Mail_Address_Format-634ee903b600",
+      "price_idempotency_key": "dake-live-price-v1-DAKE_Mail_Address_Format-be0c513e1d43",
+      "payment_link_idempotency_key": "dake-live-link-v1-DAKE_Mail_Address_Format-312f44985930",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "DAKE_Mail_Draft",
+      "type": "app",
+      "title": "Dakeメール下書き",
+      "price": 300,
+      "currency": "jpy",
+      "category": "メール",
+      "source_original": "01_apps/DAKE_Mail_Draft/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8448001",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_Draft_v1.0.0",
+      "product_name": "Dakeメール下書き",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "Dakeメール下書き",
+        "description": "CSV名簿から、Outlookの個別下書きを作ります。 ・Outlook下書き作成のみ ・自動送信なし ・件名、本文、添付ファイルに対応 ・送信前にOutlookで確認 ・Windows向け 送信を急がず、 下書きだけを静かに整える道具です。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "DAKE_Mail_Draft",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Mail_Draft/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=DAKE_Mail_Draft",
+          "booth_url": "https://peakheadz.booth.pm/items/8448001",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_Draft_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 300,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "DAKE_Mail_Draft"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "DAKE_Mail_Draft",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_Mail_Draft/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "DAKE_Mail_Draft",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_Mail_Draft/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "8e245af857a42d2e35c3fc7cc0782eea5d127d4e460afd878e86fe8613788cb8",
+      "price_payload_sha256": "4d2cbc11f52cbc222076fa01a901990fd337f0b04fb1b04a712920e095229274",
+      "payment_link_payload_sha256": "17fb31637059b421f338cc521d9bfc43fd950d97da0ebc1b2be7d00150606c28",
+      "product_idempotency_key": "dake-live-product-v1-DAKE_Mail_Draft-8e245af857a4",
+      "price_idempotency_key": "dake-live-price-v1-DAKE_Mail_Draft-4d2cbc11f52c",
+      "payment_link_idempotency_key": "dake-live-link-v1-DAKE_Mail_Draft-17fb31637059",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "DAKE_Maji_Memo",
+      "type": "app",
+      "title": "マジでメモ",
+      "price": 300,
+      "currency": "jpy",
+      "category": "メモ",
+      "source_original": "01_apps/DAKE_Maji_Memo/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8448021",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Maji_Memo_v1.0.0",
+      "product_name": "マジでメモ",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "マジでメモ",
+        "description": "保存を気にせず、今の考えをそのまま置いておくメモです。 ・保存を気にせず使える実務用メモアプリです。 ・閉じても前回のメモがそのまま残ります。 ・左の補助メモ、右のメインメモを個別にリフレッシュできます。 ・Windows向けexeです。 実務の流れを、 少し静かにするための道具です。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "DAKE_Maji_Memo",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Maji_Memo/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=DAKE_Maji_Memo",
+          "booth_url": "https://peakheadz.booth.pm/items/8448021",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Maji_Memo_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 300,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "DAKE_Maji_Memo"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "DAKE_Maji_Memo",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_Maji_Memo/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "DAKE_Maji_Memo",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_Maji_Memo/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "0e86ea3a1ec7ed6a68cdca05ff1ac86b5a33595381531678e81dfd5cd9999d7b",
+      "price_payload_sha256": "b016ec426b97f4acf2b791ef65ad363f5df88446c8bc201ecba483eca15dd792",
+      "payment_link_payload_sha256": "77c4f367d59f587e6c00ab350aa1827afbab980f25864b7e072cc9186d83f517",
+      "product_idempotency_key": "dake-live-product-v1-DAKE_Maji_Memo-0e86ea3a1ec7",
+      "price_idempotency_key": "dake-live-price-v1-DAKE_Maji_Memo-b016ec426b97",
+      "payment_link_idempotency_key": "dake-live-link-v1-DAKE_Maji_Memo-77c4f367d59f",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "DAKE_Sticky_Memo",
+      "type": "app",
+      "title": "付箋メモ",
+      "price": 300,
+      "currency": "jpy",
+      "category": "メモ / 付箋",
+      "source_original": "01_apps/DAKE_Sticky_Memo/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8448263",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Sticky_Memo_v1.0.0",
+      "product_name": "付箋メモ",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "付箋メモ",
+        "description": "アプリ内に付箋を作成し、自由に動かし、不要になったら消せるWindows向け軽量メモアプリです。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "DAKE_Sticky_Memo",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Sticky_Memo/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=DAKE_Sticky_Memo",
+          "booth_url": "https://peakheadz.booth.pm/items/8448263",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Sticky_Memo_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 300,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "DAKE_Sticky_Memo"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "DAKE_Sticky_Memo",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_Sticky_Memo/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "DAKE_Sticky_Memo",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_Sticky_Memo/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "4524c8cd7e633648a8ed61c3b9bc17745b26f70e9447ec9d0b2d26d1a973b8c8",
+      "price_payload_sha256": "a46e6eccfb8bd14eb477282dfb60b6443c63a13f8e6de87eb6dc10e12da4c451",
+      "payment_link_payload_sha256": "2a605ffbbdcb7358a394dd51a6b5f325fb350ef2412d5d71416df4e8a594ed5f",
+      "product_idempotency_key": "dake-live-product-v1-DAKE_Sticky_Memo-4524c8cd7e63",
+      "price_idempotency_key": "dake-live-price-v1-DAKE_Sticky_Memo-a46e6eccfb8b",
+      "payment_link_idempotency_key": "dake-live-link-v1-DAKE_Sticky_Memo-2a605ffbbdcb",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "DAKE_Yesterday_Task_Memo",
+      "type": "app",
+      "title": "Dake昨日タスクメモ",
+      "price": 300,
+      "currency": "jpy",
+      "category": "メモ",
+      "source_original": "01_apps/DAKE_Yesterday_Task_Memo/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8448291",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Yesterday_Task_Memo_v1.0.0",
+      "product_name": "Dake昨日タスクメモ",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "Dake昨日タスクメモ",
+        "description": "前営業日のメモを見ながら、今日やることを整理します。 ・昨日のメモを、今日のタスクに変える実務メモです。 ・前営業日のメモを左側に表示します。 ・今日のメモ・今日やることを右側で整理できます。 ・日付ごとに自動保存します。 ・Windows向けexeです。 実務の流れを、 少し静かにするための道具です。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "DAKE_Yesterday_Task_Memo",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Yesterday_Task_Memo/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=DAKE_Yesterday_Task_Memo",
+          "booth_url": "https://peakheadz.booth.pm/items/8448291",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Yesterday_Task_Memo_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 300,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "DAKE_Yesterday_Task_Memo"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "DAKE_Yesterday_Task_Memo",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_Yesterday_Task_Memo/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "DAKE_Yesterday_Task_Memo",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_Yesterday_Task_Memo/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "c8c0369fed2e4794149df3959102b404520e7c4d0bd34180ac72e72eaeda1500",
+      "price_payload_sha256": "72ab46af87ca236af27feb792396315f856435b5bf9c55cbbd4d2c56d6c38527",
+      "payment_link_payload_sha256": "1bb8bf5aa1602605ffcbd52d45b624152cfb6714a895a67d287fa017d34eb49a",
+      "product_idempotency_key": "dake-live-product-v1-DAKE_Yesterday_Task_Memo-c8c0369fed2e",
+      "price_idempotency_key": "dake-live-price-v1-DAKE_Yesterday_Task_Memo-72ab46af87ca",
+      "payment_link_idempotency_key": "dake-live-link-v1-DAKE_Yesterday_Task_Memo-1bb8bf5aa160",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "dake_booth_assist",
+      "type": "app",
+      "title": "BOOTHアシスト",
+      "price": 300,
+      "currency": "jpy",
+      "category": "補助ツール",
+      "source_original": "01_apps/DAKE_BOOTH_Assist/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8447580",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_BOOTH_Assist_v1.0.0",
+      "product_name": "BOOTHアシスト",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "BOOTHアシスト",
+        "description": "BOOTH登録に必要な商品情報と素材を確認し、開いているBOOTH編集画面への入力作業を補助します。 ・DakeBOOTHアシスト ・BOOTH登録用の商品情報と素材を確認 ・開いているBOOTH編集画面へ接続して入力作業を補助 ・最終公開は人間確認 ・Windows向けexe 実務の流れを、 少し静かにするための道具です。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "dake_booth_assist",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_BOOTH_Assist/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_booth_assist",
+          "booth_url": "https://peakheadz.booth.pm/items/8447580",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_BOOTH_Assist_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 300,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_booth_assist"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_booth_assist",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_BOOTH_Assist/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_booth_assist",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_BOOTH_Assist/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "85627be289ec12298fb18f69ffd78a2cb90161a492b27b969e8e9a29d29bf726",
+      "price_payload_sha256": "7e60be90ec3dfae31a925b9aec63538b95770b8a2c8450d099e41c0cea7d9c28",
+      "payment_link_payload_sha256": "f60edab9fec3ed69ce5abe45ae5f355a47c3f9945922295c2f1dd370fcbedf9a",
+      "product_idempotency_key": "dake-live-product-v1-dake_booth_assist-85627be289ec",
+      "price_idempotency_key": "dake-live-price-v1-dake_booth_assist-7e60be90ec3d",
+      "payment_link_idempotency_key": "dake-live-link-v1-dake_booth_assist-f60edab9fec3",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "dake_column_memo",
+      "type": "app",
+      "title": "ずっとメモ",
+      "price": 300,
+      "currency": "jpy",
+      "category": "メモ",
+      "source_original": "01_apps/DAKE_Column_Memo/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8447582",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Column_Memo_v1.0.0",
+      "product_name": "ずっとメモ",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "ずっとメモ",
+        "description": "1本のメモを、列に流して見渡します。 ・1本のメモを列に流して表示します。 ・1～4列の段組表示に切り替えできます。 ・自動保存・起動時復元に対応しています。 ・Windows向けexeです。 実務の流れを、 少し静かにするための道具です。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "dake_column_memo",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Column_Memo/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_column_memo",
+          "booth_url": "https://peakheadz.booth.pm/items/8447582",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Column_Memo_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 300,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_column_memo"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_column_memo",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_Column_Memo/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_column_memo",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_Column_Memo/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "8b31496770c3ae1fc37623a09c2196956f597af6fd75baea9859585250e73ac2",
+      "price_payload_sha256": "cb6269b4c7c9dc7c6748b14e2160beae66148b7335f43f0f24d5a04ebe9a9c74",
+      "payment_link_payload_sha256": "fc06c8dab6afcb0889a61d04bb753fa7f39b82ee0ea41e17b413a38319564a40",
+      "product_idempotency_key": "dake-live-product-v1-dake_column_memo-8b31496770c3",
+      "price_idempotency_key": "dake-live-price-v1-dake_column_memo-cb6269b4c7c9",
+      "payment_link_idempotency_key": "dake-live-link-v1-dake_column_memo-fc06c8dab6af",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "dake_document_cover",
+      "type": "app",
+      "title": "Dake書類送付状",
+      "price": 500,
+      "currency": "jpy",
+      "category": "書類",
+      "source_original": "01_apps/DAKE_Document_Cover/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8447586",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Document_Cover-v1.0.0",
+      "product_name": "Dake書類送付状",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "Dake書類送付状",
+        "description": "相手方と本文を入力してA4送付状PDFを作成します。 ・書類送付状PDF作成アプリ ・宛先・送付内容・作成者情報に対応 ・A4縦PDF出力 ・Windows向けexe 実務の流れを、 少し静かにするための道具です。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "dake_document_cover",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Document_Cover/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_document_cover",
+          "booth_url": "https://peakheadz.booth.pm/items/8447586",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Document_Cover-v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 500,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_document_cover"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_document_cover",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_Document_Cover/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_document_cover",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_Document_Cover/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "5296303beafd47cf23f70c20c1d77ffdf2968355df4abfd4b06e5889eda1fd84",
+      "price_payload_sha256": "fb2b6b534970e146082147d1a252ee8da48b22d8f90c0fba242e615cb5d4714a",
+      "payment_link_payload_sha256": "8324cacb8f65c9c0c1b71b9aa696f9b2bf60fb6ef5f141f47652cebfea0be94b",
+      "product_idempotency_key": "dake-live-product-v1-dake_document_cover-5296303beafd",
+      "price_idempotency_key": "dake-live-price-v1-dake_document_cover-fb2b6b534970",
+      "payment_link_idempotency_key": "dake-live-link-v1-dake_document_cover-8324cacb8f65",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "dake_fax_cover",
+      "type": "app",
+      "title": "DakeFAX送付状",
+      "price": 500,
+      "currency": "jpy",
+      "category": "書類",
+      "source_original": "01_apps/DAKE_FAX_Cover/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8447589",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_FAX_Cover_v1.0.0",
+      "product_name": "DakeFAX送付状",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "DakeFAX送付状",
+        "description": "送信先と内容を入力してA4縦のFAX送付状PDFを作成します。 ・FAX送付状PDF作成アプリ ・送信先・FAX情報・送信内容に対応 ・A4縦PDF出力 ・Windows向けexe 実務の流れを、 少し静かにするための道具です。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "dake_fax_cover",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_FAX_Cover/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_fax_cover",
+          "booth_url": "https://peakheadz.booth.pm/items/8447589",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_FAX_Cover_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 500,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_fax_cover"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_fax_cover",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_FAX_Cover/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_fax_cover",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_FAX_Cover/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "678fccdd4e013242d86edd1bcce3083f521cb0553d2baabfd11de040a9d2a4fd",
+      "price_payload_sha256": "62046f34ca25d0721d8ff0e551fb985c93dc9cf13afa09ded7347d7262f15895",
+      "payment_link_payload_sha256": "6b426ac6abdf5aa4f0f68f1ad4449f1670c32806f8d928c13caa4c3f8f88e437",
+      "product_idempotency_key": "dake-live-product-v1-dake_fax_cover-678fccdd4e01",
+      "price_idempotency_key": "dake-live-price-v1-dake_fax_cover-62046f34ca25",
+      "payment_link_idempotency_key": "dake-live-link-v1-dake_fax_cover-6b426ac6abdf",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "dake_folder_list",
+      "type": "app",
+      "title": "Dakeフォルダ一覧",
+      "price": 300,
+      "currency": "jpy",
+      "category": "ファイル / 一覧",
+      "source_original": "01_apps/DAKE_Folder_List/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8447591",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Folder_List_v1.0.0",
+      "product_name": "Dakeフォルダ一覧",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "Dakeフォルダ一覧",
+        "description": "指定フォルダの構成、ファイル名、拡張子、サイズ、更新日時を一覧化できるWindows向けアプリです。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "dake_folder_list",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Folder_List/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_folder_list",
+          "booth_url": "https://peakheadz.booth.pm/items/8447591",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Folder_List_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 300,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_folder_list"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_folder_list",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_Folder_List/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_folder_list",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_Folder_List/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "8adb058cdde70eb9e9cf03d971853de7ad3db7a3ffca7de24bbf43b802041f91",
+      "price_payload_sha256": "f816be9795be49200edf479502d876b7898a02212085079fcba124e764a14b9d",
+      "payment_link_payload_sha256": "cd9a541bd7fbd99b48ecbab1c679f3a8de7d80e801ff594354c9b077b0fdcbd0",
+      "product_idempotency_key": "dake-live-product-v1-dake_folder_list-8adb058cdde7",
+      "price_idempotency_key": "dake-live-price-v1-dake_folder_list-f816be9795be",
+      "payment_link_idempotency_key": "dake-live-link-v1-dake_folder_list-cd9a541bd7fb",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "dake_image_heictojpg",
+      "type": "app",
+      "title": "HEIC→JPG変換",
+      "price": 500,
+      "currency": "jpy",
+      "category": "画像",
+      "source_original": "01_apps/DAKE_Image_HEICtoJPG/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8447596",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_HEICtoJPG_v1.0.0",
+      "product_name": "HEIC→JPG変換",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "HEIC→JPG変換",
+        "description": "HEIC画像をJPGへ変換します。 ・HEIC→JPG変換アプリ ・複数ファイル・フォルダ追加に対応 ・元ファイルと同じ場所へ保存 ・Windows向けexe 実務の流れを、 少し静かにするための道具です。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "dake_image_heictojpg",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Image_HEICtoJPG/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_image_heictojpg",
+          "booth_url": "https://peakheadz.booth.pm/items/8447596",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_HEICtoJPG_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 500,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_image_heictojpg"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_image_heictojpg",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_Image_HEICtoJPG/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_image_heictojpg",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_Image_HEICtoJPG/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "e8a161b9bbd787cf7cd4e0df356005e6e03deabfc9dbc662f8178dae13b76a5e",
+      "price_payload_sha256": "c2e20e5fbdbdbe002383cd3fda5b49cd43b59316e7cd1811856df41e3106de6e",
+      "payment_link_payload_sha256": "31732c223cb0f2c4235f275ae6e8bd2bdc6b3ef651862151183616ac3dca9960",
+      "product_idempotency_key": "dake-live-product-v1-dake_image_heictojpg-e8a161b9bbd7",
+      "price_idempotency_key": "dake-live-price-v1-dake_image_heictojpg-c2e20e5fbdbd",
+      "payment_link_idempotency_key": "dake-live-link-v1-dake_image_heictojpg-31732c223cb0",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "dake_image_iphonetopc",
+      "type": "app",
+      "title": "Dake画像iPhoneToPC",
+      "price": 500,
+      "currency": "jpy",
+      "category": "画像",
+      "source_original": "01_apps/DAKE_Image_iPhoneToPC/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8447598",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_iPhoneToPC_v1.0.0",
+      "product_name": "Dake画像iPhoneToPC",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "Dake画像iPhoneToPC",
+        "description": "QRコード経由でiPhone写真をPCへ送ります。 ・iPhone写真受信アプリ ・QRコード読み取りで接続 ・同じWi-Fi上でPCへ保存 ・Windows向けexe 実務の流れを、 少し静かにするための道具です。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "dake_image_iphonetopc",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Image_iPhoneToPC/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_image_iphonetopc",
+          "booth_url": "https://peakheadz.booth.pm/items/8447598",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_iPhoneToPC_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 500,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_image_iphonetopc"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_image_iphonetopc",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_Image_iPhoneToPC/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_image_iphonetopc",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_Image_iPhoneToPC/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "b59effa46ca809d78254063442b4ed23121a2d680b7870ab13a90e10b49f51c4",
+      "price_payload_sha256": "786214ab9195d4de60198bacaa236e912ce7598dbbe654bbd53edcefdeba8f90",
+      "payment_link_payload_sha256": "130be0db1a6bfe0b9ca16f8e81c7e13941c1c75ea907e3a07cf7b61229d5a14f",
+      "product_idempotency_key": "dake-live-product-v1-dake_image_iphonetopc-b59effa46ca8",
+      "price_idempotency_key": "dake-live-price-v1-dake_image_iphonetopc-786214ab9195",
+      "payment_link_idempotency_key": "dake-live-link-v1-dake_image_iphonetopc-130be0db1a6b",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "dake_image_receiver",
+      "type": "app",
+      "title": "DakeImage_Receiver",
+      "price": 500,
+      "currency": "jpy",
+      "category": "画像",
+      "source_original": "01_apps/DAKE_Image_Receiver/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8447600",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_Receiver_v1.0.0",
+      "product_name": "DakeImage_Receiver",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "DakeImage_Receiver",
+        "description": "スマホから画像をこのPCへ送ります。 ・スマホ画像受信アプリ ・QRコード接続に対応 ・画像をPC側へ保存 ・Windows向けexe 実務の流れを、 少し静かにするための道具です。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "dake_image_receiver",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Image_Receiver/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_image_receiver",
+          "booth_url": "https://peakheadz.booth.pm/items/8447600",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_Receiver_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 500,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_image_receiver"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_image_receiver",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_Image_Receiver/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_image_receiver",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_Image_Receiver/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "db45edf6dfc991d1e85222d3a5d8146bb3fe6d748d72f5357857bf78fe73d5ad",
+      "price_payload_sha256": "4ce97222e76d3042526fc012e6c224f32b3662346489467e68406b7aafa8e1fb",
+      "payment_link_payload_sha256": "eef1dd1253446cca9b4989ccbab95df2be9c9f56db19b539ddc5e53298458d82",
+      "product_idempotency_key": "dake-live-product-v1-dake_image_receiver-db45edf6dfc9",
+      "price_idempotency_key": "dake-live-price-v1-dake_image_receiver-4ce97222e76d",
+      "payment_link_idempotency_key": "dake-live-link-v1-dake_image_receiver-eef1dd125344",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "dake_image_topdf",
+      "type": "app",
+      "title": "DakeImageToPDF",
+      "price": 500,
+      "currency": "jpy",
+      "category": "画像/PDF",
+      "source_original": "01_apps/DAKE_Image_ToPDF/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8397610",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_ToPDF_v1.0.0",
+      "product_name": "DakeImageToPDF",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "DakeImageToPDF",
+        "description": "画像1枚をA4のPDFに変換します。 ・画像→PDF変換アプリ ・ドラッグ＆ドロップ対応 ・A4縦横の自動判定 ・Windows向けexe 実務の流れを、 少し静かにするための道具です。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "dake_image_topdf",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Image_ToPDF/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_image_topdf",
+          "booth_url": "https://peakheadz.booth.pm/items/8397610",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_ToPDF_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 500,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_image_topdf"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_image_topdf",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_Image_ToPDF/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_image_topdf",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_Image_ToPDF/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "9b6f33b50398e0c63e65d8f476b85cc60e6e50ef4b4b071b24e1c363fcc5216c",
+      "price_payload_sha256": "114682fa919b4516f4b5d2f4c13e769d9e9ab37dd36183c50f07079801f06f67",
+      "payment_link_payload_sha256": "22ae5770b9ccac772748bc8230a735e99557a9a0968ccb077137e9f95a950580",
+      "product_idempotency_key": "dake-live-product-v1-dake_image_topdf-9b6f33b50398",
+      "price_idempotency_key": "dake-live-price-v1-dake_image_topdf-114682fa919b",
+      "payment_link_idempotency_key": "dake-live-link-v1-dake_image_topdf-22ae5770b9cc",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "dake_launcher",
+      "type": "app",
+      "title": "Dakeランチャー",
+      "price": 300,
+      "currency": "jpy",
+      "category": "補助ツール",
+      "source_original": "01_apps/DAKE_Launcher/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8447994",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Launcher_v1.0.0",
+      "product_name": "Dakeランチャー",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "Dakeランチャー",
+        "description": "DAKEシリーズ各アプリを1クリックで起動します。 ・DAKEシリーズ各アプリを1クリックで起動するランチャー ・各アプリの `README.md` にある `DAKE_META` から一覧生成 ・exe 未検出時の場所指定に対応 ・最近使ったアプリを最大2件まで記録 ・勝手な整理・移動・削除は行いません 実務の流れを、 少し静かにするための道具です。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "dake_launcher",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Launcher/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_launcher",
+          "booth_url": "https://peakheadz.booth.pm/items/8447994",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Launcher_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 300,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_launcher"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_launcher",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_Launcher/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_launcher",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_Launcher/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "7ada5064b9a2b7578ce2f3cf47b1b3638d46d93ed59117dc4d7f0717f046d401",
+      "price_payload_sha256": "4433531cf545f4cc01d97ff6f7b09f4dc5440067a08b5b422d1ab86c863ed674",
+      "payment_link_payload_sha256": "afae9ea6af1465fb39b27aa0200e90c6972a5b81228306857a70fa94ea2189cf",
+      "product_idempotency_key": "dake-live-product-v1-dake_launcher-7ada5064b9a2",
+      "price_idempotency_key": "dake-live-price-v1-dake_launcher-4433531cf545",
+      "payment_link_idempotency_key": "dake-live-link-v1-dake_launcher-afae9ea6af14",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "dake_mail_allstaff",
+      "type": "app",
+      "title": "Dake全社員メール起動",
+      "price": 300,
+      "currency": "jpy",
+      "category": "メール",
+      "source_original": "01_apps/DAKE_Mail_AllStaff/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8447998",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_AllStaff_v1.0.0",
+      "product_name": "Dake全社員メール起動",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "Dake全社員メール起動",
+        "description": "宛先、CC、件名入りの全社員宛メール作成画面を開きます。 ・全社員宛メールを開くアプリ ・宛先・CC・件名を保存可能 ・メールアドレス貼り付け自動整形 ・本文なし・自動送信なし ・実務向け軽量ツール 実務の流れを、 少し静かにするための道具です。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "dake_mail_allstaff",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Mail_AllStaff/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_mail_allstaff",
+          "booth_url": "https://peakheadz.booth.pm/items/8447998",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_AllStaff_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 300,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_mail_allstaff"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_mail_allstaff",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_Mail_AllStaff/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_mail_allstaff",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_Mail_AllStaff/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "1482cd83ac63160dbc8fb0d5168901b281a041beac4db58cd18a28495663fd25",
+      "price_payload_sha256": "0c86c36ce5caa6fda8d1f582eea1dc3b8c90748d07aaf7b3a0c4451f39a65ed0",
+      "payment_link_payload_sha256": "30903139d1d1287482d324bedf64414e1edfc4b481385121180a1c83ffde311e",
+      "product_idempotency_key": "dake-live-product-v1-dake_mail_allstaff-1482cd83ac63",
+      "price_idempotency_key": "dake-live-price-v1-dake_mail_allstaff-0c86c36ce5ca",
+      "payment_link_idempotency_key": "dake-live-link-v1-dake_mail_allstaff-30903139d1d1",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "dake_mail_kikuta",
+      "type": "app",
+      "title": "Dake菊田メール",
+      "price": 300,
+      "currency": "jpy",
+      "category": "メール",
+      "source_original": "01_apps/DAKE_Mail_Kikuta/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8448003",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_Kikuta_v1.0.0",
+      "product_name": "Dake菊田メール",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "Dake菊田メール",
+        "description": "菊田宛のメール作成画面を開きます。 ・菊田宛メール起動アプリ ・件名・本文入力に対応 ・既定メーラーで作成画面を開く ・Windows向けexe 実務の流れを、 少し静かにするための道具です。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "dake_mail_kikuta",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Mail_Kikuta/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_mail_kikuta",
+          "booth_url": "https://peakheadz.booth.pm/items/8448003",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_Kikuta_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 300,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_mail_kikuta"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_mail_kikuta",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_Mail_Kikuta/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_mail_kikuta",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_Mail_Kikuta/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "8672d4595cc973bfe9b2b8fd0035343c0a5ea4359e1a7d1b2396077ae15fd4ab",
+      "price_payload_sha256": "3d7d0c6fb5239c35a5d710263504cafcb00f2821429bd84ea5ade4e02abd2987",
+      "payment_link_payload_sha256": "000f27901ec302d31518384341b6eac60607f67333c975cd9320b1c98cff6625",
+      "product_idempotency_key": "dake-live-product-v1-dake_mail_kikuta-8672d4595cc9",
+      "price_idempotency_key": "dake-live-price-v1-dake_mail_kikuta-3d7d0c6fb523",
+      "payment_link_idempotency_key": "dake-live-link-v1-dake_mail_kikuta-000f27901ec3",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "dake_mail_list",
+      "type": "app",
+      "title": "Dakeメールリスト",
+      "price": 300,
+      "currency": "jpy",
+      "category": "メール",
+      "source_original": "01_apps/DAKE_Mail_List/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8448014",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_List_v1.0.0",
+      "product_name": "Dakeメールリスト",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "Dakeメールリスト",
+        "description": "Outlookの.msgメールから、 会社名・お名前・メールアドレスをCSVに整理します。 ・.msg からCSV整理 ・メール送信なし ・会社名、お名前、メールアドレスだけ抽出 ・ローカル完結 ・Windows向け 集めたメールを、 実務で扱いやすい一覧にします。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "dake_mail_list",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Mail_List/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_mail_list",
+          "booth_url": "https://peakheadz.booth.pm/items/8448014",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_List_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 300,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_mail_list"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_mail_list",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_Mail_List/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_mail_list",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_Mail_List/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "c610f81df29f6f5e3ed3e74110b05ac6190caa9ab88fe9abaf593196384d9eab",
+      "price_payload_sha256": "b2167e85a43a86e4a5ad23f0eac859dca77fabe02e7b952e69df25a260f4f85f",
+      "payment_link_payload_sha256": "cd3b5dccea533f5fc30e18fca24aa2547cf28579a6369f828ee773716ccd6d63",
+      "product_idempotency_key": "dake-live-product-v1-dake_mail_list-c610f81df29f",
+      "price_idempotency_key": "dake-live-price-v1-dake_mail_list-b2167e85a43a",
+      "payment_link_idempotency_key": "dake-live-link-v1-dake_mail_list-cd3b5dccea53",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "dake_mansion_schedule",
+      "type": "app",
+      "title": "マンション工程表",
+      "price": 500,
+      "currency": "jpy",
+      "category": "作業補助",
+      "source_original": "01_apps/DAKE_Mansion_Schedule/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8448169",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mansion_Schedule_v1.0.0",
+      "product_name": "マンション工程表",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "マンション工程表",
+        "description": "マンション管理会社へ提出するための、リフォーム工事工程表を作成します。 工事進捗管理ではなく、管理会社提出用の工程表作成アプリです。 ・土日を含む45日間の工期内で、合計28営業日の初期工程を自動入力 ・土日は表示し、工事バーは平日のみに表示 ・チェックした工事だけをPDF出力 ・自由工事欄に任意の工事を追加可能 ・PDFは出力日時付きファイル名で保存 実務の流れを、 少し静かにするための道具です。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "dake_mansion_schedule",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Mansion_Schedule/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_mansion_schedule",
+          "booth_url": "https://peakheadz.booth.pm/items/8448169",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mansion_Schedule_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 500,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_mansion_schedule"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_mansion_schedule",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_Mansion_Schedule/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_mansion_schedule",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_Mansion_Schedule/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "3e82d3cfedfaf15ca564fe12c52de99defad12971b267976b9bf2c371491da63",
+      "price_payload_sha256": "ef0c0b78b3a1db22257555bef7357603b00ce359eb3429cacb4c789264606c40",
+      "payment_link_payload_sha256": "7a0b1157171617649996ac43f38a3e930b4809ef3d969b5cd0c73686081fb866",
+      "product_idempotency_key": "dake-live-product-v1-dake_mansion_schedule-3e82d3cfedfa",
+      "price_idempotency_key": "dake-live-price-v1-dake_mansion_schedule-ef0c0b78b3a1",
+      "payment_link_idempotency_key": "dake-live-link-v1-dake_mansion_schedule-7a0b11571716",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "dake_pdf_checkstamp",
+      "type": "app",
+      "title": "Dake確認印",
+      "price": 500,
+      "currency": "jpy",
+      "category": "PDF",
+      "source_original": "01_apps/DAKE_PDF_CheckStamp/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8448176",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_CheckStamp_v1.0.0",
+      "product_name": "Dake確認印",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "Dake確認印",
+        "description": "PDFに名字と日付入りの確認印を押します。 ・PDF確認印アプリ ・名字と日付入りの印影に対応 ・クリック位置へ押印 ・Windows向けexe 実務の流れを、 少し静かにするための道具です。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "dake_pdf_checkstamp",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_PDF_CheckStamp/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_pdf_checkstamp",
+          "booth_url": "https://peakheadz.booth.pm/items/8448176",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_CheckStamp_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 500,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_pdf_checkstamp"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_pdf_checkstamp",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_PDF_CheckStamp/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_pdf_checkstamp",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_PDF_CheckStamp/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "2e6c897b35318ccf2ff2f6983f21ca17caf326fa17252738b8925e0006d9ecda",
+      "price_payload_sha256": "67bfe786f51fc349bca760e4e845e4e9e99e0dc722faca75a926da07e88cc355",
+      "payment_link_payload_sha256": "a628c16668e59ddc1f8248ed8d9455293f39758df6bf32d37410390d9013d4ec",
+      "product_idempotency_key": "dake-live-product-v1-dake_pdf_checkstamp-2e6c897b3531",
+      "price_idempotency_key": "dake-live-price-v1-dake_pdf_checkstamp-67bfe786f51f",
+      "payment_link_idempotency_key": "dake-live-link-v1-dake_pdf_checkstamp-a628c16668e5",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "dake_pdf_crop",
+      "type": "app",
+      "title": "DakePDFトリミング",
+      "price": 500,
+      "currency": "jpy",
+      "category": "PDF",
+      "source_original": "01_apps/DAKE_PDF_Crop/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8448182",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Crop_v1.0.0",
+      "product_name": "DakePDFトリミング",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "DakePDFトリミング",
+        "description": "PDFをドラッグ指定した範囲でトリミングします。 ・PDFトリミングアプリ ・ドラッグ範囲指定に対応 ・別名PDFとして保存 ・Windows向けexe 実務の流れを、 少し静かにするための道具です。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "dake_pdf_crop",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_PDF_Crop/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_pdf_crop",
+          "booth_url": "https://peakheadz.booth.pm/items/8448182",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Crop_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 500,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_pdf_crop"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_pdf_crop",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_PDF_Crop/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_pdf_crop",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_PDF_Crop/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "ee6068a4a4cbb170ca51ebc2f53bdf8b5033dba075f3458d6203b18268718e88",
+      "price_payload_sha256": "b7f33720696b51fc36d1d7a86758d998dec2f4624c079c4475c9f9c997f6c117",
+      "payment_link_payload_sha256": "48e3bd4eaee77d7fd5fb94209bf989a1ab90853a5e701606bb1f140e8675f7d9",
+      "product_idempotency_key": "dake-live-product-v1-dake_pdf_crop-ee6068a4a4cb",
+      "price_idempotency_key": "dake-live-price-v1-dake_pdf_crop-b7f33720696b",
+      "payment_link_idempotency_key": "dake-live-link-v1-dake_pdf_crop-48e3bd4eaee7",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "dake_pdf_lookhere",
+      "type": "app",
+      "title": "DakePDFここ見て",
+      "price": 500,
+      "currency": "jpy",
+      "category": "PDF",
+      "source_original": "01_apps/DAKE_PDF_LookHere/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8448187",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_LookHere_v1.0.0",
+      "product_name": "DakePDFここ見て",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "DakePDFここ見て",
+        "description": "PDFに赤い丸と矢印を付けます。 ・PDF注目箇所マークアプリ ・赤い丸・矢印に対応 ・元PDFとは別名で保存 ・Windows向けexe 実務の流れを、 少し静かにするための道具です。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "dake_pdf_lookhere",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_PDF_LookHere/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_pdf_lookhere",
+          "booth_url": "https://peakheadz.booth.pm/items/8448187",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_LookHere_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 500,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_pdf_lookhere"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_pdf_lookhere",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_PDF_LookHere/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_pdf_lookhere",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_PDF_LookHere/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "c9f3632637fae586dceda0fd2088c56fa6e1385347ea6e65272b36cd05f5bf87",
+      "price_payload_sha256": "230c4df1bbfb95d8c8d675984a655683cbe425b4b7397d9eb535b4bf9e41a381",
+      "payment_link_payload_sha256": "284b62182dfe8028b376d63290f2680bde6eecbb72a2fcc16400c55b233ae18e",
+      "product_idempotency_key": "dake-live-product-v1-dake_pdf_lookhere-c9f3632637fa",
+      "price_idempotency_key": "dake-live-price-v1-dake_pdf_lookhere-230c4df1bbfb",
+      "payment_link_idempotency_key": "dake-live-link-v1-dake_pdf_lookhere-284b62182dfe",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "dake_pdf_marker",
+      "type": "app",
+      "title": "DakePDFマーカー",
+      "price": 500,
+      "currency": "jpy",
+      "category": "PDF",
+      "source_original": "01_apps/DAKE_PDF_Marker/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8448193",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Marker_v1.0.0",
+      "product_name": "DakePDFマーカー",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "DakePDFマーカー",
+        "description": "PDFにピンクの半透明マーカーを付けます。 ・PDFマーカーアプリ ・半透明ピンクマーカーに対応 ・PDFへ注記して保存 ・Windows向けexe 実務の流れを、 少し静かにするための道具です。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "dake_pdf_marker",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_PDF_Marker/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_pdf_marker",
+          "booth_url": "https://peakheadz.booth.pm/items/8448193",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Marker_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 500,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_pdf_marker"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_pdf_marker",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_PDF_Marker/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_pdf_marker",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_PDF_Marker/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "2cd120f8fe0424e38615abf5f38f23dfbe067f86ddc657ba02d24fa69c3ed7b4",
+      "price_payload_sha256": "7f53d58f579dea627dd5cae715f8ef2648f372f6d8375c58a3684100e8942d60",
+      "payment_link_payload_sha256": "1535c773bfc84fbf65bacffaf2e807a4670ebf63ae52e3a7a33af4e9f3be4ad2",
+      "product_idempotency_key": "dake-live-product-v1-dake_pdf_marker-2cd120f8fe04",
+      "price_idempotency_key": "dake-live-price-v1-dake_pdf_marker-7f53d58f579d",
+      "payment_link_idempotency_key": "dake-live-link-v1-dake_pdf_marker-1535c773bfc8",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "dake_pdf_merge_mini",
+      "type": "app",
+      "title": "DakePDF結合mini",
+      "price": 500,
+      "currency": "jpy",
+      "category": "PDF",
+      "source_original": "01_apps/DAKE_PDF_Merge_Mini/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8448200",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Merge_Mini_v1.0.0",
+      "product_name": "DakePDF結合mini",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "DakePDF結合mini",
+        "description": "最大5ファイルまでのPDFを並べ替えて結合します。 ・PDF結合miniアプリ ・最大5ファイルまで対応 ・サムネイル並べ替え対応 ・Windows向けexe 実務の流れを、 少し静かにするための道具です。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "dake_pdf_merge_mini",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_PDF_Merge_Mini/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_pdf_merge_mini",
+          "booth_url": "https://peakheadz.booth.pm/items/8448200",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Merge_Mini_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 500,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_pdf_merge_mini"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_pdf_merge_mini",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_PDF_Merge_Mini/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_pdf_merge_mini",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_PDF_Merge_Mini/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "627e9723c78a6a5b47ae03175f088850df24b7cc130e9aed0f5e69725cc2c0da",
+      "price_payload_sha256": "30dc5a3321733d425e7fc26fa6aa7cbd2be3d2054f107f73bb2c638ffe8f94dc",
+      "payment_link_payload_sha256": "37d9ca9a540185c785482c647054a861cdc9a524b78928f54fad9433099ae71f",
+      "product_idempotency_key": "dake-live-product-v1-dake_pdf_merge_mini-627e9723c78a",
+      "price_idempotency_key": "dake-live-price-v1-dake_pdf_merge_mini-30dc5a332173",
+      "payment_link_idempotency_key": "dake-live-link-v1-dake_pdf_merge_mini-37d9ca9a5401",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "dake_pdf_rename",
+      "type": "app",
+      "title": "DakePDFファイル名整理",
+      "price": 500,
+      "currency": "jpy",
+      "category": "PDF",
+      "source_original": "01_apps/DAKE_PDF_Rename/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8448204",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Rename_v1.0.0",
+      "product_name": "DakePDFファイル名整理",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "DakePDFファイル名整理",
+        "description": "PDF名の前後に任意テキストを追加します。 ・PDFファイル名整理アプリ ・前後へのテキスト追加に対応 ・複数PDFをまとめて処理 ・Windows向けexe 実務の流れを、 少し静かにするための道具です。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "dake_pdf_rename",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_PDF_Rename/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_pdf_rename",
+          "booth_url": "https://peakheadz.booth.pm/items/8448204",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Rename_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 500,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_pdf_rename"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_pdf_rename",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_PDF_Rename/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_pdf_rename",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_PDF_Rename/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "899e58b4da46ad03815a25de8b36896e631abb87980718d5397f5827c7698e81",
+      "price_payload_sha256": "6bb2b6a7fe9cc13ff2e4a91e426318663dac70d81869644ee1ad8278a4846b80",
+      "payment_link_payload_sha256": "532a87632735cb15f44e0498b7d7dfb230641f3ae9841ce1b9576cce42afe0fb",
+      "product_idempotency_key": "dake-live-product-v1-dake_pdf_rename-899e58b4da46",
+      "price_idempotency_key": "dake-live-price-v1-dake_pdf_rename-6bb2b6a7fe9c",
+      "payment_link_idempotency_key": "dake-live-link-v1-dake_pdf_rename-532a87632735",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "dake_pdf_reorder",
+      "type": "app",
+      "title": "DakePDFページ並べ替え",
+      "price": 500,
+      "currency": "jpy",
+      "category": "PDF",
+      "source_original": "01_apps/DAKE_PDF_Reorder/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8448206",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Reorder_v1.0.0",
+      "product_name": "DakePDFページ並べ替え",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "DakePDFページ並べ替え",
+        "description": "PDFページ順をドラッグで並べ替えます。 ・PDFページ並べ替えアプリ ・サムネイルのドラッグ操作に対応 ・別名PDFとして保存 ・Windows向けexe 実務の流れを、 少し静かにするための道具です。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "dake_pdf_reorder",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_PDF_Reorder/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_pdf_reorder",
+          "booth_url": "https://peakheadz.booth.pm/items/8448206",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Reorder_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 500,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_pdf_reorder"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_pdf_reorder",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_PDF_Reorder/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_pdf_reorder",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_PDF_Reorder/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "742c7a6728d0920a622539e08f9ca34343d80cad891943c3cb3f3e1926bec81f",
+      "price_payload_sha256": "e929f8ce8d48ae81a0be1f01a25ebcffe78314d75601462d3b2ed9c7c01c24a4",
+      "payment_link_payload_sha256": "66e99771c7c6c1771896475264bb32cbe197748cc54675d66049a3e55a369158",
+      "product_idempotency_key": "dake-live-product-v1-dake_pdf_reorder-742c7a6728d0",
+      "price_idempotency_key": "dake-live-price-v1-dake_pdf_reorder-e929f8ce8d48",
+      "payment_link_idempotency_key": "dake-live-link-v1-dake_pdf_reorder-66e99771c7c6",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "dake_pdf_splitone",
+      "type": "app",
+      "title": "DakePDF分割One",
+      "price": 500,
+      "currency": "jpy",
+      "category": "PDF",
+      "source_original": "01_apps/DAKE_PDF_SplitOne/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8448207",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitOne_v1.0.0",
+      "product_name": "DakePDF分割One",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "DakePDF分割One",
+        "description": "PDFを全ページ1枚ずつに自動分割します。 ・PDF全ページ分割アプリ ・1ページずつ自動保存 ・ドラッグ＆ドロップ対応 ・Windows向けexe 実務の流れを、 少し静かにするための道具です。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "dake_pdf_splitone",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_PDF_SplitOne/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_pdf_splitone",
+          "booth_url": "https://peakheadz.booth.pm/items/8448207",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitOne_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 500,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_pdf_splitone"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_pdf_splitone",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_PDF_SplitOne/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_pdf_splitone",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_PDF_SplitOne/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "35bd4269728223be42e974e951f2c10831ccbc37dcdc854a0b4a2fd0dbd6b535",
+      "price_payload_sha256": "abd2ffbb77165b5e6e66dd060b40d981f01fbb7aa0a43bc484a9d0e5498176f2",
+      "payment_link_payload_sha256": "ec04cfc94ca6f02d9b7e109ba7c73c8023888a983182a38fe91f18082d69eb61",
+      "product_idempotency_key": "dake-live-product-v1-dake_pdf_splitone-35bd42697282",
+      "price_idempotency_key": "dake-live-price-v1-dake_pdf_splitone-abd2ffbb7716",
+      "payment_link_idempotency_key": "dake-live-link-v1-dake_pdf_splitone-ec04cfc94ca6",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "dake_pdf_splitselect",
+      "type": "app",
+      "title": "DakePDF分割Select",
+      "price": 500,
+      "currency": "jpy",
+      "category": "PDF",
+      "source_original": "01_apps/DAKE_PDF_SplitSelect/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8448213",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitSelect_v1.0.0",
+      "product_name": "DakePDF分割Select",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "DakePDF分割Select",
+        "description": "PDFから必要ページだけを選んで保存します。 ・PDFページ選択保存アプリ ・サムネイル選択に対応 ・範囲入力にも対応 ・Windows向けexe 実務の流れを、 少し静かにするための道具です。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "dake_pdf_splitselect",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_PDF_SplitSelect/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_pdf_splitselect",
+          "booth_url": "https://peakheadz.booth.pm/items/8448213",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitSelect_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 500,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_pdf_splitselect"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_pdf_splitselect",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_PDF_SplitSelect/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_pdf_splitselect",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_PDF_SplitSelect/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "41370f9033d1a18ebde4751664462b041824023c5653aee68cf3b52a3389aca3",
+      "price_payload_sha256": "008a6a6db11b6c379c598b01a1fe3c7608d8f13b47b3ab2d5cb2f942f3bc5cb5",
+      "payment_link_payload_sha256": "7f87ffbedae5ae6c91a3eb13e5e49becb8823f1aae6d6d07334868762d160b84",
+      "product_idempotency_key": "dake-live-product-v1-dake_pdf_splitselect-41370f9033d1",
+      "price_idempotency_key": "dake-live-price-v1-dake_pdf_splitselect-008a6a6db11b",
+      "payment_link_idempotency_key": "dake-live-link-v1-dake_pdf_splitselect-7f87ffbedae5",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "dake_pdf_toimages",
+      "type": "app",
+      "title": "DakePDFto画像",
+      "price": 500,
+      "currency": "jpy",
+      "category": "PDF",
+      "source_original": "01_apps/DAKE_PDF_ToImages/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8448216",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_ToImages_v1.0.0",
+      "product_name": "DakePDFto画像",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "DakePDFto画像",
+        "description": "PDFの各ページをPNG画像に変換します。 ・PDF→画像変換アプリ ・ページごとのPNG保存に対応 ・複数PDFの追加に対応 ・Windows向けexe 実務の流れを、 少し静かにするための道具です。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "dake_pdf_toimages",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_PDF_ToImages/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_pdf_toimages",
+          "booth_url": "https://peakheadz.booth.pm/items/8448216",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_ToImages_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 500,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_pdf_toimages"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_pdf_toimages",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_PDF_ToImages/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_pdf_toimages",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_PDF_ToImages/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "5690d497493cf95db74477848e02cf4c72891d7aaa53765f35c049d07036ed87",
+      "price_payload_sha256": "49a823f5e37970f0a7b57b530f062792c1c4e9b3494507ad8daa8f2f3b31cb13",
+      "payment_link_payload_sha256": "ab326d1fd516de06ca8a446eb1dbe04a4db3f43fa8e9472037e61eea85217ccb",
+      "product_idempotency_key": "dake-live-product-v1-dake_pdf_toimages-5690d497493c",
+      "price_idempotency_key": "dake-live-price-v1-dake_pdf_toimages-49a823f5e379",
+      "payment_link_idempotency_key": "dake-live-link-v1-dake_pdf_toimages-ab326d1fd516",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "dake_pdf_viewer",
+      "type": "app",
+      "title": "DakePDF見る",
+      "price": 500,
+      "currency": "jpy",
+      "category": "PDF",
+      "source_original": "01_apps/DAKE_PDF_Viewer/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8448219",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Viewer_v1.0.0",
+      "product_name": "DakePDF見る",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "DakePDF見る",
+        "description": "PDFを探してすぐ確認する軽量ビューワーです。 ・軽量PDFビューワー ・フォルダ内PDF一覧に対応 ・ページ表示・拡大縮小に対応 ・Windows向けexe 実務の流れを、 少し静かにするための道具です。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "dake_pdf_viewer",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_PDF_Viewer/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_pdf_viewer",
+          "booth_url": "https://peakheadz.booth.pm/items/8448219",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Viewer_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 500,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_pdf_viewer"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_pdf_viewer",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_PDF_Viewer/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_pdf_viewer",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_PDF_Viewer/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "a51f1781c40f77bea4b713f29cdd30daf2a2e946ab746c3314844392eb1aafb2",
+      "price_payload_sha256": "df00cb705ada38076e14e9f6c9fafda85c2f9bdda51a2ee62129e82927d51091",
+      "payment_link_payload_sha256": "f750e6e61b9b52ecbe9cfc3ddfa333323e40fb36a24f38bb86f06fae0645a2a8",
+      "product_idempotency_key": "dake-live-product-v1-dake_pdf_viewer-a51f1781c40f",
+      "price_idempotency_key": "dake-live-price-v1-dake_pdf_viewer-df00cb705ada",
+      "payment_link_idempotency_key": "dake-live-link-v1-dake_pdf_viewer-f750e6e61b9b",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "dake_price_apportionment",
+      "type": "app",
+      "title": "Dake価格按分",
+      "price": 300,
+      "currency": "jpy",
+      "category": "計算",
+      "source_original": "01_apps/DAKE_Price_Apportionment/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8448222",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Price_Apportionment_v1.0.0",
+      "product_name": "Dake価格按分",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "Dake価格按分",
+        "description": "売買価格を土地・建物評価額比率で参考按分します。 ・不動産価格按分アプリ ・土地・建物評価額比率で計算 ・結果コピー・印刷用表示に対応 ・Windows向けexe 実務の流れを、 少し静かにするための道具です。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "dake_price_apportionment",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Price_Apportionment/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_price_apportionment",
+          "booth_url": "https://peakheadz.booth.pm/items/8448222",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Price_Apportionment_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 300,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_price_apportionment"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_price_apportionment",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_Price_Apportionment/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_price_apportionment",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_Price_Apportionment/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "6d3fbbf5106acb830566e6643ec1cad1796c0027ea58e2503ca51e6c6ef69177",
+      "price_payload_sha256": "e6fbece74f7b7ab95185c4bdda8c514678274d8a9b49ec920d0a178644d2e2d6",
+      "payment_link_payload_sha256": "6b29dabada1240e4b20dc0e5ef03be08131d4bac8e9675a15a11aa1d33bda2a6",
+      "product_idempotency_key": "dake-live-product-v1-dake_price_apportionment-6d3fbbf5106a",
+      "price_idempotency_key": "dake-live-price-v1-dake_price_apportionment-e6fbece74f7b",
+      "payment_link_idempotency_key": "dake-live-link-v1-dake_price_apportionment-6b29dabada12",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "dake_price_fixedtax",
+      "type": "app",
+      "title": "Dake固都税計算",
+      "price": 300,
+      "currency": "jpy",
+      "category": "計算",
+      "source_original": "01_apps/DAKE_Price_FixedTax/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8448259",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Price_FixedTax_v1.0.0",
+      "product_name": "Dake固都税計算",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "Dake固都税計算",
+        "description": "固定資産税・都市計画税の概算年税額を計算します。 ・固都税概算計算アプリ ・土地・建物評価額入力に対応 ・税率変更と住宅用地区分に対応 ・Windows向けexe 実務の流れを、 少し静かにするための道具です。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "dake_price_fixedtax",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Price_FixedTax/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_price_fixedtax",
+          "booth_url": "https://peakheadz.booth.pm/items/8448259",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Price_FixedTax_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 300,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_price_fixedtax"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_price_fixedtax",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_Price_FixedTax/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_price_fixedtax",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_Price_FixedTax/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "c4b910e7dea45174d284715adace594d5f4cc1013280d93f8a0a2664454492c7",
+      "price_payload_sha256": "6929d3cd5b9760ee1e1dce0be3a3f405ce6b9f31393855468ad222bb897762c3",
+      "payment_link_payload_sha256": "09fd84626054f0c21ed8dfcae4cbdc1a5b3cb1707e07bd506831af9cf26c9c54",
+      "product_idempotency_key": "dake-live-product-v1-dake_price_fixedtax-c4b910e7dea4",
+      "price_idempotency_key": "dake-live-price-v1-dake_price_fixedtax-6929d3cd5b97",
+      "payment_link_idempotency_key": "dake-live-link-v1-dake_price_fixedtax-09fd84626054",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "dake_reform_progress",
+      "type": "app",
+      "title": "リフォーム進捗管理",
+      "price": 500,
+      "currency": "jpy",
+      "category": "進捗管理",
+      "source_original": "01_apps/DAKE_Reform_Progress/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8448260",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Reform_Progress_v1.0.0",
+      "product_name": "リフォーム進捗管理",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "リフォーム進捗管理",
+        "description": "工程の進捗に合わせて、A4縦の最新版カレンダーPDFを作成します。 ・Dakeリフォーム進捗管理 ・工程の進捗に合わせて最新版PDFを作成 ・A4縦カレンダー風PDF出力 ・ドラッグ操作と日付入力に対応 ・Windows向けexe 実務の流れを、 少し静かにするための道具です。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "dake_reform_progress",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Reform_Progress/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_reform_progress",
+          "booth_url": "https://peakheadz.booth.pm/items/8448260",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Reform_Progress_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 500,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_reform_progress"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_reform_progress",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_Reform_Progress/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_reform_progress",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_Reform_Progress/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "ff671c213fdd4870b215a14d7682c432cb3d42f347dcea466623f94aaff22a87",
+      "price_payload_sha256": "ed52fdabbabc9adfdef40b1adcab53c9b16c4651a469fad627bc00d334bd7715",
+      "payment_link_payload_sha256": "3ec072d97c5fa3ef94e858a1273708b88a551bd63844448bd49fb17fbe071a70",
+      "product_idempotency_key": "dake-live-product-v1-dake_reform_progress-ff671c213fdd",
+      "price_idempotency_key": "dake-live-price-v1-dake_reform_progress-ed52fdabbabc",
+      "payment_link_idempotency_key": "dake-live-link-v1-dake_reform_progress-3ec072d97c5f",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "dake_screen_webp",
+      "type": "app",
+      "title": "DakeScreen_WebP",
+      "price": 300,
+      "currency": "jpy",
+      "category": "スクリーンショット",
+      "source_original": "01_apps/DAKE_Screen_WebP/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8448261",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Screen_WebP_v1.0.0",
+      "product_name": "DakeScreen_WebP",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "DakeScreen_WebP",
+        "description": "選んだウインドウをWebPで保存します。 ・ウインドウスクショWebP保存アプリ ・横幅1200px以内で保存 ・ショートカット操作に対応 ・Windows向けexe 実務の流れを、 少し静かにするための道具です。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "dake_screen_webp",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Screen_WebP/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_screen_webp",
+          "booth_url": "https://peakheadz.booth.pm/items/8448261",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Screen_WebP_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 300,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_screen_webp"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_screen_webp",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_Screen_WebP/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_screen_webp",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_Screen_WebP/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "a2cf44cca60ec52dac180d13ac251a073c7782d04fa5a92cf3979d88b040f6e7",
+      "price_payload_sha256": "974197caa983a05f3a6e3ef8f7acd5dba0f2e0b9f4012a2c7c79dbd351e86787",
+      "payment_link_payload_sha256": "937b0879eadb288a57402c4f7f1fb2fb8287083450173b429de55e0be7067d13",
+      "product_idempotency_key": "dake-live-product-v1-dake_screen_webp-a2cf44cca60e",
+      "price_idempotency_key": "dake-live-price-v1-dake_screen_webp-974197caa983",
+      "payment_link_idempotency_key": "dake-live-link-v1-dake_screen_webp-937b0879eadb",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "dake_screenshot_print",
+      "type": "app",
+      "title": "Dakeスクショ印刷",
+      "price": 500,
+      "currency": "jpy",
+      "category": "スクリーンショット",
+      "source_original": "01_apps/DAKE_Screenshot_Print/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8448262",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Screenshot_Print_v1.0.0",
+      "product_name": "Dakeスクショ印刷",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "Dakeスクショ印刷",
+        "description": "クリップボードのスクリーンショットをA4縦で印刷します。 ・スクリーンショット印刷アプリ ・クリップボード画像の取得に対応 ・A4縦プレビュー付き ・Windows向けexe 実務の流れを、 少し静かにするための道具です。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "dake_screenshot_print",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Screenshot_Print/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_screenshot_print",
+          "booth_url": "https://peakheadz.booth.pm/items/8448262",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Screenshot_Print_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 500,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_screenshot_print"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_screenshot_print",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_Screenshot_Print/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_screenshot_print",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_Screenshot_Print/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "30a4b0463068e815211391052ed04906992ae320bb9f74a421302727ffcb5927",
+      "price_payload_sha256": "873006c1a76d606aab503a6b5c1bbcdc9a30a40389c0f4c1d4c1b5344cd35ed3",
+      "payment_link_payload_sha256": "85c20ad39d7abf5797b0517fc87abde4122f8ece9e89b943c567e93aa91c7e60",
+      "product_idempotency_key": "dake-live-product-v1-dake_screenshot_print-30a4b0463068",
+      "price_idempotency_key": "dake-live-price-v1-dake_screenshot_print-873006c1a76d",
+      "payment_link_idempotency_key": "dake-live-link-v1-dake_screenshot_print-85c20ad39d7a",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "dake_two_person_memo",
+      "type": "app",
+      "title": "Dake二人メモ",
+      "price": 300,
+      "currency": "jpy",
+      "category": "メモ",
+      "source_original": "01_apps/DAKE_TwoPerson_Memo/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8448279",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_TwoPerson_Memo_v1.0.0",
+      "product_name": "Dake二人メモ",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "Dake二人メモ",
+        "description": "2人で使う、ぶつからない共同メモ。 ・2人で使う、ぶつからない共同メモです。 ・左右それぞれのメモブロックを追加できます。 ・相手の本文は編集せず、確認だけを残せます。 ・同じLAN内で簡易同期できます。 ・Windows向けexeです。 実務の流れを、 少し静かにするための道具です。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "dake_two_person_memo",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_TwoPerson_Memo/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_two_person_memo",
+          "booth_url": "https://peakheadz.booth.pm/items/8448279",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_TwoPerson_Memo_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 300,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_two_person_memo"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_two_person_memo",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_TwoPerson_Memo/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_two_person_memo",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_TwoPerson_Memo/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "f0e3ff793eed1b0bb83b40410172baf7d2661e8e8f208e158cd653e2b3839c7e",
+      "price_payload_sha256": "c8c46a2ace31b2c77d75dbb27400423f042e252e29e3df5f4ba0caec45f53871",
+      "payment_link_payload_sha256": "66c8caca69971eb257f372de9f2e900d25b9d42c1c1a0c23c8ab975588baab16",
+      "product_idempotency_key": "dake-live-product-v1-dake_two_person_memo-f0e3ff793eed",
+      "price_idempotency_key": "dake-live-price-v1-dake_two_person_memo-c8c46a2ace31",
+      "payment_link_idempotency_key": "dake-live-link-v1-dake_two_person_memo-66c8caca6997",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "dake_work_calendar",
+      "type": "app",
+      "title": "Dake工程カレンダー",
+      "price": 500,
+      "currency": "jpy",
+      "category": "作業補助",
+      "source_original": "01_apps/DAKE_Work_Calendar/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8448282",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Work_Calendar_v1.0.0",
+      "product_name": "Dake工程カレンダー",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "Dake工程カレンダー",
+        "description": "指定期間の日付枠をA4縦PDFに並べます。 ・工程カレンダーPDF作成アプリ ・指定期間の日付枠に対応 ・A4縦PDF出力 ・Windows向けexe 実務の流れを、 少し静かにするための道具です。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "dake_work_calendar",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Work_Calendar/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_work_calendar",
+          "booth_url": "https://peakheadz.booth.pm/items/8448282",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Work_Calendar_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 500,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_work_calendar"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_work_calendar",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_Work_Calendar/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_work_calendar",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_Work_Calendar/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "0ba60606d633b3f2d6feb2d4a735bb59bfa0f59edbeef37fcdd7abb6a6255862",
+      "price_payload_sha256": "fdf5fe4828ea20f49a81fda3d46a574abc260d3d68fb5bcfbbbccc7a4c645ab6",
+      "payment_link_payload_sha256": "36b51b19c1846249c94e08f610cc7a81c9b1c39af17fc1e2e75b92b744fbdb8b",
+      "product_idempotency_key": "dake-live-product-v1-dake_work_calendar-0ba60606d633",
+      "price_idempotency_key": "dake-live-price-v1-dake_work_calendar-fdf5fe4828ea",
+      "payment_link_idempotency_key": "dake-live-link-v1-dake_work_calendar-36b51b19c184",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "dake_year_age",
+      "type": "app",
+      "title": "Dake築年数",
+      "price": 300,
+      "currency": "jpy",
+      "category": "年数・日付",
+      "source_original": "01_apps/DAKE_Year_Age/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8448286",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Year_Age_v1.0.0",
+      "product_name": "Dake築年数",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "Dake築年数",
+        "description": "西暦・和暦から築年数を確認します。 ・築年数確認アプリ ・西暦・和暦入力に対応 ・入力すると即時計算 ・Windows向けexe 実務の流れを、 少し静かにするための道具です。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "dake_year_age",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Year_Age/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_year_age",
+          "booth_url": "https://peakheadz.booth.pm/items/8448286",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Year_Age_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 300,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_year_age"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_year_age",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_Year_Age/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_year_age",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_Year_Age/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "024da3767b86fdc7c6126fecf73c9e38e09f0bb8a76eb3a01efec28ce6f14b99",
+      "price_payload_sha256": "d4366e43bdd30febef88e33a94b799b64c014a36821816ae70befc45117baf8a",
+      "payment_link_payload_sha256": "ee8679aeb701add426ccfc9d715d3184689fa8a5091b12e081530be75cb81856",
+      "product_idempotency_key": "dake-live-product-v1-dake_year_age-024da3767b86",
+      "price_idempotency_key": "dake-live-price-v1-dake_year_age-d4366e43bdd3",
+      "payment_link_idempotency_key": "dake-live-link-v1-dake_year_age-ee8679aeb701",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "dake_year_notice",
+      "type": "app",
+      "title": "Dake今年の注意点",
+      "price": 300,
+      "currency": "jpy",
+      "category": "年数・日付",
+      "source_original": "01_apps/DAKE_Year_Notice/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8448289",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Year_Notice_v1.0.0",
+      "product_name": "Dake今年の注意点",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10202003",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "no",
+      "product_payload": {
+        "name": "Dake今年の注意点",
+        "description": "閏年と固定資産税評価替え年を確認します。 ・今年の注意点確認アプリ ・閏年判定に対応 ・固定資産税評価替え年を表示 ・Windows向けexe 実務の流れを、 少し静かにするための道具です。",
+        "active": true,
+        "tax_code": "txcd_10202003",
+        "metadata": {
+          "dake_item_id": "dake_year_notice",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Year_Notice/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=dake_year_notice",
+          "booth_url": "https://peakheadz.booth.pm/items/8448289",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Year_Notice_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 300,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "dake_year_notice"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "dake_year_notice",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_Year_Notice/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "dake_year_notice",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_Year_Notice/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "540475f58a810fbcb02e17c8b36449f3105fcdd07d0c3c898633e1911d01b9d6",
+      "price_payload_sha256": "693cd8e9ad891dca9ab5c5a8e3ee0ecb9f41ffd78bc327146bc8712eb20eb1a1",
+      "payment_link_payload_sha256": "5e6f620d19c7a331b9793b47e39aeb74292777b6b1441c47abe27d9d05ffde64",
+      "product_idempotency_key": "dake-live-product-v1-dake_year_notice-540475f58a81",
+      "price_idempotency_key": "dake-live-price-v1-dake_year_notice-693cd8e9ad89",
+      "payment_link_idempotency_key": "dake-live-link-v1-dake_year_notice-5e6f620d19c7",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "game_alien_road",
+      "type": "app",
+      "title": "DakeAlien Road",
+      "price": 300,
+      "currency": "jpy",
+      "category": "ゲーム",
+      "source_original": "01_apps/DAKE_Game_Alien_Road/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8449213",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Game_Alien_Road_v1.0.0",
+      "product_name": "DakeAlien Road",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10201000",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "yes",
+      "product_payload": {
+        "name": "DakeAlien Road",
+        "description": "左右移動だけで遊べる、LCD携帯ゲーム風ミニゲーム。 ・左右移動だけで遊べるレトロ風ミニゲーム ・5レーンの回避アクション ・ベストスコア保存 ・Windows向けexe 実務の流れを、 少し静かにするための道具です。",
+        "active": true,
+        "tax_code": "txcd_10201000",
+        "metadata": {
+          "dake_item_id": "game_alien_road",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Game_Alien_Road/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=game_alien_road",
+          "booth_url": "https://peakheadz.booth.pm/items/8449213",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Game_Alien_Road_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 300,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "game_alien_road"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "game_alien_road",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_Game_Alien_Road/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "game_alien_road",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_Game_Alien_Road/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "fc8ee3fef5aa95588234f7897f4ada3894b89a2e69a378cdeef778f71f5f92f1",
+      "price_payload_sha256": "b7d81248e5809b6b59f3c9104521226988f0968c2a4dbba0a83f5df9e8758d65",
+      "payment_link_payload_sha256": "d15907e0710c3f7fc605597fc550747b4497206f273f4b31314fd7dc5e88dfc5",
+      "product_idempotency_key": "dake-live-product-v1-game_alien_road-fc8ee3fef5aa",
+      "price_idempotency_key": "dake-live-price-v1-game_alien_road-b7d81248e580",
+      "payment_link_idempotency_key": "dake-live-link-v1-game_alien_road-d15907e0710c",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    },
+    {
+      "id": "game_diver_catch",
+      "type": "app",
+      "title": "Dake潜って捕る",
+      "price": 300,
+      "currency": "jpy",
+      "category": "ゲーム",
+      "source_original": "01_apps/DAKE_Game_Diver_Catch/ORIGINAL.md",
+      "booth_url": "https://peakheadz.booth.pm/items/8449218",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Game_Diver_Catch_v1.0.0",
+      "product_name": "Dake潜って捕る",
+      "description_check": "ok",
+      "metadata_ready": "yes",
+      "tax_code_candidate": "txcd_10201000",
+      "tax_code_source": "rollout_review",
+      "tax_candidate_review": "operator_confirmation_required",
+      "tax_code_review_required": "yes",
+      "product_payload": {
+        "name": "Dake潜って捕る",
+        "description": "潜って捕って、船へ戻るレトロ風ミニゲーム。 ・潜って捕って、船へ戻るレトロ風ミニゲーム ・NORMAL / TIMELESS モード ・ベストスコア保存 ・Windows向けexe 実務の流れを、 少し静かにするための道具です。",
+        "active": true,
+        "tax_code": "txcd_10201000",
+        "metadata": {
+          "dake_item_id": "game_diver_catch",
+          "dake_type": "app",
+          "source_repo": "DAKE_series",
+          "source_original": "01_apps/DAKE_Game_Diver_Catch/ORIGINAL.md",
+          "store_url": "https://store.dakeapp.com/product/?id=game_diver_catch",
+          "booth_url": "https://peakheadz.booth.pm/items/8449218",
+          "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Game_Diver_Catch_v1.0.0"
+        }
+      },
+      "price_payload": {
+        "currency": "jpy",
+        "unit_amount": 300,
+        "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+        "metadata": {
+          "dake_item_id": "game_diver_catch"
+        }
+      },
+      "payment_link_payload": {
+        "line_items": [
+          {
+            "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+            "quantity": 1
+          }
+        ],
+        "metadata": {
+          "dake_item_id": "game_diver_catch",
+          "dake_type": "app",
+          "source_original": "01_apps/DAKE_Game_Diver_Catch/ORIGINAL.md"
+        },
+        "payment_intent_data": {
+          "metadata": {
+            "dake_item_id": "game_diver_catch",
+            "dake_type": "app",
+            "source_original": "01_apps/DAKE_Game_Diver_Catch/ORIGINAL.md"
+          }
+        }
+      },
+      "product_payload_sha256": "a888896a83efbde7c53e18433d0d2f9d2b3ff8f1c6fb3210c2fb8d674ca2dff6",
+      "price_payload_sha256": "05bf81feba456ae01f9f25ab16f791811c33c1a5672f802ab8a0c02a19d1cb6a",
+      "payment_link_payload_sha256": "fa80dc17c651ecad4a0e488a33281c3fdc6a2067957923a6e4dab580daba60c4",
+      "product_idempotency_key": "dake-live-product-v1-game_diver_catch-a888896a83ef",
+      "price_idempotency_key": "dake-live-price-v1-game_diver_catch-05bf81feba45",
+      "payment_link_idempotency_key": "dake-live-link-v1-game_diver_catch-fa80dc17c651",
+      "live_dry_run_ready": "yes",
+      "notes": "ok"
+    }
+  ],
+  "excluded": [
+    {
+      "id": "video_shorts_cut",
+      "title": "Dakeショート切り出し",
+      "review_result": "hold",
+      "creation_method": "hold",
+      "reason": "not create/api_candidate/price_ok/metadata_ready"
+    },
+    {
+      "id": "DAKE_Pack_Document",
+      "title": "DAKE 書類整理パック",
+      "review_result": "manual",
+      "creation_method": "manual_dashboard",
+      "reason": "not create/api_candidate/price_ok/metadata_ready"
+    },
+    {
+      "id": "DAKE_Pack_Memo",
+      "title": "DAKE メモと記録パック",
+      "review_result": "manual",
+      "creation_method": "manual_dashboard",
+      "reason": "not create/api_candidate/price_ok/metadata_ready"
+    }
+  ],
+  "errors": [],
+  "safety": [
+    "DRY RUN ONLY.",
+    "NO STRIPE API CALL.",
+    "NO LIVE OBJECT IS CREATED.",
+    "No Stripe Secret Key is read.",
+    "No Product, Price, or Payment Link is created.",
+    "No ORIGINAL.md, generated JSON, dake-store-site, or Store production update is performed."
+  ],
+  "duplicate_strategy_for_next_phase": [
+    "Retrieve live Product list.",
+    "Match by metadata.dake_item_id.",
+    "If zero matches, create a new live object candidate.",
+    "If one match, reuse existing object or stop for operator confirmation.",
+    "If two or more matches, stop as an abnormal state.",
+    "Use the idempotency key on each POST.",
+    "Save progress incrementally."
+  ]
+}
