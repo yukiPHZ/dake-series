@@ -40,7 +40,20 @@ def read_json(path: Path) -> dict[str, Any]:
 
 def write_json(path: Path, data: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    temp_path = path.with_name(f"{path.name}.tmp")
+    with temp_path.open("w", encoding="utf-8", newline="\n") as handle:
+        handle.write(json.dumps(data, ensure_ascii=False, indent=2) + "\n")
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temp_path, path)
+
+
+def file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def canonical_json(value: Any) -> str:
@@ -118,6 +131,8 @@ def validate_payload(payload: dict[str, Any]) -> list[str]:
             if not isinstance(payload_part, dict):
                 errors.append(f"{label}: {payload_key} must be an object")
                 continue
+            if "idempotency_key" in payload_part:
+                errors.append(f"{label}: {payload_key} must not contain idempotency_key")
             actual_hash = sha256_payload(payload_part)
             expected_hash = item.get(hash_key)
             if not expected_hash:
@@ -230,9 +245,18 @@ def import_stripe_module() -> Any:
     return stripe
 
 
-def initial_state(items: list[dict[str, Any]]) -> dict[str, Any]:
+def relative_to_root(path: Path) -> str:
+    try:
+        return path.resolve().relative_to(ROOT).as_posix()
+    except ValueError:
+        return str(path)
+
+
+def initial_state(items: list[dict[str, Any]], payload_file: Path, payload_hash: str) -> dict[str, Any]:
     return {
         "mode": "live",
+        "input_payload_file": relative_to_root(payload_file),
+        "input_payload_file_sha256": payload_hash,
         "started_at": now_jst(),
         "updated_at": now_jst(),
         "expected_count": EXPECTED_COUNT,
@@ -257,19 +281,39 @@ def initial_state(items: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def load_or_create_state(path: Path, items: list[dict[str, Any]], resume: bool) -> dict[str, Any]:
+def load_or_create_state(
+    path: Path,
+    items: list[dict[str, Any]],
+    resume: bool,
+    payload_file: Path,
+    payload_hash: str,
+) -> dict[str, Any]:
     if path.exists():
         if not resume:
             raise SafetyStop(f"state file exists; pass --resume to inspect it: {path}")
         state = read_json(path)
         if state.get("status") == "completed":
             raise SafetyStop("state is already completed; refusing to run")
+        if state.get("input_payload_file_sha256") != payload_hash:
+            raise SafetyStop("input payload hash differs from the state file; refusing to resume")
+        validate_resume_state(state)
         return state
     if resume:
         raise SafetyStop(f"--resume was passed but state file does not exist: {path}")
-    state = initial_state(items)
+    state = initial_state(items, payload_file, payload_hash)
     write_json(path, state)
     return state
+
+
+def validate_resume_state(state: dict[str, Any]) -> None:
+    manual_statuses = {"product_created", "price_created", "existing_object_detected", "failed"}
+    blocked = [
+        f"{item.get('id')}:{item.get('status')}"
+        for item in state.get("items", [])
+        if item.get("status") in manual_statuses
+    ]
+    if blocked:
+        raise SafetyStop("state requires manual resolution before resume: " + ", ".join(blocked))
 
 
 def save_state(path: Path, state: dict[str, Any], status: str | None = None) -> None:
@@ -288,8 +332,7 @@ def state_item(state: dict[str, Any], item_id: str) -> dict[str, Any]:
 
 def create_with_idempotency(create_func: Callable[..., Any], payload: dict[str, Any], idempotency_key: str) -> dict[str, Any]:
     params = copy.deepcopy(payload)
-    params["idempotency_key"] = idempotency_key
-    return object_to_dict(create_func(**params))
+    return object_to_dict(create_func(**params, idempotency_key=idempotency_key))
 
 
 def find_existing_products(stripe: Any) -> dict[str, list[dict[str, Any]]]:
@@ -331,8 +374,76 @@ def find_payment_links_for_prices(stripe: Any, price_ids: set[str]) -> list[str]
     return found
 
 
+def sanitize_error(exc: BaseException, failed_step: str) -> dict[str, Any]:
+    message = str(exc)
+    if contains_secret_like_value(message):
+        message = "redacted secret-like value"
+    return {
+        "error_type": type(exc).__name__,
+        "safe_message": message[:500],
+        "stripe_request_id": getattr(exc, "request_id", None),
+        "stripe_error_code": getattr(exc, "code", None),
+        "failed_step": failed_step,
+        "occurred_at": now_jst(),
+    }
+
+
+def preflight_existing_objects(
+    stripe: Any,
+    items: list[dict[str, Any]],
+    state: dict[str, Any],
+    state_path: Path,
+    existing_products: dict[str, list[dict[str, Any]]],
+) -> bool:
+    blocked = False
+    for item in items:
+        entry = state_item(state, item["id"])
+        if entry.get("status") == "completed":
+            continue
+        matches = existing_products.get(item["id"], [])
+        if len(matches) == 1:
+            product_id = matches[0].get("id")
+            price_ids = find_prices_for_product(stripe, str(product_id))
+            link_ids = find_payment_links_for_prices(stripe, set(price_ids))
+            entry.update(
+                {
+                    "status": "existing_object_detected",
+                    "existing_product_id": product_id,
+                    "existing_price_ids": price_ids,
+                    "existing_payment_link_ids": link_ids,
+                    "manual_resolution_required": True,
+                    "error": sanitize_error(SafetyStop("existing live Product detected; manual resolution required"), "preflight_existing_products"),
+                }
+            )
+            blocked = True
+        elif len(matches) > 1:
+            entry.update(
+                {
+                    "status": "failed",
+                    "manual_resolution_required": True,
+                    "error": sanitize_error(
+                        SafetyStop("multiple existing live Products with matching metadata.dake_item_id"),
+                        "preflight_existing_products",
+                    ),
+                }
+            )
+            blocked = True
+    if blocked:
+        save_state(state_path, state, "failed")
+        return False
+    return True
+
+
+def contains_placeholder(value: Any) -> bool:
+    return "__PRODUCT_ID_FROM_LIVE_PRODUCT__" in canonical_json(value) or "__PRICE_ID_FROM_LIVE_PRICE__" in canonical_json(value)
+
+
 def write_result_files(result_json: Path, result_csv: Path, result_md: Path, state: dict[str, Any]) -> None:
     completed = [item for item in state["items"] if item.get("status") == "completed"]
+    if len(completed) != EXPECTED_COUNT:
+        raise SafetyStop("live execution result can only be written after all 45 items are completed")
+    if any(item.get("livemode") is not True for item in completed):
+        raise SafetyStop("live execution result can only be written when every item has livemode=true")
     result = {
         "mode": "live",
         "created_at": now_jst(),
@@ -365,7 +476,7 @@ def write_result_files(result_json: Path, result_csv: Path, result_md: Path, sta
                     "price_id": item.get("price_id"),
                     "payment_link_id": item.get("payment_link_id"),
                     "payment_link_url": item.get("payment_link_url"),
-                    "livemode": "true",
+                    "livemode": "true" if item.get("livemode") is True else "false",
                     "status": item.get("status"),
                     "created_at": result["created_at"],
                     "metadata": json.dumps(item.get("metadata") or {}, ensure_ascii=False, sort_keys=True),
@@ -407,59 +518,48 @@ def execute_live(args: argparse.Namespace, payload: dict[str, Any], validation_e
     stripe.api_key = secret_key
 
     items = payload["items"]
-    state = load_or_create_state(args.state_json, items, args.resume)
+    payload_hash = file_sha256(args.payload_json)
+    state = load_or_create_state(args.state_json, items, args.resume, args.payload_json, payload_hash)
     existing_products = find_existing_products(stripe)
+    if not preflight_existing_objects(stripe, items, state, args.state_json, existing_products):
+        return 1
 
     for item in items:
         entry = state_item(state, item["id"])
         if entry.get("status") == "completed":
             continue
-        if entry.get("status") in {"product_created", "price_created"}:
+        if entry.get("status") in {"product_created", "price_created", "existing_object_detected", "failed"}:
             raise SafetyStop(f"{item['id']}: partial state requires manual reconciliation before resume")
+        failed_step = "create_product"
         try:
-            matches = existing_products.get(item["id"], [])
-            if len(matches) > 1:
-                entry["status"] = "failed"
-                entry["error"] = "multiple existing live Products with matching metadata.dake_item_id"
-                save_state(args.state_json, state, "failed")
-                return 1
-            if len(matches) == 1:
-                product_id = matches[0].get("id")
-                price_ids = find_prices_for_product(stripe, str(product_id))
-                link_ids = find_payment_links_for_prices(stripe, set(price_ids))
-                entry.update(
-                    {
-                        "status": "existing_object_detected",
-                        "existing_product_id": product_id,
-                        "existing_price_ids": price_ids,
-                        "existing_payment_link_ids": link_ids,
-                        "manual_resolution_required": True,
-                        "error": "existing live Product detected; manual resolution required",
-                    }
-                )
-                save_state(args.state_json, state, "failed")
-                return 1
-
             product = create_with_idempotency(
                 stripe.Product.create,
                 item["product_payload"],
                 item["product_idempotency_key"],
             )
+            if product.get("livemode") is not True:
+                raise SafetyStop("created Product returned livemode=false")
             entry["product_id"] = product["id"]
             entry["status"] = "product_created"
             save_state(args.state_json, state)
 
+            failed_step = "create_price"
             price_payload = copy.deepcopy(item["price_payload"])
             price_payload["product"] = product["id"]
+            if contains_placeholder(price_payload):
+                raise SafetyStop("Price payload still contains a placeholder")
             price = create_with_idempotency(
                 stripe.Price.create,
                 price_payload,
                 item["price_idempotency_key"],
             )
+            if price.get("livemode") is not True:
+                raise SafetyStop("created Price returned livemode=false")
             entry["price_id"] = price["id"]
             entry["status"] = "price_created"
             save_state(args.state_json, state)
 
+            failed_step = "create_payment_link"
             payment_link_payload = copy.deepcopy(item["payment_link_payload"])
             payment_link_payload["line_items"] = [
                 {
@@ -468,19 +568,24 @@ def execute_live(args: argparse.Namespace, payload: dict[str, Any], validation_e
                 }
                 for line in payment_link_payload.get("line_items", [])
             ]
+            if contains_placeholder(payment_link_payload):
+                raise SafetyStop("Payment Link payload still contains a placeholder")
             payment_link = create_with_idempotency(
                 stripe.PaymentLink.create,
                 payment_link_payload,
                 item["payment_link_idempotency_key"],
             )
+            if payment_link.get("livemode") is not True:
+                raise SafetyStop("created Payment Link returned livemode=false")
             entry["payment_link_id"] = payment_link["id"]
             entry["payment_link_url"] = payment_link.get("url")
             entry["metadata"] = item["product_payload"].get("metadata", {})
+            entry["livemode"] = True
             entry["status"] = "completed"
             save_state(args.state_json, state)
         except Exception as exc:
             entry["status"] = "failed"
-            entry["error"] = str(exc)
+            entry["error"] = sanitize_error(exc, failed_step)
             save_state(args.state_json, state, "failed")
             return 1
 
