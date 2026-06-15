@@ -344,8 +344,8 @@ Pack側はPack商品の正本であり、構成アプリ自体の正本ではな
 
 This section defines the temporary manual fulfillment policy for Stripe sales of this Pack.
 
-- payment_status: booth_only
-- stripe_payment_link: not set
+- payment_status: stripe_ready
+- stripe_payment_link: https://buy.stripe.com/aFa7sL6bL9kj6Ks9LP0gw0O
 - purchase_delivery_method: manual_email_private_download
 - purchase_delivery_ready: yes
 - stripe_creation_method: manual_dashboard_ready

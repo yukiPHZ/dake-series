@@ -1,0 +1,22 @@
+{
+  "mode": "live",
+  "product_id": "DAKE_Pack_Document",
+  "product_type": "pack",
+  "product_id_on_stripe": "prod_Uhx3R2aMT60e3u",
+  "price_id": "price_1TiX9sHrsJubFuDO8nIoHAHY",
+  "payment_link_id": "plink_1TiX9sHrsJubFuDOYmBdHgXi",
+  "payment_link_url": "https://buy.stripe.com/aFa7sL6bL9kj6Ks9LP0gw0O",
+  "livemode": true,
+  "metadata": {
+    "dake_item_id": "DAKE_Pack_Document",
+    "dake_type": "pack",
+    "source_repo": "DAKE_series",
+    "source_original": "04_packs/DAKE_Pack_Document/ORIGINAL.md",
+    "store_url": "https://store.dakeapp.com/product/?id=DAKE_Pack_Document",
+    "booth_url": "https://peakheadz.booth.pm/items/8448353",
+    "purchase_delivery_method": "manual_email_private_download",
+    "delivery_policy": "manual_email_private_download"
+  },
+  "completed_at": "2026-06-15T18:50:20+09:00",
+  "errors": []
+}

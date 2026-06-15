@@ -1,0 +1,18 @@
+{
+  "mode": "live",
+  "product_id": "DAKE_Pack_Document",
+  "product_type": "pack",
+  "source_original": "04_packs/DAKE_Pack_Document/ORIGINAL.md",
+  "input_payload_file": "tools/reports/release_artifacts/DAKE_Pack_Document/stripe_release_dry_run.json",
+  "input_payload_file_sha256": "85778db93707a4706aabe1eb4cc67ba5c5cb4ee35c3b3c5afe230ad65de815e7",
+  "started_at": "2026-06-15T18:50:18+09:00",
+  "updated_at": "2026-06-15T18:50:20+09:00",
+  "status": "completed",
+  "product_id_on_stripe": "prod_Uhx3R2aMT60e3u",
+  "price_id": "price_1TiX9sHrsJubFuDO8nIoHAHY",
+  "payment_link_id": "plink_1TiX9sHrsJubFuDOYmBdHgXi",
+  "payment_link_url": "https://buy.stripe.com/aFa7sL6bL9kj6Ks9LP0gw0O",
+  "livemode": true,
+  "manual_resolution_required": false,
+  "error": null
+}

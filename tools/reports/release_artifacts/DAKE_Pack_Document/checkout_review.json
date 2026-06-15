@@ -1,0 +1,29 @@
+{
+  "product_id": "DAKE_Pack_Document",
+  "review_status": "passed",
+  "reviewed_at": "2026-06-15T18:50:00+09:00",
+  "livemode": true,
+  "actual_payment_completed": false,
+  "product_name_visible": true,
+  "product_name": "DAKE 書類整理パック",
+  "price_visible": true,
+  "price": 1480,
+  "currency": "jpy",
+  "email_field_present": true,
+  "email_required": true,
+  "quantity_change_ui": false,
+  "shipping_address_required": false,
+  "manual_delivery_notice_visible": true,
+  "next_business_day_notice_visible": true,
+  "test_url_detected": false,
+  "private_download_url_exposed": false,
+  "local_path_exposed": false,
+  "zip_url_exposed": false,
+  "console_errors": 0,
+  "notes": [
+    "Live Stripe Checkout page showed the product name and price.",
+    "Empty submit kept the user on Checkout and marked the email field invalid/required.",
+    "Manual delivery notice said this is not automatic download and instructions are sent by email within the next business day.",
+    "No actual payment was completed."
+  ]
+}

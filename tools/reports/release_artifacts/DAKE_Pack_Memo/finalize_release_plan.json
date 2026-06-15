@@ -1,0 +1,19 @@
+{
+  "created_at": "2026-06-16T05:22:36+09:00",
+  "product_id": "DAKE_Pack_Memo",
+  "source_original": "04_packs/DAKE_Pack_Memo/ORIGINAL.md",
+  "result_file": "tools/reports/release_artifacts/DAKE_Pack_Memo/stripe_release_result.json",
+  "state_file": "tools/reports/release_artifacts/DAKE_Pack_Memo/stripe_release_state.json",
+  "checkout_review_file": "tools/reports/release_artifacts/DAKE_Pack_Memo/checkout_review.json",
+  "payment_status_before": "stripe_ready",
+  "stripe_payment_link_before": "https://buy.stripe.com/14A4gz9nX5438SAcY10gw0P",
+  "payment_status_after": "stripe_ready",
+  "stripe_payment_link_after": "https://buy.stripe.com/14A4gz9nX5438SAcY10gw0P",
+  "result_validation": "passed",
+  "state_validation": "passed",
+  "checkout_validation": "passed",
+  "uniqueness_validation": "passed",
+  "action": "already_same",
+  "errors": [],
+  "dry_run": true
+}

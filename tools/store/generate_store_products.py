@@ -172,6 +172,13 @@ def url_from_text(value: Any) -> str | None:
     return match.group(0).rstrip("`),。")
 
 
+def metadata_line(markdown: str, key: str) -> str | None:
+    match = re.search(rf"^\s*[-*]\s*{re.escape(key)}\s*:\s*(.+?)\s*$", markdown, re.MULTILINE)
+    if not match:
+        return None
+    return normalize_value(match.group(1))
+
+
 def parse_table(lines: list[str]) -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
     table_lines = [line.strip() for line in lines if line.strip().startswith("|")]
@@ -210,7 +217,7 @@ def payment_status(stripe_payment_link: str | None, booth_url: str | None) -> st
     return "preparing"
 
 
-def stripe_payment_link_from(store: dict[str, Any], booth: dict[str, Any]) -> str | None:
+def stripe_payment_link_from(store: dict[str, Any], booth: dict[str, Any], markdown: str) -> str | None:
     return first_non_null(
         url_from_text(store.get("Stripe Payment Link")),
         url_from_text(store.get("stripe_payment_link")),
@@ -218,6 +225,7 @@ def stripe_payment_link_from(store: dict[str, Any], booth: dict[str, Any]) -> st
         url_from_text(store.get("Stripe URL")),
         url_from_text(booth.get("Stripe Payment Link")),
         url_from_text(booth.get("stripe_payment_link")),
+        url_from_text(metadata_line(markdown, "stripe_payment_link")),
     )
 
 
@@ -281,7 +289,7 @@ def extract_item(path: Path) -> tuple[dict[str, Any] | None, dict[str, str] | No
     )
     support_policy = first_non_null(store.get("サポート方針"))
     disclaimer = section_text(sections, "免責・注意事項")
-    stripe_payment_link = stripe_payment_link_from(store, booth)
+    stripe_payment_link = stripe_payment_link_from(store, booth, markdown)
 
     included_items: list[dict[str, str]] = []
     if item_type in {"pack", "shimarisu_pack"}:

@@ -19,7 +19,7 @@
 
 ## 生成対象件数
 
-- generated_at: 2026-06-14T22:23:39+09:00
+- generated_at: 2026-06-16T05:23:56+09:00
 - items: 53
 
 ## type別件数
@@ -34,8 +34,8 @@
 
 ## payment_status別件数
 
-- stripe_ready: 50
-- booth_only: 2
+- stripe_ready: 52
+- booth_only: 0
 - preparing: 1
 - free_download: 0
 - not_for_sale: 0
@@ -46,7 +46,7 @@
 - store_url: 53
 - support_policy: 53
 - stripe_price_id: 53
-- stripe_payment_link: 3
+- stripe_payment_link: 1
 
 ## SHIMARISU Pack参照結果
 
