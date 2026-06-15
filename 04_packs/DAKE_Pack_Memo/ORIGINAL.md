@@ -339,3 +339,66 @@ Pack側はPack商品の正本であり、構成アプリ自体の正本ではな
 - `assets/booth_thumbnail.jpg`
 - `pack_ready/booth_thumbnail.jpg`
 - `pack_ready/DAKE_Pack_Memo.zip`
+
+## Stripe manual delivery operation
+
+This section defines the temporary manual fulfillment policy for Stripe sales of this Pack.
+
+- payment_status: booth_only
+- stripe_payment_link: not set
+- purchase_delivery_method: manual_email_private_download
+- purchase_delivery_ready: yes
+- stripe_creation_method: manual_dashboard_ready
+- review_result: ready
+- delivery_rule: `00_core/DAKE_PACK_MANUAL_DELIVERY_RULE.md`
+- delivery_email_template: `tools/templates/stripe_pack_manual_delivery_email.txt`
+- delivery_log_template: `tools/templates/stripe_pack_manual_delivery_log.example.csv`
+
+### Delivery file
+
+- pack_id: `DAKE_Pack_Memo`
+- pack_title: DAKE メモと記録パック
+- delivery_file: `DAKE_Pack_Memo.zip`
+- delivery_path: `04_packs/DAKE_Pack_Memo/pack_ready/DAKE_Pack_Memo.zip`
+- delivery_file_size: 37762217 bytes
+- delivery_file_sha256: `62b2656fc2b2941bcb01c070d9338f1dde3ed24798c79fc8db24ca71b45f21bc`
+- included_apps: DAKE_Sticky_Memo, DAKE_Maji_Memo, DAKE_Git_Memo, DAKE_Yesterday_Task_Memo
+
+### Buyer notice
+
+This Pack is a digital product. After Stripe payment is confirmed, DAKE sends download instructions to the email address entered at purchase.
+
+This is not automatic download. The standard delivery window is within the next business day after payment confirmation.
+
+If the delivery email does not arrive, the buyer should contact DAKE with the purchased Pack name, purchase-time email address, purchase date/time, and Stripe payment information that can identify the payment. Card numbers, security codes, passwords, and other sensitive information must not be requested.
+
+### Payment confirmation
+
+Before sending download instructions, confirm all of the following in Stripe Dashboard.
+
+- Payment succeeded.
+- Payment is in live mode.
+- Purchased product is `DAKE メモと記録パック`.
+- Paid amount is 980 JPY.
+- Currency is JPY.
+- Buyer email address is available.
+- Payment is not refunded or canceled.
+
+### Manual delivery procedure
+
+1. Confirm the payment in Stripe Dashboard.
+2. Match the payment to this Pack and the expected price.
+3. Confirm the current delivery file path, size, and SHA256.
+4. Generate or prepare a private download instruction for this buyer only.
+5. Send the instruction to the buyer email address using the official template.
+6. Record the delivery status in a secure local delivery log outside Git.
+
+### Resend and failure handling
+
+If the buyer requests resend, verify the original payment, Pack, buyer email address, and previous delivery record before resending. Do not send public download URLs.
+
+If email delivery fails, record `delivery_failed`, confirm the email address and payment information, and handle refund or individual support according to existing DAKE Store policy.
+
+### Prohibited storage
+
+Do not store buyer email addresses, payment IDs, private download URLs, Stripe Secret Keys, Webhook Secrets, card information, or real delivery logs in Git, generated JSON, Store static files, Markdown reports, or public folders.
