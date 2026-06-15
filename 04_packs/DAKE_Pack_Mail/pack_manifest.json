@@ -5,11 +5,11 @@
   "title": "DAKE メール準備パック",
   "display_name": "DAKE メール準備パック",
   "version": "1.0.0",
-  "status": "preparing",
+  "status": "available",
   "pack_type": "mail_pack",
   "price": 780,
   "currency": "JPY",
-  "booth_url": "未設定",
+  "booth_url": "https://peakheadz.booth.pm/items/8457085",
   "target_platform": "Windows",
   "included_apps": [
     {

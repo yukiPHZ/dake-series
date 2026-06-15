@@ -192,7 +192,7 @@ def test_real_repo_compatibility() -> None:
     expected = {
         "DAKE_Pack_Document": "RELEASE_COMPLETE",
         "DAKE_Pack_Memo": "RELEASE_COMPLETE",
-        "DAKE_Pack_Mail": "BOOTH_REGISTRATION_PENDING",
+        "DAKE_Pack_Mail": "STRIPE_DRY_RUN_READY",
         "dake_pdf_viewer": "LEGACY_COMPLETE",
         "video_shorts_cut": "PREPARING_BLOCKED",
     }

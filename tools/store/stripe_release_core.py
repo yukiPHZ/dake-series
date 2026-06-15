@@ -120,6 +120,19 @@ def normalize_original_value(value: str) -> str:
     return text.strip()
 
 
+def is_unset_value(value: object) -> bool:
+    return normalize_original_value(str(value or "")).lower() in {
+        "",
+        "not set",
+        "none",
+        "null",
+        "-",
+        "unset",
+        "未設定",
+        "譛ｪ險ｭ螳・",
+    }
+
+
 def metadata_line(text: str, key: str) -> str:
     pattern = re.compile(rf"^\s*[-*]\s*{re.escape(key)}\s*:\s*(.+?)\s*$", re.MULTILINE)
     match = pattern.search(text)
@@ -181,7 +194,7 @@ def parse_original_item(path: Path) -> dict[str, Any]:
         )
         payment_status = metadata_line(text, "payment_status") or "booth_only"
         stripe_payment_link = metadata_line(text, "stripe_payment_link")
-        if stripe_payment_link.lower() in {"not set", "none", "null", "譛ｪ險ｭ螳・"}:
+        if is_unset_value(stripe_payment_link):
             stripe_payment_link = ""
         return {
             "id": product_id,
@@ -303,6 +316,8 @@ def validate_payment_state(product_id: str, item: dict[str, Any]) -> list[str]:
     errors: list[str] = []
     status = str(item.get("payment_status") or "")
     payment_link = str(item.get("stripe_payment_link") or "")
+    if is_unset_value(payment_link):
+        payment_link = ""
     if status == "stripe_ready" or payment_link:
         errors.append(f"{product_id}: already stripe_ready or has a Stripe Payment Link")
     if status not in {"booth_only", "preparing", ""}:

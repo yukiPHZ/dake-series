@@ -12,10 +12,10 @@
   "display_name": "DAKE メール準備パック",
   "product_type": "pack",
   "pack_type": "mail_pack",
-  "status": "preparing",
+  "status": "available",
   "price": 780,
   "currency": "JPY",
-  "booth_url": "未設定",
+  "booth_url": "https://peakheadz.booth.pm/items/8457085",
   "included_apps": [
     "DAKE_Mail_List",
     "DAKE_Mail_Address_Format",
@@ -23,7 +23,14 @@
   ],
   "show_in_booth_assist": true,
   "show_on_dashboard": true,
-  "tags": ["メール", "Outlook", "CSV", "Windows", "実務", "下書き"],
+  "tags": [
+    "メール",
+    "Outlook",
+    "CSV",
+    "Windows",
+    "実務",
+    "下書き"
+  ],
   "summary": "Outlookメールから連絡先を集め、宛先を整え、CSVから個別メール下書きを作るPackです。",
   "copyright": "PEAKHEADZ"
 }

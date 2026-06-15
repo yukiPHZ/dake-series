@@ -4,10 +4,10 @@
 
 - product_id: DAKE_Pack_Mail
 - product_type: pack
-- current_stage: BOOTH_REGISTRATION_PENDING
-- payment_status: preparing
+- current_stage: STRIPE_DRY_RUN_READY
+- payment_status: booth_only
 - stripe_payment_link: missing
-- next_action: register product on BOOTH and record the product URL
+- next_action: run Stripe live execution with explicit confirmation
 
 ## Checks
 
@@ -15,7 +15,7 @@
 - delivery_ready: True
 - pack_zip_ready: True
 - booth_assets_ready: True
-- stripe_dry_run_ready: False
+- stripe_dry_run_ready: True
 - stripe_live_completed: False
 - checkout_review_passed: False
 - source_finalized: False

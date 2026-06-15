@@ -12,14 +12,13 @@ README.md、PACK_META、pack_manifest.json、booth_product.txt、pack_ready、BO
 - short_title: DAKE メール準備パック
 - category: メール実務Pack
 - pack_type: mail_pack
-- status: preparing
+- status: available
 - version: 1.0.0
 - price: 780円
 - currency: JPY
 - target_platform: Windows
-- booth_url: 未設定
-- distribution: BOOTH registration pending
-
+- booth_url: https://peakheadz.booth.pm/items/8457085
+- distribution: BOOTH / manual private download
 ## Packの目的
 
 メール作業のうち、送信前に発生する小さな準備作業をまとめて扱えるようにする。
@@ -131,10 +130,10 @@ DAKE_Pack_Mail.zip
   "display_name": "DAKE メール準備パック",
   "product_type": "pack",
   "pack_type": "mail_pack",
-  "status": "preparing",
+  "status": "available",
   "price": 780,
   "currency": "JPY",
-  "booth_url": "未設定",
+  "booth_url": "https://peakheadz.booth.pm/items/8457085",
   "included_apps": ["DAKE_Mail_List", "DAKE_Mail_Address_Format", "DAKE_Mail_Draft"],
   "show_in_booth_assist": true,
   "show_on_dashboard": true,
@@ -222,9 +221,10 @@ Do not store buyer email addresses, payment IDs, private download URLs, Stripe S
 
 ## Stripe情報
 
-- payment_status: preparing
+- payment_status: booth_only
 - stripe_payment_link: 未設定
-- stripe_creation_method: not_started
+- stripe_creation_method: manual_dashboard_ready
+- review_result: ready
 - tax_code_candidate: txcd_10202003
 
 ## 配布ファイル証跡

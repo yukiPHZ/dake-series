@@ -1,4 +1,4 @@
 folder,display_name,status,price,included_count,booth_url,thumbnail,ready_thumbnail,thumbnail_size,ready_thumbnail_size,thumbnail_ok,ready_thumbnail_ok,product_references_thumbnail,booth_product,pack_ready,readme_txt,notice,pack_zip,manifest,source_zip_count,source_zip_stale_count,booth_score,missing,stale,next_step
 DAKE_Pack_Document,DAKE 書類整理パック,available,1480,4,https://peakheadz.booth.pm/items/8448353,True,True,1200x1200,1200x1200,True,True,True,True,True,True,True,DAKE_Pack_Document.zip,True,4,0,3/3,,,ready
-DAKE_Pack_Mail,DAKE メール準備パック,preparing,780,3,未設定,True,True,1200x1200,1200x1200,True,True,True,True,True,True,True,DAKE_Pack_Mail.zip,True,3,0,3/3,,,ready
+DAKE_Pack_Mail,DAKE メール準備パック,available,780,3,https://peakheadz.booth.pm/items/8457085,True,True,1200x1200,1200x1200,True,True,True,True,True,True,True,DAKE_Pack_Mail.zip,True,3,0,3/3,,,ready
 DAKE_Pack_Memo,DAKE メモと記録パック,available,980,4,https://peakheadz.booth.pm/items/8449208,True,True,1200x1200,1200x1200,True,True,True,True,True,True,True,DAKE_Pack_Memo.zip,True,4,0,3/3,,,ready
