@@ -1,0 +1,89 @@
+{
+  "mode": "dry-run",
+  "notice": "DRY RUN ONLY. NO STRIPE API CALL. NO LIVE OBJECT IS CREATED.",
+  "created_at": "2026-06-15T18:22:42+09:00",
+  "product_id": "DAKE_Pack_Memo",
+  "product_type": "pack",
+  "source_original": "04_packs/DAKE_Pack_Memo/ORIGINAL.md",
+  "title": "DAKE メモと記録パック",
+  "price": 980,
+  "currency": "jpy",
+  "tax_code_candidate": "txcd_10202003",
+  "tax_candidate_review": "operator_confirmation_required",
+  "payment_status_before": "booth_only",
+  "stripe_payment_link_before": null,
+  "purchase_delivery_ready": "yes",
+  "purchase_delivery_method": "manual_email_private_download",
+  "distribution_file": "DAKE_Pack_Memo.zip",
+  "distribution_path": "04_packs/DAKE_Pack_Memo/pack_ready/DAKE_Pack_Memo.zip",
+  "distribution_file_size": 37762217,
+  "distribution_file_sha256": "62b2656fc2b2941bcb01c070d9338f1dde3ed24798c79fc8db24ca71b45f21bc",
+  "product_payload": {
+    "name": "DAKE メモと記録パック",
+    "description": "DAKE メモと記録パック。本商品は自動ダウンロードではありません。Stripe決済確認後、購入時のメールアドレス宛に次営業日以内にダウンロード方法をご案内します。",
+    "active": true,
+    "tax_code": "txcd_10202003",
+    "metadata": {
+      "dake_item_id": "DAKE_Pack_Memo",
+      "dake_type": "pack",
+      "source_repo": "DAKE_series",
+      "source_original": "04_packs/DAKE_Pack_Memo/ORIGINAL.md",
+      "store_url": "https://store.dakeapp.com/product/?id=DAKE_Pack_Memo",
+      "booth_url": "https://peakheadz.booth.pm/items/8449208",
+      "purchase_delivery_method": "manual_email_private_download",
+      "delivery_policy": "manual_email_private_download"
+    }
+  },
+  "price_payload": {
+    "currency": "jpy",
+    "unit_amount": 980,
+    "product": "__PRODUCT_ID_FROM_LIVE_PRODUCT__",
+    "metadata": {
+      "dake_item_id": "DAKE_Pack_Memo"
+    }
+  },
+  "payment_link_payload": {
+    "line_items": [
+      {
+        "price": "__PRICE_ID_FROM_LIVE_PRICE__",
+        "quantity": 1
+      }
+    ],
+    "metadata": {
+      "dake_item_id": "DAKE_Pack_Memo",
+      "dake_type": "pack",
+      "source_original": "04_packs/DAKE_Pack_Memo/ORIGINAL.md",
+      "purchase_delivery_method": "manual_email_private_download",
+      "delivery_policy": "manual_email_private_download"
+    },
+    "payment_intent_data": {
+      "metadata": {
+        "dake_item_id": "DAKE_Pack_Memo",
+        "dake_type": "pack",
+        "source_original": "04_packs/DAKE_Pack_Memo/ORIGINAL.md",
+        "purchase_delivery_method": "manual_email_private_download",
+        "delivery_policy": "manual_email_private_download"
+      }
+    }
+  },
+  "ready_for_live_execution": "yes",
+  "errors": [],
+  "secret_read": "no",
+  "live_api_called": "no",
+  "safety": [
+    "No Stripe API call is made in dry-run mode.",
+    "No Stripe Secret Key is read in dry-run mode.",
+    "No Product, Price, or Payment Link is created.",
+    "No Payment Link URL is written back to ORIGINAL.md.",
+    "No generated JSON or Store file is updated.",
+    "No buyer information is stored.",
+    "No private download URL is stored.",
+    "No absolute local Pack ZIP path is exposed."
+  ],
+  "product_payload_sha256": "d89060ec22539f19b6ad05c35df49bc531567bf2d3cfdf7932f25762e40c5e42",
+  "price_payload_sha256": "83195943907b48ee45e6729d3054877792f9edbe106c41ee1428c7839f928097",
+  "payment_link_payload_sha256": "f47fd9190716555147a7e3ad403fe254673b499dbf9c8bb61525a095e7299aef",
+  "product_idempotency_key": "dake-release-product-v1-DAKE_Pack_Memo-d89060ec2253",
+  "price_idempotency_key": "dake-release-price-v1-DAKE_Pack_Memo-83195943907b",
+  "payment_link_idempotency_key": "dake-release-link-v1-DAKE_Pack_Memo-f47fd9190716"
+}

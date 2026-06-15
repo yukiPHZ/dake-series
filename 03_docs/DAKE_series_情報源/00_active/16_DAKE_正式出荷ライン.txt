@@ -122,3 +122,25 @@ Codexは通常出荷時に即時公開または自動予約を行わない。
 
 v2_closedは、出荷証跡とBuffer下書きが揃い、人間が投稿・予約・修正・見送りを判断できる状態を表す。
 予約済み・公開済みであることはv2_closedの必須条件にしない。
+
+## Pack Stripe release command（Phase 16C追記）
+
+Pack商品も単品正式出荷コマンドを使用する。
+
+```powershell
+python tools\release_product.py <product_id>
+```
+
+Packでは、Stripe payload生成前に以下を必須確認する。
+
+- Pack ZIPが存在する。
+- Pack ZIPのサイズとSHA256が正本・manifestと一致する。
+- 購入後配布方式が `manual_email_private_download` として正本化されている。
+- `purchase_delivery_ready=yes` である。
+- 配布期限、購入者向け案内、再送、不達対応、共通手動配布ルール参照がある。
+
+購入後導線が未確定のPackは、Stripe決済を開かない。
+
+Pack ZIPや非公開配布URLをpublic repo、generated JSON、Store静的ファイルへ置かない。
+
+Payment Link作成後は、確定したPayment Link URLだけを別工程で `ORIGINAL.md` へ書き戻す。
