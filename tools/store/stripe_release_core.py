@@ -40,7 +40,7 @@ def read_json(path: Path) -> dict[str, Any]:
 
 def write_json_atomic(path: Path, data: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    temp = path.with_name(f"{path.name}.tmp")
+    temp = path.with_name(f"{path.name}.{os.getpid()}.tmp")
     with temp.open("w", encoding="utf-8", newline="\n") as handle:
         handle.write(json.dumps(data, ensure_ascii=False, indent=2) + "\n")
         handle.flush()
@@ -50,7 +50,7 @@ def write_json_atomic(path: Path, data: dict[str, Any]) -> None:
 
 def write_text_atomic(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    temp = path.with_name(f"{path.name}.tmp")
+    temp = path.with_name(f"{path.name}.{os.getpid()}.tmp")
     with temp.open("w", encoding="utf-8", newline="\n") as handle:
         handle.write(text)
         handle.flush()
@@ -113,6 +113,40 @@ def normalize_space(value: object) -> str:
     return " ".join(str(value or "").replace("\r\n", "\n").replace("\r", "\n").split()).strip()
 
 
+def normalize_original_value(value: str) -> str:
+    text = value.strip()
+    if len(text) >= 2 and text.startswith("`") and text.endswith("`"):
+        text = text[1:-1].strip()
+    return text.strip()
+
+
+def metadata_line(text: str, key: str) -> str:
+    pattern = re.compile(rf"^\s*[-*]\s*{re.escape(key)}\s*:\s*(.+?)\s*$", re.MULTILINE)
+    match = pattern.search(text)
+    return normalize_original_value(match.group(1)) if match else ""
+
+
+def json_like_value(text: str, key: str) -> str:
+    pattern = re.compile(rf'"{re.escape(key)}"\s*:\s*"([^"]*)"')
+    match = pattern.search(text)
+    return normalize_original_value(match.group(1)) if match else ""
+
+
+def first_url_after(text: str, label: str) -> str:
+    pattern = re.compile(rf"{re.escape(label)}[^\n]*?(https?://[^\s`]+)")
+    match = pattern.search(text)
+    return match.group(1).strip() if match else ""
+
+
+def parse_price_from_text(text: str) -> int | None:
+    for label in ["price", "萓｡譬ｼ"]:
+        pattern = re.compile(rf"{re.escape(label)}\s*[:：]\s*([0-9][0-9,]*)")
+        match = pattern.search(text)
+        if match:
+            return int_price(match.group(1))
+    return None
+
+
 def clean_description(value: object, fallback: str, limit: int = 240) -> str:
     text = normalize_space(value) or normalize_space(fallback)
     if len(text) > limit:
@@ -124,8 +158,87 @@ def discover_originals() -> list[Path]:
     return list((ROOT / "01_apps").glob("**/ORIGINAL.md")) + list((ROOT / "04_packs").glob("**/ORIGINAL.md"))
 
 
+def validate_product_id(product_id: str) -> None:
+    if not product_id or not product_id.strip():
+        raise SafetyStop("product_id is required")
+    if any(part in product_id for part in ["..", "/", "\\"]):
+        raise SafetyStop("product_id must not contain path separators or traversal")
+    if any(ord(char) < 32 for char in product_id):
+        raise SafetyStop("product_id must not contain control characters")
+
+
+def parse_original_item(path: Path) -> dict[str, Any]:
+    text = path.read_text(encoding="utf-8")
+    relative = relative_to_root(path)
+    if relative.startswith("04_packs/"):
+        product_type = "pack"
+        product_id = metadata_line(text, "pack_id") or json_like_value(text, "folder_name") or path.parent.name
+        title = (
+            metadata_line(text, "pack_title")
+            or metadata_line(text, "title")
+            or json_like_value(text, "display_name")
+            or product_id
+        )
+        payment_status = metadata_line(text, "payment_status") or "booth_only"
+        stripe_payment_link = metadata_line(text, "stripe_payment_link")
+        if stripe_payment_link.lower() in {"not set", "none", "null", "譛ｪ險ｭ螳・"}:
+            stripe_payment_link = ""
+        return {
+            "id": product_id,
+            "type": product_type,
+            "source_repo": "DAKE_series",
+            "source_original": relative,
+            "title": title,
+            "price": parse_price_from_text(text),
+            "currency": "JPY",
+            "booth_url": metadata_line(text, "booth_url") or json_like_value(text, "booth_url") or first_url_after(text, "BOOTH URL"),
+            "github_release_url": "",
+            "stripe_payment_link": stripe_payment_link or None,
+            "payment_status": payment_status,
+            "description": "",
+        }
+
+    product_id = path.parent.name
+    return {
+        "id": product_id,
+        "type": "app",
+        "source_repo": "DAKE_series",
+        "source_original": relative,
+        "title": metadata_line(text, "title") or path.parent.name,
+        "price": parse_price_from_text(text),
+        "currency": "JPY",
+        "booth_url": metadata_line(text, "booth_url") or first_url_after(text, "BOOTH URL"),
+        "github_release_url": metadata_line(text, "release_url") or first_url_after(text, "Release"),
+        "stripe_payment_link": metadata_line(text, "stripe_payment_link") or None,
+        "payment_status": metadata_line(text, "payment_status") or "",
+        "description": "",
+    }
+
+
+def discover_original_items() -> dict[str, dict[str, Any]]:
+    result: dict[str, dict[str, Any]] = {}
+    duplicates: dict[str, list[str]] = {}
+    for path in discover_originals():
+        item = parse_original_item(path)
+        item_id = str(item.get("id") or "")
+        if not item_id:
+            continue
+        if item_id in result:
+            duplicates.setdefault(item_id, [result[item_id]["source_original"]]).append(item["source_original"])
+        result[item_id] = item
+    if duplicates:
+        detail = "; ".join(f"{item_id}: {', '.join(paths)}" for item_id, paths in sorted(duplicates.items()))
+        raise SafetyStop("duplicate product id in ORIGINAL.md files: " + detail)
+    return result
+
+
 def load_store_items() -> dict[str, dict[str, Any]]:
-    data = read_json(STORE_PRODUCTS_JSON)
+    if not STORE_PRODUCTS_JSON.exists():
+        return {}
+    try:
+        data = read_json(STORE_PRODUCTS_JSON)
+    except json.JSONDecodeError:
+        return {}
     items = data.get("items")
     if not isinstance(items, list):
         raise SafetyStop("tools/generated/store_products.generated.json must contain items")
@@ -144,10 +257,26 @@ def load_store_items() -> dict[str, dict[str, Any]]:
 
 
 def resolve_product(product_id: str) -> dict[str, Any]:
+    validate_product_id(product_id)
+    original_items = discover_original_items()
     store_items = load_store_items()
-    if product_id not in store_items:
+    generated_item = store_items.get(product_id)
+    direct_item = original_items.get(product_id)
+    if direct_item is None and generated_item is not None:
+        generated_source = str(generated_item.get("source_original") or "")
+        for item in original_items.values():
+            if item.get("source_original") == generated_source:
+                direct_item = {**item, "id": product_id}
+                break
+    if direct_item is None:
         raise SafetyStop(f"Product id not found: {product_id}")
-    item = store_items[product_id]
+    item = {**direct_item}
+    if generated_item:
+        for key, value in generated_item.items():
+            if item.get(key) in (None, "", []) and value not in (None, "", []):
+                item[key] = value
+        item["id"] = product_id
+        item["source_original"] = direct_item["source_original"]
     source_original = str(item.get("source_original") or "")
     if not source_original:
         raise SafetyStop(f"{product_id}: source_original is missing")
@@ -282,9 +411,10 @@ def build_pack_release(context: dict[str, Any]) -> dict[str, Any]:
     item = context["item"]
     original_text = context["original_text"]
     source_original = context["source_original"]
+    source_path = context["source_path"]
     rollout = row_map(ROLLOUT_REVIEW_CSV).get(product_id, {})
     pack_ready = row_map(PACK_READY_CSV).get(product_id, {})
-    manifest_path = ROOT / "04_packs" / product_id / "pack_manifest.json"
+    manifest_path = source_path.parent / "pack_manifest.json"
     errors = validate_payment_state(product_id, item)
     if not manifest_path.exists():
         errors.append(f"{product_id}: pack_manifest.json is missing")
@@ -314,9 +444,6 @@ def build_pack_release(context: dict[str, Any]) -> dict[str, Any]:
         "buyer_notice": "Buyer notice" in original_text,
         "resend_policy": "Resend and failure handling" in original_text,
         "rule_reference": "00_core/DAKE_PACK_MANUAL_DELIVERY_RULE.md" in original_text,
-        "ready_report": pack_ready.get("purchase_delivery_ready") == "yes"
-        and pack_ready.get("stripe_creation_method") == "manual_dashboard_ready"
-        and pack_ready.get("review_result") == "ready",
     }
     for key, ok in manual_checks.items():
         if not ok:
@@ -726,6 +853,7 @@ def initial_state(payload: dict[str, Any], payload_file_hash: str) -> dict[str, 
         "mode": "live",
         "product_id": payload["product_id"],
         "product_type": payload["product_type"],
+        "source_original": payload["source_original"],
         "input_payload_file": relative_to_root(dry_run_json_path(payload["product_id"])),
         "input_payload_file_sha256": payload_file_hash,
         "started_at": now_jst(),
