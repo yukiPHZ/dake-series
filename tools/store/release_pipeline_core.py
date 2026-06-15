@@ -27,6 +27,7 @@ BUY_STRIPE_PREFIX = "https://buy.stripe.com/"
 STAGES = [
     "SOURCE_INVALID",
     "PREPARING_BLOCKED",
+    "BOOTH_REGISTRATION_PENDING",
     "SOURCE_READY",
     "STRIPE_DRY_RUN_READY",
     "STRIPE_LIVE_COMPLETED",
@@ -45,6 +46,7 @@ STAGES = [
 NEXT_ACTIONS = {
     "SOURCE_INVALID": "fix source of truth",
     "PREPARING_BLOCKED": "complete product preparation",
+    "BOOTH_REGISTRATION_PENDING": "register product on BOOTH and record the product URL",
     "SOURCE_READY": "run Stripe dry-run",
     "STRIPE_DRY_RUN_READY": "run Stripe live execution with explicit confirmation",
     "STRIPE_LIVE_COMPLETED": "record Checkout browser review",
@@ -225,6 +227,9 @@ class ReleasePipeline:
         )
         if is_unset(stripe_payment_link):
             stripe_payment_link = ""
+        booth_url = metadata_line(text, "booth_url") or first_url_after(text, "BOOTH URL", "booth_url")
+        if is_unset(booth_url):
+            booth_url = ""
         return ProductSource(
             product_id=product_id,
             product_type=product_type,
@@ -236,7 +241,7 @@ class ReleasePipeline:
             status=metadata_line(text, "status") or json_like_value(text, "status"),
             payment_status=metadata_line(text, "payment_status"),
             stripe_payment_link=stripe_payment_link,
-            booth_url=metadata_line(text, "booth_url") or first_url_after(text, "BOOTH URL", "booth_url"),
+            booth_url=booth_url,
             github_release_url=metadata_line(text, "release_url") or first_url_after(text, "GitHub Release", "release_url"),
         )
 
@@ -326,6 +331,26 @@ class ReleasePipeline:
         if "Manual delivery procedure" not in source.text:
             warnings.append("manual delivery procedure section was not found")
         return not errors, errors, warnings
+
+    def validate_booth_assets(self, source: ProductSource) -> tuple[bool, list[str]]:
+        errors: list[str] = []
+        pack_dir = source.path.parent
+        ready_dir = pack_dir / "pack_ready"
+        required_paths = [
+            pack_dir / "README.md",
+            ready_dir / "README.txt",
+            ready_dir / "注意事項.txt",
+            pack_dir / "assets" / "booth_thumbnail.jpg",
+        ]
+        for path in required_paths:
+            if not path.exists():
+                errors.append(f"missing BOOTH asset: {relative_to(self.root, path)}")
+        if not ((pack_dir / "booth_product.txt").exists() or (ready_dir / "booth_product.txt").exists()):
+            errors.append("missing BOOTH product text")
+        pack_zip_path = ready_dir / f"{source.product_id}.zip"
+        if not pack_zip_path.exists():
+            errors.append(f"missing Pack ZIP: {relative_to(self.root, pack_zip_path)}")
+        return not errors, errors
 
     def validate_dry_run(self, product_id: str, dry_run: dict[str, Any] | None) -> tuple[bool, list[str]]:
         if dry_run is None:
@@ -514,10 +539,14 @@ class ReleasePipeline:
                 errors.append(optional_error)
 
         delivery_ready = True
+        booth_assets_ready = False
         if source.product_type == "pack":
             delivery_ready, delivery_errors, delivery_warnings = self.validate_pack_delivery(source)
             errors.extend(delivery_errors)
             warnings.extend(delivery_warnings)
+            booth_assets_ready, booth_asset_errors = self.validate_booth_assets(source)
+            if payment_status == "preparing":
+                errors.extend(booth_asset_errors)
 
         if price is None and payment_status != "preparing":
             errors.append("price is missing or invalid")
@@ -595,6 +624,8 @@ class ReleasePipeline:
         checks = {
             "source_valid": not errors and not inconsistent,
             "delivery_ready": delivery_ready if source.product_type == "pack" else "not_applicable",
+            "pack_zip_ready": delivery_ready if source.product_type == "pack" else "not_applicable",
+            "booth_assets_ready": booth_assets_ready if source.product_type == "pack" else "not_applicable",
             "stripe_dry_run_ready": dry_run_ready,
             "stripe_live_completed": live_completed,
             "checkout_review_passed": checkout_passed,
@@ -613,6 +644,15 @@ class ReleasePipeline:
         elif inconsistent:
             errors.extend(inconsistent)
             stage = "INCONSISTENT"
+        elif (
+            source.product_type == "pack"
+            and payment_status == "preparing"
+            and delivery_ready
+            and booth_assets_ready
+            and not source.booth_url
+            and not source.stripe_payment_link
+        ):
+            stage = "BOOTH_REGISTRATION_PENDING"
         elif payment_status == "preparing":
             stage = "PREPARING_BLOCKED"
         elif legacy_complete:
@@ -644,6 +684,8 @@ class ReleasePipeline:
             "payment_status": payment_status,
             "stripe_payment_link": "present" if stripe_payment_link else "missing",
             "stripe_payment_link_url": stripe_payment_link,
+            "booth_url": "present" if source.booth_url else "missing",
+            "booth_url_value": source.booth_url,
             "stripe_result": "completed" if live_completed else "missing",
             "checkout_review": "passed" if checkout_passed else ("failed" if checkout_failed else "missing"),
             "next_action": NEXT_ACTIONS[stage],
@@ -685,6 +727,13 @@ class ReleasePipeline:
                 f'--confirmation-text "CREATE LIVE PAYMENT LINK {product_id}"'
             )
             return {"advanced": False, "stage": stage, "message": "manual live execution required", "command": command_text}
+        if stage == "BOOTH_REGISTRATION_PENDING":
+            return {
+                "advanced": False,
+                "stage": stage,
+                "message": "manual BOOTH registration required",
+                "command": f"python tools\\record_booth_registration.py {product_id} --booth-url <BOOTH商品URL>",
+            }
         if stage in {"STRIPE_LIVE_COMPLETED", "CHECKOUT_REVIEW_PENDING"}:
             return {"advanced": False, "stage": stage, "message": "manual Checkout review required", "command": f"python tools\\record_checkout_review.py {product_id}"}
         if stage == "CHECKOUT_REVIEW_PASSED":
@@ -737,9 +786,12 @@ def print_status(status: dict[str, Any]) -> None:
     print(f"current_stage: {status.get('current_stage')}")
     print(f"payment_status: {status.get('payment_status')}")
     print(f"stripe_payment_link: {status.get('stripe_payment_link')}")
+    print(f"booth_url: {status.get('booth_url', 'unknown')}")
     checks = status.get("checks", {})
     for key in [
         "delivery_ready",
+        "pack_zip_ready",
+        "booth_assets_ready",
         "stripe_dry_run_ready",
         "stripe_live_completed",
         "checkout_review_passed",

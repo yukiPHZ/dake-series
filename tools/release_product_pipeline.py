@@ -58,7 +58,7 @@ def main() -> int:
                 print(f"command: {command}")
         if "returncode" in result:
             print(f"returncode: {result['returncode']}")
-    return 0 if result.get("advanced") or status["current_stage"] in {"STRIPE_DRY_RUN_READY", "CHECKOUT_REVIEW_PENDING", "STORE_GENERATED", "STORE_SYNC_PENDING", "STORE_SYNCED", "PRODUCTION_VERIFICATION_PENDING", "RELEASE_COMPLETE", "LEGACY_COMPLETE"} else 1
+    return 0 if result.get("advanced") or status["current_stage"] in {"BOOTH_REGISTRATION_PENDING", "STRIPE_DRY_RUN_READY", "CHECKOUT_REVIEW_PENDING", "STORE_GENERATED", "STORE_SYNC_PENDING", "STORE_SYNCED", "PRODUCTION_VERIFICATION_PENDING", "RELEASE_COMPLETE", "LEGACY_COMPLETE"} else 1
 
 
 if __name__ == "__main__":

@@ -1,0 +1,85 @@
+{
+  "schema": "dake_pack_manifest_v1",
+  "pack_id": "DAKE_Pack_Mail",
+  "folder_name": "DAKE_Pack_Mail",
+  "title": "DAKE メール準備パック",
+  "display_name": "DAKE メール準備パック",
+  "version": "1.0.0",
+  "status": "preparing",
+  "pack_type": "mail_pack",
+  "price": 780,
+  "currency": "JPY",
+  "booth_url": "未設定",
+  "target_platform": "Windows",
+  "included_apps": [
+    {
+      "id": "dake_mail_list",
+      "folder": "DAKE_Mail_List",
+      "title": "Dakeメールリスト",
+      "role": "Outlookの.msgメールから会社名・氏名・メールアドレスをCSV化する",
+      "zip_name": "DakeMail_List.zip",
+      "zip_size": 32925063,
+      "zip_sha256": "1012c378bb28d62b1c7fec9d50f5de966c606a9ff44a74b60e20854bfebf8bc1",
+      "pack_entry": "apps/DAKE_Mail_List/DakeMail_List.zip",
+      "booth_url": "https://peakheadz.booth.pm/items/8448014",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_List_v1.0.0",
+      "status": "available",
+      "zip_path": "01_apps/DAKE_Mail_List/booth_ready/DakeMail_List.zip",
+      "source_zip": "01_apps/DAKE_Mail_List/booth_ready/DakeMail_List.zip",
+      "source_zip_size": 32925063,
+      "source_zip_sha256": "1012c378bb28d62b1c7fec9d50f5de966c606a9ff44a74b60e20854bfebf8bc1",
+      "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_List_v1.0.0"
+    },
+    {
+      "id": "DAKE_Mail_Address_Format",
+      "folder": "DAKE_Mail_Address_Format",
+      "title": "Dakeメールアドレス整形",
+      "role": "名前付き表記、改行、セミコロン等が混在したメールアドレスを抽出・整形する",
+      "zip_name": "DakeMail_Address_Format.zip",
+      "zip_size": 10106704,
+      "zip_sha256": "3fe241b58b95de37ae4b9d08b9fb6096e485fbf72d28d9926cb43120267d53de",
+      "pack_entry": "apps/DAKE_Mail_Address_Format/DakeMail_Address_Format.zip",
+      "booth_url": "https://peakheadz.booth.pm/items/8447996",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_Address_Format_v1.0.0",
+      "status": "available",
+      "zip_path": "01_apps/DAKE_Mail_Address_Format/booth_ready/DakeMail_Address_Format.zip",
+      "source_zip": "01_apps/DAKE_Mail_Address_Format/booth_ready/DakeMail_Address_Format.zip",
+      "source_zip_size": 10106704,
+      "source_zip_sha256": "3fe241b58b95de37ae4b9d08b9fb6096e485fbf72d28d9926cb43120267d53de",
+      "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_Address_Format_v1.0.0"
+    },
+    {
+      "id": "DAKE_Mail_Draft",
+      "folder": "DAKE_Mail_Draft",
+      "title": "Dakeメール下書き",
+      "role": "CSV名簿からOutlookの個別下書きを作成する",
+      "zip_name": "DakeMail_Draft.zip",
+      "zip_size": 13902128,
+      "zip_sha256": "d6d691d890eb8d5b3fa903765f756a6e66d666400a228eebdb3135174a55724e",
+      "pack_entry": "apps/DAKE_Mail_Draft/DakeMail_Draft.zip",
+      "booth_url": "https://peakheadz.booth.pm/items/8448001",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_Draft_v1.0.0",
+      "status": "available",
+      "zip_path": "01_apps/DAKE_Mail_Draft/booth_ready/DakeMail_Draft.zip",
+      "source_zip": "01_apps/DAKE_Mail_Draft/booth_ready/DakeMail_Draft.zip",
+      "source_zip_size": 13902128,
+      "source_zip_sha256": "d6d691d890eb8d5b3fa903765f756a6e66d666400a228eebdb3135174a55724e",
+      "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_Draft_v1.0.0"
+    }
+  ],
+  "excluded_apps": [
+    {
+      "folder": "DAKE_Mail_AllStaff",
+      "reason": "組織固有の用途を含むため汎用販売Packには収録しない"
+    },
+    {
+      "folder": "DAKE_Mail_Kikuta",
+      "reason": "利用者固有の用途を含むため汎用販売Packには収録しない"
+    }
+  ],
+  "pack_zip": "04_packs/DAKE_Pack_Mail/pack_ready/DAKE_Pack_Mail.zip",
+  "pack_zip_name": "DAKE_Pack_Mail.zip",
+  "pack_zip_size": 56950902,
+  "pack_zip_sha256": "dfc972b91529161bbf688fbe4fb5bf91b5e27956afe058486a0b5d79ab293ad4",
+  "generated_at": "2026-06-16T06:25:43+09:00"
+}

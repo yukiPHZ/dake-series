@@ -165,3 +165,16 @@ Packは例外商品ではなく、appと並ぶ主力商品種別として同じp
 既存Stripe対応済みアプリは、現在の証跡方式導入前の商品として `LEGACY_COMPLETE` で扱える。過去商品のstate/result/checkout証跡を捏造して補完しない。
 
 pipelineはSecretを読まず、Stripe APIを呼ばず、Git commit/pushやStore本番反映を自動実行しない。外部作成、Checkout確認、正本確定、Store公開の境界を維持する。
+
+Phase 17B-1では、新規PackがBOOTH登録素材まで揃った状態を `BOOTH_REGISTRATION_PENDING` として扱う。
+
+このstageではPack正本、Pack ZIP、manifest、README、注意事項、booth_product、BOOTHサムネイルが揃っているが、BOOTH URLとStripe Payment Linkは未設定である。
+
+BOOTH登録は自動実行しない。登録後は以下のコマンドでBOOTH URLを正本へ記録する。
+
+```powershell
+python tools\record_booth_registration.py <product_id> --booth-url <BOOTH商品URL>
+python tools\record_booth_registration.py <product_id> --booth-url <BOOTH商品URL> --apply --confirm-product-id <product_id> --confirmation-text "RECORD BOOTH REGISTRATION <product_id>"
+```
+
+このコマンドはBOOTH APIを呼ばず、URL検証と `ORIGINAL.md` の最小更新だけを行う。Stripe情報は変更しない。

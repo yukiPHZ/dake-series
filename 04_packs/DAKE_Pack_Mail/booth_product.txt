@@ -1,0 +1,74 @@
+# 商品名
+DAKE メール準備パック
+
+# 価格
+780円
+
+# 短い説明
+メールを集める、整える、下書きにする。
+送信前までの小さな実務をまとめたWindows向けPackです。
+
+# 商品紹介文
+Outlookメールから連絡先をCSVにし、
+メールアドレスを使いやすい形へ整え、
+CSVから個別メールの下書きを作る3本をまとめました。
+
+収録アプリ:
+・Dakeメールリスト
+・Dakeメールアドレス整形
+・Dakeメール下書き
+
+メールは自動送信しません。
+作成された下書きをOutlookで確認してから送信できます。
+
+Dakeメール下書きは、Windows版Microsoft Outlook Classicを使用します。
+New Outlook / Web Outlookでは動作しない場合があります。
+
+# できること
+- Outlookの.msgメールから会社名・氏名・メールアドレスをCSV化
+- 名前付き表記、改行、セミコロン区切りなどの宛先を抽出・整形
+- CSV名簿からOutlookの個別下書きを作成
+
+# 使い方
+1. Pack ZIPを解凍します。
+2. appsフォルダ内の各アプリZIPを解凍します。
+3. 必要なアプリを起動して使います。
+4. 作成されたメール下書きは、送信前に必ず確認してください。
+
+# 注意事項
+- Windows向けです。
+- Dakeメール下書きはOutlook Classic前提です。
+- New Outlook / Web Outlookでは動作しない場合があります。
+- メールは自動送信しません。
+- 迷惑メール、無断送信、法令・規約違反用途は禁止です。
+- CSVやメールデータの管理は利用者責任で行ってください。
+
+# タグ
+メール
+Outlook
+CSV
+Windows
+実務
+仕事効率化
+下書き
+ツール
+
+# 配布物
+- apps/DAKE_Mail_List/DakeMail_List.zip
+- apps/DAKE_Mail_Address_Format/DakeMail_Address_Format.zip
+- apps/DAKE_Mail_Draft/DakeMail_Draft.zip
+- README.txt
+- 注意事項.txt
+
+# 画像
+メイン画像: assets/booth_thumbnail.jpg
+補助画像: pack_ready/booth_thumbnail.jpg
+
+# 免責
+本Packの利用により生じた損害について、作者は責任を負いません。
+
+# コピーライト
+PEAKHEADZ / Vibe-Coded by Yukihiko Kikuta
+
+# URL
+未設定

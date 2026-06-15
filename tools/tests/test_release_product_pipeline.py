@@ -12,6 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools"))
 
+import record_booth_registration  # noqa: E402
 from store.release_pipeline_core import ReleasePipeline  # noqa: E402
 
 
@@ -41,7 +42,13 @@ def make_store_json(path: Path, items: list[dict]) -> None:
     )
 
 
-def write_pack(root: Path, product_id: str, payment_status: str = "booth_only", stripe_link: str = "not set") -> None:
+def write_pack(
+    root: Path,
+    product_id: str,
+    payment_status: str = "booth_only",
+    stripe_link: str = "not set",
+    booth_url: str = "https://peakheadz.booth.pm/items/synthetic-test",
+) -> None:
     pack_dir = root / "04_packs" / product_id
     pack_ready = pack_dir / "pack_ready"
     pack_ready.mkdir(parents=True, exist_ok=True)
@@ -56,9 +63,9 @@ def write_pack(root: Path, product_id: str, payment_status: str = "booth_only", 
             "schema": "dake_pack_manifest_v1",
             "folder_name": product_id,
             "display_name": "Synthetic Pack",
-            "status": "available",
-            "price": 1234,
-            "booth_url": "https://peakheadz.booth.pm/items/synthetic-test",
+                "status": "available",
+                "price": 1234,
+                "booth_url": booth_url,
             "included_apps": [],
             "pack_zip": zip_relative,
             "pack_zip_size": zip_path.stat().st_size,
@@ -74,7 +81,7 @@ def write_pack(root: Path, product_id: str, payment_status: str = "booth_only", 
 - title: Synthetic Pack
 - status: available
 - price: 1234
-- booth_url: https://peakheadz.booth.pm/items/synthetic-test
+- booth_url: {booth_url}
 
 ## Stripe manual delivery operation
 
@@ -101,6 +108,17 @@ If the buyer requests resend, verify the original payment, Pack, buyer email add
         encoding="utf-8",
         newline="\n",
     )
+
+
+def write_booth_assets(root: Path, product_id: str) -> None:
+    pack_dir = root / "04_packs" / product_id
+    ready_dir = pack_dir / "pack_ready"
+    (pack_dir / "assets").mkdir(parents=True, exist_ok=True)
+    (pack_dir / "README.md").write_text("# Synthetic Pack\n", encoding="utf-8")
+    (pack_dir / "booth_product.txt").write_text("Synthetic product text\n", encoding="utf-8")
+    (pack_dir / "assets" / "booth_thumbnail.jpg").write_bytes(b"fake-jpg-for-pipeline-test")
+    (ready_dir / "README.txt").write_text("Synthetic README\n", encoding="utf-8")
+    (ready_dir / "注意事項.txt").write_text("Synthetic notice\n", encoding="utf-8")
 
 
 def write_dummy_release_product(root: Path) -> Path:
@@ -174,6 +192,7 @@ def test_real_repo_compatibility() -> None:
     expected = {
         "DAKE_Pack_Document": "RELEASE_COMPLETE",
         "DAKE_Pack_Memo": "RELEASE_COMPLETE",
+        "DAKE_Pack_Mail": "BOOTH_REGISTRATION_PENDING",
         "dake_pdf_viewer": "LEGACY_COMPLETE",
         "video_shorts_cut": "PREPARING_BLOCKED",
     }
@@ -210,6 +229,84 @@ def test_synthetic_pack_discovery_and_advance_dispatch() -> None:
         result = pipeline.advance("Synthetic_Pack_Example")
         assert result["advanced"] is True, result
         assert marker.read_text(encoding="utf-8") == "called"
+
+
+def run_booth_command(root: Path, store: Path, argv: list[str]) -> int:
+    old_argv = sys.argv[:]
+    old_pipeline = record_booth_registration.ReleasePipeline
+    try:
+        record_booth_registration.ReleasePipeline = lambda: ReleasePipeline(root=root, store_site_root=store)  # type: ignore[assignment]
+        sys.argv = ["record_booth_registration.py", *argv]
+        return record_booth_registration.main()
+    finally:
+        sys.argv = old_argv
+        record_booth_registration.ReleasePipeline = old_pipeline
+
+
+def test_booth_registration_pending_and_record_command() -> None:
+    with tempfile.TemporaryDirectory() as temp:
+        root = Path(temp) / "DAKE_series"
+        store = Path(temp) / "dake-store-site"
+        product_id = "Pending_Mail_Pack"
+        write_pack(root, product_id, payment_status="preparing", stripe_link="未設定", booth_url="未設定")
+        write_booth_assets(root, product_id)
+        pipeline = ReleasePipeline(root=root, store_site_root=store)
+        status = pipeline.status(product_id)
+        assert status["current_stage"] == "BOOTH_REGISTRATION_PENDING", status
+
+        booth_url = "https://peakheadz.booth.pm/items/1234567"
+        assert run_booth_command(root, store, [product_id, "--booth-url", booth_url]) == 0
+        original_path = root / "04_packs" / product_id / "ORIGINAL.md"
+        before = original_path.read_text(encoding="utf-8")
+        assert "payment_status: preparing" in before
+        assert run_booth_command(root, store, [product_id, "--booth-url", booth_url, "--apply"]) == 1
+        assert "payment_status: preparing" in original_path.read_text(encoding="utf-8")
+        assert run_booth_command(
+            root,
+            store,
+            [
+                product_id,
+                "--booth-url",
+                booth_url,
+                "--apply",
+                "--confirm-product-id",
+                product_id,
+                "--confirmation-text",
+                f"RECORD BOOTH REGISTRATION {product_id}",
+            ],
+        ) == 0
+        after = original_path.read_text(encoding="utf-8")
+        assert f"booth_url: {booth_url}" in after
+        assert "status: available" in after
+        assert "payment_status: booth_only" in after
+        assert "stripe_payment_link: 未設定" in after
+
+
+def test_booth_registration_rejections() -> None:
+    bad_urls = [
+        "http://peakheadz.booth.pm/items/123",
+        "https://example.com/items/123",
+        "https://peakheadz.booth.pm/product/123",
+        "https://peakheadz.booth.pm/items/not-number",
+        "https://peakheadz.booth.pm/items/123?x=1",
+    ]
+    for bad_url in bad_urls:
+        try:
+            record_booth_registration.validate_booth_url(bad_url)
+        except record_booth_registration.SafetyStop:
+            pass
+        else:
+            raise AssertionError(f"bad URL accepted: {bad_url}")
+
+    with tempfile.TemporaryDirectory() as temp:
+        root = Path(temp) / "DAKE_series"
+        store = Path(temp) / "dake-store-site"
+        write_pack(root, "Target_Pack", payment_status="preparing", stripe_link="未設定", booth_url="未設定")
+        write_booth_assets(root, "Target_Pack")
+        write_pack(root, "Owner_Pack", payment_status="booth_only", stripe_link="未設定", booth_url="https://peakheadz.booth.pm/items/7654321")
+        write_booth_assets(root, "Owner_Pack")
+        assert run_booth_command(root, store, ["Target_Pack", "--booth-url", "https://peakheadz.booth.pm/items/7654321"]) == 1
+        assert run_booth_command(root, store, ["Owner_Pack", "--booth-url", "https://peakheadz.booth.pm/items/9999999"]) == 1
 
 
 def test_inconsistent_fixtures() -> None:
@@ -266,6 +363,8 @@ def main() -> int:
         test_real_repo_compatibility,
         test_generated_counts,
         test_synthetic_pack_discovery_and_advance_dispatch,
+        test_booth_registration_pending_and_record_command,
+        test_booth_registration_rejections,
         test_inconsistent_fixtures,
         test_duplicate_product_id,
     ]
