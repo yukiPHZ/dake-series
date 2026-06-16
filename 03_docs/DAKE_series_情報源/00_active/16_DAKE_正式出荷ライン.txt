@@ -39,7 +39,13 @@ store_products.generated.json
 ↓
 dake-store-site同期
 ↓
+dakeapp-site Store検索用generated view同期
+↓
+dakeapp.com APPS検索 / Store導線確認
+↓
 store.dakeapp.com商品詳細確認
+↓
+store.dakeapp.com Detail戻り導線確認
 ↓
 payment_status確認
 ↓
@@ -73,7 +79,10 @@ Store表示は ORIGINAL.md 由来の generated JSON から作る。
 - dakeapp.com掲載
 - store_products.generated.json再生成
 - dake-store-site同期
+- dakeapp-site Store検索用generated view同期
+- dakeapp.com APPS検索 / Store導線確認
 - store.dakeapp.com商品詳細確認
+- store.dakeapp.com Detail戻り導線確認
 - payment_status確認
 - Cloudflare反映確認
 
@@ -83,6 +92,7 @@ Store表示は ORIGINAL.md 由来の generated JSON から作る。
 
 ```powershell
 python tools\store\sync_store_to_site.py
+python tools\sync_dake_web_link_data.py
 ```
 
 同期後に確認する。
@@ -96,6 +106,9 @@ python tools\store\sync_store_to_site.py
 - source_policy
 - do_not_edit: true
 - shimarisu_pack
+- dakeapp-site の Store検索用generated view
+- store.dakeapp.com 商品詳細から DAKE Detail へ戻る導線
+- dakeapp.com APPS検索結果の View 導線
 
 ## 禁止
 
@@ -104,6 +117,8 @@ python tools\store\sync_store_to_site.py
 - Storeだけで完了扱いする
 - generated JSONを手編集する
 - Store側で商品情報を直接編集する
+- 検索用JSONやリンク一覧を手作業で別正本化する
+- 商品詳細、検索結果、ORBIT用リンクを正本なしで手入力する
 - Stripe Secret / APIキー / Webhook Secretを公開repoへ入れる
 
 ## SNS投稿と予約設定（v2補足）
