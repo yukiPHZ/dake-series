@@ -464,7 +464,13 @@ class ReleasePipeline:
             and ("console error" in lower_text or "console_errors" in lower_text)
         )
 
-    def validate_production_review(self, product_id: str, product_type: str, review: dict[str, Any] | None) -> tuple[bool, list[str]]:
+    def validate_production_review(
+        self,
+        product_id: str,
+        product_type: str,
+        review: dict[str, Any] | None,
+        source_text: str = "",
+    ) -> tuple[bool, list[str]]:
         if review is None:
             return self.production_verified_from_report(product_id, product_type), []
         errors: list[str] = []
@@ -479,8 +485,19 @@ class ReleasePipeline:
             "stripe_button_visible": True,
             "payment_link_matches_source": True,
             "booth_link_visible": True,
+            "booth_link_correct": True,
             "test_url_detected": False,
+            "private_url_exposed": False,
+            "local_path_exposed": False,
+            "zip_url_exposed": False,
+            "actual_payment_completed": False,
         }
+        if product_type == "pack":
+            expected["manual_delivery_notice_visible"] = True
+            expected["next_business_day_notice_visible"] = True
+            if self.product_specific_notice_required(source_text):
+                expected["product_specific_notice_required"] = True
+                expected["product_specific_notice_visible"] = True
         for key, value in expected.items():
             if review.get(key) != value:
                 errors.append(f"production_review {key} must be {value!r}")
@@ -572,7 +589,7 @@ class ReleasePipeline:
         dry_run_ready, dry_run_errors = self.validate_dry_run(product_id, dry_run)
         live_completed, live_url, live_errors = self.validate_live(product_id, result, state)
         checkout_passed, checkout_failed, checkout_errors = self.validate_checkout(product_id, source.product_type, checkout, source.text)
-        production_verified, production_errors = self.validate_production_review(product_id, source.product_type, production_review)
+        production_verified, production_errors = self.validate_production_review(product_id, source.product_type, production_review, source.text)
         artifact_validation_errors = dry_run_errors + live_errors + checkout_errors + production_errors
 
         source_finalized = payment_status == "stripe_ready" and bool(stripe_payment_link)

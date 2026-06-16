@@ -4,10 +4,10 @@
 
 - product_id: DAKE_Pack_Mail
 - product_type: pack
-- current_stage: CHECKOUT_REVIEW_PASSED
-- payment_status: booth_only
-- stripe_payment_link: missing
-- next_action: finalize source of truth
+- current_stage: RELEASE_COMPLETE
+- payment_status: stripe_ready
+- stripe_payment_link: present
+- next_action: none
 
 ## Checks
 
@@ -18,10 +18,10 @@
 - stripe_dry_run_ready: True
 - stripe_live_completed: True
 - checkout_review_passed: True
-- source_finalized: False
-- store_generated: False
-- store_synced: False
-- production_verified: False
+- source_finalized: True
+- store_generated: True
+- store_synced: True
+- production_verified: True
 - legacy_complete: False
 - dake_series_git: dirty
 - dake_store_site_git: clean

@@ -1,0 +1,31 @@
+{
+  "product_id": "DAKE_Pack_Mail",
+  "reviewed_at": "2026-06-16T12:44:00+09:00",
+  "product_page_url": "https://store.dakeapp.com/product/?id=DAKE_Pack_Mail",
+  "product_name": "DAKE メール準備パック",
+  "price": 780,
+  "currency": "jpy",
+  "product_page_http_ok": true,
+  "product_name_visible": true,
+  "price_visible": true,
+  "stripe_button_visible": true,
+  "payment_link_matches_source": true,
+  "booth_link_visible": true,
+  "booth_link_correct": true,
+  "manual_delivery_notice_visible": true,
+  "next_business_day_notice_visible": true,
+  "test_url_detected": false,
+  "private_url_exposed": false,
+  "local_path_exposed": false,
+  "zip_url_exposed": false,
+  "actual_payment_completed": false,
+  "page_status": 200,
+  "product_specific_notice_required": true,
+  "product_specific_notice_visible": true,
+  "console_errors": 0,
+  "notes": [
+    "Production Store review passed after publishing DAKE_Pack_Mail. No actual payment was completed."
+  ],
+  "review_status": "passed",
+  "failed_checks": []
+}
