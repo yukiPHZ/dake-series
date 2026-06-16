@@ -4,6 +4,7 @@
 
 - product_id: DAKE_Pack_Document
 - product_type: pack
+- status: completed
 - livemode: True
 - product_id_on_stripe: prod_Uhx3R2aMT60e3u
 - price_id: price_1TiX9sHrsJubFuDO8nIoHAHY

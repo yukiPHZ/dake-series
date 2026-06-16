@@ -24,6 +24,26 @@ STORE_PRODUCT_BASE_URL = "https://store.dakeapp.com/product/"
 PACK_TAX_CODE_CANDIDATE = "txcd_10202003"
 JST = timezone(timedelta(hours=9))
 SECRET_PATTERN = re.compile(r"sk_(?:test|live)_[A-Za-z0-9]{16,}|whsec_[A-Za-z0-9]{16,}")
+CHECKOUT_NOTICE_MAX_LENGTH = 1200
+MANUAL_DELIVERY_CHECKOUT_NOTICE = (
+    "本商品は自動ダウンロードではありません。"
+    "決済確認後、購入時に入力されたメールアドレス宛に、"
+    "次営業日以内にダウンロード方法をご案内します。"
+)
+CHECKOUT_PRODUCT_NOTICE_REQUIRED_TERMS = [
+    "Windows",
+    "Microsoft Outlook Classic",
+    "New Outlook",
+    "Web Outlook",
+    "自動送信されません",
+    "下書き",
+    "確認してから",
+]
+CHECKOUT_MANUAL_DELIVERY_REQUIRED_TERMS = [
+    "自動ダウンロードではありません",
+    "購入時に入力されたメールアドレス",
+    "次営業日以内",
+]
 
 
 class SafetyStop(RuntimeError):
@@ -165,6 +185,52 @@ def clean_description(value: object, fallback: str, limit: int = 240) -> str:
     if len(text) > limit:
         return text[: limit - 3].rstrip() + "..."
     return text
+
+
+def checkout_notice_required(original_text: str) -> bool:
+    return metadata_line(original_text, "checkout_notice_required").lower() == "yes"
+
+
+def checkout_product_notice(original_text: str) -> str:
+    return metadata_line(original_text, "checkout_product_notice")
+
+
+def build_checkout_submit_message(original_text: str, purchase_delivery_method: str) -> tuple[str, list[str]]:
+    errors: list[str] = []
+    parts: list[str] = []
+    product_notice = checkout_product_notice(original_text)
+    product_notice_is_required = checkout_notice_required(original_text)
+
+    if product_notice_is_required:
+        if not product_notice:
+            errors.append("checkout_product_notice is required but missing")
+        else:
+            missing_terms = [
+                term
+                for term in CHECKOUT_PRODUCT_NOTICE_REQUIRED_TERMS
+                if term not in product_notice
+            ]
+            if missing_terms:
+                errors.append("checkout_product_notice missing required terms: " + ", ".join(missing_terms))
+    if product_notice:
+        parts.append("【動作環境・重要事項】\n" + product_notice)
+
+    if purchase_delivery_method == "manual_email_private_download":
+        parts.append("【お渡し方法】\n" + MANUAL_DELIVERY_CHECKOUT_NOTICE)
+
+    message = "\n\n".join(part.strip() for part in parts if part.strip())
+    if message:
+        if len(message) > CHECKOUT_NOTICE_MAX_LENGTH:
+            errors.append(f"checkout submit message exceeds {CHECKOUT_NOTICE_MAX_LENGTH} characters")
+        if purchase_delivery_method == "manual_email_private_download":
+            missing_terms = [
+                term
+                for term in CHECKOUT_MANUAL_DELIVERY_REQUIRED_TERMS
+                if term not in message
+            ]
+            if missing_terms:
+                errors.append("checkout manual delivery notice missing required terms: " + ", ".join(missing_terms))
+    return message, errors
 
 
 def discover_originals() -> list[Path]:
@@ -357,6 +423,7 @@ def base_payload(
     github_release_url: str,
     tax_code_candidate: str,
     purchase_delivery_method: str,
+    checkout_submit_message: str = "",
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     metadata = {
         "dake_item_id": product_id,
@@ -406,6 +473,12 @@ def base_payload(
             "metadata": payment_metadata,
         },
     }
+    if checkout_submit_message:
+        payment_link_payload["custom_text"] = {
+            "submit": {
+                "message": checkout_submit_message,
+            },
+        }
     return product_payload, price_payload, payment_link_payload
 
 
@@ -479,6 +552,12 @@ def build_pack_release(context: dict[str, Any]) -> dict[str, Any]:
     if tax_code != PACK_TAX_CODE_CANDIDATE:
         errors.append(f"{product_id}: unexpected tax code candidate: {tax_code}")
 
+    checkout_submit_message, checkout_notice_errors = build_checkout_submit_message(
+        original_text,
+        "manual_email_private_download",
+    )
+    errors.extend(f"{product_id}: {error}" for error in checkout_notice_errors)
+
     description = clean_description(
         "",
         f"{title}。本商品は自動ダウンロードではありません。Stripe決済確認後、購入時のメールアドレス宛に次営業日以内にダウンロード方法をご案内します。",
@@ -495,6 +574,7 @@ def build_pack_release(context: dict[str, Any]) -> dict[str, Any]:
         github_release_url="",
         tax_code_candidate=tax_code,
         purchase_delivery_method="manual_email_private_download",
+        checkout_submit_message=checkout_submit_message,
     )
 
     data = {
@@ -513,6 +593,9 @@ def build_pack_release(context: dict[str, Any]) -> dict[str, Any]:
         "stripe_payment_link_before": item.get("stripe_payment_link"),
         "purchase_delivery_ready": "yes" if not errors else "no",
         "purchase_delivery_method": "manual_email_private_download",
+        "checkout_notice_required": checkout_notice_required(original_text),
+        "checkout_submit_message": checkout_submit_message,
+        "checkout_submit_message_length": len(checkout_submit_message),
         "distribution_file": Path(pack_zip).name if pack_zip else "",
         "distribution_path": pack_zip,
         "distribution_file_size": zip_size,
@@ -588,6 +671,7 @@ def build_app_release(context: dict[str, Any]) -> dict[str, Any]:
         github_release_url=github_release_url,
         tax_code_candidate=tax_code,
         purchase_delivery_method="",
+        checkout_submit_message="",
     )
     data = {
         "mode": "dry-run",
@@ -701,6 +785,8 @@ def dry_run_markdown(payload: dict[str, Any], json_path: Path) -> str:
     delivery_rows = [
         ["purchase_delivery_ready", payload["purchase_delivery_ready"]],
         ["purchase_delivery_method", payload["purchase_delivery_method"]],
+        ["checkout_notice_required", payload.get("checkout_notice_required", "not_applicable")],
+        ["checkout_submit_message_length", payload.get("checkout_submit_message_length", 0)],
         ["distribution_file", payload["distribution_file"]],
         ["distribution_file_sha256", payload["distribution_file_sha256"]],
     ]
@@ -748,6 +834,10 @@ def dry_run_markdown(payload: dict[str, Any], json_path: Path) -> str:
 ## Stripe Payment Link
 
 {table(['field', 'value'], [['price', payload['payment_link_payload']['line_items'][0]['price']], ['quantity', payload['payment_link_payload']['line_items'][0]['quantity']]])}
+
+## Checkout Submit Notice
+
+{payload.get('checkout_submit_message') or '-'}
 
 ## Metadata
 
@@ -981,6 +1071,7 @@ def write_result(payload: dict[str, Any], state: dict[str, Any]) -> None:
         raise SafetyStop("result can only be written after completed state")
     result = {
         "mode": "live",
+        "status": "completed",
         "product_id": product_id,
         "product_type": payload["product_type"],
         "product_id_on_stripe": state.get("product_id_on_stripe"),

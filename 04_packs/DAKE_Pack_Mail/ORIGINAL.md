@@ -181,6 +181,13 @@ Storeにはまだ掲載しない。BOOTH登録後、BOOTH URLを正本へ記録�
 - CSV、メールデータ、連絡先情報の管理は利用者の責任で行ってください。
 - 第三者への再配布は禁止します。
 
+## Checkout購入前表示
+
+- checkout_notice_required: yes
+- checkout_notice_target: submit
+- checkout_notice_version: 1
+- checkout_product_notice: Windows向けです。Dakeメール下書きはWindows版Microsoft Outlook Classicを使用します。New Outlook / Web Outlookでは動作しない場合があります。メールは自動送信されません。作成された下書きの宛先・件名・本文・添付を確認してから、利用者自身で送信してください。
+
 ## 手動配布方針
 
 Stripe販売を開始する場合は、既存Packと同じ共通ルールを使用する。

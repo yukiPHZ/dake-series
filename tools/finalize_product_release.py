@@ -154,7 +154,11 @@ def result_out_md_path(product_id: str) -> Path:
 
 def is_unset_link(value: str) -> bool:
     compact = (value or "").strip().lower()
-    return compact in {"", "not set", "none", "null", "-", "unset"}
+    return compact in {"", "not set", "none", "null", "-", "unset", "未設定"}
+
+
+def product_specific_notice_required(original_text: str) -> bool:
+    return metadata_line(original_text, "checkout_notice_required").lower() == "yes"
 
 
 def validate_stripe_result(product_id: str, result: dict[str, Any], state: dict[str, Any]) -> list[str]:
@@ -169,6 +173,8 @@ def validate_stripe_result(product_id: str, result: dict[str, Any], state: dict[
         errors.append("state livemode must be true")
     if state.get("status") != "completed":
         errors.append("state status must be completed")
+    if result.get("status") != "completed":
+        errors.append("result status must be completed")
     if result.get("errors") not in ([], None):
         errors.append("result errors must be empty")
 
@@ -188,7 +194,7 @@ def validate_stripe_result(product_id: str, result: dict[str, Any], state: dict[
     return errors
 
 
-def validate_checkout_review(product_id: str, review: dict[str, Any]) -> list[str]:
+def validate_checkout_review(product_id: str, review: dict[str, Any], original_text: str = "") -> list[str]:
     errors: list[str] = []
     expected = {
         "product_id": product_id,
@@ -208,6 +214,11 @@ def validate_checkout_review(product_id: str, review: dict[str, Any]) -> list[st
     for key, value in expected.items():
         if review.get(key) != value:
             errors.append(f"checkout_review {key} must be {value!r}")
+    if product_specific_notice_required(original_text):
+        if review.get("product_specific_notice_required") is not True:
+            errors.append("checkout_review product_specific_notice_required must be True")
+        if review.get("product_specific_notice_visible") is not True:
+            errors.append("checkout_review product_specific_notice_visible must be True")
     if int(review.get("console_errors") or 0) != 0:
         errors.append("checkout_review console_errors must be 0")
     return errors
@@ -262,7 +273,7 @@ def build_plan(product_id: str) -> dict[str, Any]:
     checkout = read_json(checkout_review_path(product_id))
 
     result_errors = validate_stripe_result(product_id, result, state)
-    checkout_errors = validate_checkout_review(product_id, checkout)
+    checkout_errors = validate_checkout_review(product_id, checkout, original["text"])
     uniqueness_errors = validate_unique_live_results()
     errors = result_errors + checkout_errors + uniqueness_errors
 

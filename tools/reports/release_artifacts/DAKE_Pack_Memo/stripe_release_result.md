@@ -4,6 +4,7 @@
 
 - product_id: DAKE_Pack_Memo
 - product_type: pack
+- status: completed
 - livemode: True
 - product_id_on_stripe: prod_UhxB53EcwVH5KG
 - price_id: price_1TiXH3HrsJubFuDOTZmrYTNY

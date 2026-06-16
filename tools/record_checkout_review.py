@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 from typing import Any
 
-from store.release_pipeline_core import ReleasePipeline, now_jst, write_json_atomic, write_text_atomic
+from store.release_pipeline_core import ReleasePipeline, metadata_line, now_jst, write_json_atomic, write_text_atomic
 
 
 COMMON_CHECKS = [
@@ -24,6 +24,16 @@ PACK_CHECKS = [
     ("manual_delivery_notice_visible", "Manual delivery notice is visible"),
     ("next_business_day_notice_visible", "Next-business-day email notice is visible"),
 ]
+
+
+def product_specific_notice_required(pipeline: ReleasePipeline, product_id: str) -> bool:
+    sources, duplicates = pipeline.discover_sources()
+    if product_id in duplicates:
+        return False
+    source = sources.get(product_id)
+    if source is None:
+        return False
+    return metadata_line(source.text, "checkout_notice_required").lower() == "yes"
 
 
 def parse_args() -> argparse.Namespace:
@@ -114,9 +124,20 @@ def main() -> int:
             checks[key] = value
             if not value:
                 failures.append(key)
+        notice_required = product_specific_notice_required(pipeline, args.product_id)
+        checks["product_specific_notice_required"] = notice_required
+        if notice_required:
+            value = ask_bool("Product-specific Checkout notice is visible")
+            checks["product_specific_notice_visible"] = value
+            if not value:
+                failures.append("product_specific_notice_visible")
+        else:
+            checks["product_specific_notice_visible"] = "not_applicable"
     else:
         checks["manual_delivery_notice_visible"] = "not_applicable"
         checks["next_business_day_notice_visible"] = "not_applicable"
+        checks["product_specific_notice_required"] = False
+        checks["product_specific_notice_visible"] = "not_applicable"
 
     console_ok = ask_bool("Console has no errors")
     checks["console_errors"] = 0 if console_ok else 1

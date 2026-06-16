@@ -384,6 +384,8 @@ class ReleasePipeline:
             errors.append("result livemode must be true")
         if state.get("livemode") is not True:
             errors.append("state livemode must be true")
+        if result.get("status") != "completed":
+            errors.append("result status must be completed")
         if result.get("errors") not in ([], None):
             errors.append("result errors must be empty")
         if state.get("status") != "completed":
@@ -402,7 +404,16 @@ class ReleasePipeline:
             errors.append("payment_link_url must not contain test_")
         return not errors, url, errors
 
-    def validate_checkout(self, product_id: str, product_type: str, review: dict[str, Any] | None) -> tuple[bool, bool, list[str]]:
+    def product_specific_notice_required(self, source_text: str) -> bool:
+        return metadata_line(source_text, "checkout_notice_required").lower() == "yes"
+
+    def validate_checkout(
+        self,
+        product_id: str,
+        product_type: str,
+        review: dict[str, Any] | None,
+        source_text: str = "",
+    ) -> tuple[bool, bool, list[str]]:
         if review is None:
             return False, False, []
         errors: list[str] = []
@@ -431,6 +442,11 @@ class ReleasePipeline:
             for key in ["manual_delivery_notice_visible", "next_business_day_notice_visible"]:
                 if review.get(key) is not True:
                     errors.append(f"checkout_review {key} must be True")
+            if self.product_specific_notice_required(source_text):
+                if review.get("product_specific_notice_required") is not True:
+                    errors.append("checkout_review product_specific_notice_required must be True")
+                if review.get("product_specific_notice_visible") is not True:
+                    errors.append("checkout_review product_specific_notice_visible must be True")
         if int(review.get("console_errors") or 0) != 0:
             errors.append("checkout_review console_errors must be 0")
         return not errors, failed, errors
@@ -555,7 +571,7 @@ class ReleasePipeline:
 
         dry_run_ready, dry_run_errors = self.validate_dry_run(product_id, dry_run)
         live_completed, live_url, live_errors = self.validate_live(product_id, result, state)
-        checkout_passed, checkout_failed, checkout_errors = self.validate_checkout(product_id, source.product_type, checkout)
+        checkout_passed, checkout_failed, checkout_errors = self.validate_checkout(product_id, source.product_type, checkout, source.text)
         production_verified, production_errors = self.validate_production_review(product_id, source.product_type, production_review)
         artifact_validation_errors = dry_run_errors + live_errors + checkout_errors + production_errors
 

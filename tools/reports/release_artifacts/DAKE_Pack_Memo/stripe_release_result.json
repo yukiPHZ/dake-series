@@ -2,6 +2,7 @@
   "mode": "live",
   "product_id": "DAKE_Pack_Memo",
   "product_type": "pack",
+  "status": "completed",
   "product_id_on_stripe": "prod_UhxB53EcwVH5KG",
   "price_id": "price_1TiXH3HrsJubFuDOTZmrYTNY",
   "payment_link_id": "plink_1TiXH3HrsJubFuDOs3zyOeW9",

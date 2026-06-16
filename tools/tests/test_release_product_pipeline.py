@@ -140,6 +140,7 @@ def write_live_artifacts(root: Path, product_id: str, url: str, state_status: st
         artifact / "stripe_release_result.json",
         {
             "mode": "live",
+            "status": "completed",
             "product_id": product_id,
             "product_type": "pack",
             "product_id_on_stripe": "prod_fixture",
@@ -192,7 +193,7 @@ def test_real_repo_compatibility() -> None:
     expected = {
         "DAKE_Pack_Document": "RELEASE_COMPLETE",
         "DAKE_Pack_Memo": "RELEASE_COMPLETE",
-        "DAKE_Pack_Mail": "STRIPE_DRY_RUN_READY",
+        "DAKE_Pack_Mail": "CHECKOUT_REVIEW_PASSED",
         "dake_pdf_viewer": "LEGACY_COMPLETE",
         "video_shorts_cut": "PREPARING_BLOCKED",
     }

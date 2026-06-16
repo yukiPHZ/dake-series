@@ -1,7 +1,7 @@
 {
   "mode": "dry-run",
   "notice": "DRY RUN ONLY. NO STRIPE API CALL. NO LIVE OBJECT IS CREATED.",
-  "created_at": "2026-06-16T06:56:41+09:00",
+  "created_at": "2026-06-16T12:18:48+09:00",
   "product_id": "DAKE_Pack_Mail",
   "product_type": "pack",
   "source_original": "04_packs/DAKE_Pack_Mail/ORIGINAL.md",
@@ -14,6 +14,9 @@
   "stripe_payment_link_before": null,
   "purchase_delivery_ready": "yes",
   "purchase_delivery_method": "manual_email_private_download",
+  "checkout_notice_required": true,
+  "checkout_submit_message": "【動作環境・重要事項】\nWindows向けです。Dakeメール下書きはWindows版Microsoft Outlook Classicを使用します。New Outlook / Web Outlookでは動作しない場合があります。メールは自動送信されません。作成された下書きの宛先・件名・本文・添付を確認してから、利用者自身で送信してください。\n\n【お渡し方法】\n本商品は自動ダウンロードではありません。決済確認後、購入時に入力されたメールアドレス宛に、次営業日以内にダウンロード方法をご案内します。",
+  "checkout_submit_message_length": 250,
   "distribution_file": "DAKE_Pack_Mail.zip",
   "distribution_path": "04_packs/DAKE_Pack_Mail/pack_ready/DAKE_Pack_Mail.zip",
   "distribution_file_size": 56950902,
@@ -64,6 +67,11 @@
         "purchase_delivery_method": "manual_email_private_download",
         "delivery_policy": "manual_email_private_download"
       }
+    },
+    "custom_text": {
+      "submit": {
+        "message": "【動作環境・重要事項】\nWindows向けです。Dakeメール下書きはWindows版Microsoft Outlook Classicを使用します。New Outlook / Web Outlookでは動作しない場合があります。メールは自動送信されません。作成された下書きの宛先・件名・本文・添付を確認してから、利用者自身で送信してください。\n\n【お渡し方法】\n本商品は自動ダウンロードではありません。決済確認後、購入時に入力されたメールアドレス宛に、次営業日以内にダウンロード方法をご案内します。"
+      }
     }
   },
   "ready_for_live_execution": "yes",
@@ -82,8 +90,8 @@
   ],
   "product_payload_sha256": "45f9ea00d0952c117ac2fb022d31a911d0abb1f759f7011dc3c95b50a364701a",
   "price_payload_sha256": "1deff06049e71b55dac19ca0e6e578196b523d763941aa86d913e854311e83f3",
-  "payment_link_payload_sha256": "0a2ebc3a48f545d5dea3833d85ee23f798489005a908116f4a2f2e18a8cd7faf",
+  "payment_link_payload_sha256": "bcb94817368da233252cd07973666b6b91635446c86a47f7fd5e45792f0d648c",
   "product_idempotency_key": "dake-release-product-v1-DAKE_Pack_Mail-45f9ea00d095",
   "price_idempotency_key": "dake-release-price-v1-DAKE_Pack_Mail-1deff06049e7",
-  "payment_link_idempotency_key": "dake-release-link-v1-DAKE_Pack_Mail-0a2ebc3a48f5"
+  "payment_link_idempotency_key": "dake-release-link-v1-DAKE_Pack_Mail-bcb94817368d"
 }

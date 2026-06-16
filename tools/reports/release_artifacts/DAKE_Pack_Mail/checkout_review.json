@@ -1,0 +1,28 @@
+{
+  "product_id": "DAKE_Pack_Mail",
+  "reviewed_at": "2026-06-16T12:23:46+09:00",
+  "product_name": "DAKE メール準備パック",
+  "price": 780,
+  "currency": "jpy",
+  "product_name_visible": true,
+  "price_visible": true,
+  "livemode": true,
+  "test_url_detected": false,
+  "quantity_change_ui": false,
+  "email_field_present": true,
+  "email_required": true,
+  "shipping_address_required": false,
+  "private_download_url_exposed": false,
+  "local_path_exposed": false,
+  "actual_payment_completed": false,
+  "manual_delivery_notice_visible": true,
+  "next_business_day_notice_visible": true,
+  "product_specific_notice_required": true,
+  "product_specific_notice_visible": true,
+  "console_errors": 0,
+  "notes": [
+    "Browser review passed after checkout notice repair. No actual payment was completed."
+  ],
+  "review_status": "passed",
+  "failed_checks": []
+}

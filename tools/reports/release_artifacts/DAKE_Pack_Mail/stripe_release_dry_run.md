@@ -20,6 +20,8 @@
 | --- | --- |
 | purchase_delivery_ready | yes |
 | purchase_delivery_method | manual_email_private_download |
+| checkout_notice_required | True |
+| checkout_submit_message_length | 250 |
 | distribution_file | DAKE_Pack_Mail.zip |
 | distribution_file_sha256 | dfc972b91529161bbf688fbe4fb5bf91b5e27956afe058486a0b5d79ab293ad4 |
 
@@ -53,6 +55,14 @@
 | price | __PRICE_ID_FROM_LIVE_PRICE__ |
 | quantity | 1 |
 
+## Checkout Submit Notice
+
+【動作環境・重要事項】
+Windows向けです。Dakeメール下書きはWindows版Microsoft Outlook Classicを使用します。New Outlook / Web Outlookでは動作しない場合があります。メールは自動送信されません。作成された下書きの宛先・件名・本文・添付を確認してから、利用者自身で送信してください。
+
+【お渡し方法】
+本商品は自動ダウンロードではありません。決済確認後、購入時に入力されたメールアドレス宛に、次営業日以内にダウンロード方法をご案内します。
+
 ## Metadata
 
 | key | value |
@@ -76,7 +86,7 @@
 | --- | --- |
 | product_payload_sha256 | 45f9ea00d0952c117ac2fb022d31a911d0abb1f759f7011dc3c95b50a364701a |
 | price_payload_sha256 | 1deff06049e71b55dac19ca0e6e578196b523d763941aa86d913e854311e83f3 |
-| payment_link_payload_sha256 | 0a2ebc3a48f545d5dea3833d85ee23f798489005a908116f4a2f2e18a8cd7faf |
+| payment_link_payload_sha256 | bcb94817368da233252cd07973666b6b91635446c86a47f7fd5e45792f0d648c |
 
 ## Idempotency Keys
 
@@ -84,7 +94,7 @@
 | --- | --- |
 | product_idempotency_key | dake-release-product-v1-DAKE_Pack_Mail-45f9ea00d095 |
 | price_idempotency_key | dake-release-price-v1-DAKE_Pack_Mail-1deff06049e7 |
-| payment_link_idempotency_key | dake-release-link-v1-DAKE_Pack_Mail-0a2ebc3a48f5 |
+| payment_link_idempotency_key | dake-release-link-v1-DAKE_Pack_Mail-bcb94817368d |
 
 ## Safety Checks
 

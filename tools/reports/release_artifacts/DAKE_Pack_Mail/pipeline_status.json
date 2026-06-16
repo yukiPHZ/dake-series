@@ -4,23 +4,23 @@
   "source_original": "04_packs/DAKE_Pack_Mail/ORIGINAL.md",
   "title": "DAKE メール準備パック",
   "price": 780,
-  "current_stage": "STRIPE_DRY_RUN_READY",
+  "current_stage": "CHECKOUT_REVIEW_PASSED",
   "payment_status": "booth_only",
   "stripe_payment_link": "missing",
   "stripe_payment_link_url": "",
   "booth_url": "present",
   "booth_url_value": "https://peakheadz.booth.pm/items/8457085",
-  "stripe_result": "missing",
-  "checkout_review": "missing",
-  "next_action": "run Stripe live execution with explicit confirmation",
+  "stripe_result": "completed",
+  "checkout_review": "passed",
+  "next_action": "finalize source of truth",
   "checks": {
     "source_valid": true,
     "delivery_ready": true,
     "pack_zip_ready": true,
     "booth_assets_ready": true,
     "stripe_dry_run_ready": true,
-    "stripe_live_completed": false,
-    "checkout_review_passed": false,
+    "stripe_live_completed": true,
+    "checkout_review_passed": true,
     "source_finalized": false,
     "store_generated": false,
     "store_synced": false,
@@ -36,5 +36,5 @@
     "generated_json": "tools/generated/store_products.generated.json",
     "store_site_json": "C:\\Users\\yukiz\\devlop\\dake-store-site\\public\\assets\\data\\store_products.generated.json"
   },
-  "saved_at": "2026-06-16T06:56:58+09:00"
+  "saved_at": "2026-06-16T12:23:58+09:00"
 }
