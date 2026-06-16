@@ -282,6 +282,7 @@ def extract_item(path: Path) -> tuple[dict[str, Any] | None, dict[str, str] | No
         url_from_text(booth.get("BOOTH URL")),
         url_from_text(distribution.get("BOOTH")),
         url_from_text(distribution.get("BOOTH URL")),
+        url_from_text(metadata_line(markdown, "booth_url")),
     )
     github_release_url = first_non_null(
         url_from_text(booth.get("GitHub Release")),

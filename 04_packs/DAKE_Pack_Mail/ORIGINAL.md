@@ -228,8 +228,8 @@ Do not store buyer email addresses, payment IDs, private download URLs, Stripe S
 
 ## Stripe情報
 
-- payment_status: booth_only
-- stripe_payment_link: 未設定
+- payment_status: stripe_ready
+- stripe_payment_link: https://buy.stripe.com/7sY14ncA90NN1q84rv0gw0Q
 - stripe_creation_method: manual_dashboard_ready
 - review_result: ready
 - tax_code_candidate: txcd_10202003

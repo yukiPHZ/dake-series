@@ -193,7 +193,7 @@ def test_real_repo_compatibility() -> None:
     expected = {
         "DAKE_Pack_Document": "RELEASE_COMPLETE",
         "DAKE_Pack_Memo": "RELEASE_COMPLETE",
-        "DAKE_Pack_Mail": "CHECKOUT_REVIEW_PASSED",
+        "DAKE_Pack_Mail": "STORE_GENERATED",
         "dake_pdf_viewer": "LEGACY_COMPLETE",
         "video_shorts_cut": "PREPARING_BLOCKED",
     }
@@ -208,11 +208,11 @@ def test_real_repo_compatibility() -> None:
 def test_generated_counts() -> None:
     data = json.loads((ROOT / "tools" / "generated" / "store_products.generated.json").read_text(encoding="utf-8"))
     items = data["items"]
-    assert len(items) == 53
+    assert len(items) == 54
     counts: dict[str, int] = {}
     for item in items:
         counts[item.get("payment_status") or ""] = counts.get(item.get("payment_status") or "", 0) + 1
-    assert counts.get("stripe_ready") == 52
+    assert counts.get("stripe_ready") == 53
     assert counts.get("booth_only", 0) == 0
     assert counts.get("preparing") == 1
 

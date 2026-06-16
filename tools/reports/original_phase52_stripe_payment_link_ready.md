@@ -15,17 +15,17 @@
 
 ## 参照したORIGINAL
 
-- discovered: 53
+- discovered: 54
 
 ## 生成対象件数
 
-- generated_at: 2026-06-16T05:23:56+09:00
-- items: 53
+- generated_at: 2026-06-16T12:36:55+09:00
+- items: 54
 
 ## type別件数
 
 - app: 50
-- pack: 2
+- pack: 3
 - shimarisu_pack: 1
 
 ## skipped件数
@@ -34,7 +34,7 @@
 
 ## payment_status別件数
 
-- stripe_ready: 52
+- stripe_ready: 53
 - booth_only: 0
 - preparing: 1
 - free_download: 0
@@ -42,10 +42,10 @@
 
 ## 主な未確定項目
 
-- download_url: 53
-- store_url: 53
-- support_policy: 53
-- stripe_price_id: 53
+- download_url: 54
+- store_url: 54
+- support_policy: 54
+- stripe_price_id: 54
 - stripe_payment_link: 1
 
 ## SHIMARISU Pack参照結果
