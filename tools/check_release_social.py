@@ -13,11 +13,16 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from release_source_policy import app_url_for, read_app_source
+from release_source_policy import (
+    product_dirs as source_product_dirs,
+    product_url_for,
+    read_product_source,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
 APPS_DIR = ROOT / "01_apps"
+PACKS_DIR = ROOT / "04_packs"
 REPORT_DIR = ROOT / "tools" / "reports" / "release_artifacts"
 SHIPPING_STATUS = "available"
 PLATFORMS = ("x", "threads", "instagram")
@@ -26,6 +31,7 @@ PLATFORMS = ("x", "threads", "instagram")
 @dataclass
 class SocialCheck:
     app: str
+    product_type: str = "app"
     display_name: str = ""
     status: str = "unknown"
     social_posts: bool = False
@@ -86,8 +92,18 @@ def read_text(path: Path) -> str:
 
 
 def read_meta(app_dir: Path) -> tuple[dict[str, Any], str]:
-    source = read_app_source(app_dir, ROOT)
+    source = read_product_source(app_dir, ROOT)
     return source.meta, source.error
+
+
+def product_id_for(app_dir: Path, meta: dict[str, Any]) -> str:
+    return str(meta.get("app_key") or meta.get("folder_name") or app_dir.name)
+
+
+def social_artifact_dir(app_dir: Path, meta: dict[str, Any]) -> Path:
+    if str(meta.get("product_type") or "") == "pack":
+        return REPORT_DIR / product_id_for(app_dir, meta)
+    return app_dir / "release_artifacts"
 
 
 def buffer_id(record: dict[str, Any], platform: str) -> str:
@@ -122,12 +138,13 @@ def validate_social_posts(path: Path, app_url: str, requested_channels: list[str
 
 
 def check_app(app_dir: Path, only_available: bool) -> SocialCheck:
-    source = read_app_source(app_dir, ROOT)
+    source = read_product_source(app_dir, ROOT)
     meta = source.meta
     meta_error = source.error
     status = str(meta.get("status") or "unknown")
     result = SocialCheck(
         app=app_dir.name,
+        product_type=str(meta.get("product_type") or "app"),
         display_name=str(meta.get("display_name") or meta.get("site_title") or app_dir.name),
         status=status,
         source_kind=source.source_kind,
@@ -144,8 +161,8 @@ def check_app(app_dir: Path, only_available: bool) -> SocialCheck:
         return result
     if meta_error:
         result.actions.append(meta_error)
-    app_url = app_url_for(app_dir, meta, ROOT.parent / "dakeapp-site")
-    release_dir = app_dir / "release_artifacts"
+    app_url = product_url_for(app_dir, meta, ROOT.parent / "dakeapp-site")
+    release_dir = social_artifact_dir(app_dir, meta)
     posts = release_dir / "social_posts.md"
     release = release_dir / "social_release.json"
     result.social_posts = posts.exists()
@@ -181,13 +198,14 @@ def check_app(app_dir: Path, only_available: bool) -> SocialCheck:
 
 
 def app_dirs() -> list[Path]:
-    return sorted(path for path in APPS_DIR.iterdir() if path.is_dir() and path.name.startswith("DAKE_"))
+    return source_product_dirs(APPS_DIR, PACKS_DIR)
 
 
 def write_csv(results: list[SocialCheck], path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     fields = [
         "app",
+        "product_type",
         "display_name",
         "status",
         "ok",
@@ -251,16 +269,16 @@ def write_markdown(results: list[SocialCheck], path: Path) -> None:
         "",
         "## Not Complete",
         "",
-        "| app | stage | requested | draft | buffer | X | Threads | Instagram | action |",
-        "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| app | type | stage | requested | draft | buffer | X | Threads | Instagram | action |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ])
     for item in not_ok:
         lines.append(
-            f"| {item.app} | {item.social_stage or '-'} | {item.requested_channels} | {item.social_draft_ready} | {item.social_buffer_ready} | {bool(item.buffer_x_id)} | {bool(item.buffer_threads_id)} | {bool(item.buffer_instagram_id)} | {'<br>'.join(item.actions) or '-'} |"
+            f"| {item.app} | {item.product_type} | {item.social_stage or '-'} | {item.requested_channels} | {item.social_draft_ready} | {item.social_buffer_ready} | {bool(item.buffer_x_id)} | {bool(item.buffer_threads_id)} | {bool(item.buffer_instagram_id)} | {'<br>'.join(item.actions) or '-'} |"
         )
-    lines.extend(["", "## Complete", "", "| app | X | Threads | Instagram |", "| --- | --- | --- | --- |"])
+    lines.extend(["", "## Complete", "", "| app | type | X | Threads | Instagram |", "| --- | --- | --- | --- | --- |"])
     for item in ok:
-        lines.append(f"| {item.app} | {item.buffer_x_id} | {item.buffer_threads_id} | {item.buffer_instagram_id} |")
+        lines.append(f"| {item.app} | {item.product_type} | {item.buffer_x_id} | {item.buffer_threads_id} | {item.buffer_instagram_id} |")
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 

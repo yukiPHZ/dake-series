@@ -10,6 +10,19 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable
 
+try:
+    from commerce.stripe_payment_link_core import (
+        CommerceProductSpec,
+        CommerceSafetyStop,
+        build_stripe_payment_link_payloads,
+    )
+except ModuleNotFoundError:  # Imported as tools.store.stripe_release_core in tests.
+    from tools.commerce.stripe_payment_link_core import (
+        CommerceProductSpec,
+        CommerceSafetyStop,
+        build_stripe_payment_link_payloads,
+    )
+
 
 ROOT = Path(__file__).resolve().parents[2]
 STORE_PRODUCTS_JSON = ROOT / "tools" / "generated" / "store_products.generated.json"
@@ -439,47 +452,36 @@ def base_payload(
         metadata["purchase_delivery_method"] = purchase_delivery_method
         metadata["delivery_policy"] = purchase_delivery_method
 
-    payment_metadata = {
-        "dake_item_id": product_id,
-        "dake_type": product_type,
-        "source_original": source_original,
-    }
-    if purchase_delivery_method:
-        payment_metadata["purchase_delivery_method"] = purchase_delivery_method
-        payment_metadata["delivery_policy"] = purchase_delivery_method
+    if product_type == "pack":
+        product_kind = "pack_one_time_manual_delivery"
+        fulfillment_mode = purchase_delivery_method or "manual_email_private_download"
+    else:
+        product_kind = "app_one_time"
+        fulfillment_mode = purchase_delivery_method
 
-    product_payload = {
-        "name": title,
-        "description": description,
-        "active": True,
-        "tax_code": tax_code_candidate,
-        "metadata": {key: str(value) for key, value in metadata.items() if str(value) != ""},
-    }
-    price_payload = {
-        "currency": currency,
-        "unit_amount": price,
-        "product": PRODUCT_PLACEHOLDER,
-        "metadata": {"dake_item_id": product_id},
-    }
-    payment_link_payload = {
-        "line_items": [
-            {
-                "price": PRICE_PLACEHOLDER,
-                "quantity": 1,
-            }
-        ],
-        "metadata": payment_metadata,
-        "payment_intent_data": {
-            "metadata": payment_metadata,
-        },
-    }
-    if checkout_submit_message:
-        payment_link_payload["custom_text"] = {
-            "submit": {
-                "message": checkout_submit_message,
-            },
-        }
-    return product_payload, price_payload, payment_link_payload
+    try:
+        payloads = build_stripe_payment_link_payloads(
+            CommerceProductSpec(
+                product_id=product_id,
+                product_kind=product_kind,
+                title=title,
+                description=description,
+                amount=price,
+                currency=currency,
+                price_model="one_time",
+                tax_code=tax_code_candidate,
+                quantity=1,
+                metadata=metadata,
+                checkout_notice=checkout_submit_message,
+                fulfillment_mode=fulfillment_mode,
+                after_completion_url=None,
+            ),
+            product_placeholder=PRODUCT_PLACEHOLDER,
+            price_placeholder=PRICE_PLACEHOLDER,
+        )
+    except CommerceSafetyStop as exc:
+        raise SafetyStop(str(exc)) from exc
+    return payloads.product_payload, payloads.price_payload, payloads.payment_link_payload
 
 
 def finalize_payload_hashes(product_id: str, data: dict[str, Any]) -> None:

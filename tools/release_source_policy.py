@@ -25,12 +25,16 @@ SLUG_OVERRIDES = {
     "dake_image_heictojpg": "heic-to-jpg",
     "dake_image_iphonetopc": "iphone-to-pc",
 }
+STORE_PRODUCT_BASE_URL = "https://store.dakeapp.com/product/"
+STORE_IMAGE_BASE_URL = "https://store.dakeapp.com/assets/images/products"
 
 
 @dataclass
 class AppSource:
     app_dir: Path
     meta: dict[str, Any] = field(default_factory=dict)
+    product_type: str = "app"
+    product_id: str = ""
     source_kind: str = "missing"
     source_path: Path | None = None
     source_label: str = ""
@@ -104,6 +108,24 @@ def with_release_defaults(meta: dict[str, Any]) -> dict[str, Any]:
     return normalized
 
 
+def generated_store_items(root: Path) -> dict[str, dict[str, Any]]:
+    path = root / "tools" / "generated" / "store_products.generated.json"
+    if not path.exists():
+        return {}
+    try:
+        loaded = json.loads(read_text(path))
+    except Exception:
+        return {}
+    items = loaded.get("items")
+    if not isinstance(items, list):
+        return {}
+    return {
+        str(item.get("id")): item
+        for item in items
+        if isinstance(item, dict) and item.get("id")
+    }
+
+
 def source_label(path: Path, root: Path) -> str:
     try:
         return path.relative_to(root).as_posix()
@@ -127,6 +149,8 @@ def read_app_source(app_dir: Path, root: Path | None = None) -> AppSource:
 
     source = AppSource(
         app_dir=app_dir,
+        product_type="app",
+        product_id=app_dir.name,
         original_exists=original.exists(),
         original_missing=not original.exists(),
         readme_exists=readme.exists(),
@@ -137,6 +161,7 @@ def read_app_source(app_dir: Path, root: Path | None = None) -> AppSource:
 
     if original_meta:
         source.meta = with_release_defaults(original_meta)
+        source.product_id = str(source.meta.get("app_key") or source.meta.get("folder_name") or app_dir.name)
         source.source_kind = "original"
         source.source_path = original
         source.source_label = source_label(original, root)
@@ -149,6 +174,7 @@ def read_app_source(app_dir: Path, root: Path | None = None) -> AppSource:
         source.error = original_error
     if readme_meta:
         source.meta = with_release_defaults(readme_meta)
+        source.product_id = str(source.meta.get("app_key") or source.meta.get("folder_name") or app_dir.name)
         source.source_kind = "readme_fallback"
         source.source_path = readme
         source.source_label = source_label(readme, root)
@@ -168,8 +194,90 @@ def read_app_source(app_dir: Path, root: Path | None = None) -> AppSource:
     return source
 
 
+def metadata_line(text: str, key: str) -> str:
+    match = re.search(rf"^\s*[-*]\s*{re.escape(key)}\s*:\s*(.+?)\s*$", text, re.MULTILINE)
+    if not match:
+        return ""
+    value = match.group(1).strip()
+    if len(value) >= 2 and value.startswith("`") and value.endswith("`"):
+        value = value[1:-1].strip()
+    return value
+
+
+def store_url_for_product(product_id: str) -> str:
+    return f"{STORE_PRODUCT_BASE_URL}?id={product_id}"
+
+
+def store_image_url_for_product(product_id: str) -> str:
+    return f"{STORE_IMAGE_BASE_URL}/{product_id}/thumbnail.jpg"
+
+
+def read_pack_source(pack_dir: Path, root: Path | None = None) -> AppSource:
+    root = root or pack_dir.parents[1]
+    original = pack_dir / "ORIGINAL.md"
+    text = read_text(original) if original.exists() else ""
+    product_id = metadata_line(text, "pack_id") or pack_dir.name
+    generated = generated_store_items(root).get(product_id, {})
+    title = str(generated.get("title") or metadata_line(text, "title") or product_id)
+    description = str(generated.get("description") or generated.get("summary") or title)
+    status = str(generated.get("status") or metadata_line(text, "status") or "unknown")
+    meta = with_release_defaults(
+        {
+            "app_key": product_id,
+            "folder_name": pack_dir.name,
+            "display_name": title,
+            "site_title": title,
+            "launcher_title": title,
+            "site_description": description,
+            "launcher_description": description,
+            "update_summary": description,
+            "status": status,
+            "product_type": "pack",
+            "source_original": source_label(original, root) if original.exists() else "",
+            "store_url": store_url_for_product(product_id),
+            "thumbnail_url": store_image_url_for_product(product_id),
+            "price": generated.get("price") or metadata_line(text, "price"),
+            "booth_url": generated.get("booth_url") or metadata_line(text, "booth_url"),
+        }
+    )
+    return AppSource(
+        app_dir=pack_dir,
+        meta=meta,
+        product_type="pack",
+        product_id=product_id,
+        source_kind="pack_original" if original.exists() else "missing",
+        source_path=original if original.exists() else None,
+        source_label=source_label(original, root) if original.exists() else "",
+        original_exists=original.exists(),
+        original_missing=not original.exists(),
+        readme_exists=(pack_dir / "README.md").exists(),
+        error="" if original.exists() else "original_missing",
+    )
+
+
+def read_product_source(product_dir: Path, root: Path | None = None) -> AppSource:
+    root = root or product_dir.parents[1]
+    try:
+        relative = product_dir.resolve().relative_to(root.resolve()).as_posix()
+    except ValueError:
+        relative = ""
+    if relative.startswith("04_packs/"):
+        return read_pack_source(product_dir, root)
+    return read_app_source(product_dir, root)
+
+
 def app_dirs(apps_dir: Path) -> list[Path]:
     return sorted(path for path in apps_dir.iterdir() if path.is_dir() and path.name.startswith("DAKE_"))
+
+
+def pack_dirs(packs_dir: Path) -> list[Path]:
+    if not packs_dir.exists():
+        return []
+    return sorted(path for path in packs_dir.iterdir() if path.is_dir() and path.name.startswith("DAKE_Pack_"))
+
+
+def product_dirs(apps_dir: Path, packs_dir: Path) -> list[Path]:
+    return app_dirs(apps_dir) + pack_dirs(packs_dir)
 
 
 def find_app(apps_dir: Path, identifier: str, root: Path | None = None) -> Path:
@@ -186,6 +294,23 @@ def find_app(apps_dir: Path, identifier: str, root: Path | None = None) -> Path:
         if any(value.lower() == needle for value in values if value):
             return app_dir
     raise SystemExit(f"app not found: {identifier}")
+
+
+def find_product(apps_dir: Path, packs_dir: Path, identifier: str, root: Path | None = None) -> Path:
+    needle = identifier.lower()
+    for product_dir in product_dirs(apps_dir, packs_dir):
+        if product_dir.name.lower() == needle:
+            return product_dir
+        source = read_product_source(product_dir, root)
+        values = [
+            source.product_id,
+            str(source.meta.get("app_key") or ""),
+            str(source.meta.get("display_name") or ""),
+            str(source.meta.get("folder_name") or ""),
+        ]
+        if any(value.lower() == needle for value in values if value):
+            return product_dir
+    raise SystemExit(f"product not found: {identifier}")
 
 
 def camel_slug(value: str) -> str:
@@ -235,3 +360,10 @@ def app_url_for(app_dir: Path, meta: dict[str, Any], site_root: Path) -> str:
     if explicit:
         return explicit
     return f"https://dakeapp.com/apps/{site_slug(app_dir, meta, site_root)}/"
+
+
+def product_url_for(product_dir: Path, meta: dict[str, Any], site_root: Path) -> str:
+    if str(meta.get("product_type") or "") == "pack":
+        product_id = str(meta.get("app_key") or product_dir.name)
+        return str(meta.get("store_url") or store_url_for_product(product_id))
+    return app_url_for(product_dir, meta, site_root)

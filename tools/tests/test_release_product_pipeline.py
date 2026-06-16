@@ -188,6 +188,53 @@ def write_live_artifacts(root: Path, product_id: str, url: str, state_status: st
     )
 
 
+def write_production_review(root: Path, product_id: str) -> None:
+    artifact = root / "tools" / "reports" / "release_artifacts" / product_id
+    write_json(
+        artifact / "production_review.json",
+        {
+            "product_id": product_id,
+            "review_status": "passed",
+            "page_status": 200,
+            "product_name_visible": True,
+            "price_visible": True,
+            "stripe_button_visible": True,
+            "payment_link_matches_source": True,
+            "booth_link_visible": True,
+            "booth_link_correct": True,
+            "manual_delivery_notice_visible": True,
+            "next_business_day_notice_visible": True,
+            "test_url_detected": False,
+            "private_url_exposed": False,
+            "local_path_exposed": False,
+            "zip_url_exposed": False,
+            "actual_payment_completed": False,
+            "console_errors": 0,
+        },
+    )
+
+
+def write_social_artifact(root: Path, product_id: str) -> None:
+    artifact = root / "tools" / "reports" / "release_artifacts" / product_id
+    write_json(
+        artifact / "social_release.json",
+        {
+            "product_id": product_id,
+            "product_type": "pack",
+            "app_key": product_id,
+            "stage": "complete",
+            "published": False,
+            "scheduled": False,
+            "requested_channels": ["x", "threads", "instagram"],
+            "buffer": {
+                "x": {"status": "draft_created", "buffer_post_id": "x_fixture"},
+                "threads": {"status": "draft_created", "buffer_post_id": "threads_fixture"},
+                "instagram": {"status": "draft_created", "buffer_post_id": "instagram_fixture"},
+            },
+        },
+    )
+
+
 def test_real_repo_compatibility() -> None:
     pipeline = ReleasePipeline()
     expected = {
@@ -200,6 +247,9 @@ def test_real_repo_compatibility() -> None:
     for product_id, stage in expected.items():
         status = pipeline.status(product_id)
         assert status["current_stage"] == stage, (product_id, status)
+    mail_status = pipeline.status("DAKE_Pack_Mail")
+    assert mail_status["commerce_status"] == "complete", mail_status
+    assert mail_status["formal_release_status"] in {"v2_closed", "v2_pending"}, mail_status
 
     assert pipeline.status("DOES_NOT_EXIST")["current_stage"] == "SOURCE_INVALID"
     assert pipeline.status(r"..\..\example")["current_stage"] == "SOURCE_INVALID"
@@ -359,6 +409,45 @@ def test_duplicate_product_id() -> None:
         assert "duplicate product id" in "\n".join(status["errors"])
 
 
+def test_formal_release_status_from_social_artifact() -> None:
+    with tempfile.TemporaryDirectory() as temp:
+        root = Path(temp) / "DAKE_series"
+        store = Path(temp) / "dake-store-site"
+        product_id = "Formal_Pack"
+        stripe_url = "https://buy.stripe.com/formalpack"
+        booth_url = "https://peakheadz.booth.pm/items/1234567"
+        write_pack(root, product_id, payment_status="stripe_ready", stripe_link=stripe_url, booth_url=booth_url)
+        write_booth_assets(root, product_id)
+        write_live_artifacts(root, product_id, stripe_url)
+        write_production_review(root, product_id)
+        item = {
+            "id": product_id,
+            "type": "pack",
+            "title": "Formal Pack",
+            "price": 1234,
+            "payment_status": "stripe_ready",
+            "stripe_payment_link": stripe_url,
+            "booth_url": booth_url,
+        }
+        make_store_json(root / "tools" / "generated" / "store_products.generated.json", [item])
+        make_store_json(store / "public" / "assets" / "data" / "store_products.generated.json", [item])
+
+        pipeline = ReleasePipeline(root=root, store_site_root=store)
+        pending = pipeline.status(product_id)
+        assert pending["current_stage"] == "RELEASE_COMPLETE", pending
+        assert pending["commerce_status"] == "complete", pending
+        assert pending["social_status"] == "buffer_drafts_pending", pending
+        assert pending["formal_release_status"] == "v2_pending", pending
+        assert pending["next_formal_action"] == "create Buffer drafts", pending
+
+        write_social_artifact(root, product_id)
+        closed = pipeline.status(product_id)
+        assert closed["current_stage"] == "RELEASE_COMPLETE", closed
+        assert closed["social_status"] == "buffer_drafts_complete", closed
+        assert closed["formal_release_status"] == "v2_closed", closed
+        assert closed["next_formal_action"] is None, closed
+
+
 def main() -> int:
     tests = [
         test_real_repo_compatibility,
@@ -368,6 +457,7 @@ def main() -> int:
         test_booth_registration_rejections,
         test_inconsistent_fixtures,
         test_duplicate_product_id,
+        test_formal_release_status_from_social_artifact,
     ]
     for test in tests:
         test()

@@ -13,6 +13,7 @@ import json
 import os
 import re
 import urllib.error
+import urllib.parse
 import urllib.request
 from collections import Counter
 from dataclasses import dataclass, field
@@ -21,13 +22,24 @@ from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from release_source_policy import app_url_for, find_app as source_find_app, read_app_source
+from release_source_policy import (
+    app_url_for,
+    find_app as source_find_app,
+    find_product as source_find_product,
+    product_dirs as source_product_dirs,
+    product_url_for,
+    read_product_source,
+    store_image_url_for_product,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
 APPS_DIR = ROOT / "01_apps"
+PACKS_DIR = ROOT / "04_packs"
 DEFAULT_SITE_ROOT = Path(os.environ.get("DAKEAPP_SITE_ROOT", r"C:\Users\yukiz\devlop\dakeapp-site"))
+DEFAULT_STORE_SITE_ROOT = Path(os.environ.get("DAKE_STORE_SITE_ROOT", r"C:\Users\yukiz\devlop\dake-store-site"))
 DEFAULT_SCHEDULE_PLAN = ROOT / "tools" / "reports" / "social_schedule_plan.json"
+CENTRAL_ARTIFACT_ROOT = ROOT / "tools" / "reports" / "release_artifacts"
 JST = timezone(timedelta(hours=9))
 PLATFORMS = ("x", "threads", "instagram")
 CHANNEL_LABELS = {"x": "X", "threads": "Threads", "instagram": "Instagram"}
@@ -205,16 +217,30 @@ def read_plain_env(name: str) -> str:
 
 
 def read_meta(app_dir: Path) -> tuple[dict[str, Any], str]:
-    source = read_app_source(app_dir, ROOT)
+    source = read_product_source(app_dir, ROOT)
     return source.meta, source.error
 
 
 def find_app(identifier: str) -> Path:
-    return source_find_app(APPS_DIR, identifier, ROOT)
+    return source_find_product(APPS_DIR, PACKS_DIR, identifier, ROOT)
 
 
 def app_dirs() -> list[Path]:
-    return sorted(path for path in APPS_DIR.iterdir() if path.is_dir() and path.name.startswith("DAKE_"))
+    return source_product_dirs(APPS_DIR, PACKS_DIR)
+
+
+def product_id_for(app_dir: Path, meta: dict[str, Any]) -> str:
+    return str(meta.get("app_key") or meta.get("folder_name") or app_dir.name)
+
+
+def product_type_for(meta: dict[str, Any]) -> str:
+    return str(meta.get("product_type") or "app")
+
+
+def social_artifact_dir(app_dir: Path, meta: dict[str, Any]) -> Path:
+    if product_type_for(meta) == "pack":
+        return CENTRAL_ARTIFACT_ROOT / product_id_for(app_dir, meta)
+    return app_dir / "release_artifacts"
 
 
 def normalize_channel(value: str) -> str:
@@ -278,6 +304,45 @@ def build_posts(meta: dict[str, Any], app_url: str, requested_channels: list[str
     name = str(meta.get("site_title") or meta.get("display_name") or meta.get("launcher_title") or "DAKEアプリ")
     feature = safe_sentence(str(meta.get("launcher_description") or meta.get("site_description") or ""), name)
     background = safe_sentence(str(meta.get("update_summary") or meta.get("site_description") or ""), feature)
+    product_id = str(meta.get("app_key") or meta.get("folder_name") or "")
+    if str(meta.get("product_type") or "") == "pack":
+        if product_id == "DAKE_Pack_Mail":
+            all_posts = {
+                "x": trim_for_x(
+                    "DAKE メール準備パックを公開しました。\n"
+                    "メールを集める、整える、下書きにする。\n"
+                    "送信前までの小さな実務をまとめたWindows向けPackです。\n"
+                    f"{app_url}"
+                ),
+                "threads": (
+                    "DAKE メール準備パックを公開しました。\n\n"
+                    "Outlookメールから連絡先をCSVにし、メールアドレスを整え、CSVから個別メールの下書きを作る3本をまとめています。\n\n"
+                    "メールは自動送信しません。下書きを確認してから、自分で送信できます。\n\n"
+                    f"{app_url}"
+                ),
+                "instagram": (
+                    "DAKE メール準備パック\n\n"
+                    "集める。\n"
+                    "整える。\n"
+                    "下書きにする。\n\n"
+                    "送信前までのメール実務をまとめた\n"
+                    "Windows向けPackです。\n\n"
+                    f"{app_url}\n\n"
+                    "#DAKE #Windowsアプリ #Outlook #仕事効率化"
+                ),
+            }
+        else:
+            all_posts = {
+                "x": trim_for_x(f"{name} を公開しました。\n{feature}\n{app_url}"),
+                "threads": f"{name} を公開しました。\n\n{background}\n\n{app_url}",
+                "instagram": f"{name}\n\n{feature}\n\n詳細: {app_url}\n\n#DAKE #Windowsアプリ #仕事効率化",
+            }
+        posts = {channel: all_posts[channel] for channel in requested_channels}
+        for platform, text in posts.items():
+            lowered = text.lower()
+            if "github.com" in lowered or "booth.pm" in lowered:
+                raise ValueError(f"{platform} post contains forbidden direct release/shop URL")
+        return posts
     all_posts = {
         "x": trim_for_x(f"{name} を公開しました。\n{feature}\n{app_url}"),
         "threads": (
@@ -310,6 +375,11 @@ def public_site_image_url(app_dir: Path, app_url: str, site_root: Path) -> str:
     override = read_plain_env("BUFFER_INSTAGRAM_IMAGE_URL")
     if override.startswith("https://"):
         return override
+    parsed = urllib.parse.urlparse(app_url)
+    if parsed.netloc == "store.dakeapp.com":
+        product_id = urllib.parse.parse_qs(parsed.query).get("id", [""])[0]
+        if product_id:
+            return store_image_url_for_product(product_id)
     slug = detail_slug_from_url(app_url)
     if not slug:
         return ""
@@ -360,6 +430,27 @@ def write_posts_markdown(path: Path, outcome: SocialOutcome, existing_sections: 
     ]
     for platform in ordered:
         lines.extend([f"## {platform.upper()}", "", sections[platform], ""])
+    write_text(path, "\n".join(lines))
+
+
+def write_social_release_markdown(path: Path, outcome: SocialOutcome, record: dict[str, Any]) -> None:
+    rows = [
+        f"- product_id: {record.get('product_id') or record.get('app_key')}",
+        f"- product_type: {record.get('product_type')}",
+        f"- stage: {record.get('stage')}",
+        f"- detail_url: {record.get('app_url')}",
+        f"- requested_channels: {', '.join(record.get('requested_channels') or [])}",
+        f"- published: {record.get('published')}",
+        f"- scheduled: {record.get('scheduled')}",
+    ]
+    for platform in PLATFORMS:
+        item = record.get("buffer", {}).get(platform, {})
+        post_id = item.get("buffer_post_id") if isinstance(item, dict) else ""
+        status = item.get("status") if isinstance(item, dict) else ""
+        rows.append(f"- {platform}: {status or '-'} {post_id or ''}".rstrip())
+    lines = ["# Social Release", "", *rows, "", "## Posts", ""]
+    for platform in outcome.requested_channels:
+        lines.extend([f"### {platform}", "", outcome.posts.get(platform, ""), ""])
     write_text(path, "\n".join(lines))
 
 
@@ -642,6 +733,8 @@ def build_record(
     existing: dict[str, Any],
     args: argparse.Namespace,
 ) -> dict[str, Any]:
+    product_id = product_id_for(app_dir, outcome.meta)
+    product_type = product_type_for(outcome.meta)
     completed_channels = [
         platform for platform in outcome.requested_channels if outcome.buffer.get(platform, {}).get("buffer_post_id")
     ]
@@ -651,6 +744,8 @@ def build_record(
         for platform in PLATFORMS
     }
     record = {
+        "product_id": product_id,
+        "product_type": product_type,
         "app_key": str(outcome.meta.get("app_key") or app_dir.name),
         "display_name": str(outcome.meta.get("display_name") or outcome.meta.get("site_title") or app_dir.name),
         "app_url": outcome.app_url,
@@ -661,6 +756,8 @@ def build_record(
         "link_policy": "dakeapp.com detail page only",
         "dry_run": not args.post_to_buffer,
         "save_to_draft": True,
+        "published": False,
+        "scheduled": False,
         "requested_channels": outcome.requested_channels,
         "completed_channels": completed_channels,
         "skipped_channels": skipped_channels,
@@ -673,7 +770,7 @@ def build_record(
             "original_missing": source.original_missing,
             "meta_derivative_mismatch": source.derivative_mismatches,
         },
-        "tool": {"name": "tools/release_social.py", "version": 3},
+        "tool": {"name": "tools/release_social.py", "version": 4},
     }
     existing_schedule = existing.get("scheduled_posts")
     if isinstance(existing_schedule, dict):
@@ -683,18 +780,19 @@ def build_record(
 
 def create_social(app_dir: Path, args: argparse.Namespace) -> SocialOutcome:
     requested_channels = args.requested_channels
-    source = read_app_source(app_dir, ROOT)
+    source = read_product_source(app_dir, ROOT)
     meta = source.meta
     meta_error = source.error
-    app_url = app_url_for(app_dir, meta, args.site_root)
+    app_url = product_url_for(app_dir, meta, args.site_root)
     posts = build_posts(meta, app_url, requested_channels)
     display_name = str(meta.get("display_name") or meta.get("site_title") or app_dir.name)
-    instagram_image_url = public_site_image_url(app_dir, app_url, args.site_root)
+    instagram_image_url = args.thumbnail_url if str(args.thumbnail_url).startswith("https://") else public_site_image_url(app_dir, app_url, args.site_root)
     outcome = SocialOutcome(app_dir=app_dir, meta=meta, app_url=app_url, posts=posts, requested_channels=requested_channels)
-    release_dir = app_dir / "release_artifacts"
+    release_dir = social_artifact_dir(app_dir, meta)
     release_dir.mkdir(parents=True, exist_ok=True)
     posts_path = release_dir / "social_posts.md"
     release_path = release_dir / "social_release.json"
+    release_md_path = release_dir / "social_release.md"
     existing = read_existing_record(release_path)
     existing_posts = read_existing_social_posts(posts_path)
 
@@ -784,16 +882,18 @@ def create_social(app_dir: Path, args: argparse.Namespace) -> SocialOutcome:
     record = build_record(app_dir, source, outcome, existing, args)
     if not args.no_write:
         write_json(release_path, record)
+        write_social_release_markdown(release_md_path, outcome, record)
     return outcome
 
 
 def available_app(app_dir: Path) -> bool:
-    source = read_app_source(app_dir, ROOT)
+    source = read_product_source(app_dir, ROOT)
     return str(source.meta.get("status") or "unknown") == SHIPPING_STATUS
 
 
 def social_ready_for(app_dir: Path, requested_channels: list[str]) -> bool:
-    record = read_existing_record(app_dir / "release_artifacts" / "social_release.json")
+    source = read_product_source(app_dir, ROOT)
+    record = read_existing_record(social_artifact_dir(app_dir, source.meta) / "social_release.json")
     if not record:
         return False
     channels = channels_from_record(record) if "requested_channels" in record else requested_channels
@@ -898,10 +998,10 @@ def validate_schedule_plan(path: Path, confirm: bool, site_root: Path) -> tuple[
             errors.append(f"item {index}: {error}")
             continue
         due_at = scheduled_at.astimezone(timezone.utc).isoformat(timespec="seconds")
-        release_path = app_dir / "release_artifacts" / "social_release.json"
+        source = read_product_source(app_dir, ROOT)
+        release_path = social_artifact_dir(app_dir, source.meta) / "social_release.json"
         record = read_existing_record(release_path)
-        source = read_app_source(app_dir, ROOT)
-        app_url = app_url_for(app_dir, source.meta, site_root)
+        app_url = product_url_for(app_dir, source.meta, site_root)
         for channel in channels:
             pair = (app_dir.name, channel)
             if pair in seen_pairs:
@@ -961,6 +1061,7 @@ def apply_schedule_plan(path: Path, args: argparse.Namespace) -> int:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate DAKE SNS posts and optionally create Buffer draft posts.")
     parser.add_argument("--app", action="append", default=[])
+    parser.add_argument("--product", action="append", default=[], help="Product id or folder name; accepts apps and packs.")
     parser.add_argument("--all-v2-pending", action="store_true")
     parser.add_argument("--limit", type=int)
     parser.add_argument("--channels", default="")
@@ -978,15 +1079,15 @@ def parse_args() -> argparse.Namespace:
     args.requested_channels = parse_channels(args.channels)
     if args.confirm_schedule and not args.apply_schedule:
         parser.error("--confirm-schedule requires --apply-schedule")
-    if args.apply_schedule and (args.app or args.all_v2_pending or args.post_to_buffer or args.discover_only):
+    if args.apply_schedule and (args.app or args.product or args.all_v2_pending or args.post_to_buffer or args.discover_only):
         parser.error("--apply-schedule cannot be combined with app draft generation options")
     if args.all_v2_pending:
         if args.limit is None:
             parser.error("--all-v2-pending requires --limit")
         if args.limit < 1 or args.limit > MAX_BATCH_LIMIT:
             parser.error(f"--limit must be between 1 and {MAX_BATCH_LIMIT}")
-    if not args.apply_schedule and not args.all_v2_pending and not args.app:
-        parser.error("--app, --all-v2-pending, or --apply-schedule is required")
+    if not args.apply_schedule and not args.all_v2_pending and not args.app and not args.product:
+        parser.error("--app, --product, --all-v2-pending, or --apply-schedule is required")
     if args.post_to_buffer and not args.save_to_draft:
         parser.error("normal shipping requires --save-to-draft")
     return args
@@ -1005,7 +1106,7 @@ def main() -> int:
             print("no Buffer mutation: --post-to-buffer was not supplied")
             return 0
     else:
-        app_targets = [find_app(item) for item in args.app]
+        app_targets = [find_app(item) for item in [*args.app, *args.product]]
 
     outcomes: list[SocialOutcome] = []
     try:

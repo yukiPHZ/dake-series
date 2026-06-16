@@ -23,6 +23,7 @@ JST = timezone(timedelta(hours=9))
 
 SOURCE_ROOTS = ("01_apps", "04_packs")
 BUY_STRIPE_PREFIX = "https://buy.stripe.com/"
+SOCIAL_CHANNELS = ("x", "threads", "instagram")
 
 STAGES = [
     "SOURCE_INVALID",
@@ -505,6 +506,45 @@ class ReleasePipeline:
             errors.append("production_review console_errors must be 0")
         return not errors, errors
 
+    def social_release_path(self, source: ProductSource) -> Path:
+        central = self.artifact_dir(source.product_id) / "social_release.json"
+        if source.product_type == "pack" or central.exists():
+            return central
+        return source.path.parent / "release_artifacts" / "social_release.json"
+
+    def validate_social_release(self, source: ProductSource, record: dict[str, Any] | None) -> tuple[bool, str, list[str]]:
+        if record is None:
+            return False, "missing", []
+        errors: list[str] = []
+        if record.get("product_id") and record.get("product_id") != source.product_id:
+            errors.append("social_release product_id does not match target")
+        if record.get("app_key") and record.get("app_key") != source.product_id and source.product_type == "pack":
+            errors.append("social_release app_key does not match Pack id")
+        if record.get("published") is True:
+            errors.append("social_release must not be published by the shipping pipeline")
+        if record.get("scheduled") is True:
+            errors.append("social_release must not be scheduled by the shipping pipeline")
+        requested = record.get("requested_channels")
+        if isinstance(requested, list):
+            channels = [str(channel).strip().lower() for channel in requested if str(channel).strip().lower() in SOCIAL_CHANNELS]
+        else:
+            channels = list(SOCIAL_CHANNELS)
+        if not channels:
+            channels = list(SOCIAL_CHANNELS)
+        buffer = record.get("buffer")
+        if not isinstance(buffer, dict):
+            buffer = {}
+        complete = (
+            record.get("stage") == "complete"
+            and all(isinstance(buffer.get(channel), dict) and buffer[channel].get("buffer_post_id") for channel in channels)
+            and not errors
+        )
+        if complete:
+            return True, "buffer_drafts_complete", []
+        if errors:
+            return False, "buffer_drafts_invalid", errors
+        return False, "buffer_drafts_pending", []
+
     def git_status(self, path: Path) -> str:
         if not (path / ".git").exists():
             return "unknown"
@@ -532,6 +572,10 @@ class ReleasePipeline:
             "payment_status": "",
             "stripe_payment_link": "",
             "next_action": NEXT_ACTIONS["SOURCE_INVALID"],
+            "next_formal_action": None,
+            "commerce_status": "blocked",
+            "social_status": "not_started",
+            "formal_release_status": "not_ready",
             "checks": {},
             "errors": errors,
             "warnings": warnings,
@@ -565,9 +609,10 @@ class ReleasePipeline:
         checkout, checkout_error = self.read_optional_json(artifact_dir / "checkout_review.json")
         finalize_result, finalize_error = self.read_optional_json(artifact_dir / "finalize_release_result.json")
         production_review, production_error = self.read_optional_json(artifact_dir / "production_review.json")
+        social_release, social_error = self.read_optional_json(self.social_release_path(source))
 
         errors.extend(generated_errors + site_errors)
-        for optional_error in [dry_run_error, result_error, state_error, checkout_error, finalize_error, production_error]:
+        for optional_error in [dry_run_error, result_error, state_error, checkout_error, finalize_error, production_error, social_error]:
             if optional_error:
                 errors.append(optional_error)
 
@@ -590,7 +635,8 @@ class ReleasePipeline:
         live_completed, live_url, live_errors = self.validate_live(product_id, result, state)
         checkout_passed, checkout_failed, checkout_errors = self.validate_checkout(product_id, source.product_type, checkout, source.text)
         production_verified, production_errors = self.validate_production_review(product_id, source.product_type, production_review, source.text)
-        artifact_validation_errors = dry_run_errors + live_errors + checkout_errors + production_errors
+        social_complete, social_status_value, social_errors = self.validate_social_release(source, social_release)
+        artifact_validation_errors = dry_run_errors + live_errors + checkout_errors + production_errors + social_errors
 
         source_finalized = payment_status == "stripe_ready" and bool(stripe_payment_link)
         generated_status = str(generated_item.get("payment_status") or "")
@@ -666,6 +712,7 @@ class ReleasePipeline:
             "store_generated": store_generated,
             "store_synced": store_synced,
             "production_verified": production_verified,
+            "social_buffer_drafts_complete": social_complete,
             "legacy_complete": legacy_complete,
             "dake_series_git": self.git_status(self.root),
             "dake_store_site_git": self.git_status(self.store_site_root),
@@ -707,6 +754,31 @@ class ReleasePipeline:
         else:
             stage = "SOURCE_READY"
 
+        commerce_complete = stage in {"RELEASE_COMPLETE", "LEGACY_COMPLETE"}
+        if commerce_complete:
+            commerce_status = "complete"
+        elif stage in {"SOURCE_INVALID", "INCONSISTENT", "PREPARING_BLOCKED"}:
+            commerce_status = "blocked"
+        else:
+            commerce_status = "in_progress"
+
+        if commerce_complete and social_complete:
+            formal_social_status = "buffer_drafts_complete"
+            formal_release_status = "v2_closed"
+            next_formal_action = None
+        elif legacy_complete:
+            formal_social_status = "legacy_unknown"
+            formal_release_status = "legacy_unknown"
+            next_formal_action = "review legacy social evidence"
+        elif commerce_complete:
+            formal_social_status = "buffer_drafts_pending" if social_status_value == "missing" else social_status_value
+            formal_release_status = "v2_pending"
+            next_formal_action = "create Buffer drafts"
+        else:
+            formal_social_status = "not_started"
+            formal_release_status = "not_ready"
+            next_formal_action = None
+
         return {
             "product_id": product_id,
             "product_type": source.product_type,
@@ -722,6 +794,10 @@ class ReleasePipeline:
             "stripe_result": "completed" if live_completed else "missing",
             "checkout_review": "passed" if checkout_passed else ("failed" if checkout_failed else "missing"),
             "next_action": NEXT_ACTIONS[stage],
+            "next_formal_action": next_formal_action,
+            "commerce_status": commerce_status,
+            "social_status": formal_social_status,
+            "formal_release_status": formal_release_status,
             "checks": checks,
             "errors": errors,
             "warnings": warnings,
@@ -795,9 +871,13 @@ def render_status_markdown(status: dict[str, Any]) -> str:
 - product_id: {status.get('product_id')}
 - product_type: {status.get('product_type')}
 - current_stage: {status.get('current_stage')}
+- commerce_status: {status.get('commerce_status')}
+- social_status: {status.get('social_status')}
+- formal_release_status: {status.get('formal_release_status')}
 - payment_status: {status.get('payment_status')}
 - stripe_payment_link: {status.get('stripe_payment_link')}
 - next_action: {status.get('next_action') or 'none'}
+- next_formal_action: {status.get('next_formal_action') or 'none'}
 
 ## Checks
 
@@ -817,6 +897,9 @@ def print_status(status: dict[str, Any]) -> None:
     print(f"product_id: {status.get('product_id')}")
     print(f"product_type: {status.get('product_type')}")
     print(f"current_stage: {status.get('current_stage')}")
+    print(f"commerce_status: {status.get('commerce_status')}")
+    print(f"social_status: {status.get('social_status')}")
+    print(f"formal_release_status: {status.get('formal_release_status')}")
     print(f"payment_status: {status.get('payment_status')}")
     print(f"stripe_payment_link: {status.get('stripe_payment_link')}")
     print(f"booth_url: {status.get('booth_url', 'unknown')}")
@@ -832,12 +915,14 @@ def print_status(status: dict[str, Any]) -> None:
         "store_generated",
         "store_synced",
         "production_verified",
+        "social_buffer_drafts_complete",
     ]:
         if key in checks:
             print(f"{key}: {checks[key]}")
     print(f"DAKE_series: {checks.get('dake_series_git', 'unknown')}")
     print(f"dake-store-site: {checks.get('dake_store_site_git', 'unknown')}")
     print(f"next_action: {status.get('next_action') or 'none'}")
+    print(f"next_formal_action: {status.get('next_formal_action') or 'none'}")
     if status.get("errors"):
         print("errors:")
         for error in status["errors"]:

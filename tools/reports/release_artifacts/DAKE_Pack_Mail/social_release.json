@@ -1,0 +1,67 @@
+{
+  "product_id": "DAKE_Pack_Mail",
+  "product_type": "pack",
+  "app_key": "DAKE_Pack_Mail",
+  "display_name": "DAKE メール準備パック",
+  "app_url": "https://store.dakeapp.com/product/?id=DAKE_Pack_Mail",
+  "created_at": "2026-06-16T17:48:55+09:00",
+  "stage": "complete",
+  "reason": "",
+  "social_posts_path": "release_artifacts/social_posts.md",
+  "link_policy": "dakeapp.com detail page only",
+  "dry_run": false,
+  "save_to_draft": true,
+  "published": false,
+  "scheduled": false,
+  "requested_channels": [
+    "x",
+    "threads",
+    "instagram"
+  ],
+  "completed_channels": [
+    "x",
+    "threads",
+    "instagram"
+  ],
+  "skipped_channels": [],
+  "social_schedule_status": {
+    "x": "draft",
+    "threads": "draft",
+    "instagram": "draft"
+  },
+  "posts": {
+    "x": "DAKE メール準備パックを公開しました。\nメールを集める、整える、下書きにする。\n送信前までの小さな実務をまとめたWindows向けPackです。\nhttps://store.dakeapp.com/product/?id=DAKE_Pack_Mail",
+    "threads": "DAKE メール準備パックを公開しました。\n\nOutlookメールから連絡先をCSVにし、メールアドレスを整え、CSVから個別メールの下書きを作る3本をまとめています。\n\nメールは自動送信しません。下書きを確認してから、自分で送信できます。\n\nhttps://store.dakeapp.com/product/?id=DAKE_Pack_Mail",
+    "instagram": "DAKE メール準備パック\n\n集める。\n整える。\n下書きにする。\n\n送信前までのメール実務をまとめた\nWindows向けPackです。\n\nhttps://store.dakeapp.com/product/?id=DAKE_Pack_Mail\n\n#DAKE #Windowsアプリ #Outlook #仕事効率化"
+  },
+  "buffer": {
+    "x": {
+      "channel": "x",
+      "status": "draft_created",
+      "success": true,
+      "buffer_post_id": "6a310df504f576fe42b04034"
+    },
+    "threads": {
+      "channel": "threads",
+      "status": "draft_created",
+      "success": true,
+      "buffer_post_id": "6a310df6a8215e3dea50f650"
+    },
+    "instagram": {
+      "channel": "instagram",
+      "status": "draft_created",
+      "success": true,
+      "buffer_post_id": "6a310df7924339d68c6ec98b"
+    }
+  },
+  "source_policy": {
+    "source_kind": "pack_original",
+    "source_path": "04_packs/DAKE_Pack_Mail/ORIGINAL.md",
+    "original_missing": false,
+    "meta_derivative_mismatch": []
+  },
+  "tool": {
+    "name": "tools/release_social.py",
+    "version": 4
+  }
+}

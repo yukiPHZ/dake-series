@@ -40,6 +40,7 @@ def main() -> int:
             print(f"product_id: {status['product_id']}")
             print(f"current_stage: {status['current_stage']}")
             print(f"next_action: {status['next_action'] or 'none'}")
+            print(f"next_formal_action: {status.get('next_formal_action') or 'none'}")
         return 0 if status["current_stage"] not in {"SOURCE_INVALID", "INCONSISTENT"} else 1
 
     result = pipeline.advance(args.product_id)

@@ -178,3 +178,68 @@ python tools\record_booth_registration.py <product_id> --booth-url <BOOTH商品U
 ```
 
 このコマンドはBOOTH APIを呼ばず、URL検証と `ORIGINAL.md` の最小更新だけを行う。Stripe情報は変更しない。
+
+# Phase 18 commerce/social closeout
+
+`RELEASE_COMPLETE` means commerce completion: Stripe, source finalization, Store generation/sync, and production review are complete.
+
+Formal release v2 is a separate layer:
+
+```text
+commerce_status=complete
+social_status=buffer_drafts_complete
+formal_release_status=v2_closed
+```
+
+If commerce is complete but Buffer drafts are missing:
+
+```text
+social_status=buffer_drafts_pending
+formal_release_status=v2_pending
+next_formal_action=create Buffer drafts
+```
+
+Normal social release creates Buffer drafts only. It does not publish, schedule, or intentionally queue posts.
+
+Pack products are social release targets. Pack posts must link to the Store product detail page, not directly to BOOTH, Stripe, GitHub Release, or private delivery URLs.
+
+Stripe commerce v1 supports:
+
+```text
+app_one_time
+pack_one_time_manual_delivery
+digital_product_one_time
+web_service_one_time_manual_fulfillment
+web_service_one_time_redirect
+```
+
+Stripe commerce v1 does not support:
+
+```text
+subscription
+recurring price
+usage based billing
+automatic account provisioning
+automatic entitlement
+webhook fulfillment
+refund automation
+customer portal
+```
+
+For new Pack releases, the target high-level flow is:
+
+```text
+Pack creation and BOOTH-ready material
+BOOTH registration by human
+BOOTH URL record
+Stripe dry-run
+Stripe live execution with explicit confirmation
+Checkout human review
+source finalization
+Store generation/sync
+production review
+Buffer drafts
+v2_closed
+```
+
+Normal Pack release should need two major Codex requests: one before BOOTH registration, and one after BOOTH registration. Failed safety gates remain separate follow-up work.

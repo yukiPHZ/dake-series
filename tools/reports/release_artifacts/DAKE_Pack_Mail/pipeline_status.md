@@ -5,9 +5,13 @@
 - product_id: DAKE_Pack_Mail
 - product_type: pack
 - current_stage: RELEASE_COMPLETE
+- commerce_status: complete
+- social_status: buffer_drafts_complete
+- formal_release_status: v2_closed
 - payment_status: stripe_ready
 - stripe_payment_link: present
 - next_action: none
+- next_formal_action: none
 
 ## Checks
 
@@ -22,6 +26,7 @@
 - store_generated: True
 - store_synced: True
 - production_verified: True
+- social_buffer_drafts_complete: True
 - legacy_complete: False
 - dake_series_git: dirty
 - dake_store_site_git: clean

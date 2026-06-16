@@ -13,6 +13,10 @@
   "stripe_result": "completed",
   "checkout_review": "passed",
   "next_action": null,
+  "next_formal_action": null,
+  "commerce_status": "complete",
+  "social_status": "buffer_drafts_complete",
+  "formal_release_status": "v2_closed",
   "checks": {
     "source_valid": true,
     "delivery_ready": true,
@@ -25,6 +29,7 @@
     "store_generated": true,
     "store_synced": true,
     "production_verified": true,
+    "social_buffer_drafts_complete": true,
     "legacy_complete": false,
     "dake_series_git": "dirty",
     "dake_store_site_git": "clean"
@@ -36,5 +41,5 @@
     "generated_json": "tools/generated/store_products.generated.json",
     "store_site_json": "C:\\Users\\yukiz\\devlop\\dake-store-site\\public\\assets\\data\\store_products.generated.json"
   },
-  "saved_at": "2026-06-16T12:44:11+09:00"
+  "saved_at": "2026-06-16T17:49:18+09:00"
 }
