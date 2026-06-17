@@ -24,7 +24,7 @@ APP_NAME = "YUKIZ BLOG 投稿DAKE"
 WINDOW_TITLE = "YUKIZ BLOG 投稿DAKE"
 COPYRIGHT = "© 2026 しまりす不動産 / Vibe-Coded by Yukihiko Kikuta"
 DEFAULT_SITE_PATH = Path("C:/Users/yukiz/devlop/yukizblog-site")
-DEFAULT_BASE_URL = os.environ.get("YUKIZBLOG_BASE_URL", "https://yukizblog.com/")
+DEFAULT_BASE_URL = os.environ.get("YUKIZBLOG_BASE_URL", "https://yukizblog.yukihikokikuta.com/")
 TOKYO = dt.timezone(dt.timedelta(hours=9), "JST")
 
 UI_TEXT = {

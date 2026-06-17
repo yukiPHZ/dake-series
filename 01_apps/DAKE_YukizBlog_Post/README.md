@@ -77,10 +77,18 @@ DAKE 共通アイコン `C:\Users\yukiz\devlop\DAKE_series\02_assets\dake_icon.i
 
 対象サイトは初期値で `C:\Users\yukiz\devlop\yukizblog-site` です。
 
-`sitemap.xml` の URL は初期値として `https://yukizblog.com/` を使います。公開 URL が変わる場合は、環境変数 `YUKIZBLOG_BASE_URL` で指定してから実行してください。
+`sitemap.xml` の URL は初期値として `https://yukizblog.yukihikokikuta.com/` を使います。公開 URL が変わる場合は、環境変数 `YUKIZBLOG_BASE_URL` で指定してから実行してください。
 
 削除、編集、投稿一覧管理、タイトル編集、タグ編集、SEO 編集はありません。
 ユーザーの仕事は、本文を書くことだけです。
+
+## 凍結メモ
+
+- 凍結日: 2026-06-17
+- 理由: `yukizblog.com` は解約候補。今後は `yukizblog.yukihikokikuta.com` の静的アーカイブ運用を優先する。
+- 凍結対象: この投稿DAKEからの新規投稿、投稿HTML生成、`data/posts.json` 更新、sitemap更新。
+- 自動投稿、予約投稿、投稿API、管理画面は持たない。もし外部に残っている場合は停止対象。
+- 再開条件: 新サブドメインで投稿運用を再開する判断があり、READMEとサイトrepoの方針を先に更新した場合のみ。
 
 ## DAKE_META
 
@@ -97,7 +105,7 @@ DAKE 共通アイコン `C:\Users\yukiz\devlop\DAKE_series\02_assets\dake_icon.i
   "exe_name": "Dake_YukizBlog_Post.exe",
   "release_url": "",
   "screenshot_path": "assets/screenshot.webp",
-  "status": "internal",
+  "status": "frozen",
   "show_in_launcher": false,
   "show_on_site": false,
   "demo_video_path": "release_artifacts/demo.mp4",

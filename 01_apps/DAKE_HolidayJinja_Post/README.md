@@ -63,6 +63,14 @@ images/hj-004.jpg
 
 GitHubへの反映は、サイト側の変更確認後に手動で行ってください。
 
+## 凍結メモ
+
+- 凍結日: 2026-06-17
+- 理由: `holiday-jinja.com` 本体は解約候補であり、コンテンツ再利用は行わない。`sky` のみ `sky.niceskill.com` へ移行する。
+- 凍結対象: この投稿DAKEからの新規投稿、画像コピー、`posts.json` 追記、ローカル投稿運用。
+- 自動投稿、予約投稿、投稿API、管理画面は持たない。もし外部に残っている場合は停止対象。
+- 再開条件: holiday-jinja本体を維持する明確な運用理由ができ、サイトrepoのREADME/SITE_SPECを先に更新した場合のみ。
+
 ## ビルド
 
 依存関係を入れたうえで、`build.bat` を実行します。
@@ -93,7 +101,7 @@ dist/Dake_HolidayJinja_Post.exe
   "exe_name": "Dake_HolidayJinja_Post.exe",
   "release_url": "",
   "screenshot_path": "assets/screenshot.webp",
-  "status": "internal",
+  "status": "frozen",
   "show_in_launcher": false,
   "show_on_site": false,
   "demo_video_path": "release_artifacts/demo.mp4",
