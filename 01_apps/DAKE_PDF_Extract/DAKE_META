@@ -1,0 +1,21 @@
+{
+  "app_key": "dake_pdf_extract",
+  "display_name": "DakePDF抽出",
+  "launcher_title": "PDF抽出",
+  "launcher_description": "1つのPDFから、必要なページを何度でも連続して抽出します。",
+  "site_title": "DakePDF抽出",
+  "site_description": "PDFを開いたまま、選択、抽出、自動選択解除、次の選択を繰り返せるWindows向けアプリです。",
+  "update_summary": "1つのPDFから必要なページを連続抽出する新規DAKEアプリを追加しました。",
+  "folder_name": "DAKE_PDF_Extract",
+  "exe_name": "DakePDF_Extract.exe",
+  "release_url": "",
+  "booth_url": "",
+  "store_url": "",
+  "screenshot_path": "assets/screenshot.webp",
+  "status": "draft",
+  "version": "0.1.0",
+  "show_in_launcher": false,
+  "show_on_site": false,
+  "app_type": "market",
+  "completion_goal": "draft_build_verified"
+}

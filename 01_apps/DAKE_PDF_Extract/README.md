@@ -1,0 +1,88 @@
+# DakePDF抽出
+
+DakePDF抽出は、1つのPDFを開いたまま、必要なページを何度でも連続して抽出するWindows向けDAKEアプリです。
+
+## 特徴
+
+- PDFを1ファイルだけ読み込み
+- ファイル選択とドラッグ＆ドロップに対応
+- 全ページのサムネイル一覧表示
+- クリックで選択、再クリックで解除
+- Shift+クリックで範囲選択
+- Enterで抽出、Escで選択解除
+- 選択ページを1つのPDFにまとめて保存
+- 選択ページを1ページずつ保存
+- 保存成功後もPDFとスクロール位置を維持
+- 保存成功後は選択を自動解除
+- 抽出済みページは薄い表示と小さなチェックで表示
+- サムネイルサイズをボタン、スライダー、Ctrl+マウスホイールで変更
+
+## 使い方
+
+1. `PDFを追加` からPDFを選ぶか、PDFを画面へドラッグ＆ドロップします。
+2. サムネイルをクリックして抽出したいページを選びます。
+3. 必要に応じて抽出方法を選びます。
+4. `抽出して保存` または Enter で保存します。
+5. 選択が自動解除されるので、続けて次のページを選べます。
+
+## 保存先とファイル名
+
+初期保存先は元PDFと同じフォルダです。保存先は `保存先を変更` から変更できます。
+
+出力ファイル名は元PDF名とページ番号から生成します。
+
+- 1ページ: `元PDF名_p001.pdf`
+- 連続ページ: `元PDF名_p002-004.pdf`
+- 非連続ページ: `元PDF名_p002_004_007.pdf`
+- 1ページずつ: `元PDF名_p002.pdf` など
+
+同名ファイルがある場合は上書きせず、`_2`、`_3` のように連番を付けます。
+
+## ビルド
+
+同じフォルダで以下を実行します。
+
+```bat
+build.bat
+```
+
+生成物は `dist\DakePDF_Extract.exe` です。
+
+## 開発確認
+
+```powershell
+python -m py_compile main.py
+python main.py --launch-check
+python main.py --process-check
+python main.py --self-check
+```
+
+## DAKE_META
+
+```json
+{
+  "app_key": "dake_pdf_extract",
+  "display_name": "DakePDF抽出",
+  "launcher_title": "PDF抽出",
+  "launcher_description": "1つのPDFから、必要なページを何度でも連続して抽出します。",
+  "site_title": "DakePDF抽出",
+  "site_description": "PDFを開いたまま、選択、抽出、自動選択解除、次の選択を繰り返せるWindows向けアプリです。",
+  "update_summary": "1つのPDFから必要なページを連続抽出する新規DAKEアプリを追加しました。",
+  "folder_name": "DAKE_PDF_Extract",
+  "exe_name": "DakePDF_Extract.exe",
+  "release_url": "",
+  "booth_url": "",
+  "store_url": "",
+  "screenshot_path": "assets/screenshot.webp",
+  "status": "draft",
+  "version": "0.1.0",
+  "show_in_launcher": false,
+  "show_on_site": false,
+  "app_type": "market",
+  "completion_goal": "draft_build_verified"
+}
+```
+
+## 出荷状況
+
+GitHub Release、BOOTH登録、Store公開、Cloudflare反映、dakeapp.com掲載は未実施です。
