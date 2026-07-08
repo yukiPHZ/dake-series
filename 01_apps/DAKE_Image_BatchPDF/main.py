@@ -14,6 +14,7 @@ import time
 import traceback
 import webbrowser
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -124,7 +125,9 @@ UI_TEXT = {
     "thumbnail_error": "表示できません",
     "file_type_images": "画像ファイル",
     "file_type_all": "すべてのファイル",
-    "default_pdf_name": "画像まとめ.pdf",
+    "output_name_one": "Dake_画像まとめ_1枚配置_{timestamp}.pdf",
+    "output_name_four": "Dake_画像まとめ_4枚配置_{timestamp}.pdf",
+    "output_name_date_format": "%Y%m%d_%H%M%S",
     "footer_left": "シンプルそれDAKEシリーズ",
     "footer_link_1": "戸建買取査定",
     "footer_link_2": "Instagram",
@@ -173,6 +176,8 @@ ROW_GAP = 10
 OUTER_MARGIN_PT = 34
 GUTTER_PT = 18
 RESAMPLE = Image.Resampling.LANCZOS if hasattr(Image, "Resampling") else Image.LANCZOS
+ROTATION_AREA_EPSILON = 0.0001
+MAX_UNIQUE_PATH_ATTEMPTS = 10000
 
 
 @dataclass
@@ -189,6 +194,13 @@ class LoadedImage:
     path_key: str
     thumbnail_png: bytes
     pixel_size: tuple[int, int]
+
+
+@dataclass(frozen=True)
+class SlotPlacement:
+    rotate_clockwise: bool
+    draw_width: float
+    draw_height: float
 
 
 class ImageReadError(RuntimeError):
@@ -304,6 +316,46 @@ def default_output_dir() -> Path:
     return downloads if downloads.exists() else Path.home()
 
 
+def default_output_filename(layout: str, now: datetime | None = None) -> str:
+    timestamp = (now or datetime.now()).strftime(UI_TEXT["output_name_date_format"])
+    template_key = "output_name_four" if layout == LAYOUT_FOUR else "output_name_one"
+    return UI_TEXT[template_key].format(timestamp=timestamp)
+
+
+def ensure_pdf_suffix(path: Path) -> Path:
+    if path.suffix.lower() == ".pdf":
+        return path
+    return path.with_suffix(".pdf")
+
+
+def ensure_unique_path(path: Path) -> Path:
+    path = ensure_pdf_suffix(path)
+    if not path.exists():
+        return path
+
+    stem = path.stem
+    suffix = path.suffix
+    for index in range(2, MAX_UNIQUE_PATH_ATTEMPTS + 1):
+        candidate = path.with_name(f"{stem}_{index}{suffix}")
+        if not candidate.exists():
+            return candidate
+
+    raise RuntimeError(UI_TEXT["message_save_failed"])
+
+
+def commit_temp_to_unique_path(temp_path: Path, output_path: Path) -> Path:
+    for _attempt in range(MAX_UNIQUE_PATH_ATTEMPTS):
+        candidate = ensure_unique_path(output_path)
+        try:
+            os.rename(temp_path, candidate)
+        except OSError:
+            if candidate.exists():
+                continue
+            raise
+        return candidate
+    raise RuntimeError(UI_TEXT["message_save_failed"])
+
+
 def open_folder(path: Path) -> bool:
     try:
         if os.name == "nt":
@@ -394,14 +446,6 @@ def make_thumbnail_png(source_path: Path) -> tuple[bytes, tuple[int, int]]:
         image.close()
 
 
-def image_reader_from_path(source_path: Path) -> tuple[Any, Image.Image]:
-    image = load_display_image(source_path, PDF_IMAGE_MAX_EDGE)
-    if ImageReader is None:
-        image.close()
-        raise RuntimeError(UI_TEXT["message_reportlab_missing"])
-    return ImageReader(image), image
-
-
 def fit_rect(source_size: tuple[int, int], box_width: float, box_height: float) -> tuple[float, float]:
     image_width, image_height = source_size
     if image_width <= 0 or image_height <= 0:
@@ -410,14 +454,55 @@ def fit_rect(source_size: tuple[int, int], box_width: float, box_height: float) 
     return image_width * scale, image_height * scale
 
 
+def choose_best_orientation(source_size: tuple[int, int], box_width: float, box_height: float) -> SlotPlacement:
+    image_width, image_height = source_size
+    draw_width_0, draw_height_0 = fit_rect((image_width, image_height), box_width, box_height)
+    area_0 = draw_width_0 * draw_height_0
+
+    draw_width_90, draw_height_90 = fit_rect((image_height, image_width), box_width, box_height)
+    area_90 = draw_width_90 * draw_height_90
+
+    if area_90 > area_0 * (1.0 + ROTATION_AREA_EPSILON):
+        return SlotPlacement(True, draw_width_90, draw_height_90)
+    return SlotPlacement(False, draw_width_0, draw_height_0)
+
+
+def rotate_clockwise_90(image: Image.Image) -> Image.Image:
+    if hasattr(Image, "Transpose"):
+        return image.transpose(Image.Transpose.ROTATE_270)
+    return image.rotate(-90, expand=True)
+
+
+def prepare_image_for_slot(image: Image.Image, box_width: float, box_height: float) -> tuple[Image.Image, SlotPlacement]:
+    placement = choose_best_orientation(image.size, box_width, box_height)
+    if placement.rotate_clockwise:
+        return rotate_clockwise_90(image), placement
+    return image, placement
+
+
 def draw_image_centered(pdf: Any, source_path: Path, x: float, y: float, width: float, height: float) -> None:
-    reader, image = image_reader_from_path(source_path)
+    image = load_display_image(source_path, PDF_IMAGE_MAX_EDGE)
+    if ImageReader is None:
+        image.close()
+        raise RuntimeError(UI_TEXT["message_reportlab_missing"])
+    slot_image: Image.Image | None = None
     try:
-        draw_width, draw_height = fit_rect(image.size, width, height)
-        draw_x = x + (width - draw_width) / 2
-        draw_y = y + (height - draw_height) / 2
-        pdf.drawImage(reader, draw_x, draw_y, draw_width, draw_height, preserveAspectRatio=True, mask="auto")
+        slot_image, placement = prepare_image_for_slot(image, width, height)
+        reader = ImageReader(slot_image)
+        draw_x = x + (width - placement.draw_width) / 2
+        draw_y = y + (height - placement.draw_height) / 2
+        pdf.drawImage(
+            reader,
+            draw_x,
+            draw_y,
+            placement.draw_width,
+            placement.draw_height,
+            preserveAspectRatio=True,
+            mask="auto",
+        )
     finally:
+        if slot_image is not None and slot_image is not image:
+            slot_image.close()
         image.close()
 
 
@@ -433,6 +518,7 @@ def generate_pdf(
     if not source_paths:
         raise RuntimeError(UI_TEXT["message_no_images"])
 
+    output_path = ensure_pdf_suffix(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     handle, temp_name = tempfile.mkstemp(
         prefix=f".{output_path.stem}_",
@@ -493,8 +579,7 @@ def generate_pdf(
         if event_queue is not None:
             event_queue.put(("pdf_progress", "saving", 1, 1))
         pdf.save()
-        os.replace(str(temp_path), str(output_path))
-        return output_path
+        return commit_temp_to_unique_path(temp_path, output_path)
     except CancelledError:
         raise
     except ImageReadError:
@@ -1220,17 +1305,15 @@ class DakeImageBatchPdfApp:
             parent=self.root,
             title=UI_TEXT["dialog_save_title"],
             initialdir=str(default_output_dir()),
-            initialfile=UI_TEXT["default_pdf_name"],
+            initialfile=default_output_filename(self.layout_var.get()),
             defaultextension=".pdf",
             filetypes=[("PDF", "*.pdf"), (UI_TEXT["file_type_all"], "*.*")],
-            confirmoverwrite=True,
+            confirmoverwrite=False,
         )
         if not selected:
             return
 
-        output_path = Path(selected)
-        if output_path.suffix.lower() != ".pdf":
-            output_path = output_path.with_suffix(".pdf")
+        output_path = ensure_pdf_suffix(Path(selected))
         if not output_path.parent.exists() or not output_path.parent.is_dir():
             self.show_error(UI_TEXT["message_save_folder_invalid"])
             return
