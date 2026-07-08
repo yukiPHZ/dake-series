@@ -57,6 +57,7 @@ UI_TEXT = {
     "main_title": "PDFからページを抽出する",
     "main_description": "1つのPDFから、必要なページを何度でも連続して抽出します。",
     "button_add": "PDFを追加",
+    "button_refresh": "リフレッシュ",
     "button_select_folder": "保存先を変更",
     "button_extract": "抽出して保存",
     "button_clear_selection": "選択解除",
@@ -558,6 +559,7 @@ class DakePdfExtractApp:
         self.config_store = ConfigStore()
         self.queue: queue.Queue[tuple[Any, ...]] = queue.Queue()
         self.load_id = 0
+        self.load_failure_source_pdf: Path | None = None
         self.extract_id = 0
         self.closed = False
         self.stop_event = threading.Event()
@@ -663,6 +665,13 @@ class DakePdfExtractApp:
         header_buttons.grid(row=0, column=1, sticky="e", padx=(16, 0))
         self.add_button = self._make_button(header_buttons, UI_TEXT["button_add"], self.choose_pdf, "primary")
         self.add_button.pack(side="left")
+        self.refresh_button = self._make_button(
+            header_buttons,
+            UI_TEXT["button_refresh"],
+            self.refresh_pdf,
+            "secondary",
+        )
+        self.refresh_button.pack(side="left", padx=(8, 0))
         self.folder_button = self._make_button(
             header_buttons,
             UI_TEXT["button_select_folder"],
@@ -1011,6 +1020,11 @@ class DakePdfExtractApp:
         self.config_store.save({"last_output_dir": str(self.output_dir)})
         self._set_status("status_ready", UI_TEXT["status_folder_changed"], "success")
 
+    def refresh_pdf(self) -> None:
+        if self.source_pdf is None or self.is_loading or self.is_extracting:
+            return
+        self.load_pdf(self.source_pdf, keep_output_dir=True, reset_extracted=True)
+
     def _on_drop(self, event: tk.Event) -> None:
         try:
             paths = self._drop_paths(str(event.data))  # type: ignore[attr-defined]
@@ -1029,7 +1043,15 @@ class DakePdfExtractApp:
             parts = [data]
         return [Path(part) for part in parts if str(part).strip()]
 
-    def load_pdf(self, pdf_path: Path) -> None:
+    def load_pdf(
+        self,
+        pdf_path: Path,
+        *,
+        keep_output_dir: bool = False,
+        reset_extracted: bool | None = None,
+    ) -> None:
+        if self.is_loading:
+            return
         if fitz is None or Image is None or ImageTk is None:
             self._set_status("status_error", UI_TEXT["error_dependency_missing"], "error")
             return
@@ -1041,12 +1063,21 @@ class DakePdfExtractApp:
             return
 
         same_pdf = self.source_pdf is not None and self._same_path(self.source_pdf, pdf_path)
+        previous_output_dir = self.output_dir
+        previous_output_dir_manual = self.output_dir_manual
+        if reset_extracted is None:
+            reset_extracted = not same_pdf
         self.load_id += 1
         current_load_id = self.load_id
+        self.load_failure_source_pdf = pdf_path if keep_output_dir else None
         self.source_pdf = pdf_path
-        if not same_pdf:
+        if keep_output_dir and previous_output_dir is not None:
+            self.output_dir = previous_output_dir
+            self.output_dir_manual = previous_output_dir_manual
+        elif not same_pdf:
             self.output_dir = pdf_path.parent
             self.output_dir_manual = False
+        if reset_extracted:
             self.extracted_pages.clear()
         self.page_count = 0
         self.pages = []
@@ -1139,7 +1170,6 @@ class DakePdfExtractApp:
             self.page_count = int(page_count)
             self.pages = [PageItem(page_index=index) for index in range(self.page_count)]
             self.source_pdf = Path(pdf_path)
-            self.is_loading = False
             self._refresh_file_info()
             self._set_status("status_rendering", UI_TEXT["status_loaded"].format(count=self.page_count), "active")
             self._update_action_buttons()
@@ -1168,6 +1198,8 @@ class DakePdfExtractApp:
             return
 
         if kind == "thumbnail_done":
+            self.is_loading = False
+            self.load_failure_source_pdf = None
             self._set_status("status_ready", UI_TEXT["status_ready"], "neutral")
             self._update_action_buttons()
             return
@@ -1175,7 +1207,8 @@ class DakePdfExtractApp:
         if kind == "load_failed":
             _kind, _load_id, message_text = message
             self.is_loading = False
-            self.source_pdf = None
+            self.source_pdf = self.load_failure_source_pdf
+            self.load_failure_source_pdf = None
             self.page_count = 0
             self.pages = []
             self.selected_pages.clear()
@@ -1267,11 +1300,15 @@ class DakePdfExtractApp:
             self.selected_pages_var.set(UI_TEXT["selected_pages_empty"])
 
     def _update_action_buttons(self) -> None:
-        can_extract = self.source_pdf is not None and self.page_count > 0 and bool(self.selected_pages) and not self.is_extracting
+        busy = self.is_loading or self.is_extracting
+        can_extract = self.source_pdf is not None and self.page_count > 0 and bool(self.selected_pages) and not busy
         self.extract_button.configure(state="normal" if can_extract else "disabled")
-        self.clear_button.configure(state="normal" if self.selected_pages and not self.is_extracting else "disabled")
-        self.folder_button.configure(state="normal" if not self.is_extracting else "disabled")
-        self.add_button.configure(state="normal" if not self.is_extracting else "disabled")
+        self.clear_button.configure(state="normal" if self.selected_pages and not busy else "disabled")
+        self.refresh_button.configure(
+            state="normal" if self.source_pdf is not None and not busy else "disabled"
+        )
+        self.folder_button.configure(state="normal" if not busy else "disabled")
+        self.add_button.configure(state="normal" if not busy else "disabled")
 
     def toggle_page(self, page_number: int, shift_pressed: bool = False) -> None:
         if page_number < 1 or page_number > self.page_count:
@@ -1651,14 +1688,46 @@ def run_self_check() -> int:
         root = make_root()
         root.withdraw()
         app = DakePdfExtractApp(root)
+        app.refresh_pdf()
+        if app.load_id != 0:
+            app.close()
+            return 1
         app.load_pdf(source)
         deadline = time.time() + 10
         while time.time() < deadline:
             root.update()
-            if app.page_count == 8 and len(app.thumbnail_images) >= 3:
+            if not app.is_loading and app.page_count == 8 and len(app.thumbnail_images) >= 8:
                 break
             time.sleep(0.05)
-        if app.page_count != 8:
+        if app.is_loading or app.page_count != 8:
+            app.close()
+            return 1
+        updated_page_count = 6
+        create_sample_pdf(source, updated_page_count)
+        initial_output_dir = app.output_dir
+        initial_thumbnail_size = int(app.thumbnail_size_var.get())
+        app.extracted_pages.update({1, 5})
+        app.select_pages({2, 3})
+        app.refresh_pdf()
+        refresh_load_id = app.load_id
+        app.refresh_pdf()
+        if app.load_id != refresh_load_id:
+            app.close()
+            return 1
+        deadline = time.time() + 10
+        while time.time() < deadline:
+            root.update()
+            if not app.is_loading and app.page_count == updated_page_count and len(app.thumbnail_images) >= updated_page_count:
+                break
+            time.sleep(0.05)
+        if (
+            app.is_loading
+            or app.page_count != updated_page_count
+            or app.selected_pages
+            or app.extracted_pages
+            or app.output_dir != initial_output_dir
+            or int(app.thumbnail_size_var.get()) != initial_thumbnail_size
+        ):
             app.close()
             return 1
         app.toggle_page(2)
@@ -1667,7 +1736,7 @@ def run_self_check() -> int:
             app.close()
             return 1
         app.clear_selection()
-        app.select_pages({2, 4, 7})
+        app.select_pages({2, 4, 6})
         app.output_dir = temp
         app.start_extract()
         deadline = time.time() + 10
@@ -1676,7 +1745,7 @@ def run_self_check() -> int:
             if not app.is_extracting:
                 break
             time.sleep(0.05)
-        if app.selected_pages or not {2, 4, 7}.issubset(app.extracted_pages):
+        if app.selected_pages or not {2, 4, 6}.issubset(app.extracted_pages):
             app.close()
             return 1
         for page in range(1, 6):
