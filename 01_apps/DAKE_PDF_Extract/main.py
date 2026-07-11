@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 import ctypes
+import base64
 import io
 import json
 import os
 import queue
 import re
+import subprocess
 import sys
 import tempfile
 import threading
@@ -53,7 +55,6 @@ COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
 
 UI_TEXT = {
     "brand_series": "シンプルそれDAKEシリーズ",
-    "header_subtitle": "止まらない、迷わない、すぐ終わる。",
     "main_title": "PDFからページを抽出する",
     "main_description": "1つのPDFから、必要なページを何度でも連続して抽出します。",
     "button_add": "PDFを追加",
@@ -89,6 +90,8 @@ UI_TEXT = {
     "status_no_pdf": "先にPDFを追加してください。",
     "status_selection_cleared": "選択を解除しました。",
     "status_folder_changed": "保存先を変更しました。",
+    "status_folder_opening": "保存先フォルダを表示中",
+    "status_folder_shown": "保存先フォルダを表示しました。",
     "status_size_changed": "サムネイルサイズを変更しました。",
     "status_drop_ready": "PDFを選ぶか、ここへドロップしてください。",
     "file_label_empty": "PDF：未選択",
@@ -98,7 +101,7 @@ UI_TEXT = {
     "save_dir_empty": "保存先：未設定",
     "save_dir_value": "保存先：{path}",
     "thumbnail_empty_title": "PDFを追加してください",
-    "thumbnail_empty_detail": "ファイル選択またはドラッグ＆ドロップで読み込みます。",
+    "thumbnail_empty_detail": "ここをクリックしてPDFを選択、またはドラッグ＆ドロップで読み込みます。",
     "thumbnail_loading": "読み込み中",
     "thumbnail_error": "表示できません",
     "thumbnail_page": "P.{page}",
@@ -116,6 +119,7 @@ UI_TEXT = {
     "error_save_dir_missing": "保存先フォルダが見つかりません。保存先を変更してください。",
     "error_save_dir_denied": "保存先へ書き込めません。権限のあるフォルダへ変更してください。",
     "error_save_failed": "PDFを保存できませんでした。保存先とファイル名を確認してください。",
+    "error_folder_show": "保存は完了しましたが、保存先フォルダを表示できませんでした。",
     "error_extract_exception": "抽出中に問題が起きました。選択ページと保存先を確認してください。",
     "error_detail": "詳細：{detail}",
     "error_drop_detail": "ドロップされた内容を読み取れませんでした。PDFファイルを1つだけ指定してください。",
@@ -180,10 +184,14 @@ COMMON_ICON_FILENAME = "dake_icon.ico"
 WINDOW_SIZE = "1080x760"
 WINDOW_MIN_SIZE = (820, 640)
 FONT_CANDIDATES = ("BIZ UDPGothic", "Yu Gothic UI", "Meiryo", "Segoe UI")
+HEADER_COMPACT_WIDTH = 1020
 THUMBNAIL_MIN = 100
 THUMBNAIL_MAX = 300
 THUMBNAIL_DEFAULT = 156
 THUMBNAIL_STEP = 20
+THUMBNAIL_SLIDER_WIDTH = 150
+THUMBNAIL_SLIDER_HEIGHT = 28
+THUMBNAIL_SLIDER_PADDING = 9
 RENDER_CACHE_WIDTH = 360
 CANVAS_PAD_X = 18
 CANVAS_PAD_Y = 18
@@ -395,6 +403,76 @@ def validate_output_dir(output_dir: Path) -> None:
                 pass
 
 
+def reveal_output_folder(output_dir: Path) -> None:
+    """Bring an existing Explorer window forward, or open the output folder once."""
+    if not output_dir.exists() or not output_dir.is_dir():
+        raise UserFacingError(UI_TEXT["error_save_dir_missing"])
+    if not sys.platform.startswith("win"):
+        if not webbrowser.open(output_dir.resolve().as_uri(), new=2):
+            raise UserFacingError(UI_TEXT["error_folder_show"])
+        return
+
+    script = r'''
+$target = [Environment]::GetEnvironmentVariable('DAKE_PDF_EXTRACT_OUTPUT_FOLDER')
+if ([string]::IsNullOrWhiteSpace($target)) { exit 1 }
+$target = [IO.Path]::GetFullPath($target).TrimEnd([char]'\')
+$shell = New-Object -ComObject Shell.Application
+$existing = $null
+foreach ($window in @($shell.Windows())) {
+    try {
+        $folderPath = $window.Document.Folder.Self.Path
+        if ($folderPath -and ([IO.Path]::GetFullPath($folderPath).TrimEnd([char]'\') -ieq $target)) {
+            $existing = $window
+            break
+        }
+    } catch {}
+}
+if ($null -ne $existing) {
+    Add-Type @'
+using System;
+using System.Runtime.InteropServices;
+public static class DakePdfExtractWindow {
+    [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+    [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int command);
+}
+'@
+    $handle = [IntPtr]$existing.HWND
+    [DakePdfExtractWindow]::ShowWindow($handle, 9) | Out-Null
+    [DakePdfExtractWindow]::SetForegroundWindow($handle) | Out-Null
+} else {
+    $shell.Open($target)
+}
+Start-Sleep -Milliseconds 500
+'''
+    environment = os.environ.copy()
+    environment["DAKE_PDF_EXTRACT_OUTPUT_FOLDER"] = str(output_dir.resolve())
+    command = base64.b64encode(script.encode("utf-16le")).decode("ascii")
+    creation_flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    try:
+        completed = subprocess.run(
+            [
+                "powershell.exe",
+                "-NoLogo",
+                "-NoProfile",
+                "-NonInteractive",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-EncodedCommand",
+                command,
+            ],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=10,
+            check=False,
+            creationflags=creation_flags,
+            env=environment,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise UserFacingError(UI_TEXT["error_folder_show"]) from exc
+    if completed.returncode != 0:
+        raise UserFacingError(UI_TEXT["error_folder_show"])
+
+
 def format_error_detail(exc: BaseException) -> str:
     text = str(exc).strip().replace("\n", " ")
     if not text:
@@ -581,7 +659,12 @@ class DakePdfExtractApp:
         self.busy_dot_index = 0
         self.is_loading = False
         self.is_extracting = False
+        self.is_choosing_pdf = False
         self.footer_compact: bool | None = None
+        self.header_compact: bool | None = None
+        self.empty_state_bounds: tuple[int, int, int, int] | None = None
+        self.folder_reveal_inflight: set[str] = set()
+        self.folder_revealer: Callable[[Path], None] = reveal_output_folder
 
         self.file_var = tk.StringVar(value=UI_TEXT["file_label_empty"])
         self.page_count_var = tk.StringVar(value=UI_TEXT["page_count_empty"])
@@ -610,14 +693,6 @@ class DakePdfExtractApp:
         except tk.TclError:
             pass
         style.configure(
-            "Dake.Horizontal.TScale",
-            troughcolor=THEME["soft"],
-            background=THEME["background"],
-            bordercolor=THEME["border"],
-            lightcolor=THEME["border"],
-            darkcolor=THEME["border"],
-        )
-        style.configure(
             "Dake.TRadiobutton",
             background=THEME["card"],
             foreground=THEME["text"],
@@ -632,36 +707,30 @@ class DakePdfExtractApp:
         top.grid(row=0, column=0, sticky="ew", padx=24, pady=(18, 10))
         top.grid_columnconfigure(0, weight=1)
 
-        header = tk.Frame(top, bg=THEME["background"])
-        header.grid(row=0, column=0, sticky="ew")
-        header.grid_columnconfigure(0, weight=1)
-        header.grid_columnconfigure(1, weight=0)
+        self.header = tk.Frame(top, bg=THEME["background"])
+        self.header.grid(row=0, column=0, sticky="ew")
+        self.header.grid_columnconfigure(0, weight=1)
+        self.header.grid_columnconfigure(1, weight=0)
 
-        title_area = tk.Frame(header, bg=THEME["background"])
+        title_area = tk.Frame(self.header, bg=THEME["background"])
         title_area.grid(row=0, column=0, sticky="w")
-        tk.Label(
-            title_area,
-            text=UI_TEXT["brand_series"],
-            bg=THEME["background"],
-            fg=THEME["muted"],
-            font=(self.font_family, 9, "bold"),
-        ).pack(anchor="w")
-        tk.Label(
+        self.header_title = tk.Label(
             title_area,
             text=UI_TEXT["main_title"],
             bg=THEME["background"],
             fg=THEME["text"],
-            font=(self.font_family, 22, "bold"),
-        ).pack(anchor="w", pady=(2, 0))
-        tk.Label(
+            font=(self.font_family, 18, "bold"),
+        )
+        self.header_description = tk.Label(
             title_area,
             text=UI_TEXT["main_description"],
             bg=THEME["background"],
             fg=THEME["muted"],
             font=(self.font_family, 10),
-        ).pack(anchor="w", pady=(4, 0))
+            justify="left",
+        )
 
-        header_buttons = tk.Frame(header, bg=THEME["background"])
+        header_buttons = tk.Frame(self.header, bg=THEME["background"])
         header_buttons.grid(row=0, column=1, sticky="e", padx=(16, 0))
         self.add_button = self._make_button(header_buttons, UI_TEXT["button_add"], self.choose_pdf, "primary")
         self.add_button.pack(side="left")
@@ -701,24 +770,24 @@ class DakePdfExtractApp:
         ).pack(side="left", padx=(0, 8))
         self.minus_button = self._make_square_button(size_area, UI_TEXT["button_thumbnail_minus"], self.decrease_thumbnail_size)
         self.minus_button.pack(side="left")
-        self.size_scale = tk.Scale(
+        self.size_slider = tk.Canvas(
             size_area,
-            from_=THUMBNAIL_MIN,
-            to=THUMBNAIL_MAX,
-            orient="horizontal",
-            showvalue=False,
-            length=150,
-            resolution=1,
-            variable=self.thumbnail_size_var,
-            command=self.on_thumbnail_size_changed,
+            width=THUMBNAIL_SLIDER_WIDTH,
+            height=THUMBNAIL_SLIDER_HEIGHT,
             bg=THEME["card"],
-            troughcolor=THEME["soft"],
-            activebackground=THEME["accent"],
+            bd=0,
             highlightthickness=0,
+            cursor="hand2",
+            takefocus=True,
         )
-        self.size_scale.pack(side="left", padx=8)
+        self.size_slider.pack(side="left", padx=8)
+        self.size_slider.bind("<Button-1>", self._on_thumbnail_slider_pointer)
+        self.size_slider.bind("<B1-Motion>", self._on_thumbnail_slider_pointer)
+        self.size_slider.bind("<Left>", lambda _event: self._slider_decrease())
+        self.size_slider.bind("<Right>", lambda _event: self._slider_increase())
         self.plus_button = self._make_square_button(size_area, UI_TEXT["button_thumbnail_plus"], self.increase_thumbnail_size)
         self.plus_button.pack(side="left")
+        self._render_thumbnail_slider()
 
         canvas_frame = tk.Frame(self.root, bg=THEME["card"], highlightbackground=THEME["border"], highlightthickness=1)
         canvas_frame.grid(row=1, column=0, sticky="nsew", padx=24, pady=(10, 8))
@@ -791,20 +860,20 @@ class DakePdfExtractApp:
 
         action_buttons = tk.Frame(action_bar, bg=THEME["card"])
         action_buttons.grid(row=0, column=2, sticky="e", padx=14, pady=10)
-        self.extract_button = self._make_button(
-            action_buttons,
-            UI_TEXT["button_extract"],
-            self.start_extract,
-            "primary",
-        )
-        self.extract_button.pack(side="left")
         self.clear_button = self._make_button(
             action_buttons,
             UI_TEXT["button_clear_selection"],
             self.clear_selection,
             "secondary",
         )
-        self.clear_button.pack(side="left", padx=(8, 0))
+        self.clear_button.pack(side="left")
+        self.extract_button = self._make_button(
+            action_buttons,
+            UI_TEXT["button_extract"],
+            self.start_extract,
+            "primary",
+        )
+        self.extract_button.pack(side="left", padx=(8, 0))
 
         status = tk.Frame(self.root, bg=THEME["background"])
         status.grid(row=3, column=0, sticky="ew", padx=24, pady=(0, 8))
@@ -838,6 +907,7 @@ class DakePdfExtractApp:
         self._make_footer_link(self.footer_right, UI_TEXT["footer_link_2"], LINKS["instagram"])
         self._make_footer_text(self.footer_right, UI_TEXT["footer_separator"])
         self._make_footer_text(self.footer_right, UI_TEXT["footer_copyright"])
+        self._update_header_layout()
         self._update_footer_layout()
 
     def _make_button(self, parent: tk.Misc, label: str, command: Callable[[], None], variant: str) -> tk.Button:
@@ -909,6 +979,8 @@ class DakePdfExtractApp:
     def _register_events(self) -> None:
         self.canvas.bind("<Configure>", self._on_canvas_configure)
         self.canvas.bind("<Button-1>", self._on_canvas_click)
+        self.canvas.bind("<Motion>", self._on_canvas_motion)
+        self.canvas.bind("<Leave>", lambda _event: self.canvas.configure(cursor=""))
         self.canvas.bind("<MouseWheel>", self._on_mousewheel)
         self.root.bind("<Configure>", self._on_root_configure, add="+")
         self.root.bind_all("<Return>", self._on_enter_key)
@@ -928,7 +1000,22 @@ class DakePdfExtractApp:
 
     def _on_root_configure(self, event: tk.Event) -> None:
         if event.widget == self.root:
+            self._update_header_layout()
             self._update_footer_layout()
+
+    def _update_header_layout(self) -> None:
+        compact = self.root.winfo_width() < HEADER_COMPACT_WIDTH
+        if compact == self.header_compact:
+            return
+        self.header_compact = compact
+        self.header_title.pack_forget()
+        self.header_description.pack_forget()
+        if compact:
+            self.header_title.pack(anchor="w")
+            self.header_description.pack(anchor="w", pady=(4, 0))
+            return
+        self.header_title.pack(side="left", anchor="w")
+        self.header_description.pack(side="left", anchor="w", padx=(18, 0))
 
     def _update_footer_layout(self) -> None:
         compact = self.root.winfo_width() < 900
@@ -980,8 +1067,14 @@ class DakePdfExtractApp:
     def _on_canvas_click(self, event: tk.Event) -> None:
         page_number = self._page_from_xy(event.x, event.y)
         if page_number is None:
+            if self.page_count == 0 and self._is_empty_state_click(event.x, event.y):
+                self.choose_pdf()
             return
         self.toggle_page(page_number, bool(event.state & SHIFT_MASK))
+
+    def _on_canvas_motion(self, event: tk.Event) -> None:
+        cursor = "hand2" if self.page_count == 0 and self._is_empty_state_click(event.x, event.y) else ""
+        self.canvas.configure(cursor=cursor)
 
     def _on_mousewheel(self, event: tk.Event) -> str | None:
         if event.state & CONTROL_MASK:
@@ -1003,14 +1096,22 @@ class DakePdfExtractApp:
         return "break"
 
     def choose_pdf(self) -> None:
-        filename = filedialog.askopenfilename(
-            title=UI_TEXT["dialog_pdf_title"],
-            filetypes=[(UI_TEXT["dialog_pdf_filter"], "*.pdf")],
-        )
+        if self.is_loading or self.is_extracting or self.is_choosing_pdf:
+            return
+        self.is_choosing_pdf = True
+        try:
+            filename = filedialog.askopenfilename(
+                title=UI_TEXT["dialog_pdf_title"],
+                filetypes=[(UI_TEXT["dialog_pdf_filter"], "*.pdf")],
+            )
+        finally:
+            self.is_choosing_pdf = False
         if filename:
             self.load_pdf(Path(filename))
 
     def choose_output_dir(self) -> None:
+        if self.is_loading or self.is_extracting:
+            return
         selected = filedialog.askdirectory(title=UI_TEXT["dialog_folder_title"])
         if not selected:
             return
@@ -1074,6 +1175,9 @@ class DakePdfExtractApp:
         if keep_output_dir and previous_output_dir is not None:
             self.output_dir = previous_output_dir
             self.output_dir_manual = previous_output_dir_manual
+        elif previous_output_dir_manual and previous_output_dir is not None:
+            self.output_dir = previous_output_dir
+            self.output_dir_manual = True
         elif not same_pdf:
             self.output_dir = pdf_path.parent
             self.output_dir_manual = False
@@ -1245,11 +1349,12 @@ class DakePdfExtractApp:
             self._update_action_buttons()
             self._set_status(
                 "status_saved",
-                UI_TEXT["status_saved"].format(count=saved_count),
+                UI_TEXT["status_folder_opening"],
                 "success",
             )
-            self.status_var.set(UI_TEXT["status_saved"].format(count=saved_count))
             self._schedule_redraw(True)
+            if result.files:
+                self._start_output_folder_reveal(current_extract_id, result.files[0].parent)
             return
 
         if kind == "extract_failed":
@@ -1259,6 +1364,22 @@ class DakePdfExtractApp:
             self.is_extracting = False
             self._update_action_buttons()
             self._set_status("status_error", str(message_text), "error")
+
+        if kind == "folder_shown":
+            _kind, current_extract_id, folder_key = message
+            self.folder_reveal_inflight.discard(folder_key)
+            if current_extract_id != self.extract_id:
+                return
+            self._set_status("status_saved", UI_TEXT["status_folder_shown"], "success")
+            return
+
+        if kind == "folder_failed":
+            _kind, current_extract_id, folder_key = message
+            self.folder_reveal_inflight.discard(folder_key)
+            if current_extract_id != self.extract_id:
+                return
+            self._set_status("status_saved", UI_TEXT["error_folder_show"], "error")
+            return
 
     def _apply_thumbnail(self, page_index: int, data: bytes) -> None:
         if Image is None or ImageTk is None:
@@ -1385,11 +1506,39 @@ class DakePdfExtractApp:
             detail = format_error_detail(exc)
             self.queue.put(("extract_failed", current_extract_id, f"{UI_TEXT['error_extract_exception']} {detail}".strip()))
 
+    def _start_output_folder_reveal(self, current_extract_id: int, output_dir: Path) -> None:
+        try:
+            folder_key = str(output_dir.resolve()).casefold()
+        except OSError:
+            folder_key = str(output_dir).casefold()
+        if folder_key in self.folder_reveal_inflight:
+            return
+        self.folder_reveal_inflight.add(folder_key)
+        thread = threading.Thread(
+            target=self._reveal_output_folder_worker,
+            args=(current_extract_id, output_dir, folder_key),
+            daemon=True,
+        )
+        thread.start()
+
+    def _reveal_output_folder_worker(
+        self,
+        current_extract_id: int,
+        output_dir: Path,
+        folder_key: str,
+    ) -> None:
+        try:
+            self.folder_revealer(output_dir)
+            self.queue.put(("folder_shown", current_extract_id, folder_key))
+        except Exception:
+            self.queue.put(("folder_failed", current_extract_id, folder_key))
+
     def on_extract_mode_changed(self) -> None:
         self.config_store.save({"extract_mode": self.extract_mode_var.get()})
         self._update_action_buttons()
 
     def on_thumbnail_size_changed(self, _value: str | None = None) -> None:
+        self._render_thumbnail_slider()
         self.photo_cache.clear()
         self._schedule_redraw(True)
         if self.save_config_job is not None:
@@ -1413,6 +1562,63 @@ class DakePdfExtractApp:
         self.thumbnail_size_var.set(max(THUMBNAIL_MIN, current - THUMBNAIL_STEP))
         self.on_thumbnail_size_changed()
 
+    def _slider_decrease(self) -> str:
+        self.decrease_thumbnail_size()
+        return "break"
+
+    def _slider_increase(self) -> str:
+        self.increase_thumbnail_size()
+        return "break"
+
+    def _on_thumbnail_slider_pointer(self, event: tk.Event) -> str:
+        self.size_slider.focus_set()
+        usable_width = THUMBNAIL_SLIDER_WIDTH - THUMBNAIL_SLIDER_PADDING * 2
+        position = max(THUMBNAIL_SLIDER_PADDING, min(event.x, THUMBNAIL_SLIDER_WIDTH - THUMBNAIL_SLIDER_PADDING))
+        ratio = (position - THUMBNAIL_SLIDER_PADDING) / usable_width
+        value = round(THUMBNAIL_MIN + ratio * (THUMBNAIL_MAX - THUMBNAIL_MIN))
+        if value != int(self.thumbnail_size_var.get()):
+            self.thumbnail_size_var.set(value)
+            self.on_thumbnail_size_changed()
+        return "break"
+
+    def _render_thumbnail_slider(self) -> None:
+        if not hasattr(self, "size_slider"):
+            return
+        slider = self.size_slider
+        slider.delete("all")
+        usable_width = THUMBNAIL_SLIDER_WIDTH - THUMBNAIL_SLIDER_PADDING * 2
+        ratio = (int(self.thumbnail_size_var.get()) - THUMBNAIL_MIN) / (THUMBNAIL_MAX - THUMBNAIL_MIN)
+        knob_x = THUMBNAIL_SLIDER_PADDING + usable_width * max(0.0, min(1.0, ratio))
+        track_y = THUMBNAIL_SLIDER_HEIGHT // 2
+        slider.create_line(
+            THUMBNAIL_SLIDER_PADDING,
+            track_y,
+            THUMBNAIL_SLIDER_WIDTH - THUMBNAIL_SLIDER_PADDING,
+            track_y,
+            fill=THEME["soft"],
+            width=4,
+            capstyle="round",
+        )
+        slider.create_line(
+            THUMBNAIL_SLIDER_PADDING,
+            track_y,
+            knob_x,
+            track_y,
+            fill=THEME["accent"],
+            width=4,
+            capstyle="round",
+        )
+        knob_radius = 6
+        slider.create_oval(
+            knob_x - knob_radius,
+            track_y - knob_radius,
+            knob_x + knob_radius,
+            track_y + knob_radius,
+            fill=THEME["white"],
+            outline=THEME["selection_border"],
+            width=2,
+        )
+
     def _schedule_redraw(self, preserve_scroll: bool = True) -> None:
         if self.redraw_job is not None:
             return
@@ -1423,6 +1629,7 @@ class DakePdfExtractApp:
         scroll_top = self.canvas.yview()[0] if preserve_scroll else 0.0
         self.canvas.delete("all")
         self.card_bounds.clear()
+        self.empty_state_bounds = None
         width = max(240, self.canvas.winfo_width())
         thumb_width = int(self.thumbnail_size_var.get())
         thumb_height = int(thumb_width * 1.42)
@@ -1452,21 +1659,46 @@ class DakePdfExtractApp:
 
     def _draw_empty_state(self, width: int) -> None:
         center_x = width // 2
-        center_y = max(150, self.canvas.winfo_height() // 2 - 20)
+        center_y = max(150, self.canvas.winfo_height() // 2)
+        box_width = min(500, max(280, width - CANVAS_PAD_X * 4))
+        box_height = 148
+        left = center_x - box_width // 2
+        top = center_y - box_height // 2
+        right = center_x + box_width // 2
+        bottom = center_y + box_height // 2
+        self.empty_state_bounds = (left, top, right, bottom)
+        self.canvas.create_rectangle(
+            left,
+            top,
+            right,
+            bottom,
+            fill=THEME["soft"],
+            outline=THEME["selection_border"],
+            width=1,
+        )
         self.canvas.create_text(
             center_x,
-            center_y,
+            center_y - 18,
             text=UI_TEXT["thumbnail_empty_title"],
             fill=THEME["text"],
             font=(self.font_family, 18, "bold"),
         )
         self.canvas.create_text(
             center_x,
-            center_y + 34,
+            center_y + 24,
             text=UI_TEXT["thumbnail_empty_detail"],
             fill=THEME["muted"],
             font=(self.font_family, 10),
+            width=box_width - 32,
         )
+
+    def _is_empty_state_click(self, x: int, y: int) -> bool:
+        if self.empty_state_bounds is None:
+            return False
+        canvas_x = int(self.canvas.canvasx(x))
+        canvas_y = int(self.canvas.canvasy(y))
+        left, top, right, bottom = self.empty_state_bounds
+        return left <= canvas_x <= right and top <= canvas_y <= bottom
 
     def _draw_page_card(
         self,
@@ -1688,6 +1920,25 @@ def run_self_check() -> int:
         root = make_root()
         root.withdraw()
         app = DakePdfExtractApp(root)
+        dialog_calls: list[bool] = []
+        original_askopenfilename = filedialog.askopenfilename
+        filedialog.askopenfilename = lambda **_kwargs: dialog_calls.append(True) or ""
+        try:
+            root.update()
+            if app.empty_state_bounds is None:
+                app.close()
+                return 1
+            left, top, right, bottom = app.empty_state_bounds
+            empty_event = type("EmptyEvent", (), {"x": (left + right) // 2, "y": (top + bottom) // 2})()
+            app._on_canvas_click(empty_event)
+            app.is_loading = True
+            app._on_canvas_click(empty_event)
+            app.is_loading = False
+            if len(dialog_calls) != 1:
+                app.close()
+                return 1
+        finally:
+            filedialog.askopenfilename = original_askopenfilename
         app.refresh_pdf()
         if app.load_id != 0:
             app.close()
@@ -1700,6 +1951,9 @@ def run_self_check() -> int:
                 break
             time.sleep(0.05)
         if app.is_loading or app.page_count != 8:
+            app.close()
+            return 1
+        if app.output_dir != source.parent or app.output_dir_manual:
             app.close()
             return 1
         updated_page_count = 6
@@ -1730,6 +1984,24 @@ def run_self_check() -> int:
         ):
             app.close()
             return 1
+        manual_output = temp / "manual_output"
+        manual_output.mkdir()
+        second_source = temp / "second_source.pdf"
+        create_sample_pdf(second_source, 6)
+        app.output_dir = manual_output
+        app.output_dir_manual = True
+        app.load_pdf(second_source)
+        deadline = time.time() + 10
+        while time.time() < deadline:
+            root.update()
+            if not app.is_loading and app.page_count == 6 and len(app.thumbnail_images) >= 6:
+                break
+            time.sleep(0.05)
+        if app.is_loading or app.output_dir != manual_output or not app.output_dir_manual:
+            app.close()
+            return 1
+        revealed_folders: list[Path] = []
+        app.folder_revealer = lambda folder: revealed_folders.append(folder)
         app.toggle_page(2)
         app.toggle_page(4, True)
         if app.selected_pages != {2, 3, 4}:
@@ -1745,7 +2017,15 @@ def run_self_check() -> int:
             if not app.is_extracting:
                 break
             time.sleep(0.05)
-        if app.selected_pages or not {2, 4, 6}.issubset(app.extracted_pages):
+        deadline = time.time() + 3
+        while time.time() < deadline and not revealed_folders:
+            root.update()
+            time.sleep(0.02)
+        if (
+            app.selected_pages
+            or not {2, 4, 6}.issubset(app.extracted_pages)
+            or revealed_folders != [temp]
+        ):
             app.close()
             return 1
         for page in range(1, 6):
@@ -1841,16 +2121,32 @@ def run_layout_check() -> int:
             return 1
         root.geometry("820x700")
         root.update()
+        app._update_header_layout()
         app._update_footer_layout()
         compact_ok = app.footer_compact is True
         root.geometry("1080x760")
         root.update()
+        app._update_header_layout()
         app._update_footer_layout()
-        wide_ok = app.footer_compact is False
+        header_texts: set[str] = set()
+        for widget in iter_widgets(app.header):
+            try:
+                header_texts.add(str(widget.cget("text")))
+            except tk.TclError:
+                continue
+        button_order = list(app.clear_button.master.winfo_children())
+        wide_ok = app.footer_compact is False and app.header_compact is False
+        header_ok = (
+            UI_TEXT["brand_series"] not in header_texts
+            and UI_TEXT["main_title"] in header_texts
+            and UI_TEXT["main_description"] in header_texts
+        )
+        buttons_ok = button_order.index(app.clear_button) < button_order.index(app.extract_button)
+        slider_ok = isinstance(app.size_slider, tk.Canvas)
         icon_ok = app.window_icon_ok
     finally:
         app.close()
-    if not (compact_ok and wide_ok and icon_ok):
+    if not (compact_ok and wide_ok and header_ok and buttons_ok and slider_ok and icon_ok):
         return 1
     print(UI_TEXT["layout_check_ok"])
     return 0
