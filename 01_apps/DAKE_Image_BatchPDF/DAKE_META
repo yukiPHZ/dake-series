@@ -1,0 +1,20 @@
+{
+  "app_key": "DAKE_Image_BatchPDF",
+  "display_name": "画像まとめPDF",
+  "launcher_title": "画像まとめPDF",
+  "launcher_description": "複数画像を順番どおり1つのPDFにまとめます。",
+  "site_title": "Dake画像まとめPDF",
+  "site_description": "複数の画像を並べて、1ページ1枚または4枚のPDFにまとめるWindows向けDAKEアプリです。",
+  "update_summary": "画像と配置枠の比率を比較し、必要な画像を時計回り90度へ回転して大きく配置するよう改善しました。",
+  "folder_name": "DAKE_Image_BatchPDF",
+  "exe_name": "DakeImage_BatchPDF.exe",
+  "release_url": "",
+  "booth_url": "",
+  "store_url": "",
+  "screenshot_path": "assets/screenshot.webp",
+  "status": "draft",
+  "show_in_launcher": false,
+  "show_on_site": false,
+  "app_type": "market",
+  "completion_goal": "formal_release"
+}

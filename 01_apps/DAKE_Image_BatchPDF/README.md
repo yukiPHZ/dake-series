@@ -2,6 +2,8 @@
 
 複数の画像を並べて、1つのPDFにまとめるDAKEシリーズのWindowsデスクトップアプリです。
 
+iPhone等から物件写真・現場写真・設備写真が複数届いたときに、案件フォルダで共有・閲覧しやすい1つの資料へまとめます。
+
 既存の `DAKE_Image_ToPDF` は画像1枚をPDF化するアプリです。このアプリは置き換えではなく、複数画像を順番どおり1つのPDFへまとめるための新規独立アプリです。
 
 ## できること
@@ -62,6 +64,8 @@ build.bat
   "folder_name": "DAKE_Image_BatchPDF",
   "exe_name": "DakeImage_BatchPDF.exe",
   "release_url": "",
+  "booth_url": "",
+  "store_url": "",
   "screenshot_path": "assets/screenshot.webp",
   "status": "draft",
   "show_in_launcher": false,
@@ -73,9 +77,8 @@ build.bat
 
 ## RELEASE_BODY
 
-- 複数画像を順番どおり1つのPDFにまとめます。
-- 1ページ1枚 / 1ページ4枚を選べます。
-- 配置枠ごとに0度と時計回り90度を比較し、より大きく表示できる向きを選びます。
-- 配置モードと日時を含む初期保存名を使い、同名ファイルは連番で上書きを防ぎます。
-- JPG / PNG / WEBP / HEIC / HEIFなどに対応します。
-- Windows向けexeです。
+- 複数画像を並べ替え、順番どおり1つのPDFにまとめます。
+- 1ページ1枚 / 1ページ4枚を選べ、4枚配置は最終ページも2列×2行固定です。
+- JPG / JPEG / PNG / BMP / WEBP / HEIC / HEIFに対応し、EXIF Orientationと透明画像を補正します。
+- 配置枠ごとに0度と時計回り90度を比較し、縦横比を保ったままトリミングせず大きく配置します。
+- 配置モードと日時を含む保存名を使い、同名ファイルは連番で上書きを防ぐWindows向けexeです。
