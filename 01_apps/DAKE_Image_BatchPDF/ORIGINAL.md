@@ -20,6 +20,16 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - app_type: market
 - completion_goal: formal_release
 
+## 公開・販売状態
+
+- GitHub Release: 未公開
+- BOOTH: 未公開
+- dakeapp.com: 未公開
+- Store: preparing
+- 価格: 未設定
+- `status`: `draft`
+- 正式公開指示があるまで、外部公開、販売登録、価格決定は行わない
+
 ## 目的
 
 複数の画像ファイルを追加し、順番を確認・変更してから、1つのPDFファイルとして保存するためのDAKEアプリです。
@@ -179,6 +189,8 @@ iPhone等から複数画像のみが送られてきた後の、案件フォル�
   "folder_name": "DAKE_Image_BatchPDF",
   "exe_name": "DakeImage_BatchPDF.exe",
   "release_url": "",
+  "booth_url": "",
+  "store_url": "",
   "screenshot_path": "assets/screenshot.webp",
   "status": "draft",
   "show_in_launcher": false,
@@ -190,12 +202,11 @@ iPhone等から複数画像のみが送られてきた後の、案件フォル�
 
 ## release_body生成用情報
 
-- 複数画像を順番どおり1つのPDFにまとめます。
-- 1ページ1枚 / 1ページ4枚を選べます。
-- 配置枠ごとに0度と時計回り90度を比較し、より大きく表示できる向きを選びます。
-- 配置モードと日時を含む初期保存名を使い、同名ファイルは連番で上書きを防ぎます。
-- JPG / PNG / WEBP / HEIC / HEIFなどに対応します。
-- Windows向けexeです。
+- 複数画像を並べ替え、順番どおり1つのPDFにまとめます。
+- 1ページ1枚 / 1ページ4枚を選べ、4枚配置は最終ページも2列×2行固定です。
+- JPG / JPEG / PNG / BMP / WEBP / HEIC / HEIFに対応し、EXIF Orientationと透明画像を補正します。
+- 配置枠ごとに0度と時計回り90度を比較し、縦横比を保ったままトリミングせず大きく配置します。
+- 配置モードと日時を含む保存名を使い、同名ファイルは連番で上書きを防ぐWindows向けexeです。
 
 ## Codex作業時の注意
 

@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+build/
+dist/
+*.spec
+*.exe
+*_config.json
+version_info.txt
+booth_ready/*.zip

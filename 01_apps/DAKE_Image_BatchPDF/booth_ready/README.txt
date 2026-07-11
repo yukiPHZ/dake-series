@@ -1,0 +1,15 @@
+Dake画像まとめPDF
+
+複数画像を順番どおり1つのPDFにまとめます。
+
+主な特徴：
+・複数画像を並べ替え、順番どおり1つのPDFにまとめます。
+・1ページ1枚 / 1ページ4枚を選べ、4枚配置は最終ページも2列×2行固定です。
+・JPG / JPEG / PNG / BMP / WEBP / HEIC / HEIFに対応し、EXIF Orientationと透明画像を補正します。
+・配置枠ごとに0度と時計回り90度を比較し、縦横比を保ったままトリミングせず大きく配置します。
+・配置モードと日時を含む保存名を使い、同名ファイルは連番で上書きを防ぐWindows向けexeです。
+
+PEAKHEADZ
+https://peakheadz.com
+
+Vibe-Coded by Yukihiko Kikuta
