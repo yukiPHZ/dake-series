@@ -665,6 +665,7 @@ class DakePdfExtractApp:
         self.empty_state_bounds: tuple[int, int, int, int] | None = None
         self.folder_reveal_inflight: set[str] = set()
         self.folder_revealer: Callable[[Path], None] = reveal_output_folder
+        self.last_saved_count = 0
 
         self.file_var = tk.StringVar(value=UI_TEXT["file_label_empty"])
         self.page_count_var = tk.StringVar(value=UI_TEXT["page_count_empty"])
@@ -1037,10 +1038,16 @@ class DakePdfExtractApp:
         except Exception:
             pass
 
-    def _set_status(self, status_key: str, detail: str | None = None, tone: str = "neutral") -> None:
+    def _set_status(
+        self,
+        status_key: str,
+        detail: str | None = None,
+        tone: str = "neutral",
+        **format_values: object,
+    ) -> None:
         self.busy_status_key = status_key if status_key in {"status_loading", "status_rendering", "status_extracting"} else None
         self.busy_dot_index = 0
-        self.status_var.set(UI_TEXT[status_key])
+        self.status_var.set(UI_TEXT[status_key].format(**format_values))
         if detail is not None:
             self.detail_var.set(detail)
         if tone == "success":
@@ -1343,6 +1350,7 @@ class DakePdfExtractApp:
             self.is_extracting = False
             self.extracted_pages.update(result.pages)
             saved_count = len(result.pages)
+            self.last_saved_count = saved_count
             self.selected_pages.clear()
             self.last_clicked_page = None
             self._update_selection_ui()
@@ -1351,6 +1359,7 @@ class DakePdfExtractApp:
                 "status_saved",
                 UI_TEXT["status_folder_opening"],
                 "success",
+                count=saved_count,
             )
             self._schedule_redraw(True)
             if result.files:
@@ -1370,7 +1379,12 @@ class DakePdfExtractApp:
             self.folder_reveal_inflight.discard(folder_key)
             if current_extract_id != self.extract_id:
                 return
-            self._set_status("status_saved", UI_TEXT["status_folder_shown"], "success")
+            self._set_status(
+                "status_saved",
+                UI_TEXT["status_folder_shown"],
+                "success",
+                count=self.last_saved_count,
+            )
             return
 
         if kind == "folder_failed":
@@ -1378,7 +1392,12 @@ class DakePdfExtractApp:
             self.folder_reveal_inflight.discard(folder_key)
             if current_extract_id != self.extract_id:
                 return
-            self._set_status("status_saved", UI_TEXT["error_folder_show"], "error")
+            self._set_status(
+                "status_saved",
+                UI_TEXT["error_folder_show"],
+                "error",
+                count=self.last_saved_count,
+            )
             return
 
     def _apply_thumbnail(self, page_index: int, data: bytes) -> None:
@@ -2025,6 +2044,7 @@ def run_self_check() -> int:
             app.selected_pages
             or not {2, 4, 6}.issubset(app.extracted_pages)
             or revealed_folders != [temp]
+            or app.status_var.get() != UI_TEXT["status_saved"].format(count=3)
         ):
             app.close()
             return 1
