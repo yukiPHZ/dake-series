@@ -13,9 +13,9 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - short_title: マンション工程表
 - category: 作業補助
 - status: available
-- version: 1.0.0（Release URLより）
+- version: 1.0.1
 - price: 500円
-- distribution: GitHub Release / BOOTH / dakeapp.com（Storeは未確定）
+- distribution: GitHub Release / BOOTH / dakeapp.com / store.dakeapp.com
 - target_platform: Windows
 
 ## 目的
@@ -35,13 +35,17 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 
 - マンション管理会社へ提出するための、リフォーム工事工程表を作成します。
 - 管理会社提出用のA3横工程表PDFを作成
-- 引渡し日から着工日・完工日を自動計算
-- 土日を含む45日間の工期内で、合計28営業日の初期工程を自動入力
-- 残り平日は予備日として工程間に分散
+- 引渡し日の3日後を着工日とし、着工日を1日目とする45日目を完工日に自動計算
+- 工期は土日祝を含む45日間です。
+- 自動工程は土日および日本の祝日を除いて配置します。
+- 合計28営業日の初期工程を維持し、45日間に配置できない場合は工程日数や工期を変更せず手動調整を案内
+- 残りの工事可能日は予備日として工程間に分散
 - チェックした工事行だけをPDFに上詰めで出力
 - 自由工事欄を追加し、任意の工事項目をPDF出力可能
-- 各工事項目の開始日・終了日を手動修正可能
-- 土日も表示し、工事バーは平日のみに表示するガントチャート風PDF出力
+- 手動入力では土日祝の日付も指定できます。
+- 手動で休日工事を指定した場合は、PDF作成前に確認します。
+- 自動工程は工事可能日のみにバーを表示し、手動指定工程は確認後に入力どおりの期間を表示
+- 土日祝を横軸に表示し、平日の祝日列も淡い休日背景と淡い赤の曜日文字で識別
 - PDFタイトルを「リフォーム工事工程表」に変更
 - PDFファイル名に出力日時を付け、同名上書きを回避
 - PDF作成後に保存先フォルダを自動で開く
@@ -93,12 +97,14 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - site_title: マンション工程表
 - site_description: リフォーム許可申請用の工程表を、A3横PDFで作成します。
 - launcher_description: 管理会社提出用のA3横工程表を作成します。
-- update_summary: マンション管理会社提出用の工程表作成を正式公開
+- update_summary: 日本の祝日対応と手動休日工事の確認を追加
 - BOOTH紹介文: マンション管理会社へ提出するための、リフォーム工事工程表を作成します。
 工事進捗管理ではなく、管理会社提出用の工程表作成アプリです。
 
-・土日を含む45日間の工期内で、合計28営業日の初期工程を自動入力
-・土日は表示し、工事バーは平日のみに表示
+・工期は土日祝を含む45日間
+・土日・祝日を除いて初期工程を自動入力
+・必要な場合は土日祝の日付も手動で自由に調整可能
+・手動で休日工事を指定した場合はPDF作成前に確認
 ・チェックした工事だけをPDF出力
 ・自由工事欄に任意の工事を追加可能
 ・PDFは出力日時付きファイル名で保存
@@ -124,10 +130,10 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
   "launcher_description": "管理会社提出用のA3横工程表を作成します。",
   "site_title": "マンション工程表",
   "site_description": "リフォーム許可申請用の工程表を、A3横PDFで作成します。",
-  "update_summary": "マンション管理会社提出用の工程表作成を正式公開",
+  "update_summary": "日本の祝日対応と手動休日工事の確認を追加",
   "folder_name": "DAKE_Mansion_Schedule",
   "exe_name": "DakeMansion_Schedule.exe",
-  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mansion_Schedule_v1.0.0",
+  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mansion_Schedule_v1.0.1",
   "screenshot_path": "assets/screenshot.webp",
   "status": "available",
   "show_in_launcher": true,
@@ -141,14 +147,18 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 ## release_body生成用情報
 
 - マンション管理会社へ提出するための、リフォーム工事工程表を作成します。
+- 自動工程は土日および日本の祝日を除いて配置します。
+- 工期は土日祝を含む45日間です。
+- 手動入力では土日祝の日付も指定できます。
+- 手動で休日工事を指定した場合は、PDF作成前に確認します。
 - 管理会社提出用のA3横工程表PDFを作成
 - 引渡し日から着工日・完工日を自動計算
-- 土日を含む45日間の工期内で、合計28営業日の初期工程を自動入力
-- 残り平日は予備日として工程間に分散
+- 合計28営業日の初期工程を維持し、配置できない場合は手動調整を案内
+- 残りの工事可能日は予備日として工程間に分散
 - チェックした工事行だけをPDFに上詰めで出力
 - 自由工事欄を追加し、任意の工事項目をPDF出力可能
-- 各工事項目の開始日・終了日を手動修正可能
-- 土日も表示し、工事バーは平日のみに表示するガントチャート風PDF出力
+- 自動工程は土日祝にバーを表示せず、確認済みの手動工程は休日にも表示可能
+- 平日の祝日列を淡い休日背景と淡い赤の曜日文字で表示
 - PDFタイトルを「リフォーム工事工程表」に変更
 - PDFファイル名に出力日時を付け、同名上書きを回避
 - PDF作成後に保存先フォルダを自動で開く
@@ -162,8 +172,10 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - 商品紹介文: マンション管理会社へ提出するための、リフォーム工事工程表を作成します。
 工事進捗管理ではなく、管理会社提出用の工程表作成アプリです。
 
-・土日を含む45日間の工期内で、合計28営業日の初期工程を自動入力
-・土日は表示し、工事バーは平日のみに表示
+・工期は土日祝を含む45日間
+・土日・祝日を除いて初期工程を自動入力
+・必要な場合は日付を手動で自由に調整可能
+・手動で休日工事を指定した場合はPDF作成前に確認
 ・チェックした工事だけをPDF出力
 ・自由工事欄に任意の工事を追加可能
 ・PDFは出力日時付きファイル名で保存
@@ -180,7 +192,7 @@ Windows
 - 商品画像: assets/booth_thumbnail.jpg
 - 補助画像: assets/screenshot.jpg
 - 作品ファイル: booth_ready/DakeMansion_Schedule.zip
-- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mansion_Schedule_v1.0.0
+- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mansion_Schedule_v1.0.1
 - BOOTH URL: https://peakheadz.booth.pm/items/8448169
 
 ## Store表示用情報
@@ -190,8 +202,10 @@ Windows
 - 説明: マンション管理会社へ提出するための、リフォーム工事工程表を作成します。
 工事進捗管理ではなく、管理会社提出用の工程表作成アプリです。
 
-・土日を含む45日間の工期内で、合計28営業日の初期工程を自動入力
-・土日は表示し、工事バーは平日のみに表示
+・工期は土日祝を含む45日間
+・土日・祝日を除いて初期工程を自動入力
+・必要な場合は日付を手動で自由に調整可能
+・手動で休日工事を指定した場合はPDF作成前に確認
 ・チェックした工事だけをPDF出力
 ・自由工事欄に任意の工事を追加可能
 ・PDFは出力日時付きファイル名で保存
@@ -203,21 +217,21 @@ Windows
 - ダウンロード導線: 未確定
 - サポート方針: 既存ファイルに記載なし
 - Stripe Payment Link: https://buy.stripe.com/bJefZh57H7cb7OwcY10gw0r
-- Store雋ｩ螢ｲ迥ｶ諷・ stripe_ready
+- payment_status: stripe_ready
 
 ## 価格・販売方針
 
 - BOOTH価格案: 500円
 - BOOTH URL: https://peakheadz.booth.pm/items/8448169
-- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mansion_Schedule_v1.0.0
-- Store販売: 未確定
+- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mansion_Schedule_v1.0.1
+- Store販売: stripe_ready
 
 ## 配布・ダウンロード方針
 
-- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mansion_Schedule_v1.0.0
+- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mansion_Schedule_v1.0.1
 - BOOTH: https://peakheadz.booth.pm/items/8448169
 - BOOTH配布zip: booth_ready/DakeMansion_Schedule.zip
-- Store配布導線: 未確定
+- Store配布導線: Stripe Payment Link / store.dakeapp.com
 
 ## 免責・注意事項
 

@@ -2,7 +2,7 @@
   "schema": "dakeapp.apps.v1",
   "do_not_edit": true,
   "source_policy": "ORIGINAL.md is the source of truth. README.md and DAKE_META are derived views. Generated JSON must not be edited manually.",
-  "generated_at": "2026-06-12T07:46:30+09:00",
+  "generated_at": "2026-08-13T07:48:52+09:00",
   "apps": [
     {
       "slug": "advanced-timer",
@@ -447,7 +447,7 @@
       "folder_name": "DAKE_Mansion_Schedule",
       "display_name": "マンション工程表",
       "detail_url": "https://dakeapp.com/apps/mansion-schedule/",
-      "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mansion_Schedule_v1.0.0",
+      "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mansion_Schedule_v1.0.1",
       "screenshot_path": "../../assets/images/apps/mansion-schedule/screenshot-01.webp",
       "demo_video_path": "release_artifacts/demo.mp4",
       "demo_video_url": "",
@@ -778,7 +778,7 @@
       "video_r2_url": "",
       "social_release_path": "release_artifacts/social_release.json",
       "source_kind": "original",
-      "source_original": "01_apps/DAKE_Screenshot_Print/ORIGINAL.md",
+      "source_original": "01_apps/Dake_Screenshot_Print/ORIGINAL.md",
       "source_readme": "",
       "original_missing": false,
       "meta_derivative_mismatch": []
@@ -854,7 +854,7 @@
       "video_r2_url": "",
       "social_release_path": "release_artifacts/social_release.json",
       "source_kind": "original",
-      "source_original": "01_apps/DAKE_Work_Calendar/ORIGINAL.md",
+      "source_original": "01_apps/Dake_Work_Calendar/ORIGINAL.md",
       "source_readme": "",
       "original_missing": false,
       "meta_derivative_mismatch": []

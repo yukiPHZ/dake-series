@@ -14,6 +14,8 @@ from pathlib import Path
 from tkinter import filedialog, font as tkfont
 from tkinter import messagebox, ttk
 
+import jpholiday
+
 
 APP_NAME = "Dakeマンション工程表"
 WINDOW_TITLE = "Dakeマンション工程表"
@@ -40,6 +42,7 @@ UI_TEXT = {
     "status_label": "状態",
     "status_ready": "入力してPDFを作成できます。",
     "status_auto_done": "日程を自動入力しました。",
+    "status_pdf_cancelled": "休日工事の確認でPDF作成を中止しました。日程を修正できます。",
     "status_pdf_done": "PDFを作成しました: {path}",
     "status_pdf_done_folder_open_failed": "PDFを作成しました。保存フォルダは手動で確認してください: {path}",
     "status_error": "入力内容を確認してください。",
@@ -47,10 +50,13 @@ UI_TEXT = {
     "dialog_done_title": "PDFを作成しました",
     "dialog_done_message": "工程表PDFを作成しました。\n保存先フォルダを確認してください。\n\n{path}",
     "dialog_save_cancelled": "保存先が選ばれていません。",
+    "dialog_holiday_work_title": "休日工事の確認",
+    "dialog_holiday_work_message": "土日または祝日を含む工事があります。\n入力どおり出力しますか？",
     "error_date_format": "{label}は YYYY-MM-DD 形式で入力してください。",
     "error_date_order": "{start_label}は{end_label}以前の日付にしてください。",
     "error_missing_reportlab": "PDF作成に必要な reportlab が見つかりません。\nrequirements.txt の内容をインストールしてください。",
     "error_pdf_no_rows": "工程表の日付範囲に表示できる日付がありません。",
+    "error_auto_schedule_insufficient": "45日間の工期内に、土日祝を除いて全工程を自動配置できませんでした。\n日程を手動で調整してください。",
     "pdf_title": "リフォーム工事工程表",
     "pdf_site_name": "現場名",
     "pdf_branch_name": "会社支店名",
@@ -69,6 +75,10 @@ UI_TEXT = {
     "launch_check_footer": "pdf_submission_footer_removed=OK",
     "launch_check_workdays": "workdays={workdays} allocated_workdays={allocated}",
     "launch_check_weekend_bars": "weekend_work_bars=none",
+    "launch_check_holiday_bars": "holiday_work_bars=none",
+    "launch_check_manual_holiday": "manual_holiday_work=allowed confirmation=yes_no",
+    "launch_check_free_holiday": "free_row_holiday_work=allowed",
+    "launch_check_insufficient": "insufficient_workdays=no_compression",
     "launch_check_reserve": "reserve_workdays={reserve}",
     "launch_check_selectable_rows": "selectable_rows=OK",
     "launch_check_free_rows": "free_rows=OK",
@@ -152,6 +162,7 @@ class ScheduleRow:
     name: str
     start_date: date
     end_date: date
+    manual_override: bool = False
 
 
 @dataclass(frozen=True)
@@ -172,6 +183,7 @@ class ScheduleRowVars:
     start_date: tk.StringVar
     end_date: tk.StringVar
     is_free: bool = False
+    manual_override: bool = False
 
 
 def get_source_dir() -> Path:
@@ -207,6 +219,10 @@ def is_weekday(value: date) -> bool:
     return value.weekday() < 5
 
 
+def is_workday(target_date: date) -> bool:
+    return is_weekday(target_date) and not jpholiday.is_holiday(target_date)
+
+
 def days_from(start: date, count: int) -> list[date]:
     return [start + timedelta(days=index) for index in range(max(0, count))]
 
@@ -221,7 +237,7 @@ def days_between(start: date, finish: date) -> list[date]:
 
 
 def workdays_between(start: date, finish: date) -> list[date]:
-    return [day for day in days_between(start, finish) if is_weekday(day)]
+    return [day for day in days_between(start, finish) if is_workday(day)]
 
 
 def parse_date(value: str, label: str) -> date:
@@ -303,42 +319,11 @@ def open_output_folder(output_path: Path, opener=None) -> bool:
     return True
 
 
-def compressed_work_durations(available_workdays: int) -> list[int]:
+def initial_work_durations(available_workdays: int) -> list[int]:
     desired = [duration for _name, duration in WORK_ITEMS]
-    minimums: list[int] = []
-    for duration in desired:
-        if duration >= 8:
-            minimums.append(6)
-        elif duration >= 6:
-            minimums.append(5)
-        else:
-            minimums.append(1)
-
-    minimum_total = sum(minimums)
-    if available_workdays < minimum_total:
-        raise ValueError(UI_TEXT["error_pdf_no_rows"])
-    if available_workdays >= sum(desired):
-        return desired
-
-    durations = minimums[:]
-    extra_days = available_workdays - minimum_total
-    priority_indexes = (
-        [index for index, duration in enumerate(desired) if duration == 2]
-        + [index for index, duration in enumerate(desired) if duration >= 8]
-        + [index for index, duration in enumerate(desired) if duration >= 6]
-    )
-    while extra_days > 0:
-        changed = False
-        for index in priority_indexes:
-            if extra_days <= 0:
-                break
-            if durations[index] < desired[index]:
-                durations[index] += 1
-                extra_days -= 1
-                changed = True
-        if not changed:
-            break
-    return durations
+    if available_workdays < sum(desired):
+        raise ValueError(UI_TEXT["error_auto_schedule_insufficient"])
+    return desired
 
 
 def reserve_gap_after_rows(reserve_workdays: int) -> dict[int, int]:
@@ -354,11 +339,11 @@ def reserve_gap_after_rows(reserve_workdays: int) -> dict[int, int]:
     return gaps
 
 
-def weekday_segments(start: date, finish: date, valid_days: set[date] | None = None) -> list[tuple[date, date]]:
+def workday_segments(start: date, finish: date, valid_days: set[date] | None = None) -> list[tuple[date, date]]:
     candidates = [
         day
         for day in days_between(start, finish)
-        if is_weekday(day) and (valid_days is None or day in valid_days)
+        if is_workday(day) and (valid_days is None or day in valid_days)
     ]
     if not candidates:
         return []
@@ -379,8 +364,8 @@ def weekday_segments(start: date, finish: date, valid_days: set[date] | None = N
 
 def build_auto_schedule(start_date: date) -> list[ScheduleRow]:
     schedule_days = days_from(start_date, TOTAL_CALENDAR_DAYS)
-    workdays = [day for day in schedule_days if is_weekday(day)]
-    durations = compressed_work_durations(len(workdays))
+    workdays = [day for day in schedule_days if is_workday(day)]
+    durations = initial_work_durations(len(workdays))
     reserve_workdays = max(0, len(workdays) - sum(durations))
     gap_after_rows = reserve_gap_after_rows(reserve_workdays)
     rows: list[ScheduleRow] = []
@@ -393,15 +378,20 @@ def build_auto_schedule(start_date: date) -> list[ScheduleRow]:
     return rows
 
 
-def build_project_from_handover(handover_date: date) -> tuple[date, date, list[ScheduleRow]]:
+def project_dates_from_handover(handover_date: date) -> tuple[date, date]:
     start_date = handover_date + timedelta(days=3)
     finish_date = start_date + timedelta(days=TOTAL_CALENDAR_DAYS - 1)
+    return start_date, finish_date
+
+
+def build_project_from_handover(handover_date: date) -> tuple[date, date, list[ScheduleRow]]:
+    start_date, finish_date = project_dates_from_handover(handover_date)
     return start_date, finish_date, build_auto_schedule(start_date)
 
 
-def schedule_rows_from_values(row_values: list[tuple[bool, bool, str, str, str]]) -> list[ScheduleRow]:
+def schedule_rows_from_values(row_values: list[tuple[bool, bool, bool, str, str, str]]) -> list[ScheduleRow]:
     rows: list[ScheduleRow] = []
-    for selected, is_free, name, start_text, end_text in row_values:
+    for selected, is_free, manual_override, name, start_text, end_text in row_values:
         if not selected:
             continue
         name = name.strip()
@@ -418,8 +408,39 @@ def schedule_rows_from_values(row_values: list[tuple[bool, bool, str, str, str]]
                     end_label=UI_TEXT["table_end_date"],
                 )
             )
-        rows.append(ScheduleRow(name=name, start_date=start_date, end_date=end_date))
+        rows.append(
+            ScheduleRow(
+                name=name,
+                start_date=start_date,
+                end_date=end_date,
+                manual_override=manual_override,
+            )
+        )
     return rows
+
+
+def schedule_row_bar_segments(row: ScheduleRow, axis_start: date, axis_finish: date) -> list[tuple[date, date]]:
+    clipped_start = max(row.start_date, axis_start)
+    clipped_end = min(row.end_date, axis_finish)
+    if clipped_start > clipped_end:
+        return []
+    if row.manual_override:
+        return [(clipped_start, clipped_end)]
+    return workday_segments(clipped_start, clipped_end)
+
+
+def includes_manual_holiday_work(rows: list[ScheduleRow]) -> bool:
+    return any(
+        row.manual_override and any(not is_workday(day) for day in days_between(row.start_date, row.end_date))
+        for row in rows
+    )
+
+
+def confirm_manual_holiday_work(rows: list[ScheduleRow], confirmer=None) -> bool:
+    if not includes_manual_holiday_work(rows):
+        return True
+    ask = confirmer or messagebox.askyesno
+    return bool(ask(UI_TEXT["dialog_holiday_work_title"], UI_TEXT["dialog_holiday_work_message"]))
 
 
 def register_pdf_fonts() -> tuple[str, str]:
@@ -532,13 +553,13 @@ def draw_schedule_pdf(output_path: Path, info: ProjectInfo, rows: list[ScheduleR
     grid = colors.HexColor("#DDE5EF")
     header_bg = colors.HexColor("#EEF3F8")
     month_bg = colors.HexColor("#DCEBFF")
-    weekend_bg = colors.HexColor("#F8FAFD")
+    holiday_bg = colors.HexColor("#F8FAFD")
     bar_color = colors.HexColor("#83B6EC")
     bar_edge = colors.HexColor("#3D82D0")
     text = colors.HexColor("#111827")
     muted = colors.HexColor("#475467")
     month_text = colors.HexColor("#1F2937")
-    weekend_weekday_text = colors.HexColor("#C77A7A")
+    holiday_weekday_text = colors.HexColor("#C77A7A")
 
     pdf.setStrokeColor(border)
     pdf.setLineWidth(0.8)
@@ -571,10 +592,10 @@ def draw_schedule_pdf(output_path: Path, info: ProjectInfo, rows: list[ScheduleR
         current_month = month
 
     for index, day in enumerate(axis_days):
-        if is_weekday(day):
+        if is_workday(day):
             continue
         x = axis_left + index * day_width
-        pdf.setFillColor(weekend_bg)
+        pdf.setFillColor(holiday_bg)
         pdf.rect(x, chart_bottom, day_width, chart_top - chart_bottom - month_height, stroke=0, fill=1)
 
     pdf.setStrokeColor(border)
@@ -596,14 +617,13 @@ def draw_schedule_pdf(output_path: Path, info: ProjectInfo, rows: list[ScheduleR
         pdf.setFillColor(muted)
         pdf.setFont(font_name, 5.5)
         pdf.drawCentredString(x + day_width / 2, header_bottom + 14, f"{day.month} / {day.day}")
-        pdf.setFillColor(weekend_weekday_text if not is_weekday(day) else muted)
+        pdf.setFillColor(holiday_weekday_text if not is_workday(day) else muted)
         pdf.setFont(font_name, 4.8)
         pdf.drawCentredString(x + day_width / 2, header_bottom + 5, weekday_labels[day.weekday()])
     pdf.setStrokeColor(border)
     pdf.line(chart_right, chart_bottom, chart_right, chart_top)
 
     day_index = {day: index for index, day in enumerate(axis_days)}
-    valid_days = set(day_index)
     for row_index, row in enumerate(rows):
         y_top = header_bottom - row_index * row_height
         y_bottom = y_top - row_height
@@ -614,12 +634,7 @@ def draw_schedule_pdf(output_path: Path, info: ProjectInfo, rows: list[ScheduleR
         pdf.setFillColor(text)
         draw_fitted_text(pdf, row.name, chart_left + 8, y_mid - 3.2, label_width - 14, font_name, 8)
 
-        clipped_start = max(row.start_date, axis_days[0])
-        clipped_end = min(row.end_date, axis_days[-1])
-        if clipped_start > clipped_end:
-            continue
-
-        segments = weekday_segments(clipped_start, clipped_end, valid_days)
+        segments = schedule_row_bar_segments(row, axis_days[0], axis_days[-1])
         if not segments:
             continue
         for first_day, last_day in segments:
@@ -651,6 +666,7 @@ def validate_pdf_a3_landscape_one_page(path: Path) -> None:
 
 class MansionScheduleApp:
     def __init__(self) -> None:
+        self._is_auto_updating = False
         self.root = tk.Tk()
         self.root.title(WINDOW_TITLE)
         self.root.geometry(WINDOW_SIZE)
@@ -660,7 +676,13 @@ class MansionScheduleApp:
         self.root.option_add("*Font", (self.font_family, 10))
 
         today = date.today()
-        start_date, finish_date, rows = build_project_from_handover(today)
+        start_date, finish_date = project_dates_from_handover(today)
+        startup_error = ""
+        try:
+            rows = build_auto_schedule(start_date)
+        except ValueError as exc:
+            rows = []
+            startup_error = str(exc)
         saved_config = load_config()
         self.project_vars = {
             "site_name": tk.StringVar(value=""),
@@ -673,13 +695,14 @@ class MansionScheduleApp:
             "save_path": tk.StringVar(value=str(default_save_path())),
         }
         self.row_vars: list[ScheduleRowVars] = []
-        for row in rows:
+        for index, (name, _duration) in enumerate(WORK_ITEMS):
+            row = rows[index] if index < len(rows) else None
             self.row_vars.append(
                 ScheduleRowVars(
                     selected=tk.BooleanVar(value=True),
-                    name=tk.StringVar(value=row.name),
-                    start_date=tk.StringVar(value=format_date(row.start_date)),
-                    end_date=tk.StringVar(value=format_date(row.end_date)),
+                    name=tk.StringVar(value=row.name if row else name),
+                    start_date=tk.StringVar(value=format_date(row.start_date) if row else ""),
+                    end_date=tk.StringVar(value=format_date(row.end_date) if row else ""),
                 )
             )
         for _index in range(FREE_WORK_ROW_COUNT):
@@ -692,12 +715,14 @@ class MansionScheduleApp:
                     is_free=True,
                 )
             )
-        self.status_var = tk.StringVar(value=UI_TEXT["status_ready"])
+        self.status_var = tk.StringVar(value=startup_error or UI_TEXT["status_ready"])
         self.footer_compact: bool | None = None
 
         self._apply_window_icon()
         self._build_styles()
         self._build_ui()
+        if startup_error:
+            self._set_status(startup_error, error=True)
 
     def run(self) -> None:
         self.root.mainloop()
@@ -827,6 +852,18 @@ class MansionScheduleApp:
             name_entry.grid(row=index, column=1, sticky="ew", padx=(0, 8), pady=2)
             start_entry.grid(row=index, column=2, sticky="ew", padx=(0, 8), pady=2)
             end_entry.grid(row=index, column=3, sticky="ew", padx=(0, 16), pady=2)
+            self._bind_manual_override(vars_for_row)
+
+    def _bind_manual_override(self, vars_for_row: ScheduleRowVars) -> None:
+        def mark_manual(*_args) -> None:
+            if self._is_auto_updating:
+                return
+            vars_for_row.manual_override = True
+
+        vars_for_row.start_date.trace_add("write", mark_manual)
+        vars_for_row.end_date.trace_add("write", mark_manual)
+        if vars_for_row.is_free:
+            vars_for_row.name.trace_add("write", mark_manual)
 
     def _build_check_cell(self, parent: tk.Frame, vars_for_row: ScheduleRowVars) -> tk.Label:
         check = tk.Label(
@@ -1007,18 +1044,43 @@ class MansionScheduleApp:
         except ValueError as exc:
             if show_errors:
                 self._show_error(str(exc))
+                return
             raise
 
-        start_date, finish_date, rows = build_project_from_handover(handover_date)
-        self.project_vars["start_date"].set(format_date(start_date))
-        self.project_vars["finish_date"].set(format_date(finish_date))
-        if not self.project_vars["save_path"].get().strip():
-            self.project_vars["save_path"].set(str(default_save_path(self.project_vars["site_name"].get())))
+        start_date, finish_date = project_dates_from_handover(handover_date)
+        try:
+            rows = build_auto_schedule(start_date)
+        except ValueError as exc:
+            self._is_auto_updating = True
+            try:
+                self.project_vars["start_date"].set(format_date(start_date))
+                self.project_vars["finish_date"].set(format_date(finish_date))
+                for vars_for_row, (name, _duration) in zip(self.row_vars, WORK_ITEMS):
+                    vars_for_row.name.set(name)
+                    vars_for_row.start_date.set("")
+                    vars_for_row.end_date.set("")
+                    vars_for_row.manual_override = False
+            finally:
+                self._is_auto_updating = False
+            if show_errors:
+                self._show_error(str(exc))
+                return
+            raise
 
-        for vars_for_row, row in zip(self.row_vars, rows):
-            vars_for_row.name.set(row.name)
-            vars_for_row.start_date.set(format_date(row.start_date))
-            vars_for_row.end_date.set(format_date(row.end_date))
+        self._is_auto_updating = True
+        try:
+            self.project_vars["start_date"].set(format_date(start_date))
+            self.project_vars["finish_date"].set(format_date(finish_date))
+            if not self.project_vars["save_path"].get().strip():
+                self.project_vars["save_path"].set(str(default_save_path(self.project_vars["site_name"].get())))
+
+            for vars_for_row, row in zip(self.row_vars, rows):
+                vars_for_row.name.set(row.name)
+                vars_for_row.start_date.set(format_date(row.start_date))
+                vars_for_row.end_date.set(format_date(row.end_date))
+                vars_for_row.manual_override = False
+        finally:
+            self._is_auto_updating = False
 
         self._set_status(UI_TEXT["status_auto_done"], success=True)
 
@@ -1060,6 +1122,7 @@ class MansionScheduleApp:
             (
                 bool(vars_for_row.selected.get()),
                 vars_for_row.is_free,
+                vars_for_row.manual_override,
                 vars_for_row.name.get(),
                 vars_for_row.start_date.get(),
                 vars_for_row.end_date.get(),
@@ -1077,6 +1140,9 @@ class MansionScheduleApp:
         try:
             info = self.collect_project_info()
             rows = self.collect_schedule_rows()
+            if not confirm_manual_holiday_work(rows):
+                self._set_status(UI_TEXT["status_pdf_cancelled"])
+                return
             draw_schedule_pdf(output_path, info, rows)
         except Exception as exc:
             self._show_error(str(exc))
@@ -1120,8 +1186,8 @@ def run_launch_check() -> int:
         raise RuntimeError("calendar day fixture failed")
     if not any(not is_weekday(day) for day in axis_days):
         raise RuntimeError("weekend fixture failed")
-    if any(not is_weekday(row.start_date) or not is_weekday(row.end_date) for row in rows):
-        raise RuntimeError("schedule weekday edge fixture failed")
+    if any(not is_workday(row.start_date) or not is_workday(row.end_date) for row in rows):
+        raise RuntimeError("schedule workday edge fixture failed")
     allocated_workdays = sum(len(workdays_between(row.start_date, row.end_date)) for row in rows)
     if allocated_workdays != TOTAL_INITIAL_WORKDAYS:
         raise RuntimeError("initial weekday allocation fixture failed")
@@ -1130,18 +1196,59 @@ def run_launch_check() -> int:
         raise RuntimeError("reserve weekday fixture failed")
     valid_days = set(axis_days)
     for row in rows:
-        for segment_start, segment_finish in weekday_segments(row.start_date, row.end_date, valid_days):
-            if any(not is_weekday(day) for day in days_between(segment_start, segment_finish)):
+        for segment_start, segment_finish in workday_segments(row.start_date, row.end_date, valid_days):
+            if any(not is_workday(day) for day in days_between(segment_start, segment_finish)):
                 raise RuntimeError("weekend bar fixture failed")
 
+    holiday_start = date(2026, 2, 1)
+    holiday_finish = holiday_start + timedelta(days=TOTAL_CALENDAR_DAYS - 1)
+    holiday_day = date(2026, 2, 11)
+    if not jpholiday.is_holiday(holiday_day) or is_workday(holiday_day):
+        raise RuntimeError("Japanese holiday fixture failed")
+    holiday_rows = build_auto_schedule(holiday_start)
+    for row in holiday_rows:
+        for segment_start, segment_finish in schedule_row_bar_segments(row, holiday_start, holiday_finish):
+            if holiday_day in days_between(segment_start, segment_finish):
+                raise RuntimeError("holiday bar fixture failed")
+
+    insufficient_start = date(2026, 4, 24)
+    try:
+        build_auto_schedule(insufficient_start)
+    except ValueError as exc:
+        if str(exc) != UI_TEXT["error_auto_schedule_insufficient"]:
+            raise RuntimeError("insufficient workday message fixture failed") from exc
+    else:
+        raise RuntimeError("insufficient workday compression fixture failed")
+
+    manual_holiday_row = ScheduleRow(
+        name="休日指定工事",
+        start_date=holiday_day,
+        end_date=holiday_day,
+        manual_override=True,
+    )
+    if schedule_row_bar_segments(manual_holiday_row, holiday_start, holiday_finish) != [(holiday_day, holiday_day)]:
+        raise RuntimeError("manual holiday bar fixture failed")
+    if not includes_manual_holiday_work([manual_holiday_row]):
+        raise RuntimeError("manual holiday detection fixture failed")
+    prompts: list[tuple[str, str]] = []
+    if confirm_manual_holiday_work(
+        [manual_holiday_row],
+        lambda title, message: prompts.append((title, message)) or False,
+    ):
+        raise RuntimeError("manual holiday no fixture failed")
+    if not confirm_manual_holiday_work([manual_holiday_row], lambda _title, _message: True):
+        raise RuntimeError("manual holiday yes fixture failed")
+    if prompts != [(UI_TEXT["dialog_holiday_work_title"], UI_TEXT["dialog_holiday_work_message"])]:
+        raise RuntimeError("manual holiday prompt fixture failed")
+
     row_values = [
-        (index != 1, False, row.name, format_date(row.start_date), format_date(row.end_date))
+        (index != 1, False, False, row.name, format_date(row.start_date), format_date(row.end_date))
         for index, row in enumerate(rows)
     ]
     row_values.extend(
         [
-            (True, True, "", "", ""),
-            (True, True, "追加確認工事", format_date(start_date), format_date(start_date)),
+            (True, True, False, "", "", ""),
+            (True, True, True, "追加確認工事", "2026-06-06", "2026-06-06"),
         ]
     )
     selected_rows = schedule_rows_from_values(row_values)
@@ -1151,6 +1258,8 @@ def run_launch_check() -> int:
         raise RuntimeError("unchecked row fixture failed")
     if selected_rows[-1].name != "追加確認工事":
         raise RuntimeError("free row fixture failed")
+    if not selected_rows[-1].manual_override or not includes_manual_holiday_work([selected_rows[-1]]):
+        raise RuntimeError("free row holiday fixture failed")
     if checkbox_symbol(True) != CHECK_SYMBOL_ON or checkbox_symbol(False) != CHECK_SYMBOL_OFF:
         raise RuntimeError("checkbox display fixture failed")
 
@@ -1210,6 +1319,10 @@ def run_launch_check() -> int:
         print(UI_TEXT["launch_check_workdays"].format(workdays=len(axis_workdays), allocated=allocated_workdays))
         print(UI_TEXT["launch_check_reserve"].format(reserve=reserve_workdays))
         print(UI_TEXT["launch_check_weekend_bars"])
+        print(UI_TEXT["launch_check_holiday_bars"])
+        print(UI_TEXT["launch_check_manual_holiday"])
+        print(UI_TEXT["launch_check_free_holiday"])
+        print(UI_TEXT["launch_check_insufficient"])
         print(UI_TEXT["launch_check_selectable_rows"])
         print(UI_TEXT["launch_check_free_rows"])
         print(UI_TEXT["launch_check_checkbox_display"])
