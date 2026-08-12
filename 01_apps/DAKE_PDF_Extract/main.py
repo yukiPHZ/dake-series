@@ -712,37 +712,37 @@ class DakePdfExtractApp:
         self.header.grid_columnconfigure(0, weight=1)
         self.header.grid_columnconfigure(1, weight=0)
 
-        title_area = tk.Frame(self.header, bg=THEME["background"])
-        title_area.grid(row=0, column=0, sticky="w")
+        self.header_title_area = tk.Frame(self.header, bg=THEME["background"])
+        self.header_title_area.grid(row=0, column=0, sticky="w")
         self.header_title = tk.Label(
-            title_area,
+            self.header_title_area,
             text=UI_TEXT["main_title"],
             bg=THEME["background"],
             fg=THEME["text"],
             font=(self.font_family, 18, "bold"),
         )
         self.header_description = tk.Label(
-            title_area,
+            self.header_title_area,
             text=UI_TEXT["main_description"],
             bg=THEME["background"],
             fg=THEME["muted"],
-            font=(self.font_family, 10),
+            font=(self.font_family, 9),
             justify="left",
         )
 
-        header_buttons = tk.Frame(self.header, bg=THEME["background"])
-        header_buttons.grid(row=0, column=1, sticky="e", padx=(16, 0))
-        self.add_button = self._make_button(header_buttons, UI_TEXT["button_add"], self.choose_pdf, "primary")
+        self.header_buttons = tk.Frame(self.header, bg=THEME["background"])
+        self.header_buttons.grid(row=0, column=1, sticky="e", padx=(16, 0))
+        self.add_button = self._make_button(self.header_buttons, UI_TEXT["button_add"], self.choose_pdf, "primary")
         self.add_button.pack(side="left")
         self.refresh_button = self._make_button(
-            header_buttons,
+            self.header_buttons,
             UI_TEXT["button_refresh"],
             self.refresh_pdf,
             "secondary",
         )
         self.refresh_button.pack(side="left", padx=(8, 0))
         self.folder_button = self._make_button(
-            header_buttons,
+            self.header_buttons,
             UI_TEXT["button_select_folder"],
             self.choose_output_dir,
             "secondary",
@@ -2136,6 +2136,12 @@ def run_layout_check() -> int:
                 continue
         button_order = list(app.clear_button.master.winfo_children())
         wide_ok = app.footer_compact is False and app.header_compact is False
+        header_width_ok = (
+            app.header_title.winfo_reqwidth()
+            + app.header_description.winfo_reqwidth()
+            + 18
+            <= app.header_title_area.winfo_width()
+        )
         header_ok = (
             UI_TEXT["brand_series"] not in header_texts
             and UI_TEXT["main_title"] in header_texts
@@ -2146,7 +2152,7 @@ def run_layout_check() -> int:
         icon_ok = app.window_icon_ok
     finally:
         app.close()
-    if not (compact_ok and wide_ok and header_ok and buttons_ok and slider_ok and icon_ok):
+    if not (compact_ok and wide_ok and header_width_ok and header_ok and buttons_ok and slider_ok and icon_ok):
         return 1
     print(UI_TEXT["layout_check_ok"])
     return 0
