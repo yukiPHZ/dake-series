@@ -15,7 +15,14 @@ README.md、DAKE_META、release_body.md、booth_product.txt などの派生フ�
 - AppUserModelID: ShimarisuFudosan.DAKE.PDFExtract
 - カテゴリ: PDF
 - 対象: Windows
-- 状態: 未公開 / draft
+- バージョン: 1.0.0
+- 正式tag: `DAKE_PDF_Extract_v1.0.0`
+- 状態: GitHub Release準備中 / BOOTH価格未定
+- 価格: 未定義
+- payment_status: preparing
+- show_in_launcher: false
+- show_on_site: false
+- completion_goal: booth_price_required
 
 ## 目的
 
@@ -88,6 +95,12 @@ DAKEシリーズ共通アイコン `../../02_assets/dake_icon.ico` を使用し�
 
 ソース実行時は `__file__` 基準で共通アイコンを探します。PyInstaller版では同梱アイコンとDAKE_series配下の共通アイコンを候補にします。見つからない場合も起動不能にはしません。
 
+## ヘッダー
+
+通常幅では、機能タイトル `PDFからページを抽出する` と機能説明を同一行に表示し、その右側へ `PDFを追加`、`リフレッシュ`、`保存先を変更` を配置します。
+
+シリーズ名 `シンプルそれDAKEシリーズ` はヘッダーへ表示せず、フッターだけで使用します。
+
 ## フッター
 
 フッター文言は以下で固定します。
@@ -108,22 +121,22 @@ Instagram
 
 ## 正式出荷状況
 
-今回の作業では正式出荷を行いません。
+初回正式バージョンは `1.0.0`、tagは `DAKE_PDF_Extract_v1.0.0` です。
 
-- GitHub Release: 未作成
-- BOOTH登録: 未実施
-- Store公開: 未実施
-- Cloudflare反映: 未実施
-- dakeapp.com掲載: 未実施
+- GitHub Release: 作成準備中
+- BOOTH登録: 価格未定義のため未実施
+- Store公開: BOOTH公開待ち
+- Cloudflare反映: Store / dakeapp.com掲載待ち
+- dakeapp.com掲載: BOOTH公開待ち
 
-未公開URLは作成しません。
+価格、BOOTH URL、Store URL、Stripe Payment Linkは推測で作成しません。価格が正本で確定するまでは、`status` を `draft`、`show_in_launcher` と `show_on_site` を `false`、`payment_status` を `preparing` とします。
 
 ## 派生ファイル方針
 
 - README.md: GitHub閲覧用
 - DAKE_META: 機械利用の補助JSON
-- release_body.md: 将来のGitHub Release本文の下書き
-- booth_product.txt: 将来のBOOTH登録文の下書き
+- release_body.md: GitHub Release本文
+- booth_product.txt: BOOTH登録文の公開前下書き
 - build.bat: PyInstallerビルド
 
-正式公開前のため、派生ファイルにも未公開URLを記載しません。
+未公開URLは派生ファイルにも記載しません。

@@ -13,9 +13,10 @@
   "store_url": "",
   "screenshot_path": "assets/screenshot.webp",
   "status": "draft",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "show_in_launcher": false,
   "show_on_site": false,
   "app_type": "market",
-  "completion_goal": "draft_build_verified"
+  "completion_goal": "booth_price_required",
+  "payment_status": "preparing"
 }

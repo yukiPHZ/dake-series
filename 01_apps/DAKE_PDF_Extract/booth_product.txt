@@ -30,7 +30,7 @@ assets/booth_thumbnail.jpg
 assets/screenshot.jpg
 
 配布ファイル:
-未作成
+DakePDF_Extract.zip（価格確定後に正式生成）
 
 GitHub Release:
 未公開
@@ -42,4 +42,4 @@ Store URL:
 未公開
 
 注意:
-このファイルは将来のBOOTH登録文の下書きです。今回、BOOTH登録は行っていません。
+価格、BOOTH URL、Store URLは未確定です。価格を推測せず、確定後に正式公開します。

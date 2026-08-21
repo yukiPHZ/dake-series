@@ -78,14 +78,15 @@ python main.py --self-check
   "store_url": "",
   "screenshot_path": "assets/screenshot.webp",
   "status": "draft",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "show_in_launcher": false,
   "show_on_site": false,
   "app_type": "market",
-  "completion_goal": "draft_build_verified"
+  "completion_goal": "booth_price_required",
+  "payment_status": "preparing"
 }
 ```
 
 ## 出荷状況
 
-GitHub Release、BOOTH登録、Store公開、Cloudflare反映、dakeapp.com掲載は未実施です。
+初回正式バージョンは `1.0.0`、tagは `DAKE_PDF_Extract_v1.0.0` です。GitHub Releaseを先行準備し、BOOTH、Store、dakeapp.com、Cloudflareは価格確定後に公開します。
