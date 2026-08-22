@@ -17,7 +17,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt などの派生フ�
 - 対象: Windows
 - バージョン: 1.0.0
 - 正式tag: `DAKE_PDF_Extract_v1.0.0`
-- 状態: GitHub Release準備中 / BOOTH価格未定
+- 状態: GitHub Release公開済み / BOOTH価格未定
 - 価格: 未定義
 - payment_status: preparing
 - show_in_launcher: false
@@ -123,7 +123,7 @@ Instagram
 
 初回正式バージョンは `1.0.0`、tagは `DAKE_PDF_Extract_v1.0.0` です。
 
-- GitHub Release: 作成準備中
+- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Extract_v1.0.0
 - BOOTH登録: 価格未定義のため未実施
 - Store公開: BOOTH公開待ち
 - Cloudflare反映: Store / dakeapp.com掲載待ち

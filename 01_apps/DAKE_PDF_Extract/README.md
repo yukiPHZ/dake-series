@@ -73,7 +73,7 @@ python main.py --self-check
   "update_summary": "1つのPDFから必要なページを連続抽出する新規DAKEアプリを追加しました。",
   "folder_name": "DAKE_PDF_Extract",
   "exe_name": "DakePDF_Extract.exe",
-  "release_url": "",
+  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Extract_v1.0.0",
   "booth_url": "",
   "store_url": "",
   "screenshot_path": "assets/screenshot.webp",
@@ -89,4 +89,4 @@ python main.py --self-check
 
 ## 出荷状況
 
-初回正式バージョンは `1.0.0`、tagは `DAKE_PDF_Extract_v1.0.0` です。GitHub Releaseを先行準備し、BOOTH、Store、dakeapp.com、Cloudflareは価格確定後に公開します。
+初回正式バージョンは `1.0.0`、tagは `DAKE_PDF_Extract_v1.0.0` です。[GitHub Release](https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Extract_v1.0.0)は公開済みです。BOOTH、Store、dakeapp.com、Cloudflareは価格確定後に公開します。

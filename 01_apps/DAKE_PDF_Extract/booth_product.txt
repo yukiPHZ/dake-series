@@ -33,7 +33,7 @@ assets/screenshot.jpg
 DakePDF_Extract.zip（価格確定後に正式生成）
 
 GitHub Release:
-未公開
+https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Extract_v1.0.0
 
 BOOTH URL:
 未公開
