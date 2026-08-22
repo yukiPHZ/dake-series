@@ -1,0 +1,46 @@
+# 商品名
+DakePDF抽出
+
+# 価格案
+500円
+
+# 商品紹介文
+1つのPDFから、必要なページを何度でも連続して抽出します。
+
+・1つのPDFから必要なページを何度でも連続抽出
+・選択ページを1つのPDFにまとめて保存
+・選択ページを1ページずつ別ファイルで保存
+・サムネイル選択、サイズ変更、リフレッシュに対応
+・抽出後の自動選択解除、抽出済み表示、保存先フォルダ表示
+
+実務の流れを、
+少し静かにするための道具です。
+
+# タグ
+PDF
+Windows
+実務
+ツール
+仕事効率化
+軽量
+シンプル
+
+# BOOTH商品画像
+assets/booth_thumbnail.jpg
+
+# 補助画像
+assets/screenshot.jpg
+
+# 作品ファイル
+booth_ready/DakePDF_Extract.zip
+
+# GitHub Release
+https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Extract_v1.0.0
+
+# 注意事項
+Windows向けアプリです。
+ご利用は自己責任でお願いいたします。
+大切なファイルは事前にバックアップを推奨します。
+本ソフトウェアの無断転載・再配布を禁止します。
+
+# URL

@@ -29,6 +29,8 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
+from release_source_policy import metadata_line
+
 
 ROOT = Path(__file__).resolve().parents[1]
 APPS_DIR = ROOT / "01_apps"
@@ -74,6 +76,7 @@ class AppResult:
     zip_name: str = ""
     product_title: str = ""
     price: int = 300
+    price_source: str = ""
     thumbnail_error: str = ""
     product_updated: bool = False
     booth_url: str = ""
@@ -177,6 +180,17 @@ def price_for(folder: str, title: str, features: list[str]) -> int:
     if "Image" in blob or "画像" in blob or "HEIC" in blob:
         return 500
     return 300
+
+
+def canonical_price_for(app_dir: Path) -> int | None:
+    original_path = app_dir / "ORIGINAL.md"
+    if not original_path.exists():
+        return None
+    raw = metadata_line(read_text(original_path), "price")
+    match = re.search(r"[0-9][0-9,]*", raw)
+    if not match:
+        return None
+    return int(match.group(0).replace(",", ""))
 
 
 def tags_for(folder: str, title: str, features: list[str]) -> list[str]:
@@ -496,7 +510,14 @@ def process_app(app_dir: Path, *, dry_run: bool = False) -> AppResult:
     if not any("Windows" in feature for feature in features):
         features.append("Windows向け")
     features = features[:5]
-    result.price = price_for(app_dir.name, title, features)
+    canonical_price = canonical_price_for(app_dir)
+    if canonical_price is not None:
+        result.price = canonical_price
+        result.price_source = "ORIGINAL.md"
+    else:
+        result.price = price_for(app_dir.name, title, features)
+        result.price_source = "inferred"
+        result.warnings.append("price inferred because ORIGINAL.md price is missing")
 
     screenshot_webp = app_dir / meta.get("screenshot_path", "assets/screenshot.webp")
     screenshot_jpg = app_dir / "assets" / "screenshot.jpg"
@@ -665,6 +686,13 @@ def main() -> int:
 
     print("")
     print("BOOTH初期候補:")
+    if args.app:
+        for result in results:
+            print(
+                f"- {result.folder}: {result.product_title} / {result.price}円 / "
+                f"{result.zip_name} / price_source={result.price_source}"
+            )
+        return 0
     for name in ["DAKE_PDF_Merge", "DAKE_Sticky_Memo", "DAKE_Maji_Memo", "DAKE_Git_Memo", "DAKE_Yesterday_Task_Memo"]:
         match = next((r for r in results if r.folder == name), None)
         if match:

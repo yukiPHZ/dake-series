@@ -8,21 +8,22 @@ README.md、DAKE_META、release_body.md、booth_product.txt などの派生フ�
 
 ## 基本情報
 
-- アプリ名: DakePDF抽出
-- 表示名: PDF抽出
-- exe名: DakePDF_Extract.exe
-- フォルダ名: DAKE_PDF_Extract
-- AppUserModelID: ShimarisuFudosan.DAKE.PDFExtract
-- カテゴリ: PDF
-- 対象: Windows
-- バージョン: 1.0.0
-- 正式tag: `DAKE_PDF_Extract_v1.0.0`
-- 状態: GitHub Release公開済み / BOOTH価格未定
-- 価格: 未定義
+- app_id: dake_pdf_extract
+- title: DakePDF抽出
+- short_title: PDF抽出
+- category: PDF
+- status: available
+- version: 1.0.0
+- price: 500円
+- distribution: GitHub Release / BOOTH / dakeapp.com / store.dakeapp.com
+- target_platform: Windows
 - payment_status: preparing
-- show_in_launcher: false
-- show_on_site: false
-- completion_goal: booth_price_required
+- booth_url: 未設定
+- stripe_payment_link: 未設定
+- exe_name: DakePDF_Extract.exe
+- folder_name: DAKE_PDF_Extract
+- app_user_model_id: ShimarisuFudosan.DAKE.PDFExtract
+- release_tag: DAKE_PDF_Extract_v1.0.0
 
 ## 目的
 
@@ -123,13 +124,127 @@ Instagram
 
 初回正式バージョンは `1.0.0`、tagは `DAKE_PDF_Extract_v1.0.0` です。
 
+- 正式価格: 500円
 - GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Extract_v1.0.0
-- BOOTH登録: 価格未定義のため未実施
+- BOOTH登録: 正式公開準備中
 - Store公開: BOOTH公開待ち
 - Cloudflare反映: Store / dakeapp.com掲載待ち
 - dakeapp.com掲載: BOOTH公開待ち
 
-価格、BOOTH URL、Store URL、Stripe Payment Linkは推測で作成しません。価格が正本で確定するまでは、`status` を `draft`、`show_in_launcher` と `show_on_site` を `false`、`payment_status` を `preparing` とします。
+価格は人間の決定により500円で確定しています。Stripe Payment Linkは作成せず、BOOTH公開後に `payment_status` を `booth_only` へ更新します。
+
+## README生成用情報
+
+- 概要: 1つのPDFを開いたまま、必要なページを何度でも連続して抽出するWindows向けDAKEアプリです。
+- 使い方: PDFを追加し、サムネイルでページを選択して抽出します。
+- 必要なもの: Windows環境
+- 注意: 元PDFは変更せず、同名出力は連番で保存します。
+- ビルド: `build.bat`
+
+## DAKE_META生成用情報
+
+```json
+{
+  "app_key": "dake_pdf_extract",
+  "display_name": "DakePDF抽出",
+  "launcher_title": "PDF抽出",
+  "launcher_description": "1つのPDFから、必要なページを何度でも連続して抽出します。",
+  "site_title": "DakePDF抽出",
+  "site_description": "PDFを開いたまま、選択、抽出、自動選択解除、次の選択を繰り返せるWindows向けアプリです。",
+  "update_summary": "DakePDF抽出 v1.0.0を正式公開しました。",
+  "folder_name": "DAKE_PDF_Extract",
+  "exe_name": "DakePDF_Extract.exe",
+  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Extract_v1.0.0",
+  "booth_url": "",
+  "store_url": "",
+  "screenshot_path": "assets/screenshot.webp",
+  "status": "available",
+  "version": "1.0.0",
+  "show_in_launcher": true,
+  "show_on_site": true,
+  "app_type": "market",
+  "completion_goal": "formal_shipping",
+  "payment_status": "preparing",
+  "demo_video_path": "release_artifacts/demo.mp4",
+  "demo_video_url": "",
+  "social_release_path": "release_artifacts/social_release.json"
+}
+```
+
+## release_body生成用情報
+
+- 1つのPDFから必要なページを何度でも連続抽出
+- 選択ページを1つのPDFにまとめて保存
+- 選択ページを1ページずつ別ファイルで保存
+- サムネイル選択、サイズ変更、リフレッシュに対応
+- 抽出後の自動選択解除、抽出済み表示、保存先フォルダ表示
+
+## booth_product生成用情報
+
+- 商品名: DakePDF抽出
+- 価格案: 500円
+- 商品紹介文: 1つのPDFを開いたまま、必要なページを何度でも連続して抽出するWindows向けアプリです。
+
+・1ページ単位または複数ページをまとめて抽出
+・選択ページを1ページずつ別ファイルで保存
+・サムネイル選択とサムネイルサイズ変更
+・元PDF更新後のリフレッシュ
+・抽出後の自動選択解除と抽出済み表示
+・保存成功後に保存先フォルダを表示
+
+- タグ: PDF
+Windows
+実務
+ツール
+仕事効率化
+軽量
+シンプル
+- 商品画像: assets/booth_thumbnail.jpg
+- 補助画像: assets/screenshot.jpg
+- 作品ファイル: booth_ready/DakePDF_Extract.zip
+- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Extract_v1.0.0
+- BOOTH URL: 未設定
+
+## Store表示用情報
+
+- 商品名: DakePDF抽出
+- キャッチ: 1つのPDFから、必要なページを何度でも連続して抽出します。
+- 説明: PDFを開いたまま、選択、抽出、自動選択解除、次の選択を繰り返せるWindows向けアプリです。
+- 価格: 500円
+- 画像: assets/booth_thumbnail.jpg
+- ダウンロード導線: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Extract_v1.0.0
+- サポート方針: GitHub ReleaseとBOOTHで配布します。
+- Stripe Payment Link: 未設定
+- Store販売状態: preparing
+
+## 価格・販売方針
+
+- BOOTH価格案: 500円
+- BOOTH URL: 未設定
+- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Extract_v1.0.0
+- Store販売: BOOTH公開待ち
+
+## 配布・ダウンロード方針
+
+- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Extract_v1.0.0
+- BOOTH: 未設定
+- BOOTH配布zip: booth_ready/DakePDF_Extract.zip
+- Store配布導線: BOOTH公開待ち
+
+## 免責・注意事項
+
+- Windows向けアプリです。
+- ご利用は自己責任でお願いいたします。
+- 大切なファイルは事前にバックアップを推奨します。
+- 本ソフトウェアの無断転載・再配布を禁止します。
+- 環境によっては起動時にWindowsの警告が表示される場合があります。
+
+## 同梱ファイル方針
+
+- exe: DakePDF_Extract.exe
+- README.txt: booth_ready/README.txt
+- 注意事項.txt: booth_ready/注意事項.txt
+- 入れないもの: build/、dist/、*.spec、設定ファイル、個人データ、ソース一式
 
 ## 派生ファイル方針
 

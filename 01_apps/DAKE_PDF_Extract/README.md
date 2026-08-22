@@ -2,6 +2,8 @@
 
 DakePDF抽出は、1つのPDFを開いたまま、必要なページを何度でも連続して抽出するWindows向けDAKEアプリです。
 
+正式価格は500円です。
+
 ## 特徴
 
 - PDFを1ファイルだけ読み込み
@@ -70,23 +72,34 @@ python main.py --self-check
   "launcher_description": "1つのPDFから、必要なページを何度でも連続して抽出します。",
   "site_title": "DakePDF抽出",
   "site_description": "PDFを開いたまま、選択、抽出、自動選択解除、次の選択を繰り返せるWindows向けアプリです。",
-  "update_summary": "1つのPDFから必要なページを連続抽出する新規DAKEアプリを追加しました。",
+  "update_summary": "DakePDF抽出 v1.0.0を正式公開しました。",
   "folder_name": "DAKE_PDF_Extract",
   "exe_name": "DakePDF_Extract.exe",
   "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Extract_v1.0.0",
   "booth_url": "",
   "store_url": "",
   "screenshot_path": "assets/screenshot.webp",
-  "status": "draft",
+  "status": "available",
   "version": "1.0.0",
-  "show_in_launcher": false,
-  "show_on_site": false,
+  "show_in_launcher": true,
+  "show_on_site": true,
   "app_type": "market",
-  "completion_goal": "booth_price_required",
-  "payment_status": "preparing"
+  "completion_goal": "formal_shipping",
+  "payment_status": "preparing",
+  "demo_video_path": "release_artifacts/demo.mp4",
+  "demo_video_url": "",
+  "social_release_path": "release_artifacts/social_release.json"
 }
 ```
 
+## RELEASE_BODY
+
+- 1つのPDFから必要なページを何度でも連続抽出
+- 選択ページを1つのPDFにまとめて保存
+- 選択ページを1ページずつ別ファイルで保存
+- サムネイル選択、サイズ変更、リフレッシュに対応
+- 抽出後の自動選択解除、抽出済み表示、保存先フォルダ表示
+
 ## 出荷状況
 
-初回正式バージョンは `1.0.0`、tagは `DAKE_PDF_Extract_v1.0.0` です。[GitHub Release](https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Extract_v1.0.0)は公開済みです。BOOTH、Store、dakeapp.com、Cloudflareは価格確定後に公開します。
+初回正式バージョンは `1.0.0`、tagは `DAKE_PDF_Extract_v1.0.0` です。[GitHub Release](https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Extract_v1.0.0)は公開済みです。BOOTH価格は500円で、正式公開準備中です。

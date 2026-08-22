@@ -21,7 +21,7 @@ DakePDF抽出
 契約書類、資料、申請書類など、同じPDFから必要なページを何度も取り出す作業。
 
 価格:
-未定
+500円
 
 商品画像:
 assets/booth_thumbnail.jpg
@@ -30,7 +30,7 @@ assets/booth_thumbnail.jpg
 assets/screenshot.jpg
 
 配布ファイル:
-DakePDF_Extract.zip（価格確定後に正式生成）
+booth_ready/DakePDF_Extract.zip
 
 GitHub Release:
 https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Extract_v1.0.0
@@ -42,4 +42,16 @@ Store URL:
 未公開
 
 注意:
-価格、BOOTH URL、Store URLは未確定です。価格を推測せず、確定後に正式公開します。
+Windows向けアプリです。
+ご利用は自己責任でお願いいたします。
+大切なファイルは事前にバックアップしてください。
+本ソフトウェアの無断転載・再配布を禁止します。
+
+タグ:
+PDF
+Windows
+実務
+ツール
+仕事効率化
+軽量
+シンプル
