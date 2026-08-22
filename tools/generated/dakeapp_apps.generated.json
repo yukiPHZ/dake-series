@@ -2,7 +2,7 @@
   "schema": "dakeapp.apps.v1",
   "do_not_edit": true,
   "source_policy": "ORIGINAL.md is the source of truth. README.md and DAKE_META are derived views. Generated JSON must not be edited manually.",
-  "generated_at": "2026-08-13T07:48:52+09:00",
+  "generated_at": "2026-08-22T09:32:13+09:00",
   "apps": [
     {
       "slug": "advanced-timer",
@@ -499,6 +499,25 @@
       "meta_derivative_mismatch": []
     },
     {
+      "slug": "pdf-extract",
+      "app_key": "dake_pdf_extract",
+      "folder_name": "DAKE_PDF_Extract",
+      "display_name": "DakePDF抽出",
+      "detail_url": "https://dakeapp.com/apps/pdf-extract/",
+      "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Extract_v1.0.0",
+      "screenshot_path": "../../assets/images/apps/pdf-extract/screenshot-01.webp",
+      "demo_video_path": "release_artifacts/demo.mp4",
+      "demo_video_url": "",
+      "video_cloudinary_url": "",
+      "video_r2_url": "",
+      "social_release_path": "release_artifacts/social_release.json",
+      "source_kind": "original",
+      "source_original": "01_apps/DAKE_PDF_Extract/ORIGINAL.md",
+      "source_readme": "",
+      "original_missing": false,
+      "meta_derivative_mismatch": []
+    },
+    {
       "slug": "pdf-lookhere",
       "app_key": "dake_pdf_lookhere",
       "folder_name": "DAKE_PDF_LookHere",
@@ -766,8 +785,8 @@
     },
     {
       "slug": "screenshot-print",
-      "app_key": "dake_screenshot_print",
-      "folder_name": "DAKE_Screenshot_Print",
+      "app_key": "",
+      "folder_name": "",
       "display_name": "Dakeスクショ印刷",
       "detail_url": "https://dakeapp.com/apps/screenshot-print/",
       "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Screenshot_Print_v1.0.0",
@@ -777,10 +796,10 @@
       "video_cloudinary_url": "",
       "video_r2_url": "",
       "social_release_path": "release_artifacts/social_release.json",
-      "source_kind": "original",
-      "source_original": "01_apps/Dake_Screenshot_Print/ORIGINAL.md",
+      "source_kind": "site_only",
+      "source_original": "",
       "source_readme": "",
-      "original_missing": false,
+      "original_missing": true,
       "meta_derivative_mismatch": []
     },
     {
@@ -842,8 +861,8 @@
     },
     {
       "slug": "work-calendar",
-      "app_key": "dake_work_calendar",
-      "folder_name": "DAKE_Work_Calendar",
+      "app_key": "",
+      "folder_name": "",
       "display_name": "Dake工程カレンダー",
       "detail_url": "https://dakeapp.com/apps/work-calendar/",
       "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Work_Calendar_v1.0.0",
@@ -853,10 +872,10 @@
       "video_cloudinary_url": "",
       "video_r2_url": "",
       "social_release_path": "release_artifacts/social_release.json",
-      "source_kind": "original",
-      "source_original": "01_apps/Dake_Work_Calendar/ORIGINAL.md",
+      "source_kind": "site_only",
+      "source_original": "",
       "source_readme": "",
-      "original_missing": false,
+      "original_missing": true,
       "meta_derivative_mismatch": []
     },
     {

@@ -12,9 +12,9 @@ from typing import Any
 SOURCE_POLICY_MARKER = "ORIGINAL.md is the source of truth"
 DEFAULT_STORE_SITE = Path(r"C:\Users\yukiz\devlop\dake-store-site")
 EXPECTED_REFERENCE = {
-    "items": 53,
-    "type_counts": {"app": 50, "pack": 2, "shimarisu_pack": 1},
-    "payment_counts": {"stripe_ready": 5, "booth_only": 47, "preparing": 1},
+    "items": 55,
+    "type_counts": {"app": 51, "pack": 3, "shimarisu_pack": 1},
+    "payment_counts": {"stripe_ready": 53, "booth_only": 1, "preparing": 1},
 }
 
 
