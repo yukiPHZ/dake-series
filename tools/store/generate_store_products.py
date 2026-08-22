@@ -253,6 +253,7 @@ def extract_item(path: Path) -> tuple[dict[str, Any] | None, dict[str, str] | No
 
     title = first_non_null(store.get("商品名"), basic.get("title"), booth.get("商品名"), item_id)
     short_title = first_non_null(basic.get("short_title"), title)
+    version = first_non_null(basic.get("version"), metadata_line(markdown, "version"))
     catch = first_non_null(store.get("キャッチ"), store.get("キャッチ補足"), section_text(sections, "公開用説明の元情報"))
     description = first_non_null(store.get("説明"), section_text(sections, "公開用説明の元情報"), booth.get("商品紹介文"))
     price = normalize_price(first_non_null(store.get("価格"), basic.get("price"), booth.get("価格案")))
@@ -288,6 +289,11 @@ def extract_item(path: Path) -> tuple[dict[str, Any] | None, dict[str, str] | No
         url_from_text(booth.get("GitHub Release")),
         url_from_text(distribution.get("GitHub Release")),
     )
+    store_url = first_non_null(
+        url_from_text(store.get("Store URL")),
+        url_from_text(basic.get("store_url")),
+        url_from_text(metadata_line(markdown, "store_url")),
+    )
     support_policy = first_non_null(store.get("サポート方針"))
     disclaimer = section_text(sections, "免責・注意事項")
     stripe_payment_link = stripe_payment_link_from(store, booth, markdown)
@@ -303,6 +309,7 @@ def extract_item(path: Path) -> tuple[dict[str, Any] | None, dict[str, str] | No
         "source_original": source_label(path, source_repo),
         "title": title,
         "short_title": short_title,
+        "version": version,
         "catch": catch,
         "description": description,
         "price": price,
@@ -316,7 +323,7 @@ def extract_item(path: Path) -> tuple[dict[str, Any] | None, dict[str, str] | No
         "download_url": download_url,
         "booth_url": booth_url,
         "github_release_url": github_release_url,
-        "store_url": None,
+        "store_url": store_url,
         "support_policy": support_policy,
         "disclaimer": disclaimer,
         "included_items": included_items,
