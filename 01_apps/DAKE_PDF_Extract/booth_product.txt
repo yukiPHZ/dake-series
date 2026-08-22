@@ -39,7 +39,7 @@ BOOTH URL:
 https://peakheadz.booth.pm/items/8746426
 
 Store URL:
-未公開
+https://store.dakeapp.com/product/?id=dake_pdf_extract
 
 注意:
 Windows向けアプリです。

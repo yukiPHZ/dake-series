@@ -77,7 +77,7 @@ python main.py --self-check
   "exe_name": "DakePDF_Extract.exe",
   "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Extract_v1.0.0",
   "booth_url": "https://peakheadz.booth.pm/items/8746426",
-  "store_url": "",
+  "store_url": "https://store.dakeapp.com/product/?id=dake_pdf_extract",
   "screenshot_path": "assets/screenshot.webp",
   "status": "available",
   "version": "1.0.0",
@@ -102,4 +102,4 @@ python main.py --self-check
 
 ## 出荷状況
 
-初回正式バージョンは `1.0.0`、tagは `DAKE_PDF_Extract_v1.0.0` です。[GitHub Release](https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Extract_v1.0.0)と[BOOTH商品](https://peakheadz.booth.pm/items/8746426)を正式公開しています。BOOTH価格は500円です。
+初回正式バージョンは `1.0.0`、tagは `DAKE_PDF_Extract_v1.0.0` です。[GitHub Release](https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Extract_v1.0.0)、[BOOTH商品](https://peakheadz.booth.pm/items/8746426)、[dakeapp.com](https://dakeapp.com/apps/pdf-extract/)、[DAKE Store](https://store.dakeapp.com/product/?id=dake_pdf_extract)を正式公開しています。BOOTH価格は500円です。

@@ -19,6 +19,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt などの派生フ�
 - target_platform: Windows
 - payment_status: booth_only
 - booth_url: https://peakheadz.booth.pm/items/8746426
+- store_url: https://store.dakeapp.com/product/?id=dake_pdf_extract
 - stripe_payment_link: 未設定
 - exe_name: DakePDF_Extract.exe
 - folder_name: DAKE_PDF_Extract
@@ -127,9 +128,9 @@ Instagram
 - 正式価格: 500円
 - GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Extract_v1.0.0
 - BOOTH登録: 500円で正式公開済み
-- Store公開: 正式同期準備中
-- Cloudflare反映: Store / dakeapp.com掲載待ち
-- dakeapp.com掲載: 正式掲載準備中
+- Store公開: https://store.dakeapp.com/product/?id=dake_pdf_extract
+- Cloudflare反映: dakeapp.com / store.dakeapp.com 本番反映済み
+- dakeapp.com掲載: https://dakeapp.com/apps/pdf-extract/
 
 価格は人間の決定により500円で確定しています。Stripe Payment Linkは作成せず、BOOTH正式公開済みのため `payment_status` は `booth_only` です。
 
@@ -156,7 +157,7 @@ Instagram
   "exe_name": "DakePDF_Extract.exe",
   "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Extract_v1.0.0",
   "booth_url": "https://peakheadz.booth.pm/items/8746426",
-  "store_url": "",
+  "store_url": "https://store.dakeapp.com/product/?id=dake_pdf_extract",
   "screenshot_path": "assets/screenshot.webp",
   "status": "available",
   "version": "1.0.0",
@@ -216,6 +217,7 @@ Windows
 - サポート方針: GitHub ReleaseとBOOTHで配布します。
 - Stripe Payment Link: 未設定
 - Store販売状態: booth_only
+- Store URL: https://store.dakeapp.com/product/?id=dake_pdf_extract
 
 ## 価格・販売方針
 
