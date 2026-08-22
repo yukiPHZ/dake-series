@@ -17,8 +17,8 @@ README.md、DAKE_META、release_body.md、booth_product.txt などの派生フ�
 - price: 500円
 - distribution: GitHub Release / BOOTH / dakeapp.com / store.dakeapp.com
 - target_platform: Windows
-- payment_status: preparing
-- booth_url: 未設定
+- payment_status: booth_only
+- booth_url: https://peakheadz.booth.pm/items/8746426
 - stripe_payment_link: 未設定
 - exe_name: DakePDF_Extract.exe
 - folder_name: DAKE_PDF_Extract
@@ -126,12 +126,12 @@ Instagram
 
 - 正式価格: 500円
 - GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Extract_v1.0.0
-- BOOTH登録: 正式公開準備中
-- Store公開: BOOTH公開待ち
+- BOOTH登録: 500円で正式公開済み
+- Store公開: 正式同期準備中
 - Cloudflare反映: Store / dakeapp.com掲載待ち
-- dakeapp.com掲載: BOOTH公開待ち
+- dakeapp.com掲載: 正式掲載準備中
 
-価格は人間の決定により500円で確定しています。Stripe Payment Linkは作成せず、BOOTH公開後に `payment_status` を `booth_only` へ更新します。
+価格は人間の決定により500円で確定しています。Stripe Payment Linkは作成せず、BOOTH正式公開済みのため `payment_status` は `booth_only` です。
 
 ## README生成用情報
 
@@ -155,7 +155,7 @@ Instagram
   "folder_name": "DAKE_PDF_Extract",
   "exe_name": "DakePDF_Extract.exe",
   "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Extract_v1.0.0",
-  "booth_url": "",
+  "booth_url": "https://peakheadz.booth.pm/items/8746426",
   "store_url": "",
   "screenshot_path": "assets/screenshot.webp",
   "status": "available",
@@ -164,7 +164,7 @@ Instagram
   "show_on_site": true,
   "app_type": "market",
   "completion_goal": "formal_shipping",
-  "payment_status": "preparing",
+  "payment_status": "booth_only",
   "demo_video_path": "release_artifacts/demo.mp4",
   "demo_video_url": "",
   "social_release_path": "release_artifacts/social_release.json"
@@ -203,7 +203,7 @@ Windows
 - 補助画像: assets/screenshot.jpg
 - 作品ファイル: booth_ready/DakePDF_Extract.zip
 - GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Extract_v1.0.0
-- BOOTH URL: 未設定
+- BOOTH URL: https://peakheadz.booth.pm/items/8746426
 
 ## Store表示用情報
 
@@ -212,24 +212,24 @@ Windows
 - 説明: PDFを開いたまま、選択、抽出、自動選択解除、次の選択を繰り返せるWindows向けアプリです。
 - 価格: 500円
 - 画像: assets/booth_thumbnail.jpg
-- ダウンロード導線: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Extract_v1.0.0
+- ダウンロード導線: https://peakheadz.booth.pm/items/8746426
 - サポート方針: GitHub ReleaseとBOOTHで配布します。
 - Stripe Payment Link: 未設定
-- Store販売状態: preparing
+- Store販売状態: booth_only
 
 ## 価格・販売方針
 
 - BOOTH価格案: 500円
-- BOOTH URL: 未設定
+- BOOTH URL: https://peakheadz.booth.pm/items/8746426
 - GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Extract_v1.0.0
-- Store販売: BOOTH公開待ち
+- Store販売: BOOTH導線で販売
 
 ## 配布・ダウンロード方針
 
 - GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Extract_v1.0.0
-- BOOTH: 未設定
+- BOOTH: https://peakheadz.booth.pm/items/8746426
 - BOOTH配布zip: booth_ready/DakePDF_Extract.zip
-- Store配布導線: BOOTH公開待ち
+- Store配布導線: https://peakheadz.booth.pm/items/8746426
 
 ## 免責・注意事項
 
@@ -251,7 +251,7 @@ Windows
 - README.md: GitHub閲覧用
 - DAKE_META: 機械利用の補助JSON
 - release_body.md: GitHub Release本文
-- booth_product.txt: BOOTH登録文の公開前下書き
+- booth_product.txt: BOOTH正式商品情報
 - build.bat: PyInstallerビルド
 
 未公開URLは派生ファイルにも記載しません。
