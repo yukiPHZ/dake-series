@@ -181,11 +181,34 @@ MAX_UNIQUE_PATH_ATTEMPTS = 10000
 
 
 @dataclass
+class ImageCanvasRow:
+    background: int
+    badge: int
+    number: int
+    thumbnail_frame: int
+    thumbnail_content: int
+    filename: int
+    dimensions: int
+
+    def item_ids(self) -> tuple[int, ...]:
+        return (
+            self.background,
+            self.badge,
+            self.number,
+            self.thumbnail_frame,
+            self.thumbnail_content,
+            self.filename,
+            self.dimensions,
+        )
+
+
+@dataclass
 class ImageItem:
     path: Path
     path_key: str
     photo: ImageTk.PhotoImage | None
     pixel_size: tuple[int, int]
+    canvas_row: ImageCanvasRow | None = None
 
 
 @dataclass(frozen=True)
@@ -625,6 +648,8 @@ class DakeImageBatchPdfApp:
         self.cancel_event: threading.Event | None = None
         self.close_after_worker = False
         self.footer_stacked: bool | None = None
+        self.list_layout_after_id: str | None = None
+        self.empty_canvas_items: tuple[int, int, int] | None = None
 
         self.layout_var = tk.StringVar(value=LAYOUT_ONE)
         self.status_var = tk.StringVar(value=UI_TEXT["status_idle"])
@@ -782,7 +807,7 @@ class DakeImageBatchPdfApp:
         )
         self.list_scrollbar.grid(row=0, column=1, sticky="ns")
         self.list_canvas.configure(yscrollcommand=self.list_scrollbar.set)
-        self.list_canvas.bind("<Configure>", lambda _event: self.render_image_list())
+        self.list_canvas.bind("<Configure>", self.schedule_list_layout)
         self.list_canvas.bind("<Button-1>", self.on_canvas_click)
         self.list_canvas.bind("<MouseWheel>", self.on_mouse_wheel)
         self.list_canvas.bind("<Enter>", lambda _event: self.list_canvas.focus_set())
@@ -1056,7 +1081,6 @@ class DakeImageBatchPdfApp:
                 self.set_status(UI_TEXT["status_ready"], detail, "success")
             else:
                 self.set_status(UI_TEXT["status_error"], UI_TEXT["message_no_valid_images"], "error")
-            self.render_image_list()
             self.update_buttons()
             return
         if kind == "pdf_progress":
@@ -1085,12 +1109,19 @@ class DakeImageBatchPdfApp:
         if loaded.path_key in self.item_keys:
             self.skipped_in_current_batch += 1
             return
+        previous_index = self.selected_index
         photo = self.photo_from_png(loaded.thumbnail_png)
-        self.items.append(ImageItem(loaded.path, loaded.path_key, photo, loaded.pixel_size))
+        item = ImageItem(loaded.path, loaded.path_key, photo, loaded.pixel_size)
+        self.items.append(item)
         self.item_keys.add(loaded.path_key)
         self.selected_index = len(self.items) - 1
         self.added_in_current_batch += 1
-        self.render_image_list()
+        width, height, row_width = self.list_dimensions()
+        self.set_empty_state_visible(False, width, height)
+        self.layout_item_row(self.selected_index, item, row_width)
+        if previous_index is not None:
+            self.update_item_row_style(previous_index)
+        self.update_list_scrollregion(width, height)
 
     def photo_from_png(self, data: bytes) -> ImageTk.PhotoImage | None:
         try:
@@ -1099,135 +1130,195 @@ class DakeImageBatchPdfApp:
         except Exception:
             return None
 
-    def render_image_list(self) -> None:
-        canvas = self.list_canvas
-        canvas.delete("all")
-        width = max(canvas.winfo_width(), 420)
-        height = max(canvas.winfo_height(), 260)
+    def schedule_list_layout(self, _event: tk.Event | None = None) -> None:
+        if self.list_layout_after_id is not None:
+            try:
+                self.root.after_cancel(self.list_layout_after_id)
+            except tk.TclError:
+                pass
+        self.list_layout_after_id = self.root.after_idle(self.run_scheduled_list_layout)
 
-        if not self.items:
-            canvas.configure(scrollregion=(0, 0, width, height))
-            center_x = width // 2
-            center_y = height // 2
-            canvas.create_text(
-                center_x,
-                center_y - 26,
-                text=UI_TEXT["empty_title"],
-                fill=THEME["text"],
-                font=(self.font_family, 14, "bold"),
-                tags=("empty",),
-            )
+    def run_scheduled_list_layout(self) -> None:
+        self.list_layout_after_id = None
+        self.render_image_list()
+
+    def list_dimensions(self) -> tuple[int, int, int]:
+        width = max(self.list_canvas.winfo_width(), 420)
+        height = max(self.list_canvas.winfo_height(), 260)
+        return width, height, max(260, width - LIST_PAD_X * 2)
+
+    def set_empty_state_visible(self, visible: bool, width: int, height: int) -> None:
+        canvas = self.list_canvas
+        center_x = width // 2
+        center_y = height // 2
+        if self.empty_canvas_items is None:
             subtitle = UI_TEXT["empty_subtitle"] if DND_READY else UI_TEXT["empty_subtitle_click_only"]
-            canvas.create_text(
-                center_x,
-                center_y + 2,
-                text=subtitle,
-                fill=THEME["muted"],
-                font=self.fonts["body"],
-                tags=("empty",),
+            self.empty_canvas_items = (
+                canvas.create_text(
+                    center_x,
+                    center_y - 26,
+                    text=UI_TEXT["empty_title"],
+                    fill=THEME["text"],
+                    font=(self.font_family, 14, "bold"),
+                    tags=("empty",),
+                ),
+                canvas.create_text(
+                    center_x,
+                    center_y + 2,
+                    text=subtitle,
+                    fill=THEME["muted"],
+                    font=self.fonts["body"],
+                    tags=("empty",),
+                ),
+                canvas.create_text(
+                    center_x,
+                    center_y + 30,
+                    text=UI_TEXT["supported_formats"],
+                    fill=THEME["muted"],
+                    font=self.fonts["small"],
+                    tags=("empty",),
+                ),
             )
-            canvas.create_text(
-                center_x,
-                center_y + 30,
-                text=UI_TEXT["supported_formats"],
-                fill=THEME["muted"],
-                font=self.fonts["small"],
-                tags=("empty",),
-            )
+        title_id, subtitle_id, formats_id = self.empty_canvas_items
+        canvas.coords(title_id, center_x, center_y - 26)
+        canvas.coords(subtitle_id, center_x, center_y + 2)
+        canvas.coords(formats_id, center_x, center_y + 30)
+        state = tk.NORMAL if visible else tk.HIDDEN
+        for item_id in self.empty_canvas_items:
+            canvas.itemconfigure(item_id, state=state)
+
+    def update_list_scrollregion(self, width: int | None = None, height: int | None = None) -> None:
+        if width is None or height is None:
+            width, height, _row_width = self.list_dimensions()
+        total_height = LIST_PAD_Y * 2 + len(self.items) * ROW_HEIGHT + max(0, len(self.items) - 1) * ROW_GAP
+        self.list_canvas.configure(scrollregion=(0, 0, width, max(height, total_height)))
+
+    def render_image_list(self) -> None:
+        width, height, row_width = self.list_dimensions()
+        if not self.items:
+            self.set_empty_state_visible(True, width, height)
+            self.update_list_scrollregion(width, height)
             return
 
-        total_height = LIST_PAD_Y * 2 + len(self.items) * ROW_HEIGHT + max(0, len(self.items) - 1) * ROW_GAP
-        canvas.configure(scrollregion=(0, 0, width, max(height, total_height)))
-
-        row_width = max(260, width - LIST_PAD_X * 2)
+        self.set_empty_state_visible(False, width, height)
         for index, item in enumerate(self.items):
-            y = LIST_PAD_Y + index * (ROW_HEIGHT + ROW_GAP)
-            self.draw_item_row(index, item, LIST_PAD_X, y, row_width)
+            self.layout_item_row(index, item, row_width)
+        self.update_list_scrollregion(width, height)
 
-    def draw_item_row(self, index: int, item: ImageItem, x: int, y: int, width: int) -> None:
-        selected = index == self.selected_index
-        fill = THEME["selection_bg"] if selected else THEME["card"]
-        outline = THEME["selection_border"] if selected else THEME["border"]
-        self.list_canvas.create_rectangle(
-            x,
-            y,
-            x + width,
-            y + ROW_HEIGHT,
-            fill=fill,
-            outline=outline,
-            width=2 if selected else 1,
-            tags=("row", f"row_{index}"),
-        )
-        badge_x = x + 14
-        badge_y = y + 24
-        self.list_canvas.create_rectangle(
-            badge_x,
-            badge_y,
-            badge_x + 34,
-            badge_y + 34,
-            fill=THEME["accent"],
-            outline=THEME["accent"],
-            tags=("row", f"row_{index}"),
-        )
-        self.list_canvas.create_text(
-            badge_x + 17,
-            badge_y + 17,
-            text=str(index + 1),
-            fill=THEME["white"],
-            font=(self.font_family, 10, "bold"),
-            tags=("row", f"row_{index}"),
-        )
-        thumb_x = x + 66
-        thumb_y = y + (ROW_HEIGHT - THUMBNAIL_SIZE[1]) // 2
-        self.list_canvas.create_rectangle(
-            thumb_x,
-            thumb_y,
-            thumb_x + THUMBNAIL_SIZE[0],
-            thumb_y + THUMBNAIL_SIZE[1],
+    def create_item_row(self, item: ImageItem) -> ImageCanvasRow:
+        canvas = self.list_canvas
+        background = canvas.create_rectangle(0, 0, 0, 0, tags=("row",))
+        badge = canvas.create_rectangle(0, 0, 0, 0, fill=THEME["accent"], outline=THEME["accent"], tags=("row",))
+        number = canvas.create_text(0, 0, fill=THEME["white"], font=(self.font_family, 10, "bold"), tags=("row",))
+        thumbnail_frame = canvas.create_rectangle(
+            0,
+            0,
+            0,
+            0,
             fill=THEME["white"],
             outline=THEME["border"],
-            tags=("row", f"row_{index}"),
+            tags=("row",),
         )
         if item.photo is not None:
-            self.list_canvas.create_image(
-                thumb_x + THUMBNAIL_SIZE[0] // 2,
-                thumb_y + THUMBNAIL_SIZE[1] // 2,
+            thumbnail_content = canvas.create_image(
+                0,
+                0,
                 image=item.photo,
                 anchor="center",
-                tags=("row", f"row_{index}"),
+                tags=("row",),
             )
         else:
-            self.list_canvas.create_text(
-                thumb_x + THUMBNAIL_SIZE[0] // 2,
-                thumb_y + THUMBNAIL_SIZE[1] // 2,
+            thumbnail_content = canvas.create_text(
+                0,
+                0,
                 text=UI_TEXT["thumbnail_error"],
                 fill=THEME["muted"],
                 font=self.fonts["small"],
-                tags=("row", f"row_{index}"),
+                tags=("row",),
             )
-
-        text_x = thumb_x + THUMBNAIL_SIZE[0] + 16
-        available_width = max(120, width - (text_x - x) - 18)
-        self.list_canvas.create_text(
-            text_x,
-            y + 29,
+        filename = canvas.create_text(
+            0,
+            0,
             text=item.path.name,
             fill=THEME["text"],
             font=self.fonts["row_title"],
             anchor="w",
-            width=available_width,
-            tags=("row", f"row_{index}"),
+            tags=("row",),
         )
-        size_text = f"{item.pixel_size[0]} x {item.pixel_size[1]}"
-        self.list_canvas.create_text(
-            text_x,
-            y + 57,
-            text=size_text,
+        dimensions = canvas.create_text(
+            0,
+            0,
+            text=f"{item.pixel_size[0]} x {item.pixel_size[1]}",
             fill=THEME["muted"],
             font=self.fonts["small"],
             anchor="w",
-            tags=("row", f"row_{index}"),
+            tags=("row",),
         )
+        return ImageCanvasRow(
+            background,
+            badge,
+            number,
+            thumbnail_frame,
+            thumbnail_content,
+            filename,
+            dimensions,
+        )
+
+    def layout_item_row(self, index: int, item: ImageItem, width: int) -> None:
+        if item.canvas_row is None:
+            item.canvas_row = self.create_item_row(item)
+        row = item.canvas_row
+        canvas = self.list_canvas
+        x = LIST_PAD_X
+        y = LIST_PAD_Y + index * (ROW_HEIGHT + ROW_GAP)
+        badge_x = x + 14
+        badge_y = y + 24
+        thumb_x = x + 66
+        thumb_y = y + (ROW_HEIGHT - THUMBNAIL_SIZE[1]) // 2
+        text_x = thumb_x + THUMBNAIL_SIZE[0] + 16
+        available_width = max(120, width - (text_x - x) - 18)
+
+        canvas.coords(row.background, x, y, x + width, y + ROW_HEIGHT)
+        canvas.coords(row.badge, badge_x, badge_y, badge_x + 34, badge_y + 34)
+        canvas.coords(row.number, badge_x + 17, badge_y + 17)
+        canvas.itemconfigure(row.number, text=str(index + 1))
+        canvas.coords(
+            row.thumbnail_frame,
+            thumb_x,
+            thumb_y,
+            thumb_x + THUMBNAIL_SIZE[0],
+            thumb_y + THUMBNAIL_SIZE[1],
+        )
+        canvas.coords(
+            row.thumbnail_content,
+            thumb_x + THUMBNAIL_SIZE[0] // 2,
+            thumb_y + THUMBNAIL_SIZE[1] // 2,
+        )
+        canvas.coords(row.filename, text_x, y + 29)
+        canvas.itemconfigure(row.filename, text=item.path.name, width=available_width)
+        canvas.coords(row.dimensions, text_x, y + 57)
+        canvas.itemconfigure(row.dimensions, text=f"{item.pixel_size[0]} x {item.pixel_size[1]}")
+        self.update_item_row_style(index)
+
+    def update_item_row_style(self, index: int) -> None:
+        if not 0 <= index < len(self.items):
+            return
+        item = self.items[index]
+        if item.canvas_row is None:
+            return
+        selected = index == self.selected_index
+        self.list_canvas.itemconfigure(
+            item.canvas_row.background,
+            fill=THEME["selection_bg"] if selected else THEME["card"],
+            outline=THEME["selection_border"] if selected else THEME["border"],
+            width=2 if selected else 1,
+        )
+
+    def delete_item_row(self, item: ImageItem) -> None:
+        if item.canvas_row is None:
+            return
+        self.list_canvas.delete(*item.canvas_row.item_ids())
+        item.canvas_row = None
 
     def on_canvas_click(self, event: tk.Event) -> None:
         if not self.items:
@@ -1237,8 +1328,11 @@ class DakeImageBatchPdfApp:
         index = int((y - LIST_PAD_Y) // (ROW_HEIGHT + ROW_GAP))
         row_top = LIST_PAD_Y + index * (ROW_HEIGHT + ROW_GAP)
         if 0 <= index < len(self.items) and row_top <= y <= row_top + ROW_HEIGHT:
+            previous_index = self.selected_index
             self.selected_index = index
-            self.render_image_list()
+            if previous_index is not None and previous_index != index:
+                self.update_item_row_style(previous_index)
+            self.update_item_row_style(index)
             self.update_buttons()
 
     def on_mouse_wheel(self, event: tk.Event) -> None:
@@ -1253,7 +1347,9 @@ class DakeImageBatchPdfApp:
         index = self.selected_index
         self.items[index - 1], self.items[index] = self.items[index], self.items[index - 1]
         self.selected_index = index - 1
-        self.render_image_list()
+        _width, _height, row_width = self.list_dimensions()
+        self.layout_item_row(index - 1, self.items[index - 1], row_width)
+        self.layout_item_row(index, self.items[index], row_width)
         self.set_status(UI_TEXT["status_ready"], UI_TEXT["status_reordered"], "success")
         self.update_buttons()
 
@@ -1263,26 +1359,38 @@ class DakeImageBatchPdfApp:
         index = self.selected_index
         self.items[index + 1], self.items[index] = self.items[index], self.items[index + 1]
         self.selected_index = index + 1
-        self.render_image_list()
+        _width, _height, row_width = self.list_dimensions()
+        self.layout_item_row(index, self.items[index], row_width)
+        self.layout_item_row(index + 1, self.items[index + 1], row_width)
         self.set_status(UI_TEXT["status_ready"], UI_TEXT["status_reordered"], "success")
         self.update_buttons()
 
     def delete_selected(self) -> None:
         if self.is_busy() or self.selected_index is None:
             return
-        item = self.items.pop(self.selected_index)
+        removed_index = self.selected_index
+        item = self.items.pop(removed_index)
+        self.delete_item_row(item)
         self.item_keys.discard(item.path_key)
         if self.items:
-            self.selected_index = min(self.selected_index, len(self.items) - 1)
+            self.selected_index = min(removed_index, len(self.items) - 1)
+            _width, _height, row_width = self.list_dimensions()
+            first_changed_index = min(removed_index, self.selected_index)
+            for index in range(first_changed_index, len(self.items)):
+                self.layout_item_row(index, self.items[index], row_width)
         else:
             self.selected_index = None
-        self.render_image_list()
+        width, height, _row_width = self.list_dimensions()
+        self.set_empty_state_visible(not self.items, width, height)
+        self.update_list_scrollregion(width, height)
         self.set_status(UI_TEXT["status_ready"], UI_TEXT["status_deleted"], "success")
         self.update_buttons()
 
     def clear_all(self) -> None:
         if self.is_busy() or not self.items:
             return
+        for item in self.items:
+            self.delete_item_row(item)
         self.items.clear()
         self.item_keys.clear()
         self.selected_index = None
