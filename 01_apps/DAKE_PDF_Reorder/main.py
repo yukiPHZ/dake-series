@@ -156,10 +156,33 @@ POLL_INTERVAL_MS = 60
 
 
 @dataclass
+class PageCanvasItems:
+    background: int
+    thumbnail_frame: int
+    image: int
+    placeholder: int
+    badge: int
+    order_label: int
+    source_label: int
+
+    def item_ids(self) -> tuple[int, ...]:
+        return (
+            self.background,
+            self.thumbnail_frame,
+            self.image,
+            self.placeholder,
+            self.badge,
+            self.order_label,
+            self.source_label,
+        )
+
+
+@dataclass
 class PageItem:
     original_index: int
     photo: Any = None
     thumbnail_error: bool = False
+    canvas_items: PageCanvasItems | None = None
 
 
 def make_root() -> tk.Tk:
@@ -309,6 +332,9 @@ class PdfReorderApp:
         self.drag_original_index: int | None = None
         self.drag_insert_index: int | None = None
         self.card_image_items: dict[int, int] = {}
+        self.insert_marker_item: int | None = None
+        self.empty_state_items: tuple[int, int] | None = None
+        self.canvas_layout_after_id: str | None = None
         self.status_var = tk.StringVar(value=UI_TEXT["status_idle"])
         self.detail_var = tk.StringVar(value=UI_TEXT["status_drop_ready"])
         self.file_var = tk.StringVar(value=UI_TEXT["file_label_none"])
@@ -649,6 +675,15 @@ class PdfReorderApp:
         self.save_button.configure(state=normal if can_save else disabled)
 
     def on_canvas_configure(self, _event: tk.Event) -> None:
+        if self.canvas_layout_after_id is not None:
+            try:
+                self.root.after_cancel(self.canvas_layout_after_id)
+            except tk.TclError:
+                pass
+        self.canvas_layout_after_id = self.root.after_idle(self.run_scheduled_canvas_layout)
+
+    def run_scheduled_canvas_layout(self) -> None:
+        self.canvas_layout_after_id = None
         self.render_pages()
 
     def on_mouse_wheel(self, event: tk.Event) -> None:
@@ -717,6 +752,7 @@ class PdfReorderApp:
 
         self.load_id += 1
         current_load_id = self.load_id
+        self.clear_page_cards()
         self.source_pdf = pdf_path
         self.pages = []
         self.page_order = []
@@ -816,6 +852,7 @@ class PdfReorderApp:
         if kind == "load_error":
             _kind, _load_id, exc = message
             self.is_busy = False
+            self.clear_page_cards()
             self.pages = []
             self.page_order = []
             self.source_pdf = None
@@ -883,47 +920,66 @@ class PdfReorderApp:
         page = self.find_page_by_original_index(original_index)
         if page is None:
             return
-        image_item = self.card_image_items.get(original_index)
-        if image_item is None:
+        if page.canvas_items is None:
             self.render_pages()
+        if page.canvas_items is None:
             return
-        self.canvas.delete(f"placeholder_{original_index}")
+        items = page.canvas_items
         if page.photo is not None:
-            self.canvas.itemconfigure(image_item, image=page.photo)
+            self.canvas.itemconfigure(items.image, image=page.photo)
+            self.canvas.itemconfigure(items.placeholder, state=tk.HIDDEN)
         else:
-            self.render_pages()
+            placeholder_text = UI_TEXT["thumbnail_error"] if page.thumbnail_error else UI_TEXT["thumbnail_loading"]
+            self.canvas.itemconfigure(items.image, image="")
+            self.canvas.itemconfigure(items.placeholder, text=placeholder_text, state=tk.NORMAL)
 
-    def render_pages(self) -> None:
-        self.canvas.delete("page_card")
-        self.canvas.delete("empty_state")
-        self.canvas.delete("insert_marker")
+    def clear_page_cards(self) -> None:
+        if self.pages or self.card_image_items:
+            self.canvas.delete("page_card")
+        for page in self.pages:
+            page.canvas_items = None
         self.card_image_items.clear()
 
+    def set_empty_state_visible(self, visible: bool, width: int, height: int) -> None:
+        title_y = height // 2 - 20
+        if self.empty_state_items is None:
+            self.empty_state_items = (
+                self.canvas.create_text(
+                    width // 2,
+                    title_y,
+                    text=UI_TEXT["empty_title"],
+                    fill=THEME["text"],
+                    font=(self.font_family, 14, "bold"),
+                    tags=("empty_state",),
+                ),
+                self.canvas.create_text(
+                    width // 2,
+                    title_y + 32,
+                    text=UI_TEXT["empty_subtitle"],
+                    fill=THEME["muted"],
+                    font=(self.font_family, 10),
+                    tags=("empty_state",),
+                ),
+            )
+        title_item, subtitle_item = self.empty_state_items
+        self.canvas.coords(title_item, width // 2, title_y)
+        self.canvas.coords(subtitle_item, width // 2, title_y + 32)
+        state = tk.NORMAL if visible else tk.HIDDEN
+        self.canvas.itemconfigure(title_item, state=state)
+        self.canvas.itemconfigure(subtitle_item, state=state)
+
+    def render_pages(self) -> None:
         width = max(self.canvas.winfo_width(), 400)
         height = max(self.canvas.winfo_height(), 260)
+        self.ensure_insert_marker()
         if not self.pages:
             self.canvas.configure(cursor="hand2")
             self.canvas.configure(scrollregion=(0, 0, width, height))
-            title_y = height // 2 - 20
-            subtitle = UI_TEXT["empty_subtitle"]
-            self.canvas.create_text(
-                width // 2,
-                title_y,
-                text=UI_TEXT["empty_title"],
-                fill=THEME["text"],
-                font=(self.font_family, 14, "bold"),
-                tags=("empty_state",),
-            )
-            self.canvas.create_text(
-                width // 2,
-                title_y + 32,
-                text=subtitle,
-                fill=THEME["muted"],
-                font=(self.font_family, 10),
-                tags=("empty_state",),
-            )
+            self.set_empty_state_visible(True, width, height)
+            self.hide_insert_marker()
             return
         self.canvas.configure(cursor="hand2")
+        self.set_empty_state_visible(False, width, height)
 
         columns = self.column_count(width)
         rows = (len(self.pages) + columns - 1) // columns
@@ -936,90 +992,144 @@ class PdfReorderApp:
 
         if self.drag_insert_index is not None:
             self.draw_insert_marker(self.drag_insert_index)
+        else:
+            self.hide_insert_marker()
 
     def draw_page_card(self, page: PageItem, display_index: int, x: int, y: int) -> None:
         original_index = page.original_index
         tag = f"page_{original_index}"
-        is_dragging = original_index == self.drag_original_index
-        fill = THEME["selection_bg"] if is_dragging else THEME["card"]
-        outline = THEME["selection_border"] if is_dragging else THEME["border"]
-        width = 2 if is_dragging else 1
-
-        self.canvas.create_rectangle(
-            x,
-            y,
-            x + CARD_WIDTH,
-            y + CARD_HEIGHT,
-            fill=fill,
-            outline=outline,
-            width=width,
-            tags=("page_card", tag),
-        )
-        self.canvas.create_rectangle(
-            x + 12,
-            y + 12,
-            x + 12 + THUMB_BOX_WIDTH,
-            y + 12 + THUMB_BOX_HEIGHT,
-            fill=THEME["background"],
-            outline=THEME["border"],
-            width=1,
-            tags=("page_card", tag),
-        )
-        image_x = x + 12 + THUMB_BOX_WIDTH // 2
-        image_y = y + 12 + THUMB_BOX_HEIGHT // 2
-        if page.photo is not None:
-            image_item = self.canvas.create_image(
-                image_x,
-                image_y,
-                image=page.photo,
-                anchor="center",
+        if page.canvas_items is None:
+            background = self.canvas.create_rectangle(0, 0, 0, 0, tags=("page_card", tag))
+            thumbnail_frame = self.canvas.create_rectangle(
+                0,
+                0,
+                0,
+                0,
+                fill=THEME["background"],
+                outline=THEME["border"],
+                width=1,
                 tags=("page_card", tag),
             )
-        else:
-            image_item = self.canvas.create_image(
-                image_x,
-                image_y,
-                anchor="center",
-                tags=("page_card", tag),
-            )
-        self.card_image_items[original_index] = image_item
-        if page.photo is None:
-            placeholder_text = UI_TEXT["thumbnail_error"] if page.thumbnail_error else UI_TEXT["thumbnail_loading"]
-            self.canvas.create_text(
-                image_x,
-                image_y,
-                text=placeholder_text,
+            image_item = self.canvas.create_image(0, 0, anchor="center", tags=("page_card", tag))
+            placeholder = self.canvas.create_text(
+                0,
+                0,
                 fill=THEME["muted"],
                 font=(self.font_family, 9),
                 tags=("page_card", tag, f"placeholder_{original_index}"),
             )
+            badge = self.canvas.create_rectangle(
+                0,
+                0,
+                0,
+                0,
+                fill=THEME["accent"],
+                outline=THEME["accent"],
+                tags=("page_card", tag),
+            )
+            order_label = self.canvas.create_text(
+                0,
+                0,
+                fill=THEME["white"],
+                font=(self.font_family, 10, "bold"),
+                tags=("page_card", tag),
+            )
+            source_label = self.canvas.create_text(
+                0,
+                0,
+                fill=THEME["muted"],
+                font=(self.font_family, 9, "bold"),
+                tags=("page_card", tag),
+            )
+            page.canvas_items = PageCanvasItems(
+                background,
+                thumbnail_frame,
+                image_item,
+                placeholder,
+                badge,
+                order_label,
+                source_label,
+            )
+            self.card_image_items[original_index] = image_item
+
+        items = page.canvas_items
+        is_dragging = original_index == self.drag_original_index
+        fill = THEME["selection_bg"] if is_dragging else THEME["card"]
+        outline = THEME["selection_border"] if is_dragging else THEME["border"]
+        self.canvas.coords(items.background, x, y, x + CARD_WIDTH, y + CARD_HEIGHT)
+        self.canvas.itemconfigure(
+            items.background,
+            fill=fill,
+            outline=outline,
+            width=2 if is_dragging else 1,
+        )
+        self.canvas.coords(
+            items.thumbnail_frame,
+            x + 12,
+            y + 12,
+            x + 12 + THUMB_BOX_WIDTH,
+            y + 12 + THUMB_BOX_HEIGHT,
+        )
+        image_x = x + 12 + THUMB_BOX_WIDTH // 2
+        image_y = y + 12 + THUMB_BOX_HEIGHT // 2
+        self.canvas.coords(items.image, image_x, image_y)
+        self.canvas.coords(items.placeholder, image_x, image_y)
+        if page.photo is not None:
+            self.canvas.itemconfigure(items.image, image=page.photo)
+            self.canvas.itemconfigure(items.placeholder, state=tk.HIDDEN)
+        else:
+            placeholder_text = UI_TEXT["thumbnail_error"] if page.thumbnail_error else UI_TEXT["thumbnail_loading"]
+            self.canvas.itemconfigure(items.image, image="")
+            self.canvas.itemconfigure(items.placeholder, text=placeholder_text, state=tk.NORMAL)
 
         badge_size = 30
-        self.canvas.create_rectangle(
+        self.canvas.coords(
+            items.badge,
             x + 12,
             y + 12,
             x + 12 + badge_size,
             y + 12 + badge_size,
-            fill=THEME["accent"],
-            outline=THEME["accent"],
-            tags=("page_card", tag),
         )
-        self.canvas.create_text(
+        self.canvas.coords(
+            items.order_label,
             x + 12 + badge_size // 2,
             y + 12 + badge_size // 2,
-            text=UI_TEXT["thumbnail_order_label"].format(number=display_index + 1),
-            fill=THEME["white"],
-            font=(self.font_family, 10, "bold"),
-            tags=("page_card", tag),
         )
-        self.canvas.create_text(
+        self.canvas.itemconfigure(
+            items.order_label,
+            text=UI_TEXT["thumbnail_order_label"].format(number=display_index + 1),
+        )
+        self.canvas.coords(
+            items.source_label,
             x + CARD_WIDTH // 2,
             y + CARD_HEIGHT - 26,
-            text=UI_TEXT["thumbnail_source_label"].format(page=original_index + 1),
-            fill=THEME["muted"],
-            font=(self.font_family, 9, "bold"),
-            tags=("page_card", tag),
         )
+        self.canvas.itemconfigure(
+            items.source_label,
+            text=UI_TEXT["thumbnail_source_label"].format(page=original_index + 1),
+        )
+
+    def update_card_style(self, original_index: int) -> None:
+        page = self.find_page_by_original_index(original_index)
+        if page is None or page.canvas_items is None:
+            return
+        is_dragging = original_index == self.drag_original_index
+        self.canvas.itemconfigure(
+            page.canvas_items.background,
+            fill=THEME["selection_bg"] if is_dragging else THEME["card"],
+            outline=THEME["selection_border"] if is_dragging else THEME["border"],
+            width=2 if is_dragging else 1,
+        )
+
+    def layout_page_range(self, first_index: int, last_index: int) -> None:
+        if not self.pages:
+            return
+        columns = self.column_count(max(self.canvas.winfo_width(), 400))
+        first_index = max(0, first_index)
+        last_index = min(last_index, len(self.pages) - 1)
+        for display_index in range(first_index, last_index + 1):
+            x, y = self.card_position(display_index, columns)
+            self.draw_page_card(self.pages[display_index], display_index, x, y)
 
     def column_count(self, width: int) -> int:
         available = max(width - CANVAS_PAD_X * 2, CARD_WIDTH)
@@ -1066,7 +1176,8 @@ class PdfReorderApp:
             return
         self.drag_original_index = self.pages[index].original_index
         self.drag_insert_index = index
-        self.render_pages()
+        self.update_card_style(self.drag_original_index)
+        self.draw_insert_marker(index)
 
     def on_canvas_drag(self, event: tk.Event) -> None:
         if self.drag_original_index is None:
@@ -1076,7 +1187,7 @@ class PdfReorderApp:
         insert_index = self.insert_index_from_xy(x, y)
         if insert_index != self.drag_insert_index:
             self.drag_insert_index = insert_index
-            self.render_pages()
+            self.draw_insert_marker(insert_index)
         self.autoscroll(event.y)
 
     def on_canvas_release(self, _event: tk.Event) -> None:
@@ -1086,6 +1197,7 @@ class PdfReorderApp:
         insert_index = self.drag_insert_index
         self.drag_original_index = None
         self.drag_insert_index = None
+        self.hide_insert_marker()
 
         old_index = None
         for index, page in enumerate(self.pages):
@@ -1093,14 +1205,19 @@ class PdfReorderApp:
                 old_index = index
                 break
         if old_index is None or insert_index is None:
-            self.render_pages()
+            self.update_card_style(original_index)
             return
 
         insert_index = max(0, min(insert_index, len(self.pages)))
         changed = self.move_page(original_index, insert_index)
         if changed:
+            new_index = next(
+                index for index, page in enumerate(self.pages) if page.original_index == original_index
+            )
+            self.layout_page_range(min(old_index, new_index), max(old_index, new_index))
             self.set_status("status_ready", UI_TEXT["status_drag_detail"])
-        self.render_pages()
+        else:
+            self.update_card_style(original_index)
 
     def move_page(self, original_index: int, insert_index: int) -> bool:
         old_index = None
@@ -1137,6 +1254,7 @@ class PdfReorderApp:
         return max(0, min(index, len(self.pages)))
 
     def draw_insert_marker(self, index: int) -> None:
+        self.ensure_insert_marker()
         columns = self.column_count(max(self.canvas.winfo_width(), 400))
         x, y = self.card_position(index, columns)
         if index >= len(self.pages) and len(self.pages) > 0:
@@ -1148,15 +1266,29 @@ class PdfReorderApp:
             else:
                 x = CANVAS_PAD_X
                 y = last_y + CARD_HEIGHT + CARD_GAP_Y
-        self.canvas.create_line(
-            x,
-            y,
-            x,
-            y + CARD_HEIGHT,
+        if self.insert_marker_item is None:
+            return
+        self.canvas.coords(self.insert_marker_item, x, y, x, y + CARD_HEIGHT)
+        self.canvas.itemconfigure(self.insert_marker_item, state=tk.NORMAL)
+        self.canvas.tag_raise(self.insert_marker_item)
+
+    def ensure_insert_marker(self) -> None:
+        if self.insert_marker_item is not None:
+            return
+        self.insert_marker_item = self.canvas.create_line(
+            0,
+            0,
+            0,
+            0,
             fill=THEME["accent"],
             width=3,
+            state=tk.HIDDEN,
             tags=("insert_marker",),
         )
+
+    def hide_insert_marker(self) -> None:
+        if self.insert_marker_item is not None:
+            self.canvas.itemconfigure(self.insert_marker_item, state=tk.HIDDEN)
 
     def autoscroll(self, pointer_y: int) -> None:
         height = self.canvas.winfo_height()
