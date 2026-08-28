@@ -241,6 +241,17 @@ https://peakheadz.com
 - assets/booth_thumbnail.jpg: あり
 - Store用画像: 未確定
 
+## 操作品質方針
+
+- PDF preview描画は固定1 workerで処理し、描画要求ごとに新しいthreadを生成しない。
+- 連続するページ変更・PDF切替では最新preview requestだけを待機対象として保持し、古い待機jobを実行しない。
+- preview結果はgeneration IDが現在のrequestと一致する場合だけUIへ反映し、古いPDFやページを後から表示しない。
+- stamp位置だけが変わる操作ではPDF背景を再生成せず、保持しているCanvas itemのstamp overlayだけを更新する。
+- 同じ名字・日付・表示サイズのstamp画像は位置変更中に再生成せず、現在のoverlay画像を再利用する。
+- resizeは連続イベントをまとめ、最後の表示サイズに対して背景の再配置を1回だけ行う。
+- 内部のstamp位置・対象ページ・名字・日付・サイズをpreviewと保存PDFの共通状態として扱い、表示位置と保存位置を一致させる。
+- Tk WidgetとPhotoImageの更新はUI threadで行い、終了時はpreview timerとworkerを停止する。
+
 ## 今後の改善予定
 
 - Store掲載時の説明、価格、ダウンロード導線を決める。
