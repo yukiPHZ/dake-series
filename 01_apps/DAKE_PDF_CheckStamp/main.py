@@ -132,6 +132,8 @@ FOOTER_BREAKPOINT = 900
 RENDER_SCALE = 2.0
 PDF_POINT_PER_UI_PIXEL = 0.75
 QUEUE_POLL_INTERVAL_MS = 80
+PREVIEW_RESIZE_DEBOUNCE_MS = 140
+STAMP_INPUT_DEBOUNCE_MS = 120
 STAMP_RENDER_SIZE = 1200
 STAMP_RGB = (198, 40, 40)
 STAMP_ALPHA = 224
@@ -146,13 +148,20 @@ class StampPosition:
 
 @dataclass(frozen=True)
 class RenderResult:
-    token: int
+    generation: int
     page_index: int
     page_count: int
     page_width: float
     page_height: float
     image: Image.Image
     error: str | None = None
+
+
+@dataclass(frozen=True)
+class PreviewRequest:
+    generation: int
+    pdf_path: Path
+    page_index: int
 
 
 @dataclass(frozen=True)
@@ -360,7 +369,15 @@ class CheckStampApp:
 
         self.font_family = choose_font_family(self.root)
         self.render_queue: queue.Queue[RenderResult | tuple[str, Path | Exception]] = queue.Queue()
-        self.render_token = 0
+        self.preview_condition = threading.Condition()
+        self.pending_preview_request: PreviewRequest | None = None
+        self.preview_generation = 0
+        self.stop_preview_worker = False
+        self.is_closing = False
+        self.preview_worker: threading.Thread | None = None
+        self.poll_after_id: str | None = None
+        self.resize_after_id: str | None = None
+        self.stamp_after_id: str | None = None
         self.busy = False
 
         self.pdf_path: Path | None = None
@@ -373,6 +390,10 @@ class CheckStampApp:
         self.preview_source_image: Image.Image | None = None
         self.preview_photo: ImageTk.PhotoImage | None = None
         self.stamp_photo: ImageTk.PhotoImage | None = None
+        self.preview_image_item: int | None = None
+        self.preview_border_item: int | None = None
+        self.stamp_image_item: int | None = None
+        self.stamp_photo_key: tuple[str, str, int] | None = None
         self.preview_origin = (0, 0)
         self.preview_display_size = (0, 0)
 
@@ -386,8 +407,12 @@ class CheckStampApp:
         self.configure_styles()
         self.build_ui()
         self.enable_drop(self.root)
+        self.name_var.trace_add("write", self.schedule_stamp_overlay_update)
+        self.date_var.trace_add("write", self.schedule_stamp_overlay_update)
         self.root.bind("<Configure>", self.handle_root_configure, add="+")
-        self.root.after(QUEUE_POLL_INTERVAL_MS, self.poll_queue)
+        self.start_preview_worker()
+        self.root.protocol("WM_DELETE_WINDOW", self.on_close)
+        self.poll_after_id = self.root.after(QUEUE_POLL_INTERVAL_MS, self.poll_queue)
 
     def configure_styles(self) -> None:
         style = ttk.Style(self.root)
@@ -733,10 +758,96 @@ class CheckStampApp:
         if selected:
             self.load_pdf(Path(selected))
 
+    def start_preview_worker(self) -> None:
+        self.preview_worker = threading.Thread(
+            target=self.preview_worker_loop,
+            name="pdf-checkstamp-preview-latest",
+            daemon=True,
+        )
+        self.preview_worker.start()
+
+    def preview_worker_loop(self) -> None:
+        while True:
+            with self.preview_condition:
+                while self.pending_preview_request is None and not self.stop_preview_worker:
+                    self.preview_condition.wait()
+                if self.stop_preview_worker:
+                    return
+                request = self.pending_preview_request
+                self.pending_preview_request = None
+                if request is None or request.generation != self.preview_generation:
+                    continue
+            result = self.render_preview(request)
+            with self.preview_condition:
+                is_current = (
+                    result.generation == self.preview_generation
+                    and not self.stop_preview_worker
+                )
+            if is_current:
+                self.render_queue.put(result)
+
+    def render_preview(self, request: PreviewRequest) -> RenderResult:
+        try:
+            with fitz.open(request.pdf_path) as document:
+                if document.page_count < 1:
+                    raise ValueError(UI_TEXT["error_no_pages"])
+                safe_index = min(max(request.page_index, 0), document.page_count - 1)
+                page = document.load_page(safe_index)
+                pixmap = page.get_pixmap(matrix=fitz.Matrix(RENDER_SCALE, RENDER_SCALE), alpha=False)
+                image = Image.frombytes("RGB", (pixmap.width, pixmap.height), pixmap.samples)
+                return RenderResult(
+                    request.generation,
+                    safe_index,
+                    document.page_count,
+                    page.rect.width,
+                    page.rect.height,
+                    image,
+                )
+        except Exception as exc:
+            return RenderResult(
+                request.generation,
+                request.page_index,
+                0,
+                0.0,
+                0.0,
+                Image.new("RGB", (1, 1), "white"),
+                str(exc),
+            )
+
+    def cancel_preview_timers(self) -> None:
+        for attribute in ("resize_after_id", "stamp_after_id"):
+            after_id = getattr(self, attribute)
+            if after_id is None:
+                continue
+            try:
+                self.root.after_cancel(after_id)
+            except tk.TclError:
+                pass
+            setattr(self, attribute, None)
+
+    def on_close(self) -> None:
+        if self.is_closing:
+            return
+        self.is_closing = True
+        self.cancel_preview_timers()
+        if self.poll_after_id is not None:
+            try:
+                self.root.after_cancel(self.poll_after_id)
+            except tk.TclError:
+                pass
+            self.poll_after_id = None
+        with self.preview_condition:
+            self.preview_generation += 1
+            self.pending_preview_request = None
+            self.stop_preview_worker = True
+            self.preview_condition.notify_all()
+        self.root.destroy()
+
     def load_pdf(self, path: Path) -> None:
         if not validate_pdf_path(path):
             self.show_error(UI_TEXT["error_pdf_only"])
             return
+        self.cancel_preview_timers()
         self.pdf_path = path
         self.page_count = 0
         self.current_page_index = 0
@@ -751,30 +862,20 @@ class CheckStampApp:
         self.update_controls()
 
     def start_render(self) -> None:
-        if self.pdf_path is None:
+        if self.pdf_path is None or self.is_closing:
             return
-        self.render_token += 1
-        token = self.render_token
-        pdf_path = self.pdf_path
-        page_index = self.current_page_index
-
-        def worker() -> None:
-            try:
-                with fitz.open(pdf_path) as document:
-                    if document.page_count < 1:
-                        raise ValueError(UI_TEXT["error_no_pages"])
-                    safe_index = min(max(page_index, 0), document.page_count - 1)
-                    page = document.load_page(safe_index)
-                    pixmap = page.get_pixmap(matrix=fitz.Matrix(RENDER_SCALE, RENDER_SCALE), alpha=False)
-                    image = Image.frombytes("RGB", (pixmap.width, pixmap.height), pixmap.samples)
-                    result = RenderResult(token, safe_index, document.page_count, page.rect.width, page.rect.height, image)
-            except Exception as exc:
-                result = RenderResult(token, page_index, 0, 0.0, 0.0, Image.new("RGB", (1, 1), "white"), str(exc))
-            self.render_queue.put(result)
-
-        threading.Thread(target=worker, daemon=True).start()
+        with self.preview_condition:
+            self.preview_generation += 1
+            self.pending_preview_request = PreviewRequest(
+                self.preview_generation,
+                self.pdf_path,
+                self.current_page_index,
+            )
+            self.preview_condition.notify()
 
     def poll_queue(self) -> None:
+        if self.is_closing:
+            return
         try:
             while True:
                 item = self.render_queue.get_nowait()
@@ -788,10 +889,11 @@ class CheckStampApp:
                         self.handle_save_error(payload)
         except queue.Empty:
             pass
-        self.root.after(QUEUE_POLL_INTERVAL_MS, self.poll_queue)
+        if not self.is_closing:
+            self.poll_after_id = self.root.after(QUEUE_POLL_INTERVAL_MS, self.poll_queue)
 
     def handle_render_result(self, result: RenderResult) -> None:
-        if result.token != self.render_token:
+        if result.generation != self.preview_generation:
             return
         if result.error is not None:
             self.preview_source_image = None
@@ -814,6 +916,16 @@ class CheckStampApp:
         self.update_controls()
 
     def handle_canvas_resize(self, _event) -> None:
+        if self.preview_source_image is None:
+            if self.pdf_path is None:
+                self.draw_empty_preview()
+            return
+        if self.resize_after_id is not None:
+            self.root.after_cancel(self.resize_after_id)
+        self.resize_after_id = self.root.after(PREVIEW_RESIZE_DEBOUNCE_MS, self.apply_preview_resize)
+
+    def apply_preview_resize(self) -> None:
+        self.resize_after_id = None
         self.redraw_preview()
 
     def handle_canvas_click(self, event) -> None:
@@ -829,7 +941,7 @@ class CheckStampApp:
         x, y = clamp_stamp_center(self.page_width, self.page_height, page_point[0], page_point[1], diameter)
         self.stamp_position = StampPosition(self.current_page_index, x, y)
         self.set_status("status_stamp_ready")
-        self.redraw_preview()
+        self.draw_stamp_overlay()
         self.update_controls()
 
     def canvas_to_page_point(self, canvas_x: int, canvas_y: int) -> tuple[float, float] | None:
@@ -849,7 +961,19 @@ class CheckStampApp:
         return (origin_x + page_x / self.page_width * display_width, origin_y + page_y / self.page_height * display_height)
 
     def draw_empty_preview(self, title: str | None = None, subtitle: str | None = None) -> None:
+        if self.resize_after_id is not None:
+            try:
+                self.root.after_cancel(self.resize_after_id)
+            except tk.TclError:
+                pass
+            self.resize_after_id = None
         self.canvas.delete("all")
+        self.preview_image_item = None
+        self.preview_border_item = None
+        self.stamp_image_item = None
+        self.preview_photo = None
+        self.stamp_photo = None
+        self.stamp_photo_key = None
         width = max(1, self.canvas.winfo_width())
         height = max(1, self.canvas.winfo_height())
         self.canvas.configure(bg=THEME["soft"])
@@ -879,24 +1003,77 @@ class CheckStampApp:
         origin_y = (canvas_height - display_height) // 2
         self.preview_origin = (origin_x, origin_y)
         self.preview_display_size = (display_width, display_height)
-        self.canvas.delete("all")
         self.canvas.configure(bg=THEME["soft"])
-        self.canvas.create_image(origin_x, origin_y, anchor="nw", image=self.preview_photo)
-        self.canvas.create_rectangle(origin_x, origin_y, origin_x + display_width, origin_y + display_height, outline=THEME["border"], width=1)
+        if self.preview_image_item is None:
+            self.preview_image_item = self.canvas.create_image(
+                origin_x,
+                origin_y,
+                anchor="nw",
+                image=self.preview_photo,
+                tags=("preview_background",),
+            )
+        else:
+            self.canvas.coords(self.preview_image_item, origin_x, origin_y)
+            self.canvas.itemconfigure(self.preview_image_item, image=self.preview_photo, state=tk.NORMAL)
+        if self.preview_border_item is None:
+            self.preview_border_item = self.canvas.create_rectangle(
+                origin_x,
+                origin_y,
+                origin_x + display_width,
+                origin_y + display_height,
+                outline=THEME["border"],
+                width=1,
+                tags=("preview_border",),
+            )
+        else:
+            self.canvas.coords(
+                self.preview_border_item,
+                origin_x,
+                origin_y,
+                origin_x + display_width,
+                origin_y + display_height,
+            )
+            self.canvas.itemconfigure(self.preview_border_item, state=tk.NORMAL)
         self.draw_stamp_overlay()
 
     def draw_stamp_overlay(self) -> None:
+        if self.stamp_image_item is None:
+            self.stamp_image_item = self.canvas.create_image(
+                0,
+                0,
+                state=tk.HIDDEN,
+                tags=("stamp_overlay",),
+            )
         if self.stamp_position is None or self.stamp_position.page_index != self.current_page_index:
+            self.canvas.itemconfigure(self.stamp_image_item, state=tk.HIDDEN)
             return
         if self.page_width <= 0 or self.page_height <= 0:
+            self.canvas.itemconfigure(self.stamp_image_item, state=tk.HIDDEN)
             return
         center_x, center_y = self.page_to_canvas_point(self.stamp_position.x, self.stamp_position.y)
         display_width, _display_height = self.preview_display_size
-        diameter = self.current_stamp_diameter_points() / self.page_width * display_width
-        stamp_image = create_stamp_image(self.name_var.get().strip(), self.date_var.get().strip(), STAMP_RENDER_SIZE)
-        stamp_image = stamp_image.resize((max(1, round(diameter)), max(1, round(diameter))), Image.Resampling.LANCZOS)
-        self.stamp_photo = ImageTk.PhotoImage(stamp_image)
-        self.canvas.create_image(center_x, center_y, image=self.stamp_photo)
+        diameter = max(1, round(self.current_stamp_diameter_points() / self.page_width * display_width))
+        photo_key = (self.name_var.get().strip(), self.date_var.get().strip(), diameter)
+        if self.stamp_photo is None or self.stamp_photo_key != photo_key:
+            stamp_image = create_stamp_image(photo_key[0], photo_key[1], STAMP_RENDER_SIZE)
+            stamp_image = stamp_image.resize((diameter, diameter), Image.Resampling.LANCZOS)
+            self.stamp_photo = ImageTk.PhotoImage(stamp_image)
+            self.stamp_photo_key = photo_key
+        self.canvas.coords(self.stamp_image_item, center_x, center_y)
+        self.canvas.itemconfigure(self.stamp_image_item, image=self.stamp_photo, state=tk.NORMAL)
+        self.canvas.tag_raise(self.stamp_image_item)
+
+    def schedule_stamp_overlay_update(self, *_args) -> None:
+        if self.stamp_position is None or self.preview_source_image is None or self.is_closing:
+            return
+        if self.stamp_after_id is not None:
+            self.root.after_cancel(self.stamp_after_id)
+        self.stamp_after_id = self.root.after(STAMP_INPUT_DEBOUNCE_MS, self.apply_stamp_input_update)
+
+    def apply_stamp_input_update(self) -> None:
+        self.stamp_after_id = None
+        self.stamp_photo_key = None
+        self.draw_stamp_overlay()
 
     def current_stamp_diameter_points(self) -> float:
         _label_key, ui_pixels = SIZE_OPTIONS.get(self.size_var.get(), SIZE_OPTIONS["medium"])
@@ -907,7 +1084,8 @@ class CheckStampApp:
             diameter = self.current_stamp_diameter_points()
             x, y = clamp_stamp_center(self.page_width, self.page_height, self.stamp_position.x, self.stamp_position.y, diameter)
             self.stamp_position = StampPosition(self.stamp_position.page_index, x, y)
-        self.redraw_preview()
+        self.stamp_photo_key = None
+        self.draw_stamp_overlay()
 
     def go_prev_page(self) -> None:
         if self.busy or self.pdf_path is None or self.current_page_index <= 0:
@@ -939,7 +1117,7 @@ class CheckStampApp:
             self.draw_empty_preview()
         else:
             self.set_status("status_ready")
-            self.redraw_preview()
+            self.draw_stamp_overlay()
         self.update_controls()
 
     def start_save(self) -> None:
@@ -959,7 +1137,8 @@ class CheckStampApp:
         if not re.fullmatch(r"\d{8}", date_text):
             self.show_error(UI_TEXT["error_date_invalid"])
             return
-        output_path = build_output_path(self.pdf_path)
+        source_path = self.pdf_path
+        output_path = build_output_path(source_path)
         diameter = self.current_stamp_diameter_points()
         position = self.stamp_position
         self.busy = True
@@ -968,7 +1147,7 @@ class CheckStampApp:
 
         def worker() -> None:
             try:
-                save_stamped_pdf(self.pdf_path, output_path, position, name, date_text, diameter)
+                save_stamped_pdf(source_path, output_path, position, name, date_text, diameter)
                 self.render_queue.put(("save_complete", output_path))
             except Exception as exc:
                 self.render_queue.put(("save_error", exc))
