@@ -241,6 +241,16 @@ https://peakheadz.com
 - assets/booth_thumbnail.jpg: あり
 - Store用画像: 未確定
 
+## 操作品質方針
+
+- Viewerのページ描画は固定1 workerで処理し、描画要求ごとに新しいthreadを生成しない。
+- 連続するページ移動・拡大縮小・PDF切替では最新render requestだけを待機対象として保持し、古い待機jobを実行しない。
+- 描画結果はgeneration IDが現在のrequestと一致する場合だけUIへ反映し、古いページを後から表示しない。
+- PDF一覧のページ情報取得は固定workerで処理し、追加ファイル数に比例してthreadを増やさない。
+- resizeは連続イベントをまとめ、最後の表示サイズに対してfit計算と描画要求を1回だけ行う。
+- ページ寸法はsummary処理で取得して再利用し、fit計算のためにUI threadでPDFを再openしない。
+- Tk WidgetとPhotoImageの更新はUI threadで行い、終了時は待機中の描画要求とworkerを停止する。
+
 ## 今後の改善予定
 
 - Store掲載時の説明、価格、ダウンロード導線を決める。
