@@ -138,12 +138,15 @@ PAGE_GAP = 18
 PAGE_PAIR_GAP = 18
 POLL_INTERVAL_MS = 60
 ZOOM_DEBOUNCE_MS = 140
+RESIZE_DEBOUNCE_MS = 140
+SUMMARY_WORKER_COUNT = 2
 
 
 @dataclass
 class PdfItem:
     path: Path
     page_count: int | None = None
+    page_sizes: list[tuple[float, float]] | None = None
     modified: str | None = None
     error: str | None = None
 
@@ -171,6 +174,17 @@ class RenderResult:
     pages: list[PageRender]
     width: int
     height: int
+
+
+@dataclass(frozen=True)
+class RenderRequest:
+    token: int
+    path: Path
+    page_index: int
+    zoom: float
+    rotation: int
+    highlight_rects: list[object]
+    view_mode: str
 
 
 def make_root() -> tk.Tk:
@@ -247,14 +261,18 @@ def format_modified(path: Path) -> str:
         return UI_TEXT["modified_unknown"]
 
 
-def read_pdf_summary(path: Path) -> tuple[int | None, str | None]:
+def read_pdf_summary(path: Path) -> tuple[int | None, list[tuple[float, float]] | None, str | None]:
     if fitz is None:
-        return None, UI_TEXT["error_dependency"]
+        return None, None, UI_TEXT["error_dependency"]
     try:
         with fitz.open(str(path)) as doc:
-            return int(doc.page_count), None
+            page_sizes: list[tuple[float, float]] = []
+            for index in range(doc.page_count):
+                rect = doc.load_page(index).rect
+                page_sizes.append((float(rect.width), float(rect.height)))
+            return int(doc.page_count), page_sizes, None
     except Exception as exc:
-        return None, humanize_error(exc)
+        return None, None, humanize_error(exc)
 
 
 def split_drop_files(root: tk.Tk, raw_value: str) -> list[Path]:
@@ -296,8 +314,15 @@ class DakePdfViewerApp:
         self.photo_images: list[object] = []
         self.render_token = 0
         self.render_after_id: str | None = None
+        self.resize_after_id: str | None = None
         self.footer_narrow: bool | None = None
         self.result_queue: queue.Queue[tuple[str, object]] = queue.Queue()
+        self.summary_job_queue: queue.Queue[Path | None] = queue.Queue()
+        self.render_condition = threading.Condition()
+        self.pending_render_request: RenderRequest | None = None
+        self.stop_workers = False
+        self.is_closing = False
+        self.background_threads: list[threading.Thread] = []
 
         self.root.title(WINDOW_TITLE)
         self.root.geometry(WINDOW_SIZE)
@@ -307,6 +332,8 @@ class DakePdfViewerApp:
         self.configure_styles()
         self.build_ui()
         self.bind_events()
+        self.start_background_workers()
+        self.root.protocol("WM_DELETE_WINDOW", self.on_close)
         self.poll_results()
         self.show_empty_view()
         self.set_status(UI_TEXT["status_idle"])
@@ -656,7 +683,102 @@ class DakePdfViewerApp:
                 except Exception:
                     pass
 
+    def start_background_workers(self) -> None:
+        for index in range(SUMMARY_WORKER_COUNT):
+            worker = threading.Thread(
+                target=self.summary_worker_loop,
+                name=f"pdf-summary-{index + 1}",
+                daemon=True,
+            )
+            worker.start()
+            self.background_threads.append(worker)
+        render_worker = threading.Thread(
+            target=self.render_worker_loop,
+            name="pdf-render-latest",
+            daemon=True,
+        )
+        render_worker.start()
+        self.background_threads.append(render_worker)
+
+    def summary_worker_loop(self) -> None:
+        while True:
+            path = self.summary_job_queue.get()
+            try:
+                if path is None:
+                    return
+                page_count, page_sizes, error = read_pdf_summary(path)
+                if not self.stop_workers:
+                    self.result_queue.put(
+                        ("summary", (str(path), page_count, page_sizes, error, format_modified(path)))
+                    )
+            finally:
+                self.summary_job_queue.task_done()
+
+    def render_worker_loop(self) -> None:
+        while True:
+            with self.render_condition:
+                while self.pending_render_request is None and not self.stop_workers:
+                    self.render_condition.wait()
+                if self.stop_workers:
+                    return
+                request = self.pending_render_request
+                self.pending_render_request = None
+                if request is None or request.token != self.render_token:
+                    continue
+            try:
+                result = self.render_page(
+                    request.path,
+                    request.page_index,
+                    request.zoom,
+                    request.rotation,
+                    request.highlight_rects,
+                    request.view_mode,
+                    request.token,
+                )
+            except Exception as exc:
+                with self.render_condition:
+                    is_current = request.token == self.render_token and not self.stop_workers
+                if is_current:
+                    self.result_queue.put(("render_error", (request.token, humanize_error(exc))))
+                continue
+            with self.render_condition:
+                is_current = request.token == self.render_token and not self.stop_workers
+            if is_current:
+                self.result_queue.put(("render", result))
+
+    def cancel_scheduled_renders(self) -> None:
+        for attribute in ("render_after_id", "resize_after_id"):
+            after_id = getattr(self, attribute)
+            if after_id is None:
+                continue
+            try:
+                self.root.after_cancel(after_id)
+            except tk.TclError:
+                pass
+            setattr(self, attribute, None)
+
+    def invalidate_render_requests(self) -> None:
+        with self.render_condition:
+            self.render_token += 1
+            self.pending_render_request = None
+
+    def on_close(self) -> None:
+        if self.is_closing:
+            return
+        self.is_closing = True
+        self.cancel_scheduled_renders()
+        with self.render_condition:
+            self.render_token += 1
+            self.pending_render_request = None
+            self.stop_workers = True
+            self.render_condition.notify_all()
+        for _ in range(SUMMARY_WORKER_COUNT):
+            self.summary_job_queue.put(None)
+        self.root.destroy()
+
     def poll_results(self) -> None:
+        if self.is_closing:
+            return
         while True:
             try:
                 kind, payload = self.result_queue.get_nowait()
@@ -672,7 +794,8 @@ class DakePdfViewerApp:
                 self.apply_search_results(payload)  # type: ignore[arg-type]
             elif kind == "print_error":
                 self.set_status(UI_TEXT["error_print"])
-        self.root.after(POLL_INTERVAL_MS, self.poll_results)
+        if not self.is_closing:
+            self.root.after(POLL_INTERVAL_MS, self.poll_results)
 
     def set_status(self, message: str) -> None:
         self.status_var.set(message)
@@ -741,23 +864,28 @@ class DakePdfViewerApp:
             self.set_status(UI_TEXT["status_idle"])
 
     def load_summary_async(self, path: Path) -> None:
-        def worker() -> None:
-            page_count, error = read_pdf_summary(path)
-            self.result_queue.put(("summary", (str(path), page_count, error, format_modified(path))))
+        self.summary_job_queue.put(path)
 
-        threading.Thread(target=worker, daemon=True).start()
-
-    def apply_summary(self, payload: tuple[str, int | None, str | None, str]) -> None:
-        key, page_count, error, modified = payload
+    def apply_summary(
+        self,
+        payload: tuple[str, int | None, list[tuple[float, float]] | None, str | None, str],
+    ) -> None:
+        key, page_count, page_sizes, error, modified = payload
         item = self.items.get(key)
         if item is None:
             return
         item.page_count = page_count
+        item.page_sizes = page_sizes
         item.error = error
         item.modified = modified
         pages = UI_TEXT["page_count_format"].format(count=page_count) if page_count else UI_TEXT["page_count_unknown"]
         if self.tree.exists(key):
             self.tree.item(key, values=(pages, modified))
+        if self.current_path is not None and key == str(self.current_path) and page_count:
+            self.current_page_count = page_count
+            if self.fit_mode in ("height", "width"):
+                self.zoom = self.compute_fit_zoom(self.current_path, self.current_page_index, self.fit_mode)
+                self.request_render()
         if self.current_path is None:
             self.set_status(UI_TEXT["status_ready"])
 
@@ -771,6 +899,8 @@ class DakePdfViewerApp:
         self.open_pdf(item.path)
 
     def close_current_pdf(self) -> None:
+        self.cancel_scheduled_renders()
+        self.invalidate_render_requests()
         self.current_path = None
         self.current_page_index = 0
         self.current_page_count = 0
@@ -789,6 +919,8 @@ class DakePdfViewerApp:
         if not path.exists():
             self.set_status(UI_TEXT["error_open_pdf"])
             return
+        self.cancel_scheduled_renders()
+        self.invalidate_render_requests()
         self.current_path = path
         self.current_page_index = 0
         self.current_page_count = self.items.get(str(path), PdfItem(path)).page_count or 0
@@ -841,46 +973,52 @@ class DakePdfViewerApp:
             self.show_empty_view()
             return
         if self.fit_mode in ("height", "width"):
-            self.zoom = self.compute_fit_zoom(self.current_path, self.current_page_index, self.fit_mode)
-            self.schedule_render()
+            if self.resize_after_id is not None:
+                self.root.after_cancel(self.resize_after_id)
+            self.resize_after_id = self.root.after(RESIZE_DEBOUNCE_MS, self.render_after_resize)
+
+    def render_after_resize(self) -> None:
+        self.resize_after_id = None
+        if self.current_path is None or self.fit_mode not in ("height", "width"):
+            return
+        self.zoom = self.compute_fit_zoom(self.current_path, self.current_page_index, self.fit_mode)
+        self.request_render()
 
     def compute_fit_zoom(self, path: Path, page_index: int, fit_mode: str | None = None) -> float:
-        if fitz is None:
-            return 1.0
-        try:
-            with fitz.open(str(path)) as doc:
-                if doc.page_count == 0:
-                    return 1.0
-                page_indexes = self.visible_page_indexes(page_index, doc.page_count)
-                widths: list[float] = []
-                heights: list[float] = []
-                for item_index in page_indexes:
-                    page = doc.load_page(item_index)
-                    rect = page.rect
-                    page_width = rect.height if self.rotation in (90, 270) else rect.width
-                    page_height = rect.width if self.rotation in (90, 270) else rect.height
-                    widths.append(float(page_width))
-                    heights.append(float(page_height))
-                pair_gap = PAGE_PAIR_GAP if len(widths) > 1 else 0
-                target_mode = fit_mode or self.fit_mode
-                canvas_width = max(self.canvas.winfo_width(), 400)
-                canvas_height = max(self.canvas.winfo_height(), 320)
-                if target_mode == "width":
-                    zoom = (canvas_width - FIT_PADDING - pair_gap) / max(sum(widths), 1)
-                else:
-                    zoom = (canvas_height - FIT_PADDING) / max(max(heights), 1)
-                return max(ZOOM_MIN, min(ZOOM_MAX, zoom))
-        except Exception:
-            return 1.0
+        item = self.items.get(str(path))
+        page_sizes = item.page_sizes if item is not None else None
+        if not page_sizes:
+            return self.zoom if self.current_path == path else 1.0
+        page_indexes = self.visible_page_indexes(page_index, len(page_sizes))
+        widths: list[float] = []
+        heights: list[float] = []
+        for item_index in page_indexes:
+            raw_width, raw_height = page_sizes[item_index]
+            page_width = raw_height if self.rotation in (90, 270) else raw_width
+            page_height = raw_width if self.rotation in (90, 270) else raw_height
+            widths.append(page_width)
+            heights.append(page_height)
+        pair_gap = PAGE_PAIR_GAP if len(widths) > 1 else 0
+        target_mode = fit_mode or self.fit_mode
+        canvas_width = max(self.canvas.winfo_width(), 400)
+        canvas_height = max(self.canvas.winfo_height(), 320)
+        if target_mode == "width":
+            zoom = (canvas_width - FIT_PADDING - pair_gap) / max(sum(widths), 1)
+        else:
+            zoom = (canvas_height - FIT_PADDING) / max(max(heights), 1)
+        return max(ZOOM_MIN, min(ZOOM_MAX, zoom))
 
     def schedule_render(self) -> None:
         if self.render_after_id is not None:
             self.root.after_cancel(self.render_after_id)
-        self.render_after_id = self.root.after(ZOOM_DEBOUNCE_MS, self.request_render)
+        self.render_after_id = self.root.after(ZOOM_DEBOUNCE_MS, self.run_scheduled_render)
+
+    def run_scheduled_render(self) -> None:
+        self.render_after_id = None
+        self.request_render()
 
     def request_render(self) -> None:
-        self.render_after_id = None
-        if self.current_path is None:
+        if self.current_path is None or self.is_closing:
             return
         if fitz is None or Image is None or ImageTk is None:
             self.set_status(UI_TEXT["error_dependency"])
@@ -891,18 +1029,20 @@ class DakePdfViewerApp:
         rotation = self.rotation
         highlight_rects = list(self.current_highlight_rects)
         view_mode = self.view_mode
-        self.render_token += 1
-        token = self.render_token
+        with self.render_condition:
+            self.render_token += 1
+            token = self.render_token
+            self.pending_render_request = RenderRequest(
+                token=token,
+                path=path,
+                page_index=page_index,
+                zoom=zoom,
+                rotation=rotation,
+                highlight_rects=highlight_rects,
+                view_mode=view_mode,
+            )
+            self.render_condition.notify()
         self.set_status(UI_TEXT["status_loading"])
-
-        def worker() -> None:
-            try:
-                result = self.render_page(path, page_index, zoom, rotation, highlight_rects, view_mode, token)
-                self.result_queue.put(("render", result))
-            except Exception as exc:
-                self.result_queue.put(("render_error", (token, humanize_error(exc))))
-
-        threading.Thread(target=worker, daemon=True).start()
 
     def display_start_page(self, page_index: int, page_count: int) -> int:
         safe_index = max(0, min(page_index, max(page_count - 1, 0)))
