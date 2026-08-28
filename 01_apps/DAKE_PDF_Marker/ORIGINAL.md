@@ -241,6 +241,16 @@ https://peakheadz.com
 - assets/booth_thumbnail.jpg: あり
 - Store用画像: 未確定
 
+## 操作品質方針
+
+- PDF open、ページ変更、zoom、resize後の描画はUI threadで実行せず、固定1 render workerへ渡す。
+- 連続する描画要求は最新1件を優先し、開始前に古くなった待機要求を置換する。完了時も現在のgenerationと一致しない結果はUIへ反映しない。
+- 同じPDFを表示している間はworkerがdocumentを再利用し、ページ変更やzoomごとにPDFを再openしない。
+- ページ背景のCanvas itemと生成済みPhotoImage参照を保持し、ページ変更・zoom・resizeでは既存itemの座標と画像だけを更新する。
+- marker追加では新しいCanvas itemだけを生成し、ドラッグ中のpreviewは同じitemの座標だけを更新する。markerの軽い操作でPDF背景を再描画しない。
+- `markers` のページ番号とPDF座標をpreview・保存結果の正本とし、保存時に画面から状態を逆算しない。
+- render worker、待機request、polling・resize timerは終了時に停止し、終了後へ処理を残さない。
+
 ## 今後の改善予定
 
 - Store掲載時の説明、価格、ダウンロード導線を決める。
