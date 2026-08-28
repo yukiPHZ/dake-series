@@ -2,11 +2,12 @@
 
 ## 調査概要
 
-- 調査日: 2026-08-27
+- 初回調査日: 2026-08-27
+- Sランク横展開完了・Aランク再評価日: 2026-08-28
 - 対象: `01_apps/` 配下の全68アプリ
 - 確認範囲: 各アプリの `main.py` と、必要な関連Pythonファイル（合計157ファイル）
 - 方法: 起動、blocking、描画、cache、thread、完了体験の静的コード調査
-- この工程での変更: 本レポート、共通品質基準、`DAKE_PDF_Merge/ORIGINAL.md` のみ
+- Phase 5までの実装対象: 代表基準アプリ `DAKE_PDF_Merge` とSランク5アプリ
 
 本調査は横展開候補を選ぶための一次監査であり、各アプリのbuildや実機性能計測は行っていない。検出語の件数だけでは判定せず、呼び出し経路と処理粒度を確認した。例えばlaunch-checkと通常起動が別々の `tk.Tk()` を持つ場合は、同一起動内の二重生成とは数えていない。
 
@@ -92,6 +93,41 @@ Sは「問題が深刻」という順位ではなく、「同じ解決が効き�
 - 改善候補: debounce済み入力を最新1jobへ集約し、単一render workerまたは置換可能queueで処理する。ページ寸法と原画像をcacheする。
 - 期待効果: 連続調整時のCPU負荷とプレビュー遅延が安定する。
 - 危険度: 低〜中。最新の押印位置と保存結果の一致を確認する。
+
+## Sランク横展開完了総括（Phase 5）
+
+初回調査で選んだSランク5件は、2026-08-28までにすべて個別実装・build・exe起動・出力回帰を完了した。以下の数値は各Phaseで同じ操作を繰り返した計測、または変更前後コードを同じTk計測器へ通した結果である。件数上限を持つアプリでは、製品仕様内の実PDFテストと、表示modelだけのストレス計測を分けた。
+
+| アプリ | 変更前問題 | 採用原則 | 変更後結果・実測 | 固有実装 | 展開可能な原則 |
+|---|---|---|---|---|---|
+| DAKE_Image_BatchPDF | 画像追加完了、選択、上下移動、削除、resizeで一覧Canvasを全消去・全生成 | 差分更新、生成済み資産再利用、内部配列を正本化 | 30画像の逐次追加で生成対象行は累計465行相当から30行へ。選択は全30行再描画から変更前後2行のstyle更新、上下移動は全30行から対象2行の再配置へ。3 / 10 / 30画像のPDF出力順を確認 | 1画像を複数Canvas itemで構成する `ImageCanvasRow` を各itemへ保持 | 一覧itemをdata itemへ結び、追加・選択・移動・削除ごとに影響範囲だけ更新する |
+| DAKE_PDF_Reorder | drag targetが変わるたび全page itemを削除・再生成し、drag中にも順序を確定 | 差分更新、drag previewとdrop確定の分離 | drag中のCanvas全削除0、page item新規生成0、thumbnail再生成0。3 / 10 / 30 / 100ページでmarker、drop後再配置、保存順を確認 | Canvas item IDをページmodelへ保持し、drag中は1本のmarkerだけ `coords` 更新 | 高頻度Motionでは同じtargetを省略し、drop時に1回だけ内部順を確定する |
+| DAKE_PDF_Viewer | summary・render要求ごとにthreadを生成し、tokenで表示を捨てても古いrender自体は継続 | Latest Job、固定worker、generation、UI thread分離 | render要求ごとの新規thread生成を廃止し、render workerは固定1、summary workerは固定2。連続ページ移動50回、zoom 30回、resize 100回で待機要求を最新1件へ置換し、古い結果のUI反映0、最終ページ一致を確認 | page / zoom / rotation / view modeをsnapshot化したrender request | 新要求で旧結果が不要になる表示処理は、FIFO完遂ではなく最新要求を優先する |
+| DAKE_PDF_CheckStamp | preview要求ごとにthreadを生成。stamp位置変更でも背景再構築経路があった | Latest Jobと差分更新の併用 | preview 50回はthread / render / 最大同時renderが50 / 50 / 50から0 / 1 / 1へ。page変更30回は30 renderから2 render、古い結果反映0。stamp位置100回は背景更新100から0、overlay更新100。resize 100回は背景・stamp更新各100から各1 | PDF背景renderとstamp overlayを分離し、generation付きpreview requestを固定1 workerへ渡す | 最新要求優先に加え、背景不変ならoverlayだけ更新する |
+| DAKE_PDF_Merge_Mini | 並び替え・削除で全カードWidgetを破棄・再生成。起動時にfitz / pypdfをimport | 差分更新、遅延読込、内部配列を正本化 | 並び替えのWidget生成/破棄は3件15/15、5件25/25、合成30件150/150から全件0/0。削除は全カード破棄から対象カード5 Widgetだけへ。import中央値295.99msから63.59ms。3件と仕様上限5件で出力順一致 | 最大5件の単純なTk Frameカードを保持し、影響開始index以降だけgrid再配置 | 小規模アプリでも不要な全再生成を残さず、重いimportは安定性を確認して利用時へ送る |
+
+### 代表基準アプリを含む6アプリ
+
+| アプリ | 基準として確定したこと | 主な確認値 |
+|---|---|---|
+| DAKE_PDF_Merge | root 1回、遅延import、固定3 thumbnail worker、PDF単位cache、カード再利用、ページ単位進捗・cancel、自動scroll | import約0.30秒→0.08〜0.09秒、onefile GUI約2.17秒→中央値約1.47秒。10 PDF / 30ページを1.793秒で順序どおり結合。30 PDFでもworker=3 |
+| DAKE_Image_BatchPDF | Canvas rowをdata itemへ保持し、追加・選択・移動・削除・resizeを差分更新 | 30画像追加の行生成465相当→30、選択・上下移動は影響2行のみ |
+| DAKE_PDF_Reorder | drag中はpreviewだけ、dropで1回確定 | 100ページでもdrag中の全Canvas delete / item生成 / thumbnail生成は0 |
+| DAKE_PDF_Viewer | 最新表示だけを固定workerでrender | page 50、zoom 30、resize 100の連続操作で古い結果反映0 |
+| DAKE_PDF_CheckStamp | Latest Jobと背景/overlay差分更新を組み合わせる | preview 50→実render 1、stamp 100→背景render 0、resize 100→最終1回 |
+| DAKE_PDF_Merge_Mini | 小規模でもカードを捨てず、起動前importを減らす | import中央値約78%削減。並び替えWidget再生成0。onefile操作可能ウインドウ1.990秒 |
+
+Merge Miniは最大5 PDFが製品仕様である。10 / 30 PDFの実投入は仕様どおりPDF I/O前に拒否し、3 / 5 PDFで結合結果を検証した。10 / 30件については上限を変えずにカードmodelだけを合成し、並び替え・削除・resizeの再生成回数を測った。
+
+## DAKE操作品質パターン A〜E
+
+| Pattern | 意味 | 実証アプリ | 判定 |
+|---|---|---|---|
+| A: 差分更新 | 変わった表示だけを更新する | PDF Merge、Image BatchPDF、PDF Reorder、PDF CheckStamp、PDF Merge Mini | 5アプリで実証。Widget、Canvas row、page item、overlayで実装は異なる |
+| B: Latest Job | 古くなった待機jobを置換し、古い結果を表示しない | PDF Viewer、PDF CheckStamp | 2アプリで実証。正本には原則を記載済み、module化は3例目まで保留 |
+| C: 生成済み資産の再利用 | thumbnail、metadata、PhotoImage、Canvas item、Widgetを軽い操作で作り直さない | 代表PDF Mergeを含む6アプリ | 6アプリで実証。cache有無より「再取得しない責務」を共通化する |
+| D: UI thread分離 | 重い処理はworker、結果はqueue / afterでUIへ返す | 代表PDF Mergeを含む6アプリ | 6アプリで実証。worker数・queue形式はアプリ特性ごとに決定する |
+| E: 内部状態を正本化 | 内部配列 / state = 画面 = 出力結果 | 代表PDF Mergeを含む6アプリ | 6アプリで出力順・ページ順・stamp位置を回帰確認 |
 
 ## 全アプリ調査一覧
 
@@ -179,33 +215,46 @@ Sは「問題が深刻」という順位ではなく、「同じ解決が効き�
 | UI queue pump | worker → queue → `after` が多数アプリに存在 | event型、終了条件、例外通知の差が小さい3アプリで検証 |
 | status animation | ドット進行、reset timer、終了時cancelが反復 | 見た目ではなくtimer lifecycleだけを共通候補にする |
 
-### Sランク改修後に再判断するもの
+### Sランク改修後の最終判断
 
-| 候補 | 理由 | まだmodule化しない理由 |
+| 候補 | 実コードで確認した重複 | 判定 |
 |---|---|---|
-| 固定worker queue | Viewer、CheckStamp、画像/PDF batchで必要 | CPU/I/O、優先度、cancel、fitzの同時利用条件が異なる |
-| 最新job renderer | Viewer、CheckStamp、Crop、Markerに展開余地 | 「古いjobを中断」か「結果だけ破棄」かがアプリごとに異なる |
-| file/page cache | PDFページ数、thumbnail、previewで反復 | keyと無効化条件、memory上限が異なる |
-| 遅延読み込み | PIL、fitz、pypdf、reportlabで起動改善余地 | PyInstallerのhidden importと例外表示を各アプリで実証する必要がある |
-| list/card再配置 | BatchPDF、Reorder、Merge Miniで有効 | Canvas item、Tk Widget、選択modelの差が大きい |
+| フォント検出 | 6アプリ中4アプリが既存rootからfont family候補を探索する小関数を個別保持 | 小さな共通helper候補。ただし候補fontとfallback差を揃えてから。今回module化しない |
+| Window icon | 6アプリでicon path解決と `iconbitmap` の例外処理が反復 | 最有力の小helper候補。onefileの `_MEIPASS` とsource実行path差を統一テスト後に判断 |
+| UI queue pump | 6アプリすべてにworker結果queueと `after` pollがある | event payload、poll間隔、終了条件、dialog責務が異なるため現時点では各アプリ保持 |
+| worker停止lifecycle | ViewerとCheckStampがcondition、pending最新1件、generation、stop flag、timer cancelを持つ | `Latest Job Renderer` パターンとして文書化。2例ではmodule化せず、3例目で同じlifecycleなら再検討 |
+| debounce timer helper | Viewer / CheckStampのresize、Viewerのzoom、各アプリのlayoutで `after_cancel` + `after` が反復 | APIを小さくできる可能性あり。例外時・終了時cancelまで同一化できる3例を待つ |
+| 遅延loader | PDF Merge / Merge Miniでfitz・pypdfの利用時importが有効 | import対象、dependency error、PyInstaller hookが異なるため関数本体は各アプリへ小さく持つ |
+| file/page cache | PDFページ数、thumbnail、previewで反復 | key、無効化、memory上限、document lifecycleが異なるため共通module化しない |
+| list/card再配置 | BatchPDF、Reorder、Merge Miniで有効 | Canvas row、複数Canvas item、Tk FrameでAPIが一致しないため共通module化しない |
+| PDF renderer / request payload | ViewerとCheckStampで最新jobが有効 | page pair、zoom、rotation、stamp状態、document lifecycleが異なるため共通module化しない |
 
 共通化の入口は「同じ名前のhelperを作ること」ではなく、2〜3アプリで同じ責務・同じ失敗条件・同じ終了処理が確認できることとする。共通moduleで理解が難しくなる場合は、品質基準と小さなローカル実装だけを共有する。
 
-## 次工程の推奨順
+## Aランク38件の再評価と次候補上位10件
 
-1. `DAKE_Image_BatchPDF` で増分row更新を実装し、2 / 10 / 30画像で計測する。
-2. `DAKE_PDF_Reorder` でdrag中の全再描画を外し、10 / 30 / 100ページで確認する。
-3. `DAKE_PDF_Viewer` でsummaryとrenderのjob制御を分離し、連続page/zoom操作を確認する。
-4. `DAKE_PDF_Merge_Mini` でカード再利用を小さく適用する。
-5. `DAKE_PDF_CheckStamp` で最新preview job方式を確認する。
+2026-08-28の `origin/main` でAランク38件・Python 126ファイルを再走査した。評価軸は、ユーザー体感改善幅、起動速度、UI停止リスク、大量データ頻度、改善安全性、代表利用頻度、他アプリへの学習価値である。検出件数だけでなく呼び出し経路を確認した。`DAKE_PDF_Insert` は初回調査時の未追跡スナップショットにはPython実装があったが、現在の `origin/main` には追跡Pythonがないため上位候補から外した。
 
-各改修は1アプリずつ行い、起動、通常件数、大量件数、キャンセル、終了、CLI、exe buildを個別に回帰確認する。最初の2〜3アプリで同じ解決が実証されるまで、共通moduleへの移行は行わない。
+| 順位 | アプリ | 現在コードで確認した候補 | 最初の改善単位 | 期待効果 / 安全性 |
+|---:|---|---|---|---|
+| 1 | DAKE_PDF_Marker | PDF open、page render、zoom / resize renderがUI thread。page描画でpixmap生成後にCanvas全更新 | render requestをsnapshot化し、固定1 worker + Latest Jobへ。marker overlayは既存差分更新を維持 | ページ移動・zoomの体感改善大。保存workerは既存のため描画だけを分離できる |
+| 2 | DAKE_PDF_LookHere | PDF open・page render・保存が同期経路。resize debounce後もUI threadで再render | open / render / saveを段階的にworker化し、まずrenderを最新要求優先へ | UI停止リスクが明確。単一PDF構造で責務を分けやすいが保存座標回帰が必須 |
+| 3 | DAKE_App_Doko | scanはworker済みだが結果反映でカード一覧を再構築。exe情報を再走査 | scan結果をkeyで比較し、変化カードだけ追加・更新・削除 | Sランク差分更新を安全に再利用でき、一覧アプリへの学習価値が高い |
+| 4 | DAKE_App_Dashboard | 68アプリscanはworker済み。filter / searchごとにTreeview全行をdelete / insert | record IDを正本にし、filter差分または再利用可能な行更新を計測 | 代表利用頻度と体感効果が高い。3,236行の大アプリなので表示層だけへ限定する |
+| 5 | DAKE_PDF_SplitSelect | fitz / PIL / pypdfを起動時import。thumbnailは固定PriorityQueue workerだがCanvas全再描画経路あり | 起動import実測後の遅延化、viewport内item保持と選択差分更新 | 大量ページ効果大。既存worker優先度とcacheを壊さない限定改修が可能 |
+| 6 | DAKE_Image_iPhoneToPC | 取込・metadata・previewに3種thread。大量写真時の同種job競合余地 | job種別ごとのinflight guard、metadata / thumbnail再利用、終了lifecycle監査 | 大量入力頻度が高く効果大。device切断を含むため安全性は中 |
+| 7 | DAKE_Image_Resize | batch worker / queueは既に良好。PIL起動importと一覧再構築に限定余地 | 起動計測とrow差分更新だけを小さく適用 | 危険が小さくImage BatchPDFのrow原則を再検証できる |
+| 8 | DAKE_Image_PasteA4 | capture、window列挙、PDF化に別job。preview Canvas全更新と短いsleep経路あり | 連続capture guard、背景と配置itemの差分更新、終了timer整理 | 連続操作の追従改善。A4配置精度を固定したまま表示層を限定可能 |
+| 9 | DAKE_PDF_ToImages | fitz起動import、大量page変換を単一workerで処理 | 遅延import、page単位progress / cancel、画像保持上限を実測 | 大量ページで完了品質が上がる。出力画質を触らずjob粒度だけ改善可能 |
+| 10 | DAKE_PDF_Crop | page変更ごとにload threadを生成し、load IDで古い結果だけ破棄。preview Canvasは全更新 | 固定1 latest preview workerを検証し、selectionは既存tag差分更新を維持 | Viewer / CheckStampに続くLatest Job 3例目候補。crop座標回帰が必要 |
 
-## 今回の未実施事項
+上位外でも、`DAKE_PDF_Extract`、`DAKE_Brainz_Search`、`DAKE_Yukiz_KadouChu` は改善余地が大きい。ただしコード規模・外部状態・既存workerが複雑で、「効果が大きく既存ロジックへの危険が小さい」という今回の順序では後段とした。`DAKE_Document_Cover` と `DAKE_FAX_Cover` は現在コードでreportlabの利用時import経路が確認でき、初回調査時より優先度を下げた。
 
-- 他DAKEアプリのコード変更
-- build、exe起動、実機性能計測
+## Phase 5で実施しないこと
+
+- Aランクアプリのコード変更
 - 共通module作成
 - version、GitHub Release、BOOTH、Store、dakeapp.comの更新
+- `DAKE_PDF_Merge_Mini` 専用branchのmain反映（本Phaseでは検証結果を報告してから判断）
 
-このレポートの分類は、各候補の改修開始時に実機計測と最新コードで再確認する。
+今後も各候補の着手時に、正本・最新コード・変更前実測を確認してから順位と手法を再確定する。
