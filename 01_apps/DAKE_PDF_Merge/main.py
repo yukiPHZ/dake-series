@@ -14,13 +14,6 @@ try:
 except Exception:
     ctypes = None
 
-from pypdf import PdfReader, PdfWriter
-
-try:
-    import fitz  # PyMuPDF
-except Exception:
-    fitz = None
-
 try:
     from tkinterdnd2 import DND_FILES, TkinterDnD
     HAS_DND = True
@@ -53,6 +46,15 @@ DISABLED_FG = "#98A2B3"
 ERROR = "#D92D20"
 FOOTER_TEXT = "#AAB2BD"
 FONT_CANDIDATES = ["BIZ UDPGothic", "Yu Gothic UI", "Meiryo"]
+THUMBNAIL_WORKER_COUNT = 3
+DRAG_AUTOSCROLL_EDGE = 64
+DRAG_AUTOSCROLL_INTERVAL_MS = 60
+
+_PDF_READER = None
+_PDF_WRITER = None
+_FITZ = None
+_FITZ_LOAD_ATTEMPTED = False
+_PDF_IMPORT_LOCK = threading.Lock()
 
 UI_TEXT = {
     "main_title": "PDFを結合する",
@@ -178,13 +180,8 @@ def make_root():
     return tk.Tk()
 
 
-def detect_font_name():
-    root = tk.Tk()
-    root.withdraw()
-    try:
-        families = set(root.tk.call("font", "families"))
-    finally:
-        root.destroy()
+def detect_font_name(root: tk.Misc):
+    families = set(root.tk.call("font", "families"))
     for name in FONT_CANDIDATES:
         if name in families:
             return name
@@ -194,11 +191,37 @@ def detect_font_name():
 FONT_NAME = None
 
 
-def ensure_font_name():
+def ensure_font_name(root: tk.Misc):
     global FONT_NAME
     if FONT_NAME is None:
-        FONT_NAME = detect_font_name()
+        FONT_NAME = detect_font_name(root)
     return FONT_NAME
+
+
+def get_pdf_reader_writer():
+    global _PDF_READER, _PDF_WRITER
+    if _PDF_READER is None or _PDF_WRITER is None:
+        with _PDF_IMPORT_LOCK:
+            if _PDF_READER is None or _PDF_WRITER is None:
+                from pypdf import PdfReader, PdfWriter
+
+                _PDF_READER = PdfReader
+                _PDF_WRITER = PdfWriter
+    return _PDF_READER, _PDF_WRITER
+
+
+def get_fitz():
+    global _FITZ, _FITZ_LOAD_ATTEMPTED
+    if not _FITZ_LOAD_ATTEMPTED:
+        with _PDF_IMPORT_LOCK:
+            if not _FITZ_LOAD_ATTEMPTED:
+                try:
+                    import fitz  # PyMuPDF
+                except Exception:
+                    fitz = None
+                _FITZ = fitz
+                _FITZ_LOAD_ATTEMPTED = True
+    return _FITZ
 
 
 def icon_ico_path() -> str:
@@ -355,6 +378,7 @@ def make_cli_output_path(inputs: list[str], output_arg: str | None) -> str:
 
 def merge_pdfs_for_cli(inputs: list[str], output: str) -> None:
     try:
+        PdfReader, PdfWriter = get_pdf_reader_writer()
         writer = PdfWriter()
         for path in inputs:
             reader = PdfReader(path)
@@ -615,6 +639,10 @@ class MergeFileCard(tk.Frame):
         self.thumb_image = img
         self.thumb_label.configure(image=img, text="", width=160, height=220, bg="#FFFFFF")
 
+    def update_index(self, index: int):
+        self.index = index
+        self.number_label.configure(text=f"{index + 1:02d}")
+
     def update_visual(self):
         self.configure(bg=CARD, highlightbackground=BORDER)
         self.top.configure(bg=CARD)
@@ -665,14 +693,17 @@ class DAKEPDFMergeApp:
         self.root.geometry("1480x900")
         self.root.minsize(1180, 760)
         self.root.configure(bg=BG)
-        apply_window_icon(self.root)
 
         self.cfg = load_config()
         self.save_folder = self.cfg.get("last_folder", default_downloads())
         self.files: list[str] = []
-        self.page_count_cache: dict[str, int] = {}
+        self.page_count_cache: dict[str, int | None] = {}
+        self.thumbnail_cache: dict[str, bytes | None] = {}
         self.merge_card_by_path: dict[str, MergeFileCard] = {}
+        self.thumbnail_job_queue: queue.Queue = queue.Queue()
         self.thumbnail_queue: queue.Queue = queue.Queue()
+        self.thumbnail_jobs_pending: set[str] = set()
+        self._thumbnail_workers_started = False
         self.ui_queue: queue.Queue = queue.Queue()
         self.worker_running = False
         self.cancel_requested = False
@@ -716,6 +747,9 @@ class DAKEPDFMergeApp:
         self.drag_target_index = None
         self.drag_start_xy = None
         self.drag_started = False
+        self.drag_pointer_xy = None
+        self.drag_autoscroll_direction = 0
+        self._drag_autoscroll_job = None
 
         self.build_ui()
         self.root.after(120, self.process_thumbnail_queue)
@@ -1143,31 +1177,29 @@ class DAKEPDFMergeApp:
         self.add_pdf_paths(paths)
 
     def add_pdf_paths(self, paths):
-        if paths:
-            self.card_ui_loading = True
-            self.pending_card_paths.clear()
-            self._card_ui_finish_scheduled = False
-            self.set_bottom_status(STATUS_LOADING, "", color=ACCENT)
-            self.start_status_animation(STATUS_LOADING)
-
-        added = 0
+        new_paths = []
+        known_paths = {os.path.normcase(os.path.normpath(path)) for path in self.files}
         for raw in paths:
             path = os.path.abspath(str(raw))
             if not path.lower().endswith(".pdf"):
                 continue
             if not os.path.isfile(path):
                 continue
-            if path in self.files:
+            path_key = os.path.normcase(os.path.normpath(path))
+            if path_key in known_paths:
                 continue
-            self.files.append(path)
-            added += 1
+            known_paths.add(path_key)
+            new_paths.append(path)
 
-        if added:
+        if new_paths:
+            self.files.extend(new_paths)
+            self.card_ui_loading = True
+            self.pending_card_paths.update(new_paths)
+            self._card_ui_finish_scheduled = False
+            self.set_bottom_status(STATUS_LOADING, "", color=ACCENT)
+            self.start_status_animation(STATUS_LOADING)
             self.refresh_merge_cards()
         else:
-            self.card_ui_loading = False
-            self.pending_card_paths.clear()
-            self._card_ui_finish_scheduled = False
             self.refresh_bottom_status()
 
     def on_drop(self, event):
@@ -1186,8 +1218,11 @@ class DAKEPDFMergeApp:
 
         self.cancel_complete_reset()
         self.stop_status_animation()
+        self.clear_card_drag_state()
         self.files.clear()
         self.page_count_cache.clear()
+        self.thumbnail_cache.clear()
+        self.pending_card_paths.clear()
         self.progress["value"] = 0
         self.refresh_merge_cards()
 
@@ -1195,7 +1230,10 @@ class DAKEPDFMergeApp:
         if self.worker_running:
             return
         if 0 <= index < len(self.files):
-            self.files.pop(index)
+            path = self.files.pop(index)
+            self.page_count_cache.pop(path, None)
+            self.thumbnail_cache.pop(path, None)
+            self.pending_card_paths.discard(path)
             self.refresh_merge_cards()
 
     def move_file(self, index: int, delta: int):
@@ -1204,14 +1242,18 @@ class DAKEPDFMergeApp:
         new_index = index + delta
         if 0 <= index < len(self.files) and 0 <= new_index < len(self.files):
             self.files[index], self.files[new_index] = self.files[new_index], self.files[index]
-            self.refresh_merge_cards()
+            self.reflow_cards()
+            self.refresh_status()
+            self.refresh_bottom_status()
 
     def begin_card_drag(self, index: int, event):
         if self.worker_running or not (0 <= index < len(self.files)):
             return
+        self.stop_drag_autoscroll()
         self.drag_source_index = index
         self.drag_target_index = index
         self.drag_start_xy = (event.x_root, event.y_root)
+        self.drag_pointer_xy = (event.x_root, event.y_root)
         self.drag_started = False
 
     def update_card_drag(self, event):
@@ -1224,6 +1266,8 @@ class DAKEPDFMergeApp:
                 return
             self.drag_started = True
 
+        self.drag_pointer_xy = (event.x_root, event.y_root)
+        self.update_drag_autoscroll(event.x_root, event.y_root)
         target_index = self.find_card_index_at(event.x_root, event.y_root)
         if target_index is not None:
             self.drag_target_index = target_index
@@ -1295,12 +1339,79 @@ class DAKEPDFMergeApp:
             )
 
     def clear_card_drag_state(self):
+        self.stop_drag_autoscroll()
         self.drag_source_index = None
         self.drag_target_index = None
         self.drag_start_xy = None
+        self.drag_pointer_xy = None
         self.drag_started = False
         for card in self.merge_card_by_path.values():
             card.set_drag_visual()
+
+    def update_drag_autoscroll(self, root_x: int, root_y: int):
+        if not self.drag_started or self.drag_source_index is None:
+            self.stop_drag_autoscroll()
+            return
+
+        canvas_x = self.canvas.winfo_rootx()
+        canvas_y = self.canvas.winfo_rooty()
+        canvas_w = self.canvas.winfo_width()
+        canvas_h = self.canvas.winfo_height()
+        margin = 24
+        direction = 0
+        if canvas_x - margin <= root_x <= canvas_x + canvas_w + margin:
+            if canvas_y - margin <= root_y <= canvas_y + DRAG_AUTOSCROLL_EDGE:
+                direction = -1
+            elif canvas_y + canvas_h - DRAG_AUTOSCROLL_EDGE <= root_y <= canvas_y + canvas_h + margin:
+                direction = 1
+
+        if direction == 0:
+            self.stop_drag_autoscroll()
+            return
+
+        self.drag_autoscroll_direction = direction
+        if self._drag_autoscroll_job is None:
+            self._drag_autoscroll_job = self.root.after(
+                DRAG_AUTOSCROLL_INTERVAL_MS,
+                self.run_drag_autoscroll,
+            )
+
+    def run_drag_autoscroll(self):
+        self._drag_autoscroll_job = None
+        if (
+            not self.drag_started
+            or self.drag_source_index is None
+            or self.drag_autoscroll_direction == 0
+        ):
+            return
+
+        before = self.canvas.yview()
+        self.canvas.yview_scroll(self.drag_autoscroll_direction, "units")
+        after = self.canvas.yview()
+        if before == after:
+            self.stop_drag_autoscroll()
+            return
+
+        if self.drag_pointer_xy is not None:
+            root_x, root_y = self.drag_pointer_xy
+            target_index = self.find_card_index_at(root_x, root_y)
+            if target_index is not None:
+                self.drag_target_index = target_index
+                self.update_card_drag_visuals()
+
+        self._drag_autoscroll_job = self.root.after(
+            DRAG_AUTOSCROLL_INTERVAL_MS,
+            self.run_drag_autoscroll,
+        )
+
+    def stop_drag_autoscroll(self):
+        self.drag_autoscroll_direction = 0
+        if self._drag_autoscroll_job is not None:
+            try:
+                self.root.after_cancel(self._drag_autoscroll_job)
+            except Exception:
+                pass
+            self._drag_autoscroll_job = None
 
     def reorder_file(self, source_index: int, target_index: int):
         if self.worker_running:
@@ -1311,7 +1422,8 @@ class DAKEPDFMergeApp:
         target_index = max(0, min(target_index, len(self.files) - 1))
         path = self.files.pop(source_index)
         self.files.insert(target_index, path)
-        self.refresh_merge_cards()
+        self.reflow_cards()
+        self.refresh_status()
         self.set_bottom_status(UI_TEXT["status_reordered"], "", color=ACCENT)
         self.schedule_complete_reset()
 
@@ -1319,43 +1431,96 @@ class DAKEPDFMergeApp:
         if path in self.page_count_cache:
             return self.page_count_cache[path]
         try:
+            PdfReader, _PdfWriter = get_pdf_reader_writer()
             count = len(PdfReader(path).pages)
-            self.page_count_cache[path] = count
             return count
         except Exception:
             return None
 
-    def queue_thumbnail_job(self, path: str):
-        def worker():
-            payload = None
-            page_count = self.get_page_count(path)
-            if fitz is not None:
-                try:
-                    doc = fitz.open(path)
-                    page_count = len(doc)
-                    page = doc.load_page(0)
-                    rect = page.rect
-                    target_w, target_h = 160, 220
-                    scale = min(target_w / rect.width, target_h / rect.height)
-                    pix = page.get_pixmap(matrix=fitz.Matrix(scale, scale), alpha=False)
-                    payload = pix.tobytes("ppm")
-                    doc.close()
-                except Exception:
-                    payload = None
-            self.thumbnail_queue.put((path, payload, page_count))
+    def start_thumbnail_workers(self):
+        if self._thumbnail_workers_started:
+            return
+        self._thumbnail_workers_started = True
+        for index in range(THUMBNAIL_WORKER_COUNT):
+            threading.Thread(
+                target=self.thumbnail_worker,
+                name=f"pdf-preview-{index + 1}",
+                daemon=True,
+            ).start()
 
-        threading.Thread(target=worker, daemon=True).start()
+    def thumbnail_worker(self):
+        while True:
+            path = self.thumbnail_job_queue.get()
+            try:
+                try:
+                    payload, page_count = self.load_pdf_preview(path)
+                except Exception:
+                    payload, page_count = None, None
+                self.thumbnail_queue.put((path, payload, page_count))
+            finally:
+                self.thumbnail_job_queue.task_done()
+
+    def load_pdf_preview(self, path: str) -> tuple[bytes | None, int | None]:
+        payload = None
+        page_count = None
+        fitz_module = get_fitz()
+
+        if fitz_module is not None:
+            try:
+                with fitz_module.open(path) as doc:
+                    page_count = len(doc)
+                    if page_count:
+                        page = doc.load_page(0)
+                        rect = page.rect
+                        target_w, target_h = 160, 220
+                        scale = min(target_w / rect.width, target_h / rect.height)
+                        pix = page.get_pixmap(
+                            matrix=fitz_module.Matrix(scale, scale),
+                            alpha=False,
+                        )
+                        payload = pix.tobytes("ppm")
+            except Exception:
+                payload = None
+                page_count = None
+
+        if page_count is None:
+            page_count = self.get_page_count(path)
+
+        return payload, page_count
+
+    def queue_thumbnail_job(self, path: str):
+        if path in self.thumbnail_cache and path in self.page_count_cache:
+            return
+        if path in self.thumbnail_jobs_pending:
+            return
+
+        self.start_thumbnail_workers()
+        self.thumbnail_jobs_pending.add(path)
+        self.thumbnail_job_queue.put(path)
+
+    def apply_cached_pdf_info(self, card: MergeFileCard, path: str):
+        if path in self.page_count_cache:
+            card.set_page_count(self.page_count_cache[path])
+        payload = self.thumbnail_cache.get(path)
+        if payload:
+            card.set_thumbnail(tk.PhotoImage(data=payload))
 
     def process_thumbnail_queue(self):
         try:
             while True:
                 path, payload, page_count = self.thumbnail_queue.get_nowait()
+                self.thumbnail_jobs_pending.discard(path)
+                if path not in self.files:
+                    self.pending_card_paths.discard(path)
+                    continue
+
+                self.thumbnail_cache[path] = payload
+                self.page_count_cache[path] = page_count
                 card = self.merge_card_by_path.get(path)
                 if card is None:
                     self.pending_card_paths.discard(path)
                     continue
-                if page_count is not None:
-                    card.set_page_count(page_count)
+                card.set_page_count(page_count)
                 if payload:
                     image = tk.PhotoImage(data=payload)
                     card.set_thumbnail(image)
@@ -1391,16 +1556,15 @@ class DAKEPDFMergeApp:
         self.folder_short_label.configure(text=f"{LABEL_SAVE_FOLDER}: {shorten_path(self.save_folder)}")
 
     def refresh_merge_cards(self):
-        for child in self.cards_wrap.winfo_children():
-            child.destroy()
-        self.merge_card_by_path = {}
-
-        if self.card_ui_loading and self.files:
-            self.pending_card_paths = set(self.files)
-            self._card_ui_finish_scheduled = False
-        else:
-            self.pending_card_paths.clear()
-            self._card_ui_finish_scheduled = False
+        active_paths = set(self.files)
+        for path in list(self.merge_card_by_path):
+            if path in active_paths:
+                continue
+            card = self.merge_card_by_path.pop(path)
+            card.destroy()
+            self.page_count_cache.pop(path, None)
+            self.thumbnail_cache.pop(path, None)
+            self.pending_card_paths.discard(path)
 
         self.refresh_status()
         self.refresh_bottom_status()
@@ -1410,25 +1574,28 @@ class DAKEPDFMergeApp:
             self.pending_card_paths.clear()
             self._card_ui_finish_scheduled = False
             self.show_empty_state()
+            self.refresh_bottom_status()
             return
 
         self.hide_empty_state()
 
-        width = max(self.canvas.winfo_width() - 24, 320)
-        card_outer = 210
-        cols = max(1, width // card_outer)
-        while cols > 1 and ((cols * card_outer) + 12) > width:
-            cols -= 1
-        used = cols * card_outer
-        extra = max(0, width - used)
-        pad_x = max(4, extra // (cols * 2 + 2) if cols else 4)
-
         for i, path in enumerate(self.files):
+            card = self.merge_card_by_path.get(path)
+            if card is not None:
+                continue
             card = MergeFileCard(self.cards_wrap, self, path, i)
             self.merge_card_by_path[path] = card
-            card.grid(row=i // cols, column=i % cols, padx=pad_x, pady=8, sticky="n")
             card.update_visual()
+            self.apply_cached_pdf_info(card, path)
+            if path in self.thumbnail_cache and path in self.page_count_cache:
+                self.pending_card_paths.discard(path)
             self.queue_thumbnail_job(path)
+
+        self.reflow_cards()
+
+        if self.card_ui_loading and not self.pending_card_paths and not self._card_ui_finish_scheduled:
+            self._card_ui_finish_scheduled = True
+            self.root.after_idle(self.finish_card_ui_loading)
 
     def on_canvas_resize(self, _event=None):
         try:
@@ -1441,8 +1608,8 @@ class DAKEPDFMergeApp:
         self.reflow_cards()
 
     def reflow_cards(self):
-        children = list(self.cards_wrap.winfo_children())
-        if not children:
+        cards = [self.merge_card_by_path[path] for path in self.files if path in self.merge_card_by_path]
+        if not cards:
             return
         width = max(self.canvas.winfo_width() - 24, 320)
         card_outer = 210
@@ -1452,9 +1619,9 @@ class DAKEPDFMergeApp:
         used = cols * card_outer
         extra = max(0, width - used)
         pad_x = max(4, extra // (cols * 2 + 2) if cols else 4)
-        for i, child in enumerate(children):
-            child.grid_forget()
-            child.grid(row=i // cols, column=i % cols, padx=pad_x, pady=8, sticky="n")
+        for i, card in enumerate(cards):
+            card.update_index(i)
+            card.grid(row=i // cols, column=i % cols, padx=pad_x, pady=8, sticky="n")
 
     def make_output_name(self) -> str:
         from datetime import datetime
@@ -1498,27 +1665,58 @@ class DAKEPDFMergeApp:
         self.progress["value"] = 0
         self.set_bottom_status(STATUS_PROCESSING, DETAIL_PROCESSING, color=ACCENT)
         self.start_status_animation(STATUS_PROCESSING)
-        threading.Thread(target=self._merge_worker, args=(output,), daemon=True).start()
+        files_snapshot = list(self.files)
+        page_counts = [self.page_count_cache.get(path) for path in files_snapshot]
+        threading.Thread(
+            target=self._merge_worker,
+            args=(output, files_snapshot, page_counts),
+            daemon=True,
+        ).start()
 
-    def _merge_worker(self, output: str):
+    def _merge_worker(self, output: str, files: list[str], page_counts: list[int | None]):
         try:
+            PdfReader, PdfWriter = get_pdf_reader_writer()
             writer = PdfWriter()
-            total = len(self.files)
+            total_files = len(files)
+            known_page_counts = [
+                count for count in page_counts if isinstance(count, int) and count >= 0
+            ]
+            use_page_progress = (
+                len(known_page_counts) == len(page_counts)
+                and sum(known_page_counts) > 0
+            )
+            total_pages = sum(known_page_counts) if use_page_progress else 0
+            processed_pages = 0
+            last_progress = -1
 
-            for i, path in enumerate(self.files, start=1):
+            for i, path in enumerate(files, start=1):
                 if self.cancel_requested:
                     self.enqueue_ui_call(self.finish_cancel)
                     return
                 try:
                     reader = PdfReader(path)
                     for page in reader.pages:
+                        if self.cancel_requested:
+                            self.enqueue_ui_call(self.finish_cancel)
+                            return
                         writer.add_page(page)
+                        processed_pages += 1
+                        if use_page_progress:
+                            progress = min(99, int(processed_pages / total_pages * 100))
+                            if progress != last_progress:
+                                last_progress = progress
+                                self.enqueue_ui_call(self.update_progress, progress, "")
                 except Exception as e:
                     self.enqueue_ui_call(self.handle_file_error, path, e)
                     return
 
-                progress = int(i / total * 100)
-                self.enqueue_ui_call(self.update_progress, progress, "")
+                if not use_page_progress:
+                    progress = min(99, int(i / total_files * 100))
+                    self.enqueue_ui_call(self.update_progress, progress, "")
+
+            if self.cancel_requested:
+                self.enqueue_ui_call(self.finish_cancel)
+                return
 
             self.enqueue_ui_call(
                 self.set_bottom_status,
@@ -1592,10 +1790,10 @@ def main():
     if "--from-shimarisu" in sys.argv[1:]:
         raise SystemExit(run_shimarisu_cli(sys.argv[1:]))
 
-    ensure_font_name()
     set_windows_app_id()
     root = make_root()
     apply_window_icon(root)
+    ensure_font_name(root)
     DAKEPDFMergeApp(root)
     root.mainloop()
 
