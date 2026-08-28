@@ -11,8 +11,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterable
 
-import fitz  # PyMuPDF
-from pypdf import PdfReader, PdfWriter
 import tkinter as tk
 import tkinter.font as tkfont
 from tkinter import filedialog, messagebox, ttk
@@ -112,6 +110,16 @@ class PdfItem:
     size: int
     pages: int
     thumbnail: "tk.PhotoImage"
+
+
+@dataclass
+class PdfCard:
+    item: PdfItem
+    frame: tk.Frame
+    remove_button: tk.Button
+    image_label: tk.Label
+    name_label: tk.Label
+    info_label: tk.Label
 
 
 class LimitError(Exception):
@@ -236,12 +244,25 @@ def normalize_pdf_paths(paths: Iterable[str]) -> list[Path]:
     return result
 
 
+def get_fitz():
+    import fitz  # PyMuPDF
+
+    return fitz
+
+
+def get_pdf_reader_writer():
+    from pypdf import PdfReader, PdfWriter
+
+    return PdfReader, PdfWriter
+
+
 def read_pdf_info(path: Path) -> tuple[int, int, bytes, int, int]:
     size = path.stat().st_size
     if size > MAX_FILE_SIZE:
         raise LimitError(UI_TEXT["error_too_large_file"], path.name)
 
     try:
+        fitz = get_fitz()
         with fitz.open(path) as doc:
             pages = doc.page_count
             if pages <= 0:
@@ -263,7 +284,7 @@ class PdfMergeMiniApp:
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
         self.items: list[PdfItem] = []
-        self.cards: list[tk.Frame] = []
+        self.cards: list[PdfCard] = []
         self.worker_queue: queue.Queue[tuple[str, object]] = queue.Queue()
         self.busy = False
         self.drag_index: int | None = None
@@ -565,6 +586,7 @@ class PdfMergeMiniApp:
     def _merge_worker(self, paths: list[Path], output_path: Path) -> None:
         try:
             output_path = get_unique_path(output_path)
+            PdfReader, PdfWriter = get_pdf_reader_writer()
             writer = PdfWriter()
             total_size = 0
             total_pages = 0
@@ -602,10 +624,13 @@ class PdfMergeMiniApp:
                 kind, payload = self.worker_queue.get_nowait()
                 if kind == "loaded":
                     loaded = payload
+                    first_new_index = len(self.cards)
                     for path, size, pages, thumb_data, _width, _height in loaded:
                         thumbnail = tk.PhotoImage(data=thumb_data)
-                        self.items.append(PdfItem(path=path, name=path.name, size=size, pages=pages, thumbnail=thumbnail))
-                    self._render_cards()
+                        item = PdfItem(path=path, name=path.name, size=size, pages=pages, thumbnail=thumbnail)
+                        self.items.append(item)
+                        self.cards.append(self._create_card(item))
+                    self._sync_card_layout(first_new_index)
                     self._set_status(UI_TEXT["status_count"].format(count=len(self.items)))
                     self._set_busy(False)
                 elif kind == "merged":
@@ -631,12 +656,77 @@ class PdfMergeMiniApp:
             pass
         self.root.after(80, self._handle_worker_queue)
 
-    def _render_cards(self) -> None:
+    def _create_card(self, item: PdfItem) -> PdfCard:
+        card_frame = tk.Frame(
+            self.cards_frame,
+            bg=COLOR_CARD,
+            highlightthickness=1,
+            highlightbackground=COLOR_BORDER,
+            width=130,
+            height=244,
+        )
+        card_frame.grid_propagate(False)
+
+        remove_button = tk.Button(
+            card_frame,
+            text=UI_TEXT["button_remove"],
+            bg=COLOR_CARD,
+            fg=COLOR_MUTED,
+            activebackground="#F2F5FA",
+            activeforeground=COLOR_TEXT,
+            relief="flat",
+            bd=0,
+            highlightthickness=0,
+            font=(self.font_family, 12, "bold"),
+            cursor="hand2",
+        )
+        remove_button.place(x=100, y=6, width=22, height=22)
+
+        image_label = tk.Label(
+            card_frame,
+            image=item.thumbnail,
+            bg=COLOR_BASE,
+            width=THUMBNAIL_WIDTH,
+            height=THUMBNAIL_HEIGHT,
+        )
+        image_label.place(x=7, y=34)
+        name_label = tk.Label(
+            card_frame,
+            text=display_filename(item.name),
+            bg=COLOR_CARD,
+            fg=COLOR_TEXT,
+            font=(self.font_family, 9, "bold"),
+            wraplength=112,
+            justify="center",
+        )
+        name_label.place(x=7, y=190, width=116, height=32)
+        info_label = tk.Label(
+            card_frame,
+            text=f"{UI_TEXT['page_count'].format(pages=item.pages)} / {format_size(item.size)}",
+            bg=COLOR_CARD,
+            fg=COLOR_MUTED,
+            font=(self.font_family, 8),
+        )
+        info_label.place(x=7, y=222, width=116, height=18)
+
+        card = PdfCard(
+            item=item,
+            frame=card_frame,
+            remove_button=remove_button,
+            image_label=image_label,
+            name_label=name_label,
+            info_label=info_label,
+        )
+        remove_button.configure(command=lambda target=card: self.remove_card(target))
+        for widget in (card_frame, image_label, name_label, info_label):
+            widget.bind("<ButtonPress-1>", lambda event, target=card: self._start_card_drag(event, target))
+            widget.bind("<B1-Motion>", self._move_card_drag)
+            widget.bind("<ButtonRelease-1>", self._finish_card_drag)
+        return card
+
+    def _sync_card_layout(self, start_index: int = 0) -> None:
         self.empty_frame.pack_forget()
         self.cards_frame.pack(fill="both", expand=True)
-        for child in self.cards_frame.winfo_children():
-            child.destroy()
-        self.cards.clear()
 
         if not self.items:
             self.cards_frame.pack_forget()
@@ -645,68 +735,35 @@ class PdfMergeMiniApp:
             return
 
         self.cards_frame.grid_columnconfigure(tuple(range(MAX_FILES)), weight=1, uniform="cards")
-        for index, item in enumerate(self.items):
-            card = tk.Frame(
-                self.cards_frame,
-                bg=COLOR_CARD,
-                highlightthickness=1,
-                highlightbackground=COLOR_BORDER,
-                width=130,
-                height=244,
-            )
-            card.grid(row=0, column=index, padx=(0 if index == 0 else 10, 0), pady=10, sticky="n")
-            card.grid_propagate(False)
-            self.cards.append(card)
+        start_index = max(0, min(start_index, len(self.cards)))
+        for index in range(start_index, len(self.cards)):
+            card = self.cards[index]
+            card.frame.grid(row=0, column=index, padx=(0 if index == 0 else 10, 0), pady=10, sticky="n")
 
-            remove_button = tk.Button(
-                card,
-                text=UI_TEXT["button_remove"],
-                command=lambda idx=index: self.remove_item(idx),
-                bg=COLOR_CARD,
-                fg=COLOR_MUTED,
-                activebackground="#F2F5FA",
-                activeforeground=COLOR_TEXT,
-                relief="flat",
-                bd=0,
-                highlightthickness=0,
-                font=(self.font_family, 12, "bold"),
-                cursor="hand2",
-            )
-            remove_button.place(x=100, y=6, width=22, height=22)
+    def _clear_cards(self) -> None:
+        for card in self.cards:
+            card.frame.destroy()
+        self.cards.clear()
 
-            image_label = tk.Label(card, image=item.thumbnail, bg=COLOR_BASE, width=THUMBNAIL_WIDTH, height=THUMBNAIL_HEIGHT)
-            image_label.place(x=7, y=34)
-            name_label = tk.Label(
-                card,
-                text=display_filename(item.name),
-                bg=COLOR_CARD,
-                fg=COLOR_TEXT,
-                font=(self.font_family, 9, "bold"),
-                wraplength=112,
-                justify="center",
-            )
-            name_label.place(x=7, y=190, width=116, height=32)
-            info_label = tk.Label(
-                card,
-                text=f"{UI_TEXT['page_count'].format(pages=item.pages)} / {format_size(item.size)}",
-                bg=COLOR_CARD,
-                fg=COLOR_MUTED,
-                font=(self.font_family, 8),
-            )
-            info_label.place(x=7, y=222, width=116, height=18)
+    def _remove_card_at(self, index: int) -> None:
+        if not 0 <= index < len(self.items):
+            return
+        self.items.pop(index)
+        card = self.cards.pop(index)
+        card.frame.destroy()
+        self._sync_card_layout(index)
 
-            for widget in (card, image_label, name_label, info_label):
-                widget.bind("<ButtonPress-1>", lambda event, idx=index: self._start_card_drag(event, idx))
-                widget.bind("<B1-Motion>", self._move_card_drag)
-                widget.bind("<ButtonRelease-1>", self._finish_card_drag)
-
-    def _start_card_drag(self, _event: tk.Event, index: int) -> None:
+    def _start_card_drag(self, _event: tk.Event, card: PdfCard) -> None:
         if self.busy:
+            return
+        try:
+            index = self.cards.index(card)
+        except ValueError:
             return
         self.drag_index = index
         self.drag_source_index = index
         self.dragging = False
-        self.cards[index].configure(highlightbackground=COLOR_SELECTED_BORDER, bg=COLOR_SELECTED_BG)
+        self.cards[index].frame.configure(highlightbackground=COLOR_SELECTED_BORDER, bg=COLOR_SELECTED_BG)
         self._set_status(UI_TEXT["status_dragging"])
 
     def _move_card_drag(self, _event: tk.Event) -> None:
@@ -717,8 +774,8 @@ class PdfMergeMiniApp:
         if not self.cards:
             return 0
         for index, card in enumerate(self.cards):
-            left = card.winfo_rootx()
-            width = card.winfo_width()
+            left = card.frame.winfo_rootx()
+            width = card.frame.winfo_width()
             if pointer_x < left + (width / 2):
                 return index
             if pointer_x <= left + width:
@@ -736,8 +793,10 @@ class PdfMergeMiniApp:
             return False
 
         item = self.items.pop(from_index)
+        card = self.cards.pop(from_index)
         adjusted_index = max(0, min(adjusted_index, len(self.items)))
         self.items.insert(adjusted_index, item)
+        self.cards.insert(adjusted_index, card)
         return True
 
     def _clear_drag_state(self, reset_cards: bool = True) -> None:
@@ -746,7 +805,7 @@ class PdfMergeMiniApp:
         self.dragging = False
         if reset_cards:
             for card in self.cards:
-                card.configure(highlightbackground=COLOR_BORDER, bg=COLOR_CARD)
+                card.frame.configure(highlightbackground=COLOR_BORDER, bg=COLOR_CARD)
 
     def _finish_card_drag(self, event: tk.Event) -> None:
         if self.busy or self.drag_index is None:
@@ -760,24 +819,26 @@ class PdfMergeMiniApp:
             return
 
         if self._move_item(source, insert_index):
-            self._render_cards()
+            self._sync_card_layout(min(source, insert_index))
             self._set_status(UI_TEXT["status_reordered"])
         else:
             self._set_status(UI_TEXT["status_count"].format(count=len(self.items)))
 
-    def remove_item(self, index: int) -> None:
+    def remove_card(self, card: PdfCard) -> None:
         if self.busy:
             self._show_error(UI_TEXT["error_busy"])
             return
-        if 0 <= index < len(self.items):
-            self._clear_drag_state()
-            self.items.pop(index)
-            self._render_cards()
-            if self.items:
-                self._set_status(UI_TEXT["status_count"].format(count=len(self.items)))
-            else:
-                self._set_status(UI_TEXT["status_idle"])
-            self._update_buttons()
+        try:
+            index = self.cards.index(card)
+        except ValueError:
+            return
+        self._clear_drag_state()
+        self._remove_card_at(index)
+        if self.items:
+            self._set_status(UI_TEXT["status_count"].format(count=len(self.items)))
+        else:
+            self._set_status(UI_TEXT["status_idle"])
+        self._update_buttons()
 
     def refresh_files(self) -> None:
         if self.busy:
@@ -786,7 +847,8 @@ class PdfMergeMiniApp:
         self.items.clear()
         self._clear_drag_state()
         self._drain_worker_queue()
-        self._render_cards()
+        self._clear_cards()
+        self._sync_card_layout()
         self._set_status(UI_TEXT["status_idle"])
         self._update_buttons()
 
