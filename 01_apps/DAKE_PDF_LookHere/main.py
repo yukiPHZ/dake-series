@@ -5,18 +5,15 @@ import base64
 import ctypes
 import math
 import os
+import queue
 import subprocess
 import sys
+import threading
 import webbrowser
 import tkinter as tk
 from dataclasses import dataclass
 from pathlib import Path
 from tkinter import filedialog, font as tkfont, messagebox, ttk
-
-try:
-    import fitz  # PyMuPDF
-except Exception:
-    fitz = None  # type: ignore[assignment]
 
 try:
     from tkinterdnd2 import DND_FILES, TkinterDnD  # type: ignore
@@ -111,19 +108,53 @@ ARROW_HEAD_ANGLE = math.radians(28)
 APP_USER_MODEL_ID = "Shimarisu.DakePDFLookHere"
 FOOTER_BREAKPOINT = 960
 
+_FITZ_MODULE: object | None = None
+
 LINKS = {
     "assessment": "https://sakurayk.notion.site/22ea54b5298d80928443ec7b4d20143d?pvs=74",
     "instagram": "https://instagram.com/kikuta.shimarisu_fudosan",
 }
 
 
-@dataclass
+def get_fitz() -> object:
+    global _FITZ_MODULE
+    if _FITZ_MODULE is None:
+        import fitz as fitz_module  # PyInstallerの解析対象に保ったまま利用時だけ読み込む
+
+        _FITZ_MODULE = fitz_module
+    return _FITZ_MODULE
+
+
+@dataclass(frozen=True)
 class Mark:
     kind: str
     page_index: int
     rect: tuple[float, float, float, float] | None = None
     start: tuple[float, float] | None = None
     end: tuple[float, float] | None = None
+
+
+@dataclass(frozen=True)
+class RenderRequest:
+    generation: int
+    pdf_path: Path
+    page_index: int
+    zoom: float
+    canvas_width: int
+    canvas_height: int
+    opens_document: bool
+
+
+@dataclass(frozen=True)
+class RenderResult:
+    request: RenderRequest
+    page_count: int = 0
+    page_rect: tuple[float, float, float, float] | None = None
+    render_scale: float = 1.0
+    image_width: int = 0
+    image_height: int = 0
+    png_data: bytes | None = None
+    error: Exception | None = None
 
 
 def make_root() -> tk.Tk:
@@ -205,20 +236,33 @@ def normalize_rect(rect: tuple[float, float, float, float]) -> tuple[float, floa
     return min(x0, x1), min(y0, y1), max(x0, x1), max(y0, y1)
 
 
-def clamp_point_to_rect(point: tuple[float, float], rect: "fitz.Rect") -> tuple[float, float]:
+def rect_values(rect: object) -> tuple[float, float, float, float]:
+    if isinstance(rect, tuple):
+        return rect
+    return (
+        float(getattr(rect, "x0")),
+        float(getattr(rect, "y0")),
+        float(getattr(rect, "x1")),
+        float(getattr(rect, "y1")),
+    )
+
+
+def clamp_point_to_rect(point: tuple[float, float], rect: object) -> tuple[float, float]:
     x, y = point
-    return min(max(x, rect.x0), rect.x1), min(max(y, rect.y0), rect.y1)
+    x0, y0, x1, y1 = rect_values(rect)
+    return min(max(x, x0), x1), min(max(y, y0), y1)
 
 
 def clamp_rect_to_page(
-    raw_rect: tuple[float, float, float, float], page_rect: "fitz.Rect"
+    raw_rect: tuple[float, float, float, float], page_rect: object
 ) -> tuple[float, float, float, float]:
     x0, y0, x1, y1 = normalize_rect(raw_rect)
+    page_x0, page_y0, page_x1, page_y1 = rect_values(page_rect)
     return (
-        min(max(x0, page_rect.x0), page_rect.x1),
-        min(max(y0, page_rect.y0), page_rect.y1),
-        min(max(x1, page_rect.x0), page_rect.x1),
-        min(max(y1, page_rect.y0), page_rect.y1),
+        min(max(x0, page_x0), page_x1),
+        min(max(y0, page_y0), page_y1),
+        min(max(x1, page_x0), page_x1),
+        min(max(y1, page_y0), page_y1),
     )
 
 
@@ -226,23 +270,50 @@ class LookHereApp:
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
         self.font_family = detect_font_family(root)
-        self.doc: "fitz.Document | None" = None
         self.pdf_path: Path | None = None
+        self.page_count = 0
         self.page_index = 0
         self.zoom = 1.0
         self.render_scale = 1.0
-        self.page_rect: "fitz.Rect | None" = None
+        self.page_rect: tuple[float, float, float, float] | None = None
         self.image_x = PAGE_MARGIN
         self.image_y = PAGE_MARGIN
         self.image_width = 0
         self.image_height = 0
         self.page_image: tk.PhotoImage | None = None
+        self.page_shadow_id: int | None = None
+        self.page_paper_id: int | None = None
+        self.page_image_id: int | None = None
         self.marks: list[Mark] = []
+        self.mark_item_ids: dict[int, int] = {}
         self.mode: str | None = None
         self.busy = False
+        self.opening_pdf = False
+        self.render_pending = False
+        self.shutting_down = False
         self.drag_start_pdf: tuple[float, float] | None = None
         self.preview_id: int | None = None
         self.resize_after_id: str | None = None
+        self.render_dispatch_after_id: str | None = None
+        self.render_after_id: str | None = None
+        self.save_after_id: str | None = None
+        self.scheduled_render_request: RenderRequest | None = None
+        self.pending_render_request: RenderRequest | None = None
+        self.render_condition = threading.Condition()
+        self.render_results: queue.Queue[RenderResult] = queue.Queue()
+        self.save_results: queue.Queue[tuple[Path, Exception | None]] = queue.Queue()
+        self.render_stop_requested = False
+        self.render_generation = 0
+        self.displayed_generation = 0
+        self.displayed_pdf_path: Path | None = None
+        self.displayed_page_index = -1
+        self.render_requests_submitted = 0
+        self.render_jobs_replaced = 0
+        self.render_jobs_started = 0
+        self.render_results_discarded = 0
+        self.render_documents_opened = 0
+        self.save_worker: threading.Thread | None = None
+        self.render_worker = threading.Thread(target=self._render_worker_loop, daemon=True)
 
         self.root.title(WINDOW_TITLE)
         self.root.geometry(WINDOW_SIZE)
@@ -256,6 +327,8 @@ class LookHereApp:
         self._update_status("status_idle")
         self._update_buttons()
         self._show_empty_canvas()
+        self.render_worker.start()
+        self.render_after_id = self.root.after(30, self._poll_render_results)
 
     def _build_styles(self) -> None:
         style = ttk.Style(self.root)
@@ -568,18 +641,30 @@ class LookHereApp:
         self.status_detail.configure(text=detail or text)
 
     def _update_buttons(self) -> None:
-        has_doc = self.doc is not None
-        normal_if_doc = tk.NORMAL if has_doc and not self.busy else tk.DISABLED
-        self.open_button.configure(state=tk.DISABLED if self.busy else tk.NORMAL)
-        self.circle_button.configure(state=normal_if_doc)
-        self.arrow_button.configure(state=normal_if_doc)
+        has_doc = self.pdf_path is not None and self.page_count > 0
+        stable_preview = (
+            has_doc
+            and not self.busy
+            and not self.opening_pdf
+            and not self.render_pending
+            and self.displayed_pdf_path == self.pdf_path
+            and self.displayed_page_index == self.page_index
+        )
+        normal_if_stable = tk.NORMAL if stable_preview else tk.DISABLED
+        self.open_button.configure(state=tk.DISABLED if self.busy or self.opening_pdf else tk.NORMAL)
+        self.circle_button.configure(state=normal_if_stable)
+        self.arrow_button.configure(state=normal_if_stable)
         self.undo_button.configure(state=tk.NORMAL if self.marks and not self.busy else tk.DISABLED)
-        self.save_button.configure(state=normal_if_doc)
+        self.save_button.configure(state=tk.NORMAL if has_doc and not self.busy and not self.opening_pdf else tk.DISABLED)
 
-        page_count = self.doc.page_count if self.doc is not None else 0
-        self.prev_button.configure(state=tk.NORMAL if has_doc and self.page_index > 0 and not self.busy else tk.DISABLED)
+        page_count = self.page_count
+        self.prev_button.configure(
+            state=tk.NORMAL if has_doc and self.page_index > 0 and not self.busy and not self.opening_pdf else tk.DISABLED
+        )
         self.next_button.configure(
-            state=tk.NORMAL if has_doc and self.page_index < page_count - 1 and not self.busy else tk.DISABLED
+            state=tk.NORMAL
+            if has_doc and self.page_index < page_count - 1 and not self.busy and not self.opening_pdf
+            else tk.DISABLED
         )
         if has_doc:
             self.page_label.configure(
@@ -613,44 +698,12 @@ class LookHereApp:
             messagebox.showerror(UI_TEXT["dialog_open_error_title"], UI_TEXT["message_non_pdf"], parent=self.root)
             self._update_status("status_error", UI_TEXT["message_non_pdf"])
             return
-        if fitz is None:
-            messagebox.showerror(
-                UI_TEXT["dialog_open_error_title"], UI_TEXT["message_pymupdf_missing"], parent=self.root
-            )
-            self._update_status("status_error", UI_TEXT["message_pymupdf_missing"])
-            return
-
-        self._set_busy(True)
         self._update_status("status_loading")
-        try:
-            new_doc = fitz.open(str(path))
-            if new_doc.page_count < 1:
-                new_doc.close()
-                raise ValueError(UI_TEXT["message_no_pages"])
-            if self.doc is not None:
-                self.doc.close()
-            self.doc = new_doc
-            self.pdf_path = path
-            self.page_index = 0
-            self.zoom = 1.0
-            self.marks.clear()
-            self.mode = "circle"
-            self.render_page()
-            self._update_status("status_circle", path.name)
-        except Exception as exc:
-            message = humanize_error(exc)
-            messagebox.showerror(UI_TEXT["dialog_open_error_title"], message, parent=self.root)
-            self._update_status("status_error", message)
-            self.doc = None
-            self.pdf_path = None
-            self.page_index = 0
-            self.mode = None
-            self._show_empty_canvas()
-        finally:
-            self._set_busy(False)
+        self.opening_pdf = True
+        self._submit_render_request(path, page_index=0, zoom=1.0, opens_document=True)
 
     def set_mode(self, mode: str) -> None:
-        if self.doc is None or self.busy:
+        if self.pdf_path is None or self.busy or self.opening_pdf or self.render_pending:
             return
         self.mode = mode
         if mode == "circle":
@@ -665,29 +718,32 @@ class LookHereApp:
         if not self.marks:
             self._update_status("status_no_undo")
             return
+        removed_index = len(self.marks) - 1
         self.marks.pop()
-        self.render_page()
+        item_id = self.mark_item_ids.pop(removed_index, None)
+        if item_id is not None:
+            self.canvas.delete(item_id)
         self._update_status("status_undo")
         self._update_buttons()
 
     def prev_page(self) -> None:
-        if self.doc is None or self.busy or self.page_index <= 0:
+        if self.pdf_path is None or self.busy or self.opening_pdf or self.page_index <= 0:
             return
         self.page_index -= 1
         self.render_page()
-        self._update_status("status_ready")
+        self._update_status("status_loading")
 
     def next_page(self) -> None:
-        if self.doc is None or self.busy or self.page_index >= self.doc.page_count - 1:
+        if self.pdf_path is None or self.busy or self.opening_pdf or self.page_index >= self.page_count - 1:
             return
         self.page_index += 1
         self.render_page()
-        self._update_status("status_ready")
+        self._update_status("status_loading")
 
     def save_pdf(self) -> None:
         if self.busy:
             return
-        if self.doc is None or self.pdf_path is None:
+        if self.pdf_path is None or self.page_count < 1:
             messagebox.showerror(UI_TEXT["dialog_save_error_title"], UI_TEXT["message_no_pdf"], parent=self.root)
             return
 
@@ -714,21 +770,52 @@ class LookHereApp:
 
         self._set_busy(True)
         self._update_status("status_saving")
+        marks = list(self.marks)
+        self.save_worker = threading.Thread(
+            target=self._save_worker,
+            args=(self.pdf_path, output_path, marks),
+            daemon=False,
+        )
+        self.save_worker.start()
+        self._poll_save_result()
+
+    def _save_worker(self, input_path: Path, output_path: Path, marks: list[Mark]) -> None:
+        error: Exception | None = None
         try:
-            with fitz.open(str(self.pdf_path)) as output_doc:
-                for mark in self.marks:
+            fitz_module = get_fitz()
+            with fitz_module.open(str(input_path)) as output_doc:
+                for mark in marks:
                     if mark.page_index < 0 or mark.page_index >= output_doc.page_count:
                         continue
                     page = output_doc.load_page(mark.page_index)
                     if mark.kind == "circle" and mark.rect is not None:
                         rect_values = clamp_rect_to_page(mark.rect, page.rect)
-                        page.draw_oval(fitz.Rect(rect_values), color=RED_RGB, width=PDF_LINE_WIDTH, overlay=True)
+                        page.draw_oval(
+                            fitz_module.Rect(rect_values),
+                            color=RED_RGB,
+                            width=PDF_LINE_WIDTH,
+                            overlay=True,
+                        )
                     elif mark.kind == "arrow" and mark.start is not None and mark.end is not None:
                         start = clamp_point_to_rect(mark.start, page.rect)
                         end = clamp_point_to_rect(mark.end, page.rect)
                         self._draw_pdf_arrow(page, start, end)
                 output_doc.save(str(output_path), garbage=4, deflate=True)
+        except Exception as exc:
+            error = exc
+        self.save_results.put((output_path, error))
 
+    def _poll_save_result(self) -> None:
+        self.save_after_id = None
+        try:
+            output_path, error = self.save_results.get_nowait()
+        except queue.Empty:
+            if not self.shutting_down:
+                self.save_after_id = self.root.after(50, self._poll_save_result)
+            return
+
+        self._set_busy(False)
+        if error is None:
             self._update_status("status_complete", str(output_path))
             messagebox.showinfo(
                 UI_TEXT["dialog_complete_title"],
@@ -736,67 +823,255 @@ class LookHereApp:
                 parent=self.root,
             )
             open_folder(output_path.parent)
-        except Exception as exc:
-            message = humanize_error(exc)
+        else:
+            message = humanize_error(error)
             messagebox.showerror(UI_TEXT["dialog_save_error_title"], message, parent=self.root)
             self._update_status("status_error", message)
-        finally:
-            self._set_busy(False)
 
     def render_page(self) -> None:
-        if self.doc is None:
+        if self.pdf_path is None:
             self._show_empty_canvas()
             return
-        page = self.doc.load_page(self.page_index)
-        self.page_rect = page.rect
-        canvas_width = max(self.canvas.winfo_width(), 480)
-        available_width = max(canvas_width - PAGE_MARGIN * 2, 240)
-        fit_scale = available_width / max(page.rect.width, 1.0)
-        self.render_scale = min(max(fit_scale * self.zoom, MIN_RENDER_SCALE), MAX_RENDER_SCALE)
-        matrix = fitz.Matrix(self.render_scale, self.render_scale)
-        pix = page.get_pixmap(matrix=matrix, alpha=False)
-        png_data = pix.tobytes("png")
-        encoded = base64.b64encode(png_data).decode("ascii")
-        self.page_image = tk.PhotoImage(data=encoded, format="PNG")
-        self.image_width = self.page_image.width()
-        self.image_height = self.page_image.height()
+        self._submit_render_request(
+            self.pdf_path,
+            page_index=self.page_index,
+            zoom=self.zoom,
+            opens_document=False,
+        )
 
-        self.canvas.delete("all")
-        visible_width = max(self.canvas.winfo_width(), self.image_width + PAGE_MARGIN * 2)
+    def _submit_render_request(
+        self,
+        pdf_path: Path,
+        page_index: int,
+        zoom: float,
+        opens_document: bool,
+    ) -> None:
+        self.render_generation += 1
+        request = RenderRequest(
+            generation=self.render_generation,
+            pdf_path=pdf_path,
+            page_index=page_index,
+            zoom=zoom,
+            canvas_width=max(self.canvas.winfo_width(), 480),
+            canvas_height=max(self.canvas.winfo_height(), 360),
+            opens_document=opens_document,
+        )
+        self.render_requests_submitted += 1
+        self.render_pending = True
+        if opens_document:
+            self._cancel_render_dispatch()
+            if self.scheduled_render_request is not None:
+                self.render_jobs_replaced += 1
+                self.scheduled_render_request = None
+            self._enqueue_render_request(request)
+        else:
+            if self.scheduled_render_request is not None:
+                self.render_jobs_replaced += 1
+            self.scheduled_render_request = request
+            self._cancel_render_dispatch()
+            self.render_dispatch_after_id = self.root.after(16, self._dispatch_scheduled_render)
+        self._update_buttons()
+
+    def _cancel_render_dispatch(self) -> None:
+        if self.render_dispatch_after_id is None:
+            return
+        try:
+            self.root.after_cancel(self.render_dispatch_after_id)
+        except Exception:
+            pass
+        self.render_dispatch_after_id = None
+
+    def _dispatch_scheduled_render(self) -> None:
+        self.render_dispatch_after_id = None
+        request = self.scheduled_render_request
+        self.scheduled_render_request = None
+        if request is not None:
+            self._enqueue_render_request(request)
+
+    def _enqueue_render_request(self, request: RenderRequest) -> None:
+        with self.render_condition:
+            if self.pending_render_request is not None:
+                self.render_jobs_replaced += 1
+            self.pending_render_request = request
+            self.render_condition.notify()
+
+    def _render_worker_loop(self) -> None:
+        document = None
+        document_path: Path | None = None
+        try:
+            while True:
+                with self.render_condition:
+                    while self.pending_render_request is None and not self.render_stop_requested:
+                        self.render_condition.wait()
+                    if self.render_stop_requested:
+                        return
+                    request = self.pending_render_request
+                    self.pending_render_request = None
+                    self.render_jobs_started += 1
+
+                if request is None:
+                    continue
+                try:
+                    fitz_module = get_fitz()
+                    if document is None or document_path != request.pdf_path:
+                        if document is not None:
+                            document.close()
+                        document = fitz_module.open(str(request.pdf_path))
+                        document_path = request.pdf_path
+                        self.render_documents_opened += 1
+                    if document.page_count < 1:
+                        raise ValueError(UI_TEXT["message_no_pages"])
+                    if request.page_index < 0 or request.page_index >= document.page_count:
+                        raise IndexError(UI_TEXT["message_no_pages"])
+
+                    page = document.load_page(request.page_index)
+                    page_rect = rect_values(page.rect)
+                    page_width = max(page_rect[2] - page_rect[0], 1.0)
+                    available_width = max(request.canvas_width - PAGE_MARGIN * 2, 240)
+                    fit_scale = available_width / page_width
+                    render_scale = min(max(fit_scale * request.zoom, MIN_RENDER_SCALE), MAX_RENDER_SCALE)
+                    pix = page.get_pixmap(
+                        matrix=fitz_module.Matrix(render_scale, render_scale),
+                        alpha=False,
+                    )
+                    result = RenderResult(
+                        request=request,
+                        page_count=document.page_count,
+                        page_rect=page_rect,
+                        render_scale=render_scale,
+                        image_width=pix.width,
+                        image_height=pix.height,
+                        png_data=pix.tobytes("png"),
+                    )
+                except Exception as exc:
+                    result = RenderResult(request=request, error=exc)
+                self.render_results.put(result)
+        finally:
+            if document is not None:
+                try:
+                    document.close()
+                except Exception:
+                    pass
+
+    def _poll_render_results(self) -> None:
+        self.render_after_id = None
+        try:
+            while True:
+                result = self.render_results.get_nowait()
+                if result.request.generation != self.render_generation:
+                    self.render_results_discarded += 1
+                    continue
+                self._apply_render_result(result)
+        except queue.Empty:
+            pass
+        if not self.render_stop_requested and not self.shutting_down:
+            self.render_after_id = self.root.after(30, self._poll_render_results)
+
+    def _apply_render_result(self, result: RenderResult) -> None:
+        request = result.request
+        self.render_pending = False
+        if result.error is not None or result.png_data is None or result.page_rect is None:
+            self.opening_pdf = False
+            if isinstance(result.error, ModuleNotFoundError):
+                message = UI_TEXT["message_pymupdf_missing"]
+            else:
+                message = humanize_error(result.error or RuntimeError(UI_TEXT["message_unknown_error"]))
+            messagebox.showerror(UI_TEXT["dialog_open_error_title"], message, parent=self.root)
+            self._update_status("status_error", message)
+            if request.opens_document:
+                self.pdf_path = None
+                self.page_count = 0
+                self.page_index = 0
+                self.zoom = 1.0
+                self.mode = None
+                self.marks.clear()
+                self._show_empty_canvas()
+            self._update_buttons()
+            return
+
+        if request.opens_document:
+            self.pdf_path = request.pdf_path
+            self.page_count = result.page_count
+            self.page_index = request.page_index
+            self.zoom = request.zoom
+            self.marks.clear()
+            self._clear_mark_overlay()
+            self.mode = "circle"
+            self.opening_pdf = False
+
+        self.page_rect = result.page_rect
+        self.render_scale = result.render_scale
+        self.image_width = result.image_width
+        self.image_height = result.image_height
+        encoded = base64.b64encode(result.png_data).decode("ascii")
+        self.page_image = tk.PhotoImage(data=encoded, format="PNG")
+        self._update_page_canvas(request.canvas_width, request.canvas_height)
+        self.displayed_generation = request.generation
+        self.displayed_pdf_path = request.pdf_path
+        self.displayed_page_index = request.page_index
+        self._sync_mark_overlay()
+        if request.opens_document:
+            self._update_status("status_circle", request.pdf_path.name)
+        else:
+            self._update_status("status_ready")
+        self._update_buttons()
+
+    def _update_page_canvas(self, canvas_width: int, canvas_height: int) -> None:
+        visible_width = max(canvas_width, self.image_width + PAGE_MARGIN * 2)
+        visible_height = max(canvas_height, self.image_height + PAGE_MARGIN * 2)
         self.image_x = max(PAGE_MARGIN, (visible_width - self.image_width) // 2)
         self.image_y = PAGE_MARGIN
-
         shadow_offset = 2
-        self.canvas.create_rectangle(
+        shadow_coords = (
             self.image_x + shadow_offset,
             self.image_y + shadow_offset,
             self.image_x + self.image_width + shadow_offset,
             self.image_y + self.image_height + shadow_offset,
-            fill=THEME["border"],
-            outline="",
         )
-        self.canvas.create_rectangle(
+        paper_coords = (
             self.image_x - 1,
             self.image_y - 1,
             self.image_x + self.image_width + 1,
             self.image_y + self.image_height + 1,
-            fill=THEME["card"],
-            outline=THEME["border"],
         )
-        self.canvas.create_image(self.image_x, self.image_y, anchor="nw", image=self.page_image)
-        self._draw_marks()
-        self.canvas.configure(
-            scrollregion=(
-                0,
-                0,
-                max(visible_width, self.image_x + self.image_width + PAGE_MARGIN),
-                self.image_y + self.image_height + PAGE_MARGIN,
+        if self.page_shadow_id is None or self.page_paper_id is None or self.page_image_id is None:
+            self.canvas.delete("all")
+            self.mark_item_ids.clear()
+            self.preview_id = None
+            self.page_shadow_id = self.canvas.create_rectangle(
+                *shadow_coords,
+                fill=THEME["border"],
+                outline="",
             )
-        )
-        self._update_buttons()
+            self.page_paper_id = self.canvas.create_rectangle(
+                *paper_coords,
+                fill=THEME["card"],
+                outline=THEME["border"],
+            )
+            self.page_image_id = self.canvas.create_image(
+                self.image_x,
+                self.image_y,
+                anchor="nw",
+                image=self.page_image,
+            )
+        else:
+            self.canvas.coords(self.page_shadow_id, *shadow_coords)
+            self.canvas.coords(self.page_paper_id, *paper_coords)
+            self.canvas.coords(self.page_image_id, self.image_x, self.image_y)
+            self.canvas.itemconfigure(self.page_image_id, image=self.page_image)
+        self.canvas.configure(scrollregion=(0, 0, visible_width, visible_height))
 
     def _show_empty_canvas(self) -> None:
         self.canvas.delete("all")
+        self.page_shadow_id = None
+        self.page_paper_id = None
+        self.page_image_id = None
+        self.mark_item_ids.clear()
+        self.preview_id = None
+        self.page_image = None
+        self.page_rect = None
+        self.image_width = 0
+        self.image_height = 0
         width = max(self.canvas.winfo_width(), 480)
         height = max(self.canvas.winfo_height(), 360)
         self.canvas.configure(scrollregion=(0, 0, width, height))
@@ -815,35 +1090,61 @@ class LookHereApp:
             fill=THEME["muted"],
         )
 
-    def _draw_marks(self) -> None:
-        for mark in self.marks:
-            if mark.page_index != self.page_index:
+    def _clear_mark_overlay(self) -> None:
+        self.canvas.delete("mark")
+        self.mark_item_ids.clear()
+
+    def _sync_mark_overlay(self) -> None:
+        if self.pdf_path is None or self.page_rect is None:
+            return
+        visible_indices = {index for index, mark in enumerate(self.marks) if mark.page_index == self.page_index}
+        for mark_index in tuple(self.mark_item_ids):
+            if mark_index in visible_indices:
                 continue
-            if mark.kind == "circle" and mark.rect is not None:
-                x0, y0, x1, y1 = self._page_rect_to_canvas(mark.rect)
-                self.canvas.create_oval(x0, y0, x1, y1, outline=RED_HEX, width=DISPLAY_LINE_WIDTH)
-            elif mark.kind == "arrow" and mark.start is not None and mark.end is not None:
-                x0, y0 = self._page_point_to_canvas(mark.start)
-                x1, y1 = self._page_point_to_canvas(mark.end)
-                self.canvas.create_line(
-                    x0,
-                    y0,
-                    x1,
-                    y1,
+            self.canvas.delete(self.mark_item_ids.pop(mark_index))
+        for mark_index in sorted(visible_indices):
+            self._update_mark_item(mark_index)
+
+    def _update_mark_item(self, mark_index: int) -> None:
+        mark = self.marks[mark_index]
+        if mark.page_index != self.page_index:
+            return
+        item_id = self.mark_item_ids.get(mark_index)
+        if mark.kind == "circle" and mark.rect is not None:
+            coords = self._page_rect_to_canvas(mark.rect)
+            if item_id is None:
+                self.mark_item_ids[mark_index] = self.canvas.create_oval(
+                    *coords,
+                    outline=RED_HEX,
+                    width=DISPLAY_LINE_WIDTH,
+                    tags=("mark",),
+                )
+            else:
+                self.canvas.coords(item_id, *coords)
+        elif mark.kind == "arrow" and mark.start is not None and mark.end is not None:
+            start_x, start_y = self._page_point_to_canvas(mark.start)
+            end_x, end_y = self._page_point_to_canvas(mark.end)
+            coords = (start_x, start_y, end_x, end_y)
+            if item_id is None:
+                self.mark_item_ids[mark_index] = self.canvas.create_line(
+                    *coords,
                     fill=RED_HEX,
                     width=DISPLAY_LINE_WIDTH,
                     arrow=tk.LAST,
                     arrowshape=(14, 18, 6),
                     capstyle=tk.ROUND,
+                    tags=("mark",),
                 )
+            else:
+                self.canvas.coords(item_id, *coords)
 
     def _page_point_to_canvas(self, point: tuple[float, float]) -> tuple[float, float]:
         if self.page_rect is None:
             return self.image_x, self.image_y
         x, y = point
         return (
-            self.image_x + (x - self.page_rect.x0) * self.render_scale,
-            self.image_y + (y - self.page_rect.y0) * self.render_scale,
+            self.image_x + (x - self.page_rect[0]) * self.render_scale,
+            self.image_y + (y - self.page_rect[1]) * self.render_scale,
         )
 
     def _page_rect_to_canvas(self, rect: tuple[float, float, float, float]) -> tuple[float, float, float, float]:
@@ -862,12 +1163,19 @@ class LookHereApp:
         x = min(max(x, 0), self.image_width)
         y = min(max(y, 0), self.image_height)
         return (
-            self.page_rect.x0 + x / self.render_scale,
-            self.page_rect.y0 + y / self.render_scale,
+            self.page_rect[0] + x / self.render_scale,
+            self.page_rect[1] + y / self.render_scale,
         )
 
     def _on_press(self, event: tk.Event) -> None:
-        if self.doc is None or self.busy or self.mode is None:
+        if (
+            self.pdf_path is None
+            or self.busy
+            or self.opening_pdf
+            or self.render_pending
+            or self.mode is None
+            or self.displayed_page_index != self.page_index
+        ):
             return
         point = self._event_to_page_point(event, require_inside=True)
         if point is None:
@@ -881,34 +1189,39 @@ class LookHereApp:
         current = self._event_to_page_point(event, require_inside=False)
         if current is None:
             return
-        self._clear_preview()
         if self.mode == "circle":
             rect = self._circle_rect_from_points(self.drag_start_pdf, current)
             x0, y0, x1, y1 = self._page_rect_to_canvas(rect)
-            self.preview_id = self.canvas.create_oval(
-                x0,
-                y0,
-                x1,
-                y1,
-                outline=RED_HEX,
-                width=DISPLAY_LINE_WIDTH,
-                dash=(6, 4),
-            )
+            if self.preview_id is None:
+                self.preview_id = self.canvas.create_oval(
+                    x0,
+                    y0,
+                    x1,
+                    y1,
+                    outline=RED_HEX,
+                    width=DISPLAY_LINE_WIDTH,
+                    dash=(6, 4),
+                )
+            else:
+                self.canvas.coords(self.preview_id, x0, y0, x1, y1)
         elif self.mode == "arrow":
             start_x, start_y = self._page_point_to_canvas(self.drag_start_pdf)
             end_x, end_y = self._page_point_to_canvas(current)
-            self.preview_id = self.canvas.create_line(
-                start_x,
-                start_y,
-                end_x,
-                end_y,
-                fill=RED_HEX,
-                width=DISPLAY_LINE_WIDTH,
-                arrow=tk.LAST,
-                arrowshape=(14, 18, 6),
-                dash=(6, 4),
-                capstyle=tk.ROUND,
-            )
+            if self.preview_id is None:
+                self.preview_id = self.canvas.create_line(
+                    start_x,
+                    start_y,
+                    end_x,
+                    end_y,
+                    fill=RED_HEX,
+                    width=DISPLAY_LINE_WIDTH,
+                    arrow=tk.LAST,
+                    arrowshape=(14, 18, 6),
+                    dash=(6, 4),
+                    capstyle=tk.ROUND,
+                )
+            else:
+                self.canvas.coords(self.preview_id, start_x, start_y, end_x, end_y)
 
     def _on_release(self, event: tk.Event) -> None:
         if self.drag_start_pdf is None or self.mode is None:
@@ -930,7 +1243,7 @@ class LookHereApp:
 
         self.drag_start_pdf = None
         self._clear_preview()
-        self.render_page()
+        self._update_mark_item(len(self.marks) - 1)
         self._update_buttons()
 
     def _circle_rect_from_points(
@@ -960,7 +1273,7 @@ class LookHereApp:
 
     def _draw_pdf_arrow(
         self,
-        page: "fitz.Page",
+        page: object,
         start: tuple[float, float],
         end: tuple[float, float],
     ) -> None:
@@ -972,7 +1285,14 @@ class LookHereApp:
         if length < 1:
             return
 
-        page.draw_line(fitz.Point(sx, sy), fitz.Point(ex, ey), color=RED_RGB, width=PDF_LINE_WIDTH, overlay=True)
+        fitz_module = get_fitz()
+        page.draw_line(
+            fitz_module.Point(sx, sy),
+            fitz_module.Point(ex, ey),
+            color=RED_RGB,
+            width=PDF_LINE_WIDTH,
+            overlay=True,
+        )
         angle = math.atan2(dy, dx)
         head_len = min(18.0, max(8.0, length * 0.25))
         for sign in (-1, 1):
@@ -980,8 +1300,8 @@ class LookHereApp:
             hx = ex + head_len * math.cos(head_angle)
             hy = ey + head_len * math.sin(head_angle)
             page.draw_line(
-                fitz.Point(ex, ey),
-                fitz.Point(hx, hy),
+                fitz_module.Point(ex, ey),
+                fitz_module.Point(hx, hy),
                 color=RED_RGB,
                 width=PDF_LINE_WIDTH,
                 overlay=True,
@@ -1001,7 +1321,7 @@ class LookHereApp:
         return "break"
 
     def _zoom_at_mouse(self, direction: int) -> None:
-        if self.doc is None or self.busy:
+        if self.pdf_path is None or self.busy or self.opening_pdf:
             return
         if direction > 0:
             self.zoom = min(self.zoom * ZOOM_STEP, 4.0)
@@ -1019,17 +1339,45 @@ class LookHereApp:
 
     def _rerender_after_resize(self) -> None:
         self.resize_after_id = None
-        if self.doc is None:
+        if self.pdf_path is None:
             self._show_empty_canvas()
         else:
             self.render_page()
 
+    def _cancel_after(self, attr_name: str) -> None:
+        after_id = getattr(self, attr_name)
+        if after_id is None:
+            return
+        try:
+            self.root.after_cancel(after_id)
+        except Exception:
+            pass
+        setattr(self, attr_name, None)
+
+    def _stop_render_worker(self) -> None:
+        self.render_stop_requested = True
+        self.render_generation += 1
+        self.scheduled_render_request = None
+        with self.render_condition:
+            self.pending_render_request = None
+            self.render_condition.notify_all()
+        if self.render_worker.is_alive() and self.render_worker is not threading.current_thread():
+            self.render_worker.join(timeout=1.5)
+
     def _on_close(self) -> None:
-        if self.doc is not None:
-            try:
-                self.doc.close()
-            except Exception:
-                pass
+        if self.shutting_down:
+            return
+        self.shutting_down = True
+        for attr_name in (
+            "resize_after_id",
+            "render_dispatch_after_id",
+            "render_after_id",
+            "save_after_id",
+        ):
+            self._cancel_after(attr_name)
+        self._stop_render_worker()
+        if self.save_worker is not None and self.save_worker.is_alive():
+            self.save_worker.join()
         self.root.destroy()
 
 
