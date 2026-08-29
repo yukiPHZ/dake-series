@@ -123,11 +123,11 @@ Merge Miniは最大5 PDFが製品仕様である。10 / 30 PDFの実投入は仕
 
 | Pattern | 意味 | 実証アプリ | 判定 |
 |---|---|---|---|
-| A: 差分更新 | 変わった表示だけを更新する | PDF Merge、Image BatchPDF、PDF Reorder、PDF CheckStamp、PDF Merge Mini | 5アプリで実証。Widget、Canvas row、page item、overlayで実装は異なる |
-| B: Latest Job | 古くなった待機jobを置換し、古い結果を表示しない | PDF Viewer、PDF CheckStamp | 2アプリで実証。正本には原則を記載済み、module化は3例目まで保留 |
-| C: 生成済み資産の再利用 | thumbnail、metadata、PhotoImage、Canvas item、Widgetを軽い操作で作り直さない | 代表PDF Mergeを含む6アプリ | 6アプリで実証。cache有無より「再取得しない責務」を共通化する |
-| D: UI thread分離 | 重い処理はworker、結果はqueue / afterでUIへ返す | 代表PDF Mergeを含む6アプリ | 6アプリで実証。worker数・queue形式はアプリ特性ごとに決定する |
-| E: 内部状態を正本化 | 内部配列 / state = 画面 = 出力結果 | 代表PDF Mergeを含む6アプリ | 6アプリで出力順・ページ順・stamp位置を回帰確認 |
+| A: 差分更新 | 変わった表示だけを更新する | PDF Merge、Image BatchPDF、PDF Reorder、PDF CheckStamp、PDF Merge Mini、PDF Marker、PDF LookHere | 7アプリで実証。Widget、Canvas row、page item、overlayで実装は異なる |
+| B: Latest Job | 古くなった待機jobを置換し、古い結果を表示しない | PDF Viewer、PDF CheckStamp、PDF Marker、PDF LookHere | 4アプリで実証。`DAKE_LATEST_JOB_PATTERN_V1.md` へ設計判断を正本化し、module化は見送った |
+| C: 生成済み資産の再利用 | thumbnail、metadata、PhotoImage、Canvas item、Widgetを軽い操作で作り直さない | 代表PDF Mergeを含む8アプリ | 8アプリで実証。cache有無より「再取得しない責務」を共通化する |
+| D: UI thread分離 | 重い処理はworker、結果はqueue / afterでUIへ返す | 代表PDF Mergeを含む8アプリ | 8アプリで実証。worker数・queue形式はアプリ特性ごとに決定する |
+| E: 内部状態を正本化 | 内部配列 / state = 画面 = 出力結果 | 代表PDF Mergeを含む8アプリ | 8アプリで出力順・ページ順・stamp / marker位置を回帰確認 |
 
 ## 全アプリ調査一覧
 
@@ -222,12 +222,12 @@ Merge Miniは最大5 PDFが製品仕様である。10 / 30 PDFの実投入は仕
 | フォント検出 | 6アプリ中4アプリが既存rootからfont family候補を探索する小関数を個別保持 | 小さな共通helper候補。ただし候補fontとfallback差を揃えてから。今回module化しない |
 | Window icon | 6アプリでicon path解決と `iconbitmap` の例外処理が反復 | 最有力の小helper候補。onefileの `_MEIPASS` とsource実行path差を統一テスト後に判断 |
 | UI queue pump | 6アプリすべてにworker結果queueと `after` pollがある | event payload、poll間隔、終了条件、dialog責務が異なるため現時点では各アプリ保持 |
-| worker停止lifecycle | ViewerとCheckStampがcondition、pending最新1件、generation、stop flag、timer cancelを持つ | `Latest Job Renderer` パターンとして文書化。2例ではmodule化せず、3例目で同じlifecycleなら再検討 |
-| debounce timer helper | Viewer / CheckStampのresize、Viewerのzoom、各アプリのlayoutで `after_cancel` + `after` が反復 | APIを小さくできる可能性あり。例外時・終了時cancelまで同一化できる3例を待つ |
+| worker停止lifecycle | Viewer、CheckStamp、Marker、LookHereがcondition、pending最新1件、generation、stop flag、timer cancelを持つ | `DAKE_LATEST_JOB_PATTERN_V1.md` として設計パターン化。payload、PDF lifecycle、保存責務が異なるためmodule化しない |
+| debounce timer helper | Viewer / CheckStamp / Marker / LookHereのresize等で `after_cancel` + `after` が反復 | APIを小さくできる可能性はあるが、即時requestとの境界と終了責務が異なるため今回module化しない |
 | 遅延loader | PDF Merge / Merge Miniでfitz・pypdfの利用時importが有効 | import対象、dependency error、PyInstaller hookが異なるため関数本体は各アプリへ小さく持つ |
 | file/page cache | PDFページ数、thumbnail、previewで反復 | key、無効化、memory上限、document lifecycleが異なるため共通module化しない |
 | list/card再配置 | BatchPDF、Reorder、Merge Miniで有効 | Canvas row、複数Canvas item、Tk FrameでAPIが一致しないため共通module化しない |
-| PDF renderer / request payload | ViewerとCheckStampで最新jobが有効 | page pair、zoom、rotation、stamp状態、document lifecycleが異なるため共通module化しない |
+| PDF renderer / request payload | Viewer、CheckStamp、Marker、LookHereでLatest Jobが有効 | page pair、zoom、rotation、overlay状態、document lifecycle、保存処理が異なるため共通module化しない |
 
 共通化の入口は「同じ名前のhelperを作ること」ではなく、2〜3アプリで同じ責務・同じ失敗条件・同じ終了処理が確認できることとする。共通moduleで理解が難しくなる場合は、品質基準と小さなローカル実装だけを共有する。
 
@@ -249,6 +249,17 @@ Merge Miniは最大5 PDFが製品仕様である。10 / 30 PDFの実投入は仕
 | 10 | DAKE_PDF_Crop | page変更ごとにload threadを生成し、load IDで古い結果だけ破棄。preview Canvasは全更新 | 固定1 latest preview workerを検証し、selectionは既存tag差分更新を維持 | Viewer / CheckStampに続くLatest Job 3例目候補。crop座標回帰が必要 |
 
 上位外でも、`DAKE_PDF_Extract`、`DAKE_Brainz_Search`、`DAKE_Yukiz_KadouChu` は改善余地が大きい。ただしコード規模・外部状態・既存workerが複雑で、「効果が大きく既存ロジックへの危険が小さい」という今回の順序では後段とした。`DAKE_Document_Cover` と `DAKE_FAX_Cover` は現在コードでreportlabの利用時import経路が確認でき、初回調査時より優先度を下げた。
+
+## Aランク Wave 1–2 実績（Phase 6–7）
+
+| アプリ | 変更前問題 | 採用した品質原則 | 変更後結果・実測 | 固有実装 | 他アプリへ展開可能な原則 |
+|---|---|---|---|---|---|
+| DAKE_PDF_Marker | fitzを起動時importし、PDF open・page / zoom / resize renderをUI threadで実行。描画のたびCanvas背景を全生成 | 差分更新、Latest Job、生成済み資産再利用、UI thread分離、内部state正本化 | import中央値271.570ms→129.888ms、window構築439.189ms→377.429ms。page変更30回は全描画30回からgeneration付き最新job 2回、zoom 30回は30回から1回。古い結果反映0。marker drag 100 motionはitem生成 / 破棄100回から各1回＋coords 99回 | marker overlayは既存itemを差分更新し、PDF背景だけを固定1 render workerへ渡す。保存jobは捨てず別責務で完遂 | 背景renderとoverlay操作を分離し、新要求で不要になる描画だけLatest Jobへ送る |
+| DAKE_PDF_LookHere | fitzを起動時importし、PDF open・page / zoom / resize render・保存をUI threadで実行。renderごとにCanvas全削除、drag previewを毎motion再生成、mark追加 / undoでも背景を再render | 差分更新、Latest Job、生成済み資産再利用、UI thread分離、内部state正本化 | import中央値146.702ms→87.333ms、操作可能window中央値346.850ms→287.191ms。page変更30回はrender 30→1（待機29件置換）、zoom 30回は30→1、resize 100イベントはdebounce後1回。mark追加30回は背景render 30→0、drag 100 motionはitem生成100→1、以後coords 99回。古い結果反映0 | 固定1 workerが同一PDF documentを保持し、Canvasの背景・PhotoImage・overlay itemを再利用。保存はsnapshotを別workerで必ず完遂 | 重い背景が変わらない操作ではoverlayだけ更新し、最新表示と必ず完遂する保存を別job種別にする |
+
+MarkerとLookHereはいずれも3 / 30 / 100ページでpreview・保存結果・元PDF非破壊を確認し、onefile buildと実exe操作を完了した。LookHereはLatest Jobの4例目だが、request payload、document lifecycle、保存責務の差が残るため共通module化しない。共通化するのは `DAKE_LATEST_JOB_PATTERN_V1.md` の判断基準までとする。
+
+次順位は変更しない。次のAランク候補は `DAKE_App_Doko` とし、scan済みcardの差分更新とexe情報の再走査を、実測後に必要範囲だけ改善する。
 
 ## Phase 5で実施しないこと
 
