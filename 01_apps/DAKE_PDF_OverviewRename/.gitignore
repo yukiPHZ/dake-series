@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+build/
+dist/
+*.spec
+*.exe
+*_config.json
+*.local.json
+Thumbs.db
+desktop.ini
