@@ -24,6 +24,11 @@ def check(scale_factor: float, width: int) -> dict[str, object]:
     root.update()
     toolbar = app.select_button.master
     toolbar_right = app.apply_button.winfo_x() + app.apply_button.winfo_width()
+    toolbar_order = (
+        app.select_button.winfo_x()
+        < app.refresh_button.winfo_x()
+        < app.reload_button.winfo_x()
+    )
     header_right = app.description_label.winfo_x() + app.description_label.winfo_width()
     footer_stacked = app.footer_right.winfo_y() > app.footer_brand.winfo_y()
     title_center = app.title_label.winfo_y() + app.title_label.winfo_height() / 2
@@ -32,6 +37,8 @@ def check(scale_factor: float, width: int) -> dict[str, object]:
         "scale_percent": int(scale_factor * 100),
         "window_width": width,
         "toolbar_fits": toolbar_right <= toolbar.winfo_width(),
+        "toolbar_order": toolbar_order,
+        "reload_visible": app.reload_button.winfo_ismapped(),
         "header_horizontal": abs(description_center - title_center) <= 2,
         "header_fits": header_right <= app.header.winfo_width(),
         "footer_stacked": footer_stacked,
@@ -55,6 +62,8 @@ def main() -> None:
     print(json.dumps(results, ensure_ascii=False, indent=2))
     assert all(
         result["toolbar_fits"]
+        and result["toolbar_order"]
+        and result["reload_visible"]
         and result["header_horizontal"]
         and result["header_fits"]
         and result["footer_fits"]
