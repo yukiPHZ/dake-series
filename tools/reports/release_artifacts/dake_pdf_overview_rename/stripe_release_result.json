@@ -1,0 +1,23 @@
+{
+  "mode": "live-dashboard",
+  "status": "completed",
+  "product_id": "dake_pdf_overview_rename",
+  "product_type": "app",
+  "product_id_on_stripe": "prod_VBbAdnHXBZVPjN",
+  "price_id": "price_1UBDyVHrsJubFuDOfPQGhhSM",
+  "payment_link_id": "plink_1UBE1sHrsJubFuDOhzt7u8BQ",
+  "payment_link_url": "https://buy.stripe.com/28E28r8jTfIHc4M6zD0gw0R",
+  "livemode": true,
+  "creation_method": "authenticated_stripe_dashboard",
+  "metadata": {
+    "dake_item_id": "dake_pdf_overview_rename",
+    "dake_type": "app",
+    "source_repo": "DAKE_series",
+    "source_original": "01_apps/DAKE_PDF_OverviewRename/ORIGINAL.md",
+    "store_url": "https://store.dakeapp.com/product/?id=dake_pdf_overview_rename",
+    "booth_url": "https://peakheadz.booth.pm/items/8798555",
+    "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.0"
+  },
+  "completed_at": "2026-09-02T22:16:41+09:00",
+  "errors": []
+}

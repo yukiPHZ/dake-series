@@ -21,7 +21,10 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示、実�
 - target_platform: Windows
 - folder_name: `DAKE_PDF_OverviewRename`
 - exe_name: `DakePDF_OverviewRename.exe`
-
+- booth_url: https://peakheadz.booth.pm/items/8798555
+- store_url: https://store.dakeapp.com/product/?id=dake_pdf_overview_rename
+- stripe_payment_link: https://buy.stripe.com/28E28r8jTfIHc4M6zD0gw0R
+- payment_status: stripe_ready
 ## 目的
 
 フォルダ内のPDFを1件ずつ開かなくても、1ページ目のサムネイルを俯瞰しながら、その場でPDFごとのファイル名を変更できるようにする。
@@ -450,7 +453,7 @@ PDFを開かず、見ながら名前を変える。
   "update_summary": "初回正式版。PDFの俯瞰表示、安全な一括名前変更、Undoに対応。",
   "folder_name": "DAKE_PDF_OverviewRename",
   "exe_name": "DakePDF_OverviewRename.exe",
-  "release_url": "",
+  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.0",
   "app_type": "market",
   "completion_goal": "formal_release",
   "screenshot_path": "assets/screenshot.webp",
@@ -460,14 +463,52 @@ PDFを開かず、見ながら名前を変える。
 }
 ```
 
+## booth_product生成用情報
+
+- 商品名: DakePDF俯瞰名前変更
+- 価格案: 500円
+- 商品紹介文: PDFを開いて、閉じて、名前を変える。その往復をなくします。フォルダ内のPDFを1ページ目のサムネイルで俯瞰しながら、変更分だけを安全にまとめて反映するWindows向けアプリです。
+- タグ: PDF
+Windows
+実務
+仕事効率化
+軽量
+シンプル
+- 商品画像: assets/booth_thumbnail.jpg
+- 補助画像: assets/screenshot.jpg
+- 作品ファイル: booth_ready/DakePDF_OverviewRename.zip
+- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.0
+- BOOTH URL: https://peakheadz.booth.pm/items/8798555
+
+## Store表示用情報
+
+- 商品名: DakePDF俯瞰名前変更
+- キャッチ: PDFを開かず、1ページ目を見ながら名前を変えます。
+- 説明: フォルダ内のPDFを1ページ目のサムネイルで俯瞰しながら、PDFごとに新しい名前を入力し、変更分だけまとめて反映するWindows向けアプリです。
+- 価格: 500円
+- 画像: assets/booth_thumbnail.jpg
+- ダウンロード導線: https://peakheadz.booth.pm/items/8798555
+- サポート方針: GitHub ReleaseとBOOTHで配布します。
+- Stripe Payment Link: https://buy.stripe.com/28E28r8jTfIHc4M6zD0gw0R
+- Store販売状態: stripe_ready
+- Store URL: https://store.dakeapp.com/product/?id=dake_pdf_overview_rename
+
 ## 価格・販売方針
 
 - 正式販売価格: 500円
 - BOOTH、Store、決済導線の表示価格を500円へ統一します。
+- Store販売: Stripe Payment Linkで販売（BOOTH導線も併記）
 
 ## 配布・ダウンロード方針
 
-GitHub Release、BOOTH、dakeapp.com、Storeを正式配布先とし、DAKE正式出荷ラインに従います。各URLは実際の公開後に本正本へ記録します。
+GitHub Release、BOOTH、dakeapp.com、Storeを正式配布先とし、DAKE正式出荷ラインに従います。
+
+- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.0
+- BOOTH URL: https://peakheadz.booth.pm/items/8798555
+- BOOTH配布zip: booth_ready/DakePDF_OverviewRename.zip
+- Store URL: https://store.dakeapp.com/product/?id=dake_pdf_overview_rename
+- Store決済導線: https://buy.stripe.com/28E28r8jTfIHc4M6zD0gw0R
+- Store補助導線: https://peakheadz.booth.pm/items/8798555
 
 ## 免責・注意事項
 
@@ -501,10 +542,13 @@ build、dist、spec、設定ファイル、個人データ、ソース一式を�
 - タスクバーアイコン: 直接目視は未確認。確認済みとは扱わない
 - 公開画像: 一時作成した `C:\Users\Public\Documents\DAKE_synthetic_release_20260902_48` の無機密合成PDF 48件だけを使い、実アプリ画面から `assets/screenshot.webp` / `assets/screenshot.jpg` / `assets/booth_thumbnail.jpg` を作成。一時フォルダはキャプチャ後に削除済み
 - 第三者ライセンス: ビルド環境の pypdfium2 5.13.0 / PDFium 153.0.7999.0（origin: pdfium-binaries）のwheelに記録されたLicense-File全19件を原文のまま `third_party_licenses/pypdfium2-5.13.0/` と配布物へ収録。コピー元とのSHA-256集合一致を確認
-- 派生ビュー: `README.md`、`DAKE_META`、`release_body.md`、`booth_product.txt`、`booth_ready/` を本正本から整備。価格、GitHub Release URL、BOOTH URLは未設定
+- 派生ビュー: `README.md`、`DAKE_META`、`release_body.md`、`booth_product.txt`、`booth_ready/` を本正本から整備。価格、GitHub Release URL、BOOTH URLを正式出荷値へ統一
 - 正式版: `version: 1.0.0`、`price: 500円`、`status: available`
 - 公開対象: `show_in_launcher: true`、`show_on_site: true`
 - Phase 3正式出荷: Issue #19に従い、実在する公開URLを作成後に本正本へ順次記録する
+- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.0（v1.0.0、公開・HTTP 200・配布zip添付を確認）
+- BOOTH: https://peakheadz.booth.pm/items/8798555（500円、購入可能、商品画像2点、配布zip設定を確認）
+- Stripe: Product `prod_VBbAdnHXBZVPjN`、Price `price_1UBDyVHrsJubFuDOfPQGhhSM`、Payment Link `plink_1UBE1sHrsJubFuDOhzt7u8BQ` を本番モードで作成。公開Checkoutで商品名、500円、購入ボタン、メール導線を確認し、実購入は未実施
 
 ## Codex作業時の注意
 

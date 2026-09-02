@@ -56,7 +56,7 @@ Windows配布版で使う pypdfium2 5.13.0 / PDFium 153.0.7999.0（pdfium-binari
 
 ## 正式版情報
 
-初回正式版はバージョン1.0.0、販売価格500円です。GitHub Release、BOOTH、dakeapp.com、Storeの正式出荷ラインへ掲載します。
+初回正式版はバージョン1.0.0、販売価格500円です。[GitHub Release](https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.0)から正式配布zipをダウンロードできます。[BOOTH](https://peakheadz.booth.pm/items/8798555)でも販売しています。dakeapp.com、Storeの正式出荷ラインにも掲載します。
 
 ## DAKE_META
 
@@ -71,7 +71,7 @@ Windows配布版で使う pypdfium2 5.13.0 / PDFium 153.0.7999.0（pdfium-binari
   "update_summary": "初回正式版。PDFの俯瞰表示、安全な一括名前変更、Undoに対応。",
   "folder_name": "DAKE_PDF_OverviewRename",
   "exe_name": "DakePDF_OverviewRename.exe",
-  "release_url": "",
+  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.0",
   "app_type": "market",
   "completion_goal": "formal_release",
   "screenshot_path": "assets/screenshot.webp",

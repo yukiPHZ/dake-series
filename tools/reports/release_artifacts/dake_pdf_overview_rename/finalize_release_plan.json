@@ -1,0 +1,19 @@
+{
+  "created_at": "2026-09-02T22:22:22+09:00",
+  "product_id": "dake_pdf_overview_rename",
+  "source_original": "01_apps/DAKE_PDF_OverviewRename/ORIGINAL.md",
+  "result_file": "tools/reports/release_artifacts/dake_pdf_overview_rename/stripe_release_result.json",
+  "state_file": "tools/reports/release_artifacts/dake_pdf_overview_rename/stripe_release_state.json",
+  "checkout_review_file": "tools/reports/release_artifacts/dake_pdf_overview_rename/checkout_review.json",
+  "payment_status_before": "booth_only",
+  "stripe_payment_link_before": "",
+  "payment_status_after": "stripe_ready",
+  "stripe_payment_link_after": "https://buy.stripe.com/28E28r8jTfIHc4M6zD0gw0R",
+  "result_validation": "passed",
+  "state_validation": "passed",
+  "checkout_validation": "passed",
+  "uniqueness_validation": "passed",
+  "action": "update",
+  "errors": [],
+  "dry_run": true
+}

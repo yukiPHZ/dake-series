@@ -32,7 +32,7 @@ assets/screenshot.jpg
 booth_ready/DakePDF_OverviewRename.zip
 
 # GitHub Release
-
+https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.0
 
 # 注意事項
 Windows向けアプリです。
@@ -43,3 +43,4 @@ Windows向けアプリです。
 本ソフトウェアの無断転載・再配布を禁止します。
 
 # URL
+https://peakheadz.booth.pm/items/8798555
