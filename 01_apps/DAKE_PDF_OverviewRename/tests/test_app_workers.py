@@ -9,7 +9,7 @@ from pathlib import Path
 
 import main
 import pytest
-from main import RenderPool, RenderRequest, scan_pdf_folder
+from main import LatestPreviewWorker, RenderPool, RenderRequest, scan_pdf_folder
 from rename_core import FileSnapshot
 
 
@@ -93,6 +93,123 @@ def test_render_failure_is_isolated(monkeypatch, tmp_path: Path) -> None:
         assert second.error is None and second.image is not None
     finally:
         pool.shutdown()
+
+
+def test_thumbnail_and_preview_workers_serialize_all_pdfium_calls(
+    monkeypatch, tmp_path: Path
+) -> None:
+    from PIL import Image
+
+    class TrackingMutex:
+        def __init__(self) -> None:
+            self._mutex = threading.Lock()
+            self._state = threading.Lock()
+            self.active = 0
+            self.waiting = 0
+            self.max_active = 0
+            self.max_waiting = 0
+            self.entries = 0
+            self.owner: int | None = None
+
+        def __enter__(self):
+            with self._state:
+                self.waiting += 1
+                self.max_waiting = max(self.max_waiting, self.waiting)
+            self._mutex.acquire()
+            with self._state:
+                self.waiting -= 1
+                self.active += 1
+                self.entries += 1
+                self.max_active = max(self.max_active, self.active)
+                self.owner = threading.get_ident()
+            return self
+
+        def __exit__(self, _exc_type, _exc, _traceback) -> None:
+            with self._state:
+                self.active -= 1
+                self.owner = None
+            self._mutex.release()
+
+        def assert_held(self) -> None:
+            with self._state:
+                assert self.active == 1
+                assert self.owner == threading.get_ident()
+
+    tracker = TrackingMutex()
+
+    class FakeBitmap:
+        def to_pil(self):
+            tracker.assert_held()
+            time.sleep(0.005)
+            return Image.new("RGB", (30, 40), "white")
+
+        def close(self) -> None:
+            tracker.assert_held()
+
+    class FakePage:
+        def get_size(self) -> tuple[int, int]:
+            tracker.assert_held()
+            return 30, 40
+
+        def render(self, *, scale: float):
+            tracker.assert_held()
+            assert scale > 0
+            time.sleep(0.01)
+            return FakeBitmap()
+
+        def close(self) -> None:
+            tracker.assert_held()
+
+    class FakeDocument:
+        def __init__(self, _path: str) -> None:
+            tracker.assert_held()
+            time.sleep(0.01)
+
+        def __len__(self) -> int:
+            tracker.assert_held()
+            return 1
+
+        def __getitem__(self, index: int):
+            tracker.assert_held()
+            assert index == 0
+            return FakePage()
+
+        def close(self) -> None:
+            tracker.assert_held()
+
+    class FakePdfium:
+        PdfDocument = FakeDocument
+
+    monkeypatch.setattr(main, "_PDFIUM_LOCK", tracker)
+    monkeypatch.setattr(
+        main,
+        "load_preview_dependencies",
+        lambda: (FakePdfium, (Image, object())),
+    )
+
+    snapshots = [make_snapshot(tmp_path, f"request_{index}.pdf") for index in range(4)]
+    pool = RenderPool(worker_count=3)
+    preview = LatestPreviewWorker()
+    try:
+        pool.replace(
+            1,
+            [
+                RenderRequest(1, "thumbnail", index, snapshots[index], (20, 20))
+                for index in range(3)
+            ],
+        )
+        preview.request(RenderRequest(1, "preview", 3, snapshots[3], (20, 20)))
+        thumbnail_results = [pool.results.get(timeout=5) for _ in range(3)]
+        preview_result = preview.results.get(timeout=5)
+        assert all(result.error is None for result in thumbnail_results)
+        assert preview_result.error is None
+    finally:
+        pool.shutdown()
+        preview.shutdown()
+
+    assert tracker.entries == 4
+    assert tracker.max_waiting >= 2
+    assert tracker.max_active == 1
 
 
 def test_ui_widget_text_has_no_inline_japanese() -> None:

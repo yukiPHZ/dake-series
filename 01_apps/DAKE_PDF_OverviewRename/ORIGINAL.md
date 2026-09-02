@@ -490,9 +490,10 @@ build、dist、spec、設定ファイル、個人データ、ソース一式を�
 ## 現在地
 
 - 正本仕様: 確定
-- Codex実装: Phase 1完了（2026-09-02）
-- 自動テスト: 27件成功
-- 合成PDF試験: 1件、48件、100件、300件でPDFium描画、名前変更、Undo、内容ハッシュ維持、一時ファイル残留なしを確認
+- Codex実装: Phase 1実装完了。Issue #12のPDFium thread-safety blockerを修正済み（2026-09-02、受入待ち）
+- PDFium thread-safety: サムネイルworkerと大preview workerが共有mutexを通り、document生成からPDFium resource closeまで直列実行。回帰テストでPDFium critical sectionの最大同時実行数1を確認
+- 自動テスト: 28件成功
+- 合成PDF試験: blocker修正後に1件、48件、100件、300件でPDFium描画、名前変更、Undo、内容ハッシュ維持、一時ファイル残留なしを再確認
 - 実装受入: Codexによる合成データ確認済み。人間の実データ48件受入と最終画面確認は未実施
 - Windows build: `build.bat` 成功、`dist/DakePDF_OverviewRename.exe` 生成・起動・基本操作・ウインドウアイコン確認済み。タスクバーアイコンの直接目視は未確認
 - 第三者ライセンス: pypdfium2 / PDFiumの現行ライセンス条件を確認済み。正式配布物へのwheel同梱ライセンス一式の収録は未実施

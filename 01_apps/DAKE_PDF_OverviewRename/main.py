@@ -137,6 +137,7 @@ SIZE_CONFIG = {
 _PDFIUM = None
 _PIL = None
 _IMPORT_LOCK = threading.Lock()
+_PDFIUM_LOCK = threading.Lock()
 
 
 def set_windows_app_id() -> None:
@@ -221,35 +222,36 @@ def scan_pdf_folder(folder: Path) -> list[FileSnapshot]:
 def render_first_page(path: Path, box: tuple[int, int]):
     pdfium, pil_modules = load_preview_dependencies()
     Image, _ = pil_modules
-    document = pdfium.PdfDocument(str(path))
-    page = None
-    bitmap = None
-    try:
-        page_count = len(document)
-        if page_count < 1:
-            raise ValueError("zero pages")
-        page = document[0]
-        width, height = page.get_size()
-        scale = max(0.25, min(box[0] / max(width, 1), box[1] / max(height, 1)))
-        bitmap = page.render(scale=scale)
-        image = bitmap.to_pil().convert("RGB").copy()
-        image.thumbnail(box, Image.Resampling.LANCZOS)
-        return image, page_count
-    finally:
-        if bitmap is not None:
-            try:
-                bitmap.close()
-            except Exception:
-                pass
-        if page is not None:
-            try:
-                page.close()
-            except Exception:
-                pass
+    with _PDFIUM_LOCK:
+        document = pdfium.PdfDocument(str(path))
+        page = None
+        bitmap = None
         try:
-            document.close()
-        except Exception:
-            pass
+            page_count = len(document)
+            if page_count < 1:
+                raise ValueError("zero pages")
+            page = document[0]
+            width, height = page.get_size()
+            scale = max(0.25, min(box[0] / max(width, 1), box[1] / max(height, 1)))
+            bitmap = page.render(scale=scale)
+            image = bitmap.to_pil().convert("RGB").copy()
+        finally:
+            if bitmap is not None:
+                try:
+                    bitmap.close()
+                except Exception:
+                    pass
+            if page is not None:
+                try:
+                    page.close()
+                except Exception:
+                    pass
+            try:
+                document.close()
+            except Exception:
+                pass
+    image.thumbnail(box, Image.Resampling.LANCZOS)
+    return image, page_count
 
 
 @dataclass(frozen=True)
