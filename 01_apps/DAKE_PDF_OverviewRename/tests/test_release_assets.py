@@ -61,7 +61,10 @@ def test_readme_meta_matches_original_and_has_formal_release_flags() -> None:
     assert meta["app_type"] == "market"
     assert meta["completion_goal"] == "formal_release"
     assert meta["status"] == "available"
-    assert meta["release_url"] == ""
+    assert meta["release_url"] == (
+        "https://github.com/yukiPHZ/dake-series/releases/tag/"
+        "DAKE_PDF_OverviewRename_v1.0.0"
+    )
     assert meta["show_in_launcher"] is True
     assert meta["show_on_site"] is True
 
@@ -73,17 +76,22 @@ def test_release_body_matches_readme_derived_view() -> None:
     assert 3 <= len(bullets) <= 5
 
 
-def test_booth_views_set_price_and_keep_urls_unset_until_publication() -> None:
+def test_booth_views_set_price_and_github_release_url() -> None:
     canonical = _read("booth_product.txt")
     ready = _read("booth_ready/booth_product.txt")
     assert canonical == ready
     price = re.search(r"(?ms)^# 価格案\s*\n(.*?)(?=^# |\Z)", canonical)
     assert price
     assert price.group(1).strip() == "500円"
-    for heading in ("GitHub Release", "URL"):
-        match = re.search(rf"(?ms)^# {re.escape(heading)}\s*\n(.*?)(?=^# |\Z)", canonical)
-        assert match, heading
-        assert match.group(1).strip() == ""
+    release = re.search(r"(?ms)^# GitHub Release\s*\n(.*?)(?=^# |\Z)", canonical)
+    assert release
+    assert release.group(1).strip() == (
+        "https://github.com/yukiPHZ/dake-series/releases/tag/"
+        "DAKE_PDF_OverviewRename_v1.0.0"
+    )
+    booth_url = re.search(r"(?ms)^# URL\s*\n(.*?)(?=^# |\Z)", canonical)
+    assert booth_url
+    assert booth_url.group(1).strip() == "https://peakheadz.booth.pm/items/8798555"
 
 
 def test_wheel_license_file_set_is_complete() -> None:

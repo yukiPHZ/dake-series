@@ -92,11 +92,16 @@ def metadata_line(text: str, key: str) -> str:
 def parse_original(path: Path) -> dict[str, Any]:
     text = path.read_text(encoding="utf-8")
     relative = relative_to_root(path)
-    item_id = metadata_line(text, "pack_id") if relative.startswith("04_packs/") else path.parent.name
+    item_id = (
+        metadata_line(text, "pack_id")
+        if relative.startswith("04_packs/")
+        else metadata_line(text, "app_id")
+    )
     if not item_id:
         item_id = path.parent.name
     return {
         "id": item_id,
+        "product_type": "pack" if relative.startswith("04_packs/") else "app",
         "source_original": relative,
         "path": path,
         "text": text,
@@ -194,7 +199,12 @@ def validate_stripe_result(product_id: str, result: dict[str, Any], state: dict[
     return errors
 
 
-def validate_checkout_review(product_id: str, review: dict[str, Any], original_text: str = "") -> list[str]:
+def validate_checkout_review(
+    product_id: str,
+    product_type: str,
+    review: dict[str, Any],
+    original_text: str = "",
+) -> list[str]:
     errors: list[str] = []
     expected = {
         "product_id": product_id,
@@ -205,8 +215,6 @@ def validate_checkout_review(product_id: str, review: dict[str, Any], original_t
         "email_required": True,
         "quantity_change_ui": False,
         "shipping_address_required": False,
-        "manual_delivery_notice_visible": True,
-        "next_business_day_notice_visible": True,
         "test_url_detected": False,
         "private_download_url_exposed": False,
         "local_path_exposed": False,
@@ -214,11 +222,15 @@ def validate_checkout_review(product_id: str, review: dict[str, Any], original_t
     for key, value in expected.items():
         if review.get(key) != value:
             errors.append(f"checkout_review {key} must be {value!r}")
-    if product_specific_notice_required(original_text):
-        if review.get("product_specific_notice_required") is not True:
-            errors.append("checkout_review product_specific_notice_required must be True")
-        if review.get("product_specific_notice_visible") is not True:
-            errors.append("checkout_review product_specific_notice_visible must be True")
+    if product_type == "pack":
+        for key in ["manual_delivery_notice_visible", "next_business_day_notice_visible"]:
+            if review.get(key) is not True:
+                errors.append(f"checkout_review {key} must be True")
+        if product_specific_notice_required(original_text):
+            if review.get("product_specific_notice_required") is not True:
+                errors.append("checkout_review product_specific_notice_required must be True")
+            if review.get("product_specific_notice_visible") is not True:
+                errors.append("checkout_review product_specific_notice_visible must be True")
     if int(review.get("console_errors") or 0) != 0:
         errors.append("checkout_review console_errors must be 0")
     return errors
@@ -273,7 +285,12 @@ def build_plan(product_id: str) -> dict[str, Any]:
     checkout = read_json(checkout_review_path(product_id))
 
     result_errors = validate_stripe_result(product_id, result, state)
-    checkout_errors = validate_checkout_review(product_id, checkout, original["text"])
+    checkout_errors = validate_checkout_review(
+        product_id,
+        str(original["product_type"]),
+        checkout,
+        original["text"],
+    )
     uniqueness_errors = validate_unique_live_results()
     errors = result_errors + checkout_errors + uniqueness_errors
 

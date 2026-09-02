@@ -258,11 +258,11 @@ def test_real_repo_compatibility() -> None:
 def test_generated_counts() -> None:
     data = json.loads((ROOT / "tools" / "generated" / "store_products.generated.json").read_text(encoding="utf-8"))
     items = data["items"]
-    assert len(items) == 55
+    assert len(items) == 56
     counts: dict[str, int] = {}
     for item in items:
         counts[item.get("payment_status") or ""] = counts.get(item.get("payment_status") or "", 0) + 1
-    assert counts.get("stripe_ready") == 53
+    assert counts.get("stripe_ready") == 54
     assert counts.get("booth_only") == 1
     assert counts.get("preparing") == 1
 

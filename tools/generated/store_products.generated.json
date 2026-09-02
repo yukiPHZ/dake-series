@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-22T09:48:22+09:00",
+  "generated_at": "2026-09-02T22:23:21+09:00",
   "source_policy": "ORIGINAL.md is the source of truth. This file is generated and must not be edited manually.",
   "schema_version": "1.0.0",
   "do_not_edit": true,
@@ -1253,6 +1253,44 @@
       "stripe_price_id": null
     },
     {
+      "id": "dake_pdf_overview_rename",
+      "type": "app",
+      "source_repo": "DAKE_series",
+      "source_original": "01_apps/DAKE_PDF_OverviewRename/ORIGINAL.md",
+      "title": "DakePDF俯瞰名前変更",
+      "short_title": "PDF俯瞰名前変更",
+      "version": "1.0.0",
+      "catch": "PDFを開かず、1ページ目を見ながら名前を変えます。",
+      "description": "フォルダ内のPDFを1ページ目のサムネイルで俯瞰しながら、PDFごとに新しい名前を入力し、変更分だけまとめて反映するWindows向けアプリです。",
+      "price": 500,
+      "currency": "JPY",
+      "status": "available",
+      "category": "PDF",
+      "tags": [
+        "PDF",
+        "Windows",
+        "実務",
+        "仕事効率化",
+        "軽量",
+        "シンプル"
+      ],
+      "image": "assets/booth_thumbnail.jpg",
+      "thumbnail": "assets/booth_thumbnail.jpg",
+      "download_type": "booth",
+      "download_url": "https://peakheadz.booth.pm/items/8798555",
+      "booth_url": "https://peakheadz.booth.pm/items/8798555",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.0",
+      "store_url": "https://store.dakeapp.com/product/?id=dake_pdf_overview_rename",
+      "support_policy": "GitHub ReleaseとBOOTHで配布します。",
+      "disclaimer": "- Windows向けアプリです。\n- ファイル名を直接変更します。\n- 大切なファイルは事前にバックアップを推奨します。\n- 処理前に変更内容を確認してください。\n- ご利用は自己責任でお願いいたします。\n- 本ソフトウェアの無断転載・再配布を禁止します。",
+      "included_items": [],
+      "stripe_payment_link": "https://buy.stripe.com/28E28r8jTfIHc4M6zD0gw0R",
+      "payment_status": "stripe_ready",
+      "source_kind": "original",
+      "is_generated": true,
+      "stripe_price_id": null
+    },
+    {
       "id": "dake_pdf_rename",
       "type": "app",
       "source_repo": "DAKE_series",
@@ -2254,5 +2292,10 @@
       "stripe_price_id": null
     }
   ],
-  "skipped": []
+  "skipped": [
+    {
+      "source_original": "01_apps/DAKE_Image_BatchPDF/ORIGINAL.md",
+      "reason": "status=draft"
+    }
+  ]
 }

@@ -2,7 +2,7 @@
   "schema": "dakeapp.apps.v1",
   "do_not_edit": true,
   "source_policy": "ORIGINAL.md is the source of truth. README.md and DAKE_META are derived views. Generated JSON must not be edited manually.",
-  "generated_at": "2026-08-22T09:32:13+09:00",
+  "generated_at": "2026-09-02T22:23:22+09:00",
   "apps": [
     {
       "slug": "advanced-timer",
@@ -589,6 +589,25 @@
       "social_release_path": "release_artifacts/social_release.json",
       "source_kind": "original",
       "source_original": "01_apps/DAKE_PDF_Merge_Mini/ORIGINAL.md",
+      "source_readme": "",
+      "original_missing": false,
+      "meta_derivative_mismatch": []
+    },
+    {
+      "slug": "pdf-overview-rename",
+      "app_key": "dake_pdf_overview_rename",
+      "folder_name": "DAKE_PDF_OverviewRename",
+      "display_name": "DakePDF俯瞰名前変更",
+      "detail_url": "https://dakeapp.com/apps/pdf-overview-rename/",
+      "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.0",
+      "screenshot_path": "../../assets/images/apps/pdf-overview-rename/screenshot-01.webp",
+      "demo_video_path": "release_artifacts/demo.mp4",
+      "demo_video_url": "",
+      "video_cloudinary_url": "",
+      "video_r2_url": "",
+      "social_release_path": "release_artifacts/social_release.json",
+      "source_kind": "original",
+      "source_original": "01_apps/DAKE_PDF_OverviewRename/ORIGINAL.md",
       "source_readme": "",
       "original_missing": false,
       "meta_derivative_mismatch": []
