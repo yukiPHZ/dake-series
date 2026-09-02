@@ -54,9 +54,9 @@ build.bat
 
 Windows配布版で使う pypdfium2 5.13.0 / PDFium 153.0.7999.0（pdfium-binaries）のwheelに記録されたライセンス文書を、`third_party_licenses/pypdfium2-5.13.0/` に収録しています。配布zipには `THIRD_PARTY_NOTICES.txt` とこのフォルダを含めます。
 
-## 出荷準備状況
+## 正式版情報
 
-Phase 2の正式出荷準備中です。価格、GitHub Release URL、BOOTH URLは未定・未公開です。GitHub Release、BOOTH、dakeapp.com、Store、Cloudflareへの公開はまだ行っていません。
+初回正式版はバージョン1.0.0、販売価格500円です。GitHub Release、BOOTH、dakeapp.com、Storeの正式出荷ラインへ掲載します。
 
 ## DAKE_META
 
@@ -68,16 +68,16 @@ Phase 2の正式出荷準備中です。価格、GitHub Release URL、BOOTH URL�
   "launcher_description": "PDFを開かず、サムネイルを見ながら名前を変更します。",
   "site_title": "DakePDF俯瞰名前変更",
   "site_description": "フォルダ内のPDFをサムネイルで俯瞰しながら、PDFごとに名前を変更できるWindows向けアプリです。",
-  "update_summary": "Phase 2正式出荷準備中。公開前の配布物・画像・第三者ライセンスを整備。",
+  "update_summary": "初回正式版。PDFの俯瞰表示、安全な一括名前変更、Undoに対応。",
   "folder_name": "DAKE_PDF_OverviewRename",
   "exe_name": "DakePDF_OverviewRename.exe",
   "release_url": "",
   "app_type": "market",
   "completion_goal": "formal_release",
   "screenshot_path": "assets/screenshot.webp",
-  "status": "draft",
-  "show_in_launcher": false,
-  "show_on_site": false
+  "status": "available",
+  "show_in_launcher": true,
+  "show_on_site": true
 }
 ```
 

@@ -52,7 +52,7 @@ def _meta(text: str) -> dict[str, object]:
     return json.loads(match.group(1))
 
 
-def test_readme_meta_matches_original_and_keeps_release_unpublished() -> None:
+def test_readme_meta_matches_original_and_has_formal_release_flags() -> None:
     meta = _meta(_read("README.md"))
     original_block = _section(_read("ORIGINAL.md"), "DAKE_META生成用情報")
     original_match = re.search(r"(?s)```json\s*(\{.*?\})\s*```", original_block)
@@ -60,10 +60,10 @@ def test_readme_meta_matches_original_and_keeps_release_unpublished() -> None:
     assert meta == json.loads(original_match.group(1))
     assert meta["app_type"] == "market"
     assert meta["completion_goal"] == "formal_release"
-    assert meta["status"] == "draft"
+    assert meta["status"] == "available"
     assert meta["release_url"] == ""
-    assert meta["show_in_launcher"] is False
-    assert meta["show_on_site"] is False
+    assert meta["show_in_launcher"] is True
+    assert meta["show_on_site"] is True
 
 
 def test_release_body_matches_readme_derived_view() -> None:
@@ -73,11 +73,14 @@ def test_release_body_matches_readme_derived_view() -> None:
     assert 3 <= len(bullets) <= 5
 
 
-def test_booth_views_keep_price_and_urls_unset() -> None:
+def test_booth_views_set_price_and_keep_urls_unset_until_publication() -> None:
     canonical = _read("booth_product.txt")
     ready = _read("booth_ready/booth_product.txt")
     assert canonical == ready
-    for heading in ("価格案", "GitHub Release", "URL"):
+    price = re.search(r"(?ms)^# 価格案\s*\n(.*?)(?=^# |\Z)", canonical)
+    assert price
+    assert price.group(1).strip() == "500円"
+    for heading in ("GitHub Release", "URL"):
         match = re.search(rf"(?ms)^# {re.escape(heading)}\s*\n(.*?)(?=^# |\Z)", canonical)
         assert match, heading
         assert match.group(1).strip() == ""

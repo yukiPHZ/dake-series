@@ -12,12 +12,12 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示、実�
 - title: `DakePDF俯瞰名前変更`
 - short_title: `PDF俯瞰名前変更`
 - category: `PDF`
-- status: `draft`
-- version: `0.1.0-dev`
+- status: `available`
+- version: `1.0.0`
 - app_type: `market`
 - completion_goal: `formal_release`
-- price: 未定
-- distribution: 未公開
+- price: `500円`
+- distribution: GitHub Release / BOOTH / dakeapp.com / Store
 - target_platform: Windows
 - folder_name: `DAKE_PDF_OverviewRename`
 - exe_name: `DakePDF_OverviewRename.exe`
@@ -447,26 +447,27 @@ PDFを開かず、見ながら名前を変える。
   "launcher_description": "PDFを開かず、サムネイルを見ながら名前を変更します。",
   "site_title": "DakePDF俯瞰名前変更",
   "site_description": "フォルダ内のPDFをサムネイルで俯瞰しながら、PDFごとに名前を変更できるWindows向けアプリです。",
-  "update_summary": "Phase 2正式出荷準備中。公開前の配布物・画像・第三者ライセンスを整備。",
+  "update_summary": "初回正式版。PDFの俯瞰表示、安全な一括名前変更、Undoに対応。",
   "folder_name": "DAKE_PDF_OverviewRename",
   "exe_name": "DakePDF_OverviewRename.exe",
   "release_url": "",
   "app_type": "market",
   "completion_goal": "formal_release",
   "screenshot_path": "assets/screenshot.webp",
-  "status": "draft",
-  "show_in_launcher": false,
-  "show_on_site": false
+  "status": "available",
+  "show_in_launcher": true,
+  "show_on_site": true
 }
 ```
 
 ## 価格・販売方針
 
-未定です。実機受入試験と完成度確認後に決めます。
+- 正式販売価格: 500円
+- BOOTH、Store、決済導線の表示価格を500円へ統一します。
 
 ## 配布・ダウンロード方針
 
-開発中は未公開です。正式出荷時はDAKE正式出荷ラインに従います。
+GitHub Release、BOOTH、dakeapp.com、Storeを正式配布先とし、DAKE正式出荷ラインに従います。各URLは実際の公開後に本正本へ記録します。
 
 ## 免責・注意事項
 
@@ -479,7 +480,7 @@ PDFを開かず、見ながら名前を変える。
 
 ## 同梱ファイル方針
 
-正式出荷時の候補:
+正式配布zip:
 
 - `DakePDF_OverviewRename.exe`
 - `README.txt`
@@ -501,16 +502,17 @@ build、dist、spec、設定ファイル、個人データ、ソース一式を�
 - 公開画像: 一時作成した `C:\Users\Public\Documents\DAKE_synthetic_release_20260902_48` の無機密合成PDF 48件だけを使い、実アプリ画面から `assets/screenshot.webp` / `assets/screenshot.jpg` / `assets/booth_thumbnail.jpg` を作成。一時フォルダはキャプチャ後に削除済み
 - 第三者ライセンス: ビルド環境の pypdfium2 5.13.0 / PDFium 153.0.7999.0（origin: pdfium-binaries）のwheelに記録されたLicense-File全19件を原文のまま `third_party_licenses/pypdfium2-5.13.0/` と配布物へ収録。コピー元とのSHA-256集合一致を確認
 - 派生ビュー: `README.md`、`DAKE_META`、`release_body.md`、`booth_product.txt`、`booth_ready/` を本正本から整備。価格、GitHub Release URL、BOOTH URLは未設定
-- 状態: `status: draft`、`app_type: market`、`completion_goal: formal_release` を維持
-- 正式出荷準備: ローカル配布zipまで作成済み。公開、mainへのmerge、正式出荷は未実施
+- 正式版: `version: 1.0.0`、`price: 500円`、`status: available`
+- 公開対象: `show_in_launcher: true`、`show_on_site: true`
+- Phase 3正式出荷: Issue #19に従い、実在する公開URLを作成後に本正本へ順次記録する
 
 ## Codex作業時の注意
 
-- 作業ブランチ: `codex/dake-pdf-overview-rename-release-prep`
+- 作業ブランチ: `codex/dake-pdf-overview-rename-formal-release`
 - 対象: `01_apps/DAKE_PDF_OverviewRename/`
 - 旧ブランチ `feature/dake-pdf-overview-rename` とDraft PR #11のコードは暫定参考であり、採用済み実装ではありません。
 - 旧コードを自動でcherry-pickしません。
 - 使える発想を参照してもよいですが、本正本と現行 `00_core` を優先してCodex自身で実装します。
-- mainへmergeしません。
-- GitHub Release、BOOTH、dakeapp.com、Store、Cloudflareへ公開しません。
-- Phase 2資材整備、回帰テスト、Windows build、commit、push、main向けDraft PR作成までを行い、結果を報告します。
+- Issue #19の出荷順序と安全ゲートに従い、main、GitHub Release、BOOTH、dakeapp.com、Store、決済、Cloudflareを正式出荷します。
+- GitHub Release、BOOTH、Stripe等のURLは作成前に推測せず、公開後の実URLだけを本正本へ書き戻します。
+- 名前変更、Undo、PDFium排他、wheel、refreshの既存挙動を不要に変更しません。
