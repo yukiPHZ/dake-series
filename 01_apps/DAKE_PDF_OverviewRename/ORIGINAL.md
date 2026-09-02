@@ -549,6 +549,9 @@ build、dist、spec、設定ファイル、個人データ、ソース一式を�
 - GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.0（v1.0.0、公開・HTTP 200・配布zip添付を確認）
 - BOOTH: https://peakheadz.booth.pm/items/8798555（500円、購入可能、商品画像2点、配布zip設定を確認）
 - Stripe: Product `prod_VBbAdnHXBZVPjN`、Price `price_1UBDyVHrsJubFuDOfPQGhhSM`、Payment Link `plink_1UBE1sHrsJubFuDOhzt7u8BQ` を本番モードで作成。公開Checkoutで商品名、500円、購入ボタン、メール導線を確認し、実購入は未実施
+- dakeapp.com: https://dakeapp.com/apps/pdf-overview-rename/（商品名、説明、画像、GitHub Release、BOOTH、Store導線を本番表示で確認）
+- Store: https://store.dakeapp.com/product/?id=dake_pdf_overview_rename（500円、`Stripe対応`、Stripe購入導線、BOOTH補助導線、商品画像を本番表示で確認）
+- Cloudflare Pages: dakeapp-site / dake-store-site ともmainマージ後の本番デプロイ成功、および上記カスタムドメインの公開表示を確認
 
 ## Codex作業時の注意
 
