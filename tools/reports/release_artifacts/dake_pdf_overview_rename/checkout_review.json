@@ -1,0 +1,28 @@
+{
+  "product_id": "dake_pdf_overview_rename",
+  "reviewed_at": "2026-09-02T22:20:50+09:00",
+  "product_name": "DakePDF俯瞰名前変更",
+  "price": 500,
+  "currency": "jpy",
+  "product_name_visible": true,
+  "price_visible": true,
+  "livemode": true,
+  "test_url_detected": false,
+  "quantity_change_ui": false,
+  "email_field_present": true,
+  "email_required": true,
+  "shipping_address_required": false,
+  "private_download_url_exposed": false,
+  "local_path_exposed": false,
+  "actual_payment_completed": false,
+  "manual_delivery_notice_visible": "not_applicable",
+  "next_business_day_notice_visible": "not_applicable",
+  "product_specific_notice_required": false,
+  "product_specific_notice_visible": "not_applicable",
+  "console_errors": 0,
+  "notes": [
+    "Public live Checkout verified at ¥500 for DakePDF overview rename; no payment was completed."
+  ],
+  "review_status": "passed",
+  "failed_checks": []
+}

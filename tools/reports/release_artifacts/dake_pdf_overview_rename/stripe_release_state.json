@@ -1,0 +1,19 @@
+{
+  "mode": "live-dashboard",
+  "product_id": "dake_pdf_overview_rename",
+  "product_type": "app",
+  "source_original": "01_apps/DAKE_PDF_OverviewRename/ORIGINAL.md",
+  "input_payload_file": "tools/reports/release_artifacts/dake_pdf_overview_rename/stripe_release_dry_run.json",
+  "input_payload_file_sha256": "a9b6c7d7560a3a3a42f7405105c9f783beace74e04fd0171e72531b30a42fec8",
+  "started_at": "2026-09-02T22:10:00+09:00",
+  "updated_at": "2026-09-02T22:16:41+09:00",
+  "status": "completed",
+  "product_id_on_stripe": "prod_VBbAdnHXBZVPjN",
+  "price_id": "price_1UBDyVHrsJubFuDOfPQGhhSM",
+  "payment_link_id": "plink_1UBE1sHrsJubFuDOhzt7u8BQ",
+  "payment_link_url": "https://buy.stripe.com/28E28r8jTfIHc4M6zD0gw0R",
+  "livemode": true,
+  "manual_resolution_required": false,
+  "creation_method": "authenticated_stripe_dashboard",
+  "error": null
+}
