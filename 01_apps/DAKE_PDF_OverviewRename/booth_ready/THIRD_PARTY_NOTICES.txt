@@ -1,0 +1,41 @@
+DakePDF俯瞰名前変更 — Third-Party Notices
+
+Windows配布版は、PDFの表示に次の配布物を使用します。
+
+- pypdfium2 5.13.0
+- PDFium 153.0.7999.0
+- PDFium origin: pdfium-binaries
+- PDFium feature flags: なし
+
+ライセンス文書は、ビルド環境へインストールされた
+`pypdfium2-5.13.0.dist-info/licenses` の License-File 全19件を、内容を変更せず
+`third_party_licenses/pypdfium2-5.13.0/` に収録したものです。
+
+収録内容:
+
+- LICENSES/Apache-2.0.txt
+- LICENSES/BSD-3-Clause.txt
+- LICENSES/CC-BY-4.0.txt
+- BUILD_LICENSES/abseil.txt
+- BUILD_LICENSES/agg23.txt
+- BUILD_LICENSES/fast_float.txt
+- BUILD_LICENSES/freetype.txt
+- BUILD_LICENSES/icu.txt
+- BUILD_LICENSES/lcms.txt
+- BUILD_LICENSES/libjpeg_turbo.ijg
+- BUILD_LICENSES/libjpeg_turbo.md
+- BUILD_LICENSES/libopenjpeg.txt
+- BUILD_LICENSES/libpng.txt
+- BUILD_LICENSES/libtiff.txt
+- BUILD_LICENSES/llvm-libc.txt
+- BUILD_LICENSES/pdfium-binaries.txt
+- BUILD_LICENSES/pdfium.txt
+- BUILD_LICENSES/simdutf.txt
+- BUILD_LICENSES/zlib.txt
+
+Official sources checked during release preparation:
+
+- https://github.com/pypdfium2-team/pypdfium2
+- https://pdfium.googlesource.com/pdfium/+/main/LICENSE
+
+各文書の条件は同梱した原文を参照してください。

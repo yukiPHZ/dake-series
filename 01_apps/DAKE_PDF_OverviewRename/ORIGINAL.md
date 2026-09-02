@@ -447,7 +447,7 @@ PDFを開かず、見ながら名前を変える。
   "launcher_description": "PDFを開かず、サムネイルを見ながら名前を変更します。",
   "site_title": "DakePDF俯瞰名前変更",
   "site_description": "フォルダ内のPDFをサムネイルで俯瞰しながら、PDFごとに名前を変更できるWindows向けアプリです。",
-  "update_summary": "初回開発中",
+  "update_summary": "Phase 2正式出荷準備中。公開前の配布物・画像・第三者ライセンスを整備。",
   "folder_name": "DAKE_PDF_OverviewRename",
   "exe_name": "DakePDF_OverviewRename.exe",
   "release_url": "",
@@ -490,26 +490,27 @@ build、dist、spec、設定ファイル、個人データ、ソース一式を�
 
 ## 現在地
 
-- 正本仕様: 確定
-- Codex実装: Phase 1技術受入PASS。Issue #12の人間受入で指摘されたwheel routingとリフレッシュ初期化を修正済み（2026-09-02、再確認待ち）
-- PDFium thread-safety: サムネイルworkerと大preview workerが共有mutexを通り、document生成からPDFium resource closeまで直列実行。回帰テストでPDFium critical sectionの最大同時実行数1を確認
-- UI操作: root配下のCanvas、サムネイル、元ファイル名、名前Entryでwheelスクロール可能。大previewは除外。リフレッシュは破棄確認後にフォルダ未選択の初期状態へ戻す
-- 自動テスト: 34件成功（48カード相当の実Tk wheel／リフレッシュ統合試験を含む）
-- 合成PDF試験: blocker修正後に1件、48件、100件、300件でPDFium描画、名前変更、Undo、内容ハッシュ維持、一時ファイル残留なしを再確認
-- 実装受入: Codexによる合成データ確認済み。人間の実データ受入で名前変更機能はPASS。wheel／リフレッシュ修正後の人間再確認は未実施
-- Windows build: `build.bat` 成功、`dist/DakePDF_OverviewRename.exe` 生成・起動・基本操作・ウインドウアイコン確認済み。タスクバーアイコンの直接目視は未確認
-- 第三者ライセンス: pypdfium2 / PDFiumの現行ライセンス条件を確認済み。正式配布物へのwheel同梱ライセンス一式の収録は未実施
-- 実データ確認: 名前変更機能は人間側PASS。UI修正2点の再確認は未実施
-- README / Release / BOOTH / Store派生: 未作成
-- 正式出荷: 未実施
+- 正本仕様: 確定。Phase 2でも本ファイルを真の正本とする
+- Phase 1技術受入: PASS。名前変更、Undo、wheel routing、リフレッシュ初期化、PDFium排他制御を維持
+- Phase 1人間受入: Issue #17の開始条件として、名前変更、Undo、マウスホイール、リフレッシュを含む主要操作はPASS済み
+- Phase 2自動テスト: 2026-09-02に41件成功。名前変更、Undo、wheel、リフレッシュ、PDFium mutex、出荷派生ビュー、公開画像を含む
+- Phase 2合成PDF試験: 2026-09-02に1件、48件、100件、300件でPDFium描画、名前変更、Undo、内容ハッシュ維持、一時ファイル残留なし、worker停止を再確認
+- Windows build: Windows 11 / Python 3.12.4 / PyInstaller 6.19.0でonefileクリーンビルド成功。`dist/DakePDF_OverviewRename.exe` の起動、48件読込、ホイール移動、リフレッシュ破棄確認、exeアイコン資源、ウインドウアイコンを確認
+- 表示倍率: 100%、125%、150%を1180px / 900px幅で自動確認し、ヘッダー横並び、ツールバー、フッターの収まりは全条件PASS
+- タスクバーアイコン: 直接目視は未確認。確認済みとは扱わない
+- 公開画像: 一時作成した `C:\Users\Public\Documents\DAKE_synthetic_release_20260902_48` の無機密合成PDF 48件だけを使い、実アプリ画面から `assets/screenshot.webp` / `assets/screenshot.jpg` / `assets/booth_thumbnail.jpg` を作成。一時フォルダはキャプチャ後に削除済み
+- 第三者ライセンス: ビルド環境の pypdfium2 5.13.0 / PDFium 153.0.7999.0（origin: pdfium-binaries）のwheelに記録されたLicense-File全19件を原文のまま `third_party_licenses/pypdfium2-5.13.0/` と配布物へ収録。コピー元とのSHA-256集合一致を確認
+- 派生ビュー: `README.md`、`DAKE_META`、`release_body.md`、`booth_product.txt`、`booth_ready/` を本正本から整備。価格、GitHub Release URL、BOOTH URLは未設定
+- 状態: `status: draft`、`app_type: market`、`completion_goal: formal_release` を維持
+- 正式出荷準備: ローカル配布zipまで作成済み。公開、mainへのmerge、正式出荷は未実施
 
 ## Codex作業時の注意
 
-- 作業ブランチ: `codex/dake-pdf-overview-rename`
+- 作業ブランチ: `codex/dake-pdf-overview-rename-release-prep`
 - 対象: `01_apps/DAKE_PDF_OverviewRename/`
 - 旧ブランチ `feature/dake-pdf-overview-rename` とDraft PR #11のコードは暫定参考であり、採用済み実装ではありません。
 - 旧コードを自動でcherry-pickしません。
 - 使える発想を参照してもよいですが、本正本と現行 `00_core` を優先してCodex自身で実装します。
 - mainへmergeしません。
 - GitHub Release、BOOTH、dakeapp.com、Store、Cloudflareへ公開しません。
-- 実装・テスト・commit・pushまでを行い、結果を報告します。
+- Phase 2資材整備、回帰テスト、Windows build、commit、push、main向けDraft PR作成までを行い、結果を報告します。
