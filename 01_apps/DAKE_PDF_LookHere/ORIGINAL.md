@@ -241,6 +241,18 @@ https://peakheadz.com
 - assets/booth_thumbnail.jpg: あり
 - Store用画像: 未確定
 
+## 操作品質方針
+
+- PyMuPDFはPDFを利用する時点で読み込み、操作可能なウインドウの構築前に重いPDF初期化を行わない。
+- PDF open、ページ変更、zoom、resize後の背景描画はUI threadで実行せず、固定1 render workerへ渡す。
+- 連続する背景描画要求は最新1件を待機対象とし、開始前の古い要求を置換する。完了結果も現在のgenerationと一致する場合だけUIへ反映する。
+- 同じPDFを表示している間はrender workerがdocumentを再利用し、ページ変更・zoom・resizeごとにPDFを再openしない。
+- PDF背景のCanvas itemと生成済みPhotoImage参照を保持し、描画結果の反映では既存itemの座標と画像だけを更新する。
+- 丸・矢印のdrag previewは同じCanvas itemの座標だけを更新する。追加・戻すでは対象overlayだけを追加・削除し、PDF背景を再生成しない。
+- `marks` のページ番号とPDF座標をpreview・保存結果の正本とし、保存時にCanvas座標から状態を逆算しない。
+- 保存は捨ててよい描画要求と分離し、明示された保存jobをworkerで必ず完遂する。
+- 終了時はrender worker、保存worker、pending request、polling・resize timerを停止し、終了後へ処理を残さない。
+
 ## 今後の改善予定
 
 - Store掲載時の説明、価格、ダウンロード導線を決める。
