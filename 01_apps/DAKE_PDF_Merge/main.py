@@ -190,8 +190,8 @@ class WindowGeometry:
 def calculate_initial_window_geometry(screen_width: int, screen_height: int) -> WindowGeometry:
     screen_width = max(1, int(screen_width))
     screen_height = max(1, int(screen_height))
-    horizontal_margin = min(80, max(24, screen_width // 20))
-    vertical_margin = min(120, max(40, screen_height // 10))
+    horizontal_margin = min(80, max(0, screen_width - PREFERRED_MIN_WIDTH))
+    vertical_margin = min(120, max(0, screen_height - PREFERRED_MIN_HEIGHT))
     available_width = max(1, screen_width - horizontal_margin)
     available_height = max(1, screen_height - vertical_margin)
     width = min(PREFERRED_WINDOW_WIDTH, available_width)
