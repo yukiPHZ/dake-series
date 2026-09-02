@@ -429,6 +429,12 @@ class LatestFolderScanner:
             self._pending = (token, folder)
             self._condition.notify_all()
 
+    def cancel(self, token: int) -> None:
+        with self._condition:
+            self._token = token
+            self._pending = None
+            self._condition.notify_all()
+
     def shutdown(self) -> None:
         with self._condition:
             self._stopping = True
@@ -568,7 +574,7 @@ class OverviewRenameApp:
         self.cards_window = self.canvas.create_window((0, 0), window=self.cards_frame, anchor="nw")
         self.cards_frame.bind("<Configure>", self._update_scrollregion)
         self.canvas.bind("<Configure>", self._on_canvas_resize)
-        self.canvas.bind("<MouseWheel>", self._on_mousewheel)
+        self.root.bind("<MouseWheel>", self._route_mousewheel, add="+")
 
         self.footer = tk.Frame(shell, bg=THEME["card"], padx=24, pady=10, highlightthickness=1, highlightbackground=THEME["border"])
         self.footer.pack(fill="x", side="bottom")
@@ -653,6 +659,14 @@ class OverviewRenameApp:
             self.footer_brand.pack(side="left")
             self.footer_right.pack(side="right")
 
+    def _route_mousewheel(self, event) -> str | None:
+        try:
+            if event.widget.winfo_toplevel() is not self.root:
+                return None
+        except (AttributeError, tk.TclError):
+            return None
+        return self._on_mousewheel(event)
+
     def _on_mousewheel(self, event) -> str:
         self.canvas.yview_scroll(-1 if event.delta > 0 else 1, "units")
         self.root.after_idle(self._reprioritize_unrendered)
@@ -661,9 +675,6 @@ class OverviewRenameApp:
     def _on_scrollbar(self, *arguments) -> None:
         self.canvas.yview(*arguments)
         self.root.after_idle(self._reprioritize_unrendered)
-
-    def _bind_card_wheel(self, widget: tk.Misc) -> None:
-        widget.bind("<MouseWheel>", self._on_mousewheel)
 
     def _update_scrollregion(self, _event=None) -> None:
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
@@ -714,7 +725,21 @@ class OverviewRenameApp:
     def refresh(self) -> None:
         if self.busy or self.folder is None or not self._confirm_discard():
             return
-        self._start_load(self.folder)
+        self._reset_to_initial()
+
+    def _reset_to_initial(self) -> None:
+        self.scan_token += 1
+        self.generation += 1
+        self.scanner.cancel(self.scan_token)
+        self.render_pool.cancel(self.generation)
+        self._close_preview()
+        self.undo_record = None
+        self.folder = None
+        self._clear_cards()
+        self.canvas.yview_moveto(0.0)
+        self.path_var.set(UI_TEXT["folder_unselected"])
+        self.status_var.set(UI_TEXT["status_empty"])
+        self._sync_controls()
 
     def _start_load(self, folder: Path) -> None:
         self.scan_token += 1
@@ -784,8 +809,6 @@ class OverviewRenameApp:
         card = CardState(identifier, snapshot, snapshot.path.name, variable, frame, body, image_label, page_label, name_label, entry, suffix_label, hint_label)
         variable.trace_add("write", lambda *_args, current=card: self._on_name_changed(current))
         image_label.bind("<Button-1>", lambda _event, current=card: self.show_preview(current))
-        for widget in (frame, body, image_label, page_label, name_label, suffix_label, hint_label):
-            self._bind_card_wheel(widget)
         self.cards.append(card)
 
     def _finish_card_creation(self) -> None:
