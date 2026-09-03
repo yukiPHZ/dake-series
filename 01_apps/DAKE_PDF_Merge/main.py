@@ -4,9 +4,11 @@ import os
 import queue
 import subprocess
 import sys
+import tempfile
 import threading
 import webbrowser
 import tkinter as tk
+from dataclasses import dataclass
 from tkinter import filedialog, messagebox, ttk
 
 try:
@@ -49,6 +51,14 @@ FONT_CANDIDATES = ["BIZ UDPGothic", "Yu Gothic UI", "Meiryo"]
 THUMBNAIL_WORKER_COUNT = 3
 DRAG_AUTOSCROLL_EDGE = 64
 DRAG_AUTOSCROLL_INTERVAL_MS = 60
+PREFERRED_WINDOW_WIDTH = 1180
+PREFERRED_WINDOW_HEIGHT = 760
+PREFERRED_MIN_WIDTH = 900
+PREFERRED_MIN_HEIGHT = 620
+NARROW_LAYOUT_THRESHOLD = 1080
+TASK_IDLE = "idle"
+TASK_PROCESSING = "processing"
+TASK_SAVING = "saving"
 
 _PDF_READER = None
 _PDF_WRITER = None
@@ -90,6 +100,7 @@ UI_TEXT = {
     "detail_none": "PDFを追加してください",
     "detail_processing": "PDFを順番どおりに処理しています",
     "detail_saving": "保存ファイルを書き出しています",
+    "detail_finalizing": "保存ファイルを確定しています",
     "detail_save_done": "保存フォルダを開きます",
     "detail_cancel": "",
     "detail_error": "処理中に問題が発生しました",
@@ -99,6 +110,10 @@ UI_TEXT = {
     "msg_save_folder_error_title": "保存先エラー",
     "msg_save_folder_error": "保存先フォルダを準備できませんでした。",
     "msg_save_done": "結合して保存が完了しました",
+    "msg_atomic_save_failed": "保存ファイルを作成できませんでした。",
+    "dialog_close_title": "処理中です",
+    "dialog_close_processing": "処理を中止して閉じますか？",
+    "dialog_close_saving": "保存中です。完了までお待ちください。",
     "filetype_pdf": "PDFファイル",
     "footer_left": "シンプルそれDAKEシリーズ / 止まらない、迷わない、すぐ終わる。",
     "footer_link_1": "戸建買取査定",
@@ -160,6 +175,37 @@ MSG_NO_FILES = UI_TEXT["msg_no_files"]
 MSG_SAVE_FOLDER_ERROR_TITLE = UI_TEXT["msg_save_folder_error_title"]
 MSG_SAVE_FOLDER_ERROR = UI_TEXT["msg_save_folder_error"]
 MSG_SAVE_DONE = UI_TEXT["msg_save_done"]
+
+
+@dataclass(frozen=True)
+class WindowGeometry:
+    width: int
+    height: int
+    x: int
+    y: int
+    min_width: int
+    min_height: int
+
+
+def calculate_initial_window_geometry(screen_width: int, screen_height: int) -> WindowGeometry:
+    screen_width = max(1, int(screen_width))
+    screen_height = max(1, int(screen_height))
+    horizontal_margin = min(80, max(0, screen_width - PREFERRED_MIN_WIDTH))
+    vertical_margin = min(120, max(0, screen_height - PREFERRED_MIN_HEIGHT))
+    available_width = max(1, screen_width - horizontal_margin)
+    available_height = max(1, screen_height - vertical_margin)
+    width = min(PREFERRED_WINDOW_WIDTH, available_width)
+    height = min(PREFERRED_WINDOW_HEIGHT, available_height)
+    x = max(0, (screen_width - width) // 2)
+    y = max(0, (screen_height - height) // 2)
+    return WindowGeometry(
+        width=width,
+        height=height,
+        x=x,
+        y=y,
+        min_width=min(PREFERRED_MIN_WIDTH, width),
+        min_height=min(PREFERRED_MIN_HEIGHT, height),
+    )
 
 
 def app_dir() -> str:
@@ -287,6 +333,10 @@ class CliError(Exception):
     pass
 
 
+class AtomicSaveError(Exception):
+    pass
+
+
 def write_cli_error(message: str) -> None:
     try:
         sys.stderr.write(f"{message}\n")
@@ -356,6 +406,59 @@ def unique_output_path(path: str, protected_paths: list[str]) -> str:
     return output
 
 
+def _commit_temp_file(temp_path: str, final_path: str) -> None:
+    if os.name == "nt":
+        os.rename(temp_path, final_path)
+        return
+    os.link(temp_path, final_path)
+    os.remove(temp_path)
+
+
+def write_pdf_atomically(
+    writer,
+    final_path: str,
+    protected_paths: list[str],
+    *,
+    commit_func=None,
+    before_commit=None,
+) -> str:
+    final_path = os.path.abspath(final_path)
+    folder = os.path.dirname(final_path) or os.getcwd()
+    os.makedirs(folder, exist_ok=True)
+    protected = [os.path.abspath(path) for path in protected_paths]
+    candidate = unique_output_path(final_path, protected)
+    temp_path: str | None = None
+    commit = commit_func or _commit_temp_file
+
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w+b",
+            dir=folder,
+            prefix=".dake_pdf_merge_",
+            suffix=".tmp",
+            delete=False,
+        ) as stream:
+            temp_path = stream.name
+            writer.write(stream)
+            stream.flush()
+            os.fsync(stream.fileno())
+
+        if before_commit is not None:
+            before_commit()
+        candidate = unique_output_path(final_path, protected)
+        commit(temp_path, candidate)
+        temp_path = None
+        return candidate
+    except Exception as exc:
+        if temp_path:
+            try:
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+            except Exception:
+                pass
+        raise AtomicSaveError(UI_TEXT["msg_atomic_save_failed"]) from exc
+
+
 def make_cli_output_path(inputs: list[str], output_arg: str | None) -> str:
     from datetime import datetime
 
@@ -376,7 +479,7 @@ def make_cli_output_path(inputs: list[str], output_arg: str | None) -> str:
     return unique_output_path(os.path.join(folder, filename), inputs)
 
 
-def merge_pdfs_for_cli(inputs: list[str], output: str) -> None:
+def merge_pdfs_for_cli(inputs: list[str], output: str) -> str:
     try:
         PdfReader, PdfWriter = get_pdf_reader_writer()
         writer = PdfWriter()
@@ -385,16 +488,10 @@ def merge_pdfs_for_cli(inputs: list[str], output: str) -> None:
             for page in reader.pages:
                 writer.add_page(page)
 
-        with open(output, "wb") as f:
-            writer.write(f)
+        return write_pdf_atomically(writer, output, inputs)
     except CliError:
         raise
     except Exception as e:
-        try:
-            if os.path.exists(output):
-                os.remove(output)
-        except Exception:
-            pass
         raise CliError(UI_TEXT["cli_error_merge_failed"]) from e
 
 
@@ -690,8 +787,15 @@ class DAKEPDFMergeApp:
     def __init__(self, root: tk.Tk):
         self.root = root
         self.root.title(WINDOW_TITLE)
-        self.root.geometry("1480x900")
-        self.root.minsize(1180, 760)
+        self.initial_geometry = calculate_initial_window_geometry(
+            self.root.winfo_screenwidth(),
+            self.root.winfo_screenheight(),
+        )
+        self.root.geometry(
+            f"{self.initial_geometry.width}x{self.initial_geometry.height}"
+            f"+{self.initial_geometry.x}+{self.initial_geometry.y}"
+        )
+        self.root.minsize(self.initial_geometry.min_width, self.initial_geometry.min_height)
         self.root.configure(bg=BG)
 
         self.cfg = load_config()
@@ -706,12 +810,18 @@ class DAKEPDFMergeApp:
         self._thumbnail_workers_started = False
         self.ui_queue: queue.Queue = queue.Queue()
         self.worker_running = False
+        self.task_state = TASK_IDLE
         self.cancel_requested = False
+        self.close_requested = False
+        self.merge_thread: threading.Thread | None = None
         self._status_anim_job = None
         self._status_anim_base = STATUS_PROCESSING
         self._status_anim_dots = 0
         self._status_anim_active = False
         self._complete_reset_job = None
+        self._thumbnail_poll_job = None
+        self._ui_poll_job = None
+        self._destroying = False
         self.card_ui_loading = False
         self.pending_card_paths: set[str] = set()
         self._card_ui_finish_scheduled = False
@@ -750,10 +860,21 @@ class DAKEPDFMergeApp:
         self.drag_pointer_xy = None
         self.drag_autoscroll_direction = 0
         self._drag_autoscroll_job = None
+        self.layout_mode: str | None = None
+        self.layout_switch_count = 0
+        self.top_card = None
+        self.footer = None
+        self.footer_left = None
+        self.footer_right = None
 
         self.build_ui()
-        self.root.after(120, self.process_thumbnail_queue)
-        self.root.after(60, self.process_ui_queue)
+        self.root.protocol("WM_DELETE_WINDOW", self.on_close)
+        self.root.bind("<Configure>", self.on_root_configure, add="+")
+        self.apply_layout_mode(
+            "narrow" if self.initial_geometry.width < NARROW_LAYOUT_THRESHOLD else "wide"
+        )
+        self._thumbnail_poll_job = self.root.after(120, self.process_thumbnail_queue)
+        self._ui_poll_job = self.root.after(60, self.process_ui_queue)
 
     def build_ui(self):
         shell = tk.Frame(self.root, bg=BG)
@@ -781,54 +902,59 @@ class DAKEPDFMergeApp:
             fg=SUBTEXT,
         ).pack(side="left", padx=(12, 0), pady=(6, 0))
 
-        top_card = tk.Frame(main, bg="#FFFFFF", highlightthickness=1, highlightbackground=BORDER)
-        top_card.pack(fill="x", pady=(0, 12))
+        self.top_card = tk.Frame(
+            main,
+            bg="#FFFFFF",
+            highlightthickness=1,
+            highlightbackground=BORDER,
+        )
+        self.top_card.pack(fill="x", pady=(0, 12))
 
-        row1 = tk.Frame(top_card, bg="#FFFFFF")
-        row1.pack(fill="x", padx=14, pady=(12, 8))
+        self.add_button = ModernButton(
+            self.top_card,
+            BUTTON_ADD,
+            self.add_files,
+            primary=True,
+            width=10,
+        )
 
-        self.add_button = ModernButton(row1, BUTTON_ADD, self.add_files, primary=True, width=10)
-        self.add_button.pack(side="left")
+        self.folder_button = ModernButton(
+            self.top_card,
+            BUTTON_FOLDER,
+            self.choose_folder,
+            width=12,
+        )
 
-        self.folder_button = ModernButton(row1, BUTTON_FOLDER, self.choose_folder, width=12)
-        self.folder_button.pack(side="left", padx=8)
-
-        self.refresh_button = ModernButton(row1, BUTTON_REFRESH, self.reset_merge, width=10)
-        self.refresh_button.pack(side="left", padx=8)
+        self.refresh_button = ModernButton(
+            self.top_card,
+            BUTTON_REFRESH,
+            self.reset_merge,
+            width=10,
+        )
 
         self.count_label = tk.Label(
-            row1,
+            self.top_card,
             text="",
             font=(FONT_NAME, 9, "bold"),
             bg="#FFFFFF",
             fg=TEXT,
         )
-        self.count_label.pack(side="left", padx=(16, 0))
-
         self.action_buttons.extend([self.add_button, self.folder_button, self.refresh_button])
 
-        right_info = tk.Frame(row1, bg="#FFFFFF")
-        right_info.pack(side="right")
-
         self.folder_short_label = tk.Label(
-            right_info,
+            self.top_card,
             text=f"{LABEL_SAVE_FOLDER}: {shorten_path(self.save_folder)}",
             font=(FONT_NAME, 9),
             bg="#FFFFFF",
             fg=SUBTEXT,
         )
-        self.folder_short_label.pack(side="right")
-
-        row2 = tk.Frame(top_card, bg="#FFFFFF")
-        row2.pack(fill="x", padx=14, pady=(0, 12))
-
-        tk.Label(
-            row2,
+        self.drag_hint_label = tk.Label(
+            self.top_card,
             text=ROW2_GUIDE,
             font=(FONT_NAME, 9),
             bg="#FFFFFF",
             fg=SUBTEXT,
-        ).pack(anchor="w")
+        )
 
         body = tk.Frame(main, bg=BG)
         body.pack(fill="both", expand=True)
@@ -894,17 +1020,14 @@ class DAKEPDFMergeApp:
         launcher_link.pack(side="right")
         bind_footer_link(launcher_link, LAUNCHER_LP_URL)
 
-        footer = tk.Frame(shell, bg=BG)
-        footer.pack(fill="x", padx=24, pady=(0, 10))
+        self.footer = tk.Frame(shell, bg=BG)
+        self.footer.pack(fill="x", padx=24, pady=(0, 10))
 
-        footer_left = tk.Frame(footer, bg=BG)
-        footer_left.pack(side="left")
-
-        footer_right = tk.Frame(footer, bg=BG)
-        footer_right.pack(side="right")
+        self.footer_left = tk.Frame(self.footer, bg=BG)
+        self.footer_right = tk.Frame(self.footer, bg=BG)
 
         tk.Label(
-            footer_left,
+            self.footer_left,
             text=UI_TEXT["footer_left"],
             font=(FONT_NAME, 9),
             bg=BG,
@@ -912,7 +1035,7 @@ class DAKEPDFMergeApp:
         ).pack(side="left")
 
         footer_assessment = tk.Label(
-            footer_right,
+            self.footer_right,
             text=UI_TEXT["footer_link_1"],
             font=(FONT_NAME, 9),
             bg=BG,
@@ -925,7 +1048,7 @@ class DAKEPDFMergeApp:
         )
 
         tk.Label(
-            footer_right,
+            self.footer_right,
             text=UI_TEXT["footer_separator"],
             font=(FONT_NAME, 9),
             bg=BG,
@@ -933,7 +1056,7 @@ class DAKEPDFMergeApp:
         ).pack(side="left")
 
         footer_instagram = tk.Label(
-            footer_right,
+            self.footer_right,
             text=UI_TEXT["footer_link_2"],
             font=(FONT_NAME, 9),
             bg=BG,
@@ -946,7 +1069,7 @@ class DAKEPDFMergeApp:
         )
 
         tk.Label(
-            footer_right,
+            self.footer_right,
             text=f"{UI_TEXT['footer_separator']}{UI_TEXT['footer_copyright']}",
             font=(FONT_NAME, 9),
             bg=BG,
@@ -961,6 +1084,89 @@ class DAKEPDFMergeApp:
 
         self.refresh_merge_cards()
         self.set_processing_state(False)
+
+    def on_root_configure(self, event):
+        if event.widget is not self.root:
+            return
+        mode = "narrow" if event.width < NARROW_LAYOUT_THRESHOLD else "wide"
+        self.apply_layout_mode(mode)
+
+    def apply_layout_mode(self, mode: str):
+        if mode not in {"wide", "narrow"} or mode == self.layout_mode:
+            return
+        self.layout_mode = mode
+        self.layout_switch_count += 1
+        self._layout_top_card(mode)
+        self._layout_footer(mode)
+        if self.folder_short_label is not None:
+            self.refresh_status()
+
+    def _layout_top_card(self, mode: str):
+        widgets = (
+            self.add_button,
+            self.folder_button,
+            self.refresh_button,
+            self.count_label,
+            self.folder_short_label,
+            self.drag_hint_label,
+        )
+        for widget in widgets:
+            widget.grid_forget()
+        for column in range(5):
+            self.top_card.grid_columnconfigure(column, weight=0)
+        self.top_card.grid_columnconfigure(4, weight=1)
+
+        self.add_button.grid(row=0, column=0, padx=(14, 0), pady=(12, 8), sticky="w")
+        self.folder_button.grid(row=0, column=1, padx=8, pady=(12, 8), sticky="w")
+        self.refresh_button.grid(row=0, column=2, padx=(0, 8), pady=(12, 8), sticky="w")
+        self.count_label.grid(row=0, column=3, padx=(8, 0), pady=(12, 8), sticky="w")
+
+        if mode == "wide":
+            self.folder_short_label.grid(
+                row=0,
+                column=4,
+                padx=(16, 14),
+                pady=(12, 8),
+                sticky="e",
+            )
+            self.drag_hint_label.grid(
+                row=1,
+                column=0,
+                columnspan=5,
+                padx=14,
+                pady=(0, 12),
+                sticky="w",
+            )
+        else:
+            self.folder_short_label.grid(
+                row=1,
+                column=0,
+                columnspan=5,
+                padx=14,
+                pady=(0, 6),
+                sticky="w",
+            )
+            self.drag_hint_label.grid(
+                row=2,
+                column=0,
+                columnspan=5,
+                padx=14,
+                pady=(0, 12),
+                sticky="w",
+            )
+
+    def _layout_footer(self, mode: str):
+        self.footer_left.grid_forget()
+        self.footer_right.grid_forget()
+        self.footer.grid_columnconfigure(0, weight=1)
+        self.footer.grid_columnconfigure(1, weight=0)
+        if mode == "wide":
+            self.footer_left.grid(row=0, column=0, sticky="w")
+            self.footer_right.grid(row=0, column=1, sticky="e")
+        else:
+            self.footer.grid_columnconfigure(1, weight=0)
+            self.footer_left.grid(row=0, column=0, columnspan=2, pady=(0, 4))
+            self.footer_right.grid(row=1, column=0, columnspan=2)
 
     def bind_mousewheel(self, widget):
         def _on_mousewheel(event):
@@ -1150,15 +1356,22 @@ class DAKEPDFMergeApp:
                 pass
             self._status_anim_job = None
 
-    def set_processing_state(self, processing: bool):
-        if processing:
+    def set_task_state(self, state: str):
+        if state not in {TASK_IDLE, TASK_PROCESSING, TASK_SAVING}:
+            raise ValueError(f"Unknown task state: {state}")
+        self.task_state = state
+        self.worker_running = state != TASK_IDLE
+        if self.worker_running:
             self.cancel_complete_reset()
         for button in self.action_buttons:
-            button.set_enabled(not processing)
-        self.cancel_button.set_enabled(processing)
-        if not processing:
+            button.set_enabled(state == TASK_IDLE)
+        self.cancel_button.set_enabled(state == TASK_PROCESSING)
+        if state == TASK_IDLE:
             self.stop_status_animation()
             self.progress_label.configure(fg=ACCENT)
+
+    def set_processing_state(self, processing: bool):
+        self.set_task_state(TASK_PROCESSING if processing else TASK_IDLE)
 
     def choose_folder(self):
         if self.worker_running:
@@ -1506,6 +1719,9 @@ class DAKEPDFMergeApp:
             card.set_thumbnail(tk.PhotoImage(data=payload))
 
     def process_thumbnail_queue(self):
+        self._thumbnail_poll_job = None
+        if self._destroying:
+            return
         try:
             while True:
                 path, payload, page_count = self.thumbnail_queue.get_nowait()
@@ -1532,12 +1748,15 @@ class DAKEPDFMergeApp:
             self._card_ui_finish_scheduled = True
             self.root.after_idle(self.finish_card_ui_loading)
 
-        self.root.after(120, self.process_thumbnail_queue)
+        self._thumbnail_poll_job = self.root.after(120, self.process_thumbnail_queue)
 
     def enqueue_ui_call(self, callback, *args, **kwargs):
         self.ui_queue.put((callback, args, kwargs))
 
     def process_ui_queue(self):
+        self._ui_poll_job = None
+        if self._destroying:
+            return
         try:
             while True:
                 callback, args, kwargs = self.ui_queue.get_nowait()
@@ -1545,7 +1764,7 @@ class DAKEPDFMergeApp:
         except queue.Empty:
             pass
 
-        self.root.after(60, self.process_ui_queue)
+        self._ui_poll_job = self.root.after(60, self.process_ui_queue)
 
     def refresh_status(self):
         count = len(self.files)
@@ -1553,7 +1772,10 @@ class DAKEPDFMergeApp:
             self.set_top_status(UI_TEXT["count_added"].format(count=count))
         else:
             self.set_top_status("")
-        self.folder_short_label.configure(text=f"{LABEL_SAVE_FOLDER}: {shorten_path(self.save_folder)}")
+        max_path_len = 42 if self.layout_mode == "narrow" else 56
+        self.folder_short_label.configure(
+            text=f"{LABEL_SAVE_FOLDER}: {shorten_path(self.save_folder, max_path_len)}"
+        )
 
     def refresh_merge_cards(self):
         active_paths = set(self.files)
@@ -1648,30 +1870,22 @@ class DAKEPDFMergeApp:
         save_config(self.cfg)
 
         base_name = self.make_output_name()
-        output = os.path.join(folder, base_name)
-        if os.path.exists(output):
-            stem, ext = os.path.splitext(base_name)
-            n = 1
-            while True:
-                candidate = os.path.join(folder, f"{stem}_{n:02d}{ext}")
-                if not os.path.exists(candidate):
-                    output = candidate
-                    break
-                n += 1
+        output = unique_output_path(os.path.join(folder, base_name), self.files)
 
         self.cancel_requested = False
-        self.worker_running = True
-        self.set_processing_state(True)
+        self.close_requested = False
+        self.set_task_state(TASK_PROCESSING)
         self.progress["value"] = 0
         self.set_bottom_status(STATUS_PROCESSING, DETAIL_PROCESSING, color=ACCENT)
         self.start_status_animation(STATUS_PROCESSING)
         files_snapshot = list(self.files)
         page_counts = [self.page_count_cache.get(path) for path in files_snapshot]
-        threading.Thread(
+        self.merge_thread = threading.Thread(
             target=self._merge_worker,
             args=(output, files_snapshot, page_counts),
-            daemon=True,
-        ).start()
+            daemon=False,
+        )
+        self.merge_thread.start()
 
     def _merge_worker(self, output: str, files: list[str], page_counts: list[int | None]):
         try:
@@ -1718,18 +1932,21 @@ class DAKEPDFMergeApp:
                 self.enqueue_ui_call(self.finish_cancel)
                 return
 
-            self.enqueue_ui_call(
-                self.set_bottom_status,
-                STATUS_SAVING,
-                DETAIL_SAVING,
-                color=ACCENT,
+            saving_ready = threading.Event()
+            saving_decision = {"allowed": False}
+            self.enqueue_ui_call(self.begin_saving, saving_ready, saving_decision)
+            saving_ready.wait()
+            if not saving_decision["allowed"]:
+                self.enqueue_ui_call(self.finish_cancel)
+                return
+            final_output = write_pdf_atomically(
+                writer,
+                output,
+                files,
+                before_commit=lambda: self.enqueue_ui_call(self.show_finalizing),
             )
-            self.enqueue_ui_call(self.start_status_animation, STATUS_SAVING)
 
-            with open(output, "wb") as f:
-                writer.write(f)
-
-            self.enqueue_ui_call(self.finish_success, output)
+            self.enqueue_ui_call(self.finish_success, final_output)
         except Exception as e:
             self.enqueue_ui_call(self.finish_error, e)
 
@@ -1737,21 +1954,41 @@ class DAKEPDFMergeApp:
         self.progress["value"] = value
 
     def cancel_task(self):
-        if self.worker_running:
+        if self.task_state == TASK_PROCESSING:
             self.cancel_requested = True
             self.set_bottom_status(STATUS_CANCELING, DETAIL_CANCEL, color=ACCENT)
             self.start_status_animation(STATUS_CANCELING)
 
+    def begin_saving(self, ready_event=None, decision=None):
+        try:
+            if self.cancel_requested or self.close_requested:
+                return
+            self.set_task_state(TASK_SAVING)
+            self.set_bottom_status(STATUS_SAVING, DETAIL_SAVING, color=ACCENT)
+            self.start_status_animation(STATUS_SAVING)
+            if decision is not None:
+                decision["allowed"] = True
+        finally:
+            if ready_event is not None:
+                ready_event.set()
+
+    def show_finalizing(self):
+        if self.task_state != TASK_SAVING:
+            return
+        self.stop_status_animation()
+        self.set_bottom_status(UI_TEXT["detail_finalizing"], "", color=ACCENT)
+
     def finish_cancel(self):
-        self.worker_running = False
-        self.set_processing_state(False)
+        self.set_task_state(TASK_IDLE)
         self.progress["value"] = 0
+        if self.close_requested:
+            self._close_when_merge_worker_stops()
+            return
         self.set_bottom_status(STATUS_CANCELED, DETAIL_CANCEL, color=ACCENT)
         self.schedule_complete_reset()
 
     def finish_success(self, output: str):
-        self.worker_running = False
-        self.set_processing_state(False)
+        self.set_task_state(TASK_IDLE)
         self.progress["value"] = 100
         self.set_bottom_status(STATUS_SAVE_DONE, DETAIL_SAVE_DONE, color=SUCCESS)
         self.root.lift()
@@ -1761,29 +1998,79 @@ class DAKEPDFMergeApp:
         self.schedule_complete_reset()
 
     def finish_error(self, error: Exception):
-        self.worker_running = False
-        self.set_processing_state(False)
+        self.set_task_state(TASK_IDLE)
         self.progress["value"] = 0
         self.refresh_status()
         self.set_bottom_status(STATUS_ERROR, DETAIL_ERROR, color=ERROR)
-        messagebox.showerror(
-            STATUS_ERROR,
-            f"{DETAIL_ERROR}\n{error}",
-            parent=self.root,
-        )
+        if self.close_requested:
+            self._close_when_merge_worker_stops()
+            return
+        if isinstance(error, AtomicSaveError):
+            message = UI_TEXT["msg_atomic_save_failed"]
+        else:
+            message = f"{DETAIL_ERROR}\n{error}"
+        messagebox.showerror(STATUS_ERROR, message, parent=self.root)
 
     def handle_file_error(self, path: str, error: Exception):
-        self.worker_running = False
-        self.set_processing_state(False)
+        self.set_task_state(TASK_IDLE)
         self.progress["value"] = 0
         self.refresh_status()
         self.set_bottom_status(STATUS_ERROR, DETAIL_FILE_ERROR, color=ERROR)
+
+        if self.close_requested:
+            self._close_when_merge_worker_stops()
+            return
 
         messagebox.showerror(
             STATUS_ERROR,
             f"{DETAIL_FILE_ERROR}\n\n{path}\n\n{error}",
             parent=self.root,
         )
+
+    def on_close(self):
+        if self.task_state == TASK_SAVING:
+            messagebox.showinfo(
+                UI_TEXT["dialog_close_title"],
+                UI_TEXT["dialog_close_saving"],
+                parent=self.root,
+            )
+            return
+        if self.task_state == TASK_PROCESSING:
+            should_close = messagebox.askyesno(
+                UI_TEXT["dialog_close_title"],
+                UI_TEXT["dialog_close_processing"],
+                parent=self.root,
+            )
+            if not should_close:
+                return
+            self.close_requested = True
+            self.cancel_requested = True
+            self.cancel_button.set_enabled(False)
+            self.set_bottom_status(STATUS_CANCELING, DETAIL_CANCEL, color=ACCENT)
+            self.start_status_animation(STATUS_CANCELING)
+            return
+        self._destroy_root()
+
+    def _close_when_merge_worker_stops(self):
+        if self.merge_thread is not None and self.merge_thread.is_alive():
+            self.root.after(20, self._close_when_merge_worker_stops)
+            return
+        self._destroy_root()
+
+    def _destroy_root(self):
+        self._destroying = True
+        self.stop_drag_autoscroll()
+        self.stop_status_animation()
+        self.cancel_complete_reset()
+        for job_name in ("_thumbnail_poll_job", "_ui_poll_job"):
+            job = getattr(self, job_name)
+            if job is not None:
+                try:
+                    self.root.after_cancel(job)
+                except Exception:
+                    pass
+                setattr(self, job_name, None)
+        self.root.destroy()
 
 
 def main():
