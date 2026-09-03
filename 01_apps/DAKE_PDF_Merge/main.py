@@ -445,7 +445,7 @@ def write_pdf_atomically(
 
         if before_commit is not None:
             before_commit()
-        candidate = unique_output_path(candidate, protected)
+        candidate = unique_output_path(final_path, protected)
         commit(temp_path, candidate)
         temp_path = None
         return candidate
@@ -819,6 +819,9 @@ class DAKEPDFMergeApp:
         self._status_anim_dots = 0
         self._status_anim_active = False
         self._complete_reset_job = None
+        self._thumbnail_poll_job = None
+        self._ui_poll_job = None
+        self._destroying = False
         self.card_ui_loading = False
         self.pending_card_paths: set[str] = set()
         self._card_ui_finish_scheduled = False
@@ -870,8 +873,8 @@ class DAKEPDFMergeApp:
         self.apply_layout_mode(
             "narrow" if self.initial_geometry.width < NARROW_LAYOUT_THRESHOLD else "wide"
         )
-        self.root.after(120, self.process_thumbnail_queue)
-        self.root.after(60, self.process_ui_queue)
+        self._thumbnail_poll_job = self.root.after(120, self.process_thumbnail_queue)
+        self._ui_poll_job = self.root.after(60, self.process_ui_queue)
 
     def build_ui(self):
         shell = tk.Frame(self.root, bg=BG)
@@ -1716,6 +1719,9 @@ class DAKEPDFMergeApp:
             card.set_thumbnail(tk.PhotoImage(data=payload))
 
     def process_thumbnail_queue(self):
+        self._thumbnail_poll_job = None
+        if self._destroying:
+            return
         try:
             while True:
                 path, payload, page_count = self.thumbnail_queue.get_nowait()
@@ -1742,12 +1748,15 @@ class DAKEPDFMergeApp:
             self._card_ui_finish_scheduled = True
             self.root.after_idle(self.finish_card_ui_loading)
 
-        self.root.after(120, self.process_thumbnail_queue)
+        self._thumbnail_poll_job = self.root.after(120, self.process_thumbnail_queue)
 
     def enqueue_ui_call(self, callback, *args, **kwargs):
         self.ui_queue.put((callback, args, kwargs))
 
     def process_ui_queue(self):
+        self._ui_poll_job = None
+        if self._destroying:
+            return
         try:
             while True:
                 callback, args, kwargs = self.ui_queue.get_nowait()
@@ -1755,7 +1764,7 @@ class DAKEPDFMergeApp:
         except queue.Empty:
             pass
 
-        self.root.after(60, self.process_ui_queue)
+        self._ui_poll_job = self.root.after(60, self.process_ui_queue)
 
     def refresh_status(self):
         count = len(self.files)
@@ -1923,8 +1932,13 @@ class DAKEPDFMergeApp:
                 self.enqueue_ui_call(self.finish_cancel)
                 return
 
-            self.task_state = TASK_SAVING
-            self.enqueue_ui_call(self.begin_saving)
+            saving_ready = threading.Event()
+            saving_decision = {"allowed": False}
+            self.enqueue_ui_call(self.begin_saving, saving_ready, saving_decision)
+            saving_ready.wait()
+            if not saving_decision["allowed"]:
+                self.enqueue_ui_call(self.finish_cancel)
+                return
             final_output = write_pdf_atomically(
                 writer,
                 output,
@@ -1945,10 +1959,18 @@ class DAKEPDFMergeApp:
             self.set_bottom_status(STATUS_CANCELING, DETAIL_CANCEL, color=ACCENT)
             self.start_status_animation(STATUS_CANCELING)
 
-    def begin_saving(self):
-        self.set_task_state(TASK_SAVING)
-        self.set_bottom_status(STATUS_SAVING, DETAIL_SAVING, color=ACCENT)
-        self.start_status_animation(STATUS_SAVING)
+    def begin_saving(self, ready_event=None, decision=None):
+        try:
+            if self.cancel_requested or self.close_requested:
+                return
+            self.set_task_state(TASK_SAVING)
+            self.set_bottom_status(STATUS_SAVING, DETAIL_SAVING, color=ACCENT)
+            self.start_status_animation(STATUS_SAVING)
+            if decision is not None:
+                decision["allowed"] = True
+        finally:
+            if ready_event is not None:
+                ready_event.set()
 
     def show_finalizing(self):
         if self.task_state != TASK_SAVING:
@@ -2036,9 +2058,18 @@ class DAKEPDFMergeApp:
         self._destroy_root()
 
     def _destroy_root(self):
+        self._destroying = True
         self.stop_drag_autoscroll()
         self.stop_status_animation()
         self.cancel_complete_reset()
+        for job_name in ("_thumbnail_poll_job", "_ui_poll_job"):
+            job = getattr(self, job_name)
+            if job is not None:
+                try:
+                    self.root.after_cancel(job)
+                except Exception:
+                    pass
+                setattr(self, job_name, None)
         self.root.destroy()
 
 
