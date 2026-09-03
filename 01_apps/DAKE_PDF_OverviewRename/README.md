@@ -11,6 +11,7 @@ PDFを開いて、閉じて、名前を変える。その往復をなくしま�
 - 変更分だけを衝突させずに一括反映
 - 直前に成功した一括変更を1回だけUndo
 - 小・標準・大の表示切替と、一覧上のマウスホイールスクロール
+- 同じフォルダを選び直さず、外部で追加・削除・改名されたPDFを反映する再読み込み
 
 PDF本文の編集、OCR、AI自動命名、サブフォルダの再帰処理は行いません。
 
@@ -22,6 +23,8 @@ PDF本文の編集、OCR、AI自動命名、サブフォルダの再帰処理は
 4. 必要な場合は `変更を元に戻す` で直前の一括変更を戻します。
 
 `リフレッシュ` は現在のフォルダ選択、カード、Undo履歴、大プレビューを破棄し、起動直後の未選択状態へ戻します。未反映の入力がある場合は先に確認します。
+
+`再読み込み` は現在選択中の同じフォルダを再スキャンします。未反映の入力がある場合は先に確認し、承認した場合だけカード、入力、Undo履歴、大プレビューを破棄して一覧を作り直します。表示サイズと選択フォルダは維持します。
 
 ## 安全仕様
 
@@ -56,7 +59,7 @@ Windows配布版で使う pypdfium2 5.13.0 / PDFium 153.0.7999.0（pdfium-binari
 
 ## 正式版情報
 
-初回正式版はバージョン1.0.0、販売価格500円です。[GitHub Release](https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.0)から正式配布zipをダウンロードできます。[BOOTH](https://peakheadz.booth.pm/items/8798555)でも販売しています。dakeapp.com、Storeの正式出荷ラインにも掲載します。
+開発中の次期パッチ版はバージョン1.0.1です。現行公開版はバージョン1.0.0、販売価格500円です。[GitHub Release](https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.0)から正式配布zipをダウンロードできます。[BOOTH](https://peakheadz.booth.pm/items/8798555)でも販売しています。本PRでは公開先を更新しません。
 
 ## DAKE_META
 
@@ -68,7 +71,7 @@ Windows配布版で使う pypdfium2 5.13.0 / PDFium 153.0.7999.0（pdfium-binari
   "launcher_description": "PDFを開かず、サムネイルを見ながら名前を変更します。",
   "site_title": "DakePDF俯瞰名前変更",
   "site_description": "フォルダ内のPDFをサムネイルで俯瞰しながら、PDFごとに名前を変更できるWindows向けアプリです。",
-  "update_summary": "初回正式版。PDFの俯瞰表示、安全な一括名前変更、Undoに対応。",
+  "update_summary": "v1.0.1。同一フォルダを再スキャンする再読み込み機能を追加。",
   "folder_name": "DAKE_PDF_OverviewRename",
   "exe_name": "DakePDF_OverviewRename.exe",
   "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.0",
@@ -87,3 +90,4 @@ Windows配布版で使う pypdfium2 5.13.0 / PDFium 153.0.7999.0（pdfium-binari
 - PDFごとに入力した名前を変更分だけ安全に一括反映
 - 衝突事前検証、ロールバック、直前の一括変更のUndoに対応
 - 固定workerとPDFium排他制御で一覧操作の応答性を維持
+- 同一フォルダを再スキャンし、外部で追加・削除・改名されたPDFを反映

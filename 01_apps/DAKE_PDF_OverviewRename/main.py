@@ -36,6 +36,7 @@ UI_TEXT = {
     "main_description": "フォルダ内のPDFをサムネイルで一覧表示し、その場で名前を変更します。",
     "select_folder": "フォルダを選ぶ",
     "refresh": "リフレッシュ",
+    "reload": "再読み込み",
     "folder_unselected": "フォルダ未選択",
     "view_size": "表示サイズ",
     "size_small": "小",
@@ -542,11 +543,13 @@ class OverviewRenameApp:
         self.select_button = self._button(self.toolbar, UI_TEXT["select_folder"], self.choose_folder)
         self.select_button.grid(row=0, column=0, padx=(0, 8))
         self.refresh_button = self._button(self.toolbar, UI_TEXT["refresh"], self.refresh)
-        self.refresh_button.grid(row=0, column=1, padx=(0, 12))
+        self.refresh_button.grid(row=0, column=1, padx=(0, 8))
+        self.reload_button = self._button(self.toolbar, UI_TEXT["reload"], self.reload)
+        self.reload_button.grid(row=0, column=2, padx=(0, 12))
         self.path_label = tk.Label(self.toolbar, textvariable=self.path_var, bg=THEME["card"], fg=THEME["muted"], font=(self.font, 9), anchor="w")
-        self.path_label.grid(row=0, column=2, sticky="ew")
+        self.path_label.grid(row=0, column=3, sticky="ew")
         self.size_controls = tk.Frame(self.toolbar, bg=THEME["card"])
-        self.size_controls.grid(row=0, column=3, padx=12)
+        self.size_controls.grid(row=0, column=4, padx=12)
         tk.Label(self.size_controls, text=UI_TEXT["view_size"], bg=THEME["card"], fg=THEME["muted"], font=(self.font, 9)).pack(side="left", padx=(0, 4))
         for value, key in (("small", "size_small"), ("normal", "size_normal"), ("large", "size_large")):
             tk.Radiobutton(
@@ -555,10 +558,10 @@ class OverviewRenameApp:
                 font=(self.font, 9), indicatoron=False, padx=7, pady=4, relief="flat",
             ).pack(side="left")
         self.undo_button = self._button(self.toolbar, UI_TEXT["undo"], self.undo, secondary=True)
-        self.undo_button.grid(row=0, column=4, padx=(0, 8))
+        self.undo_button.grid(row=0, column=5, padx=(0, 8))
         self.apply_button = self._button(self.toolbar, UI_TEXT["apply"].format(count=0), self.apply, primary=True)
-        self.apply_button.grid(row=0, column=5)
-        self.toolbar.grid_columnconfigure(2, weight=1)
+        self.apply_button.grid(row=0, column=6)
+        self.toolbar.grid_columnconfigure(3, weight=1)
 
         status = tk.Label(shell, textvariable=self.status_var, bg=THEME["background"], fg=THEME["muted"], font=(self.font, 9), anchor="w")
         status.pack(fill="x", padx=26, pady=(9, 7))
@@ -616,6 +619,7 @@ class OverviewRenameApp:
         fixed = (
             self.select_button.winfo_reqwidth()
             + self.refresh_button.winfo_reqwidth()
+            + self.reload_button.winfo_reqwidth()
             + self.size_controls.winfo_reqwidth()
             + self.undo_button.winfo_reqwidth()
             + self.apply_button.winfo_reqwidth()
@@ -625,22 +629,24 @@ class OverviewRenameApp:
         if stacked == self._toolbar_stacked:
             return
         self._toolbar_stacked = stacked
-        for widget in (self.select_button, self.refresh_button, self.path_label, self.size_controls, self.undo_button, self.apply_button):
+        for widget in (self.select_button, self.refresh_button, self.reload_button, self.path_label, self.size_controls, self.undo_button, self.apply_button):
             widget.grid_forget()
         if stacked:
             self.select_button.grid(row=0, column=0, padx=(0, 8), pady=(0, 8))
-            self.refresh_button.grid(row=0, column=1, padx=(0, 12), pady=(0, 8))
-            self.path_label.grid(row=0, column=2, columnspan=3, sticky="ew", pady=(0, 8))
-            self.size_controls.grid(row=1, column=0, columnspan=3, sticky="w")
-            self.undo_button.grid(row=1, column=3, padx=(8, 8))
-            self.apply_button.grid(row=1, column=4)
+            self.refresh_button.grid(row=0, column=1, padx=(0, 8), pady=(0, 8))
+            self.reload_button.grid(row=0, column=2, padx=(0, 12), pady=(0, 8))
+            self.path_label.grid(row=0, column=3, columnspan=3, sticky="ew", pady=(0, 8))
+            self.size_controls.grid(row=1, column=0, columnspan=4, sticky="w")
+            self.undo_button.grid(row=1, column=4, padx=(8, 8))
+            self.apply_button.grid(row=1, column=5)
         else:
             self.select_button.grid(row=0, column=0, padx=(0, 8))
-            self.refresh_button.grid(row=0, column=1, padx=(0, 12))
-            self.path_label.grid(row=0, column=2, sticky="ew")
-            self.size_controls.grid(row=0, column=3, padx=12)
-            self.undo_button.grid(row=0, column=4, padx=(0, 8))
-            self.apply_button.grid(row=0, column=5)
+            self.refresh_button.grid(row=0, column=1, padx=(0, 8))
+            self.reload_button.grid(row=0, column=2, padx=(0, 12))
+            self.path_label.grid(row=0, column=3, sticky="ew")
+            self.size_controls.grid(row=0, column=4, padx=12)
+            self.undo_button.grid(row=0, column=5, padx=(0, 8))
+            self.apply_button.grid(row=0, column=6)
 
     def _responsive_footer(self) -> None:
         available = max(self.root.winfo_width() - 48, 1)
@@ -726,6 +732,14 @@ class OverviewRenameApp:
         if self.busy or self.folder is None or not self._confirm_discard():
             return
         self._reset_to_initial()
+
+    def reload(self) -> None:
+        if self.busy or self.folder is None or not self._confirm_discard():
+            return
+        folder = self.folder
+        self._close_preview()
+        self._start_load(folder)
+        self.canvas.yview_moveto(0.0)
 
     def _reset_to_initial(self) -> None:
         self.scan_token += 1
@@ -852,6 +866,7 @@ class OverviewRenameApp:
         self.apply_button.configure(text=UI_TEXT["apply"].format(count=pending), state="normal" if pending and not self.busy else "disabled")
         self.undo_button.configure(state="normal" if self.undo_record is not None and not self.busy else "disabled")
         self.refresh_button.configure(state="normal" if self.folder is not None and not self.busy else "disabled")
+        self.reload_button.configure(state="normal" if self.folder is not None and not self.busy else "disabled")
         self.select_button.configure(state="disabled" if self.busy else "normal")
         for card in self.cards:
             card.entry.configure(state="disabled" if self.busy else "normal")

@@ -18,6 +18,9 @@ class FakeVariable:
     def set(self, value: str) -> None:
         self.value = value
 
+    def get(self) -> str:
+        return self.value
+
 
 def test_root_scoped_wheel_routes_all_main_list_surfaces() -> None:
     root = object()
@@ -196,3 +199,198 @@ def test_refresh_resets_folder_jobs_cards_preview_and_undo(tmp_path: Path) -> No
     assert app.path_var.value == UI_TEXT["folder_unselected"]
     assert app.status_var.value == UI_TEXT["status_empty"]
     app._sync_controls.assert_called_once_with()
+
+
+def test_reload_control_is_disabled_without_folder_and_enabled_with_folder(tmp_path: Path) -> None:
+    app = OverviewRenameApp.__new__(OverviewRenameApp)
+    app.cards = []
+    app.busy = False
+    app.folder = None
+    app.undo_record = None
+    app.apply_button = Mock()
+    app.undo_button = Mock()
+    app.refresh_button = Mock()
+    app.reload_button = Mock()
+    app.select_button = Mock()
+
+    app._sync_controls()
+    assert app.reload_button.configure.call_args.kwargs["state"] == "disabled"
+
+    app.folder = tmp_path
+    app._sync_controls()
+    assert app.reload_button.configure.call_args.kwargs["state"] == "normal"
+
+
+def test_reload_is_safe_noop_when_folder_is_unselected_or_busy(tmp_path: Path) -> None:
+    app = OverviewRenameApp.__new__(OverviewRenameApp)
+    app.busy = False
+    app.folder = None
+    app._confirm_discard = Mock()
+    app._close_preview = Mock()
+    app._start_load = Mock()
+    app.canvas = SimpleNamespace(yview_moveto=Mock())
+
+    app.reload()
+
+    app._confirm_discard.assert_not_called()
+    app._start_load.assert_not_called()
+
+    app.folder = tmp_path
+    app.busy = True
+    app.reload()
+    app._confirm_discard.assert_not_called()
+    app._start_load.assert_not_called()
+
+
+def test_reload_rejection_preserves_all_state(tmp_path: Path) -> None:
+    app = OverviewRenameApp.__new__(OverviewRenameApp)
+    folder = tmp_path.resolve()
+    cards = [SimpleNamespace(pending=True)]
+    undo_record = object()
+    preview_window = object()
+    app.busy = False
+    app.folder = folder
+    app.cards = cards
+    app.undo_record = undo_record
+    app._preview_window = preview_window
+    app.size_var = FakeVariable("large")
+    app._confirm_discard = Mock(return_value=False)
+    app._close_preview = Mock()
+    app._start_load = Mock()
+    app.canvas = SimpleNamespace(yview_moveto=Mock())
+
+    app.reload()
+
+    assert app.folder == folder
+    assert app.cards is cards
+    assert app.undo_record is undo_record
+    assert app._preview_window is preview_window
+    assert app.size_var.get() == "large"
+    app._close_preview.assert_not_called()
+    app._start_load.assert_not_called()
+    app.canvas.yview_moveto.assert_not_called()
+
+
+def test_reload_approval_rescans_same_folder_and_resets_old_state(tmp_path: Path) -> None:
+    app = OverviewRenameApp.__new__(OverviewRenameApp)
+    folder = tmp_path.resolve()
+    preview_window = SimpleNamespace(destroy=Mock())
+    app.busy = False
+    app.folder = folder
+    app.cards = [SimpleNamespace(pending=True)]
+    app.undo_record = object()
+    app.scan_token = 4
+    app.generation = 7
+    app.preview_generation = 10
+    app.rendered_count = 1
+    app._preview_window = preview_window
+    app._preview_label = object()
+    app._preview_photo = object()
+    app.size_var = FakeVariable("large")
+    app.path_var = FakeVariable(str(folder))
+    app.status_var = FakeVariable("loaded")
+    app._confirm_discard = Mock(return_value=True)
+    app.scanner = SimpleNamespace(request=Mock())
+    app.render_pool = SimpleNamespace(cancel=Mock())
+    app.preview_worker = SimpleNamespace(cancel=Mock())
+    app._clear_cards = Mock(side_effect=lambda: app.cards.clear())
+    app._sync_controls = Mock()
+    app.canvas = SimpleNamespace(yview_moveto=Mock())
+
+    app.reload()
+
+    assert app.folder == folder
+    assert app.size_var.get() == "large"
+    assert app.undo_record is None
+    assert app._preview_window is None
+    assert app.scan_token == 5
+    assert app.generation == 8
+    assert app.preview_generation == 12
+    app.scanner.request.assert_called_once_with(5, folder)
+    app.render_pool.cancel.assert_called_once_with(8)
+    assert [call.args for call in app.preview_worker.cancel.call_args_list] == [(11,), (12,)]
+    app._clear_cards.assert_called_once_with()
+    app.canvas.yview_moveto.assert_called_once_with(0.0)
+
+
+def test_reload_stale_generation_thumbnail_is_ignored() -> None:
+    card = SimpleNamespace(
+        snapshot=SimpleNamespace(path=Path("same.pdf")),
+        rendered=False,
+    )
+    app = OverviewRenameApp.__new__(OverviewRenameApp)
+    app.generation = 8
+    app.cards = [card]
+    app.rendered_count = 0
+    app._sync_status = Mock()
+    stale_request = main.RenderRequest(7, "thumbnail", 0, card.snapshot, (20, 20))
+    stale_result = main.RenderResult(stale_request, object(), 1, None)
+
+    app._accept_thumbnail(stale_result)
+
+    assert card.rendered is False
+    assert app.rendered_count == 0
+    app._sync_status.assert_not_called()
+
+
+def test_real_tk_reload_48_cards_reflects_add_delete_and_external_rename(tmp_path: Path) -> None:
+    try:
+        root = tk.Tk()
+    except tk.TclError as exc:
+        pytest.skip(f"Tk display is unavailable: {exc}")
+    root.geometry("900x620+2500+100")
+    app = OverviewRenameApp(root)
+    app.scanner.request = Mock()
+    app._reprioritize_unrendered = Mock()
+    folder = tmp_path.resolve()
+    for index in range(48):
+        (folder / f"scan_{index:04d}.pdf").write_bytes(b"%PDF-1.4\n%%EOF\n")
+
+    def complete_scan(expected: int) -> None:
+        token, requested_folder = app.scanner.request.call_args.args
+        app._accept_scan(token, requested_folder, main.scan_pdf_folder(requested_folder), None)
+        deadline = main.time.monotonic() + 3
+        while len(app.cards) < expected and main.time.monotonic() < deadline:
+            root.update()
+        root.update_idletasks()
+        assert len(app.cards) == expected
+
+    try:
+        assert app.reload_button.cget("state") == "disabled"
+        app._start_load(folder)
+        complete_scan(48)
+        assert app.reload_button.cget("state") == "normal"
+
+        app.size_var.set("large")
+        app.undo_record = object()
+        app._preview_window = tk.Toplevel(root)
+        app._preview_label = tk.Label(app._preview_window)
+        app._preview_label.pack()
+        (folder / "added.pdf").write_bytes(b"%PDF-1.4\n%%EOF\n")
+        app.reload()
+        complete_scan(49)
+        assert app.folder == folder
+        assert app.size_var.get() == "large"
+        assert app.undo_record is None
+        assert app._preview_window is None
+        assert app.cards[0].snapshot.path.name == "added.pdf"
+
+        (folder / "scan_0000.pdf").unlink()
+        app.reload()
+        complete_scan(48)
+        assert all(card.snapshot.path.name != "scan_0000.pdf" for card in app.cards)
+
+        (folder / "scan_0001.pdf").rename(folder / "externally_renamed.pdf")
+        app.reload()
+        complete_scan(48)
+        names = [card.snapshot.path.name for card in app.cards]
+        assert "externally_renamed.pdf" in names
+        assert "scan_0001.pdf" not in names
+    finally:
+        app.closing = True
+        if app._poll_after is not None:
+            root.after_cancel(app._poll_after)
+        app.scanner.shutdown()
+        app.render_pool.shutdown()
+        app.preview_worker.shutdown()
+        root.destroy()
