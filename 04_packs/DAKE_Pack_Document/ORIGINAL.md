@@ -226,7 +226,7 @@ Pack価格はPack側の正本情報であり、構成アプリ側のORIGINALへ�
 - Pack ZIP: `04_packs/DAKE_Pack_Document/pack_ready/DAKE_Pack_Document.zip`
 - Store: 未確定
 - 構成アプリ単品の配布導線:
-- DakePDF結合: BOOTH `https://peakheadz.booth.pm/items/8448196` / Release `https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Merge_v1.0.0`
+- DakePDF結合: BOOTH `https://peakheadz.booth.pm/items/8448196` / Release `https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Merge_v1.0.1`
 - DakeImageToPDF: BOOTH `https://peakheadz.booth.pm/items/8397610` / Release `https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_ToPDF_v1.0.0`
 - Dake画像リサイズ: BOOTH `https://peakheadz.booth.pm/items/8397622` / Release `https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_Resize_v1.0.0`
 - 貼る: BOOTH `https://peakheadz.booth.pm/items/8397628` / Release `https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_PasteA4_v1.0.0`
