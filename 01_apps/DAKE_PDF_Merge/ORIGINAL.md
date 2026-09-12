@@ -13,7 +13,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - short_title: DakePDF結合
 - category: PDF
 - status: available
-- version: 1.0.0（Release URLより）
+- version: 1.0.1
 - price: 500円
 - distribution: GitHub Release / BOOTH / dakeapp.com（Storeは未確定）
 - target_platform: Windows
@@ -76,12 +76,13 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - site_title: DakePDF結合
 - site_description: 追加したPDFを画面上で並べ替え、表示順どおりに1つのPDFへ結合できるWindows向けアプリです。
 - launcher_description: 複数PDFを並べ替えて1つに結合します。
-- update_summary: READMEメタ情報とRelease本文を整備。スクリーンショットをassets/screenshot.webpに作成。
+- update_summary: 起動ウインドウを画面サイズへ最適化し、保存処理を原子的保存へ変更。高速なPDF追加・並び替え・CLI互換性を維持した品質改善版。
 - BOOTH紹介文: 複数PDFを並べ替えて1つに結合します。
 
 ・PDF結合アプリ
 ・複数PDFの追加に対応
 ・ドラッグ並べ替え対応
+・小型画面への表示最適化・保存安全性を改善
 ・Windows向けexe
 
 実務の流れを、
@@ -100,15 +101,16 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 ```json
 {
   "app_key": "dake_pdf_merge",
+  "version": "1.0.1",
   "display_name": "DakePDF結合",
   "launcher_title": "PDF結合",
   "launcher_description": "複数PDFを並べ替えて1つに結合します。",
   "site_title": "DakePDF結合",
   "site_description": "追加したPDFを画面上で並べ替え、表示順どおりに1つのPDFへ結合できるWindows向けアプリです。",
-  "update_summary": "READMEメタ情報とRelease本文を整備。スクリーンショットをassets/screenshot.webpに作成。",
+  "update_summary": "起動ウインドウを画面サイズへ最適化し、保存処理を原子的保存へ変更。高速なPDF追加・並び替え・CLI互換性を維持した品質改善版。",
   "folder_name": "DAKE_PDF_Merge",
   "exe_name": "DakePDF_Merge.exe",
-  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Merge_v1.0.0",
+  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Merge_v1.0.1",
   "screenshot_path": "assets/screenshot.webp",
   "status": "available",
   "show_in_launcher": true,
@@ -121,9 +123,12 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 
 ## release_body生成用情報
 
+# DakePDF結合 v1.0.1
+
 - PDF結合アプリ
 - 複数PDFの追加に対応
 - ドラッグ並べ替え対応
+- 小型画面への表示最適化・保存安全性を改善
 - Windows向けexe
 
 ## booth_product生成用情報
@@ -135,6 +140,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 ・PDF結合アプリ
 ・複数PDFの追加に対応
 ・ドラッグ並べ替え対応
+・小型画面への表示最適化・保存安全性を改善
 ・Windows向けexe
 
 実務の流れを、
@@ -149,7 +155,7 @@ Windows
 - 商品画像: assets/booth_thumbnail.jpg
 - 補助画像: assets/screenshot.jpg
 - 作品ファイル: booth_ready/DakePDF_Merge.zip
-- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Merge_v1.0.0
+- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Merge_v1.0.1
 - BOOTH URL: https://peakheadz.booth.pm/items/8448196
 
 ## Store表示用情報
@@ -161,6 +167,7 @@ Windows
 ・PDF結合アプリ
 ・複数PDFの追加に対応
 ・ドラッグ並べ替え対応
+・小型画面への表示最適化・保存安全性を改善
 ・Windows向けexe
 
 実務の流れを、
@@ -176,12 +183,12 @@ Windows
 
 - BOOTH価格案: 500円
 - BOOTH URL: https://peakheadz.booth.pm/items/8448196
-- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Merge_v1.0.0
+- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Merge_v1.0.1
 - Store販売: 未確定
 
 ## 配布・ダウンロード方針
 
-- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Merge_v1.0.0
+- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Merge_v1.0.1
 - BOOTH: https://peakheadz.booth.pm/items/8448196
 - BOOTH配布zip: booth_ready/DakePDF_Merge.zip
 - Store配布導線: 未確定

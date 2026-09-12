@@ -10,6 +10,7 @@ DakePDF結合
 ・PDF結合アプリ
 ・複数PDFの追加に対応
 ・ドラッグ並べ替え対応
+・小型画面への表示最適化・保存安全性を改善
 ・Windows向けexe
 
 実務の流れを、
@@ -32,6 +33,15 @@ assets/screenshot.jpg
 
 # 作品ファイル
 booth_ready/DakePDF_Merge.zip
+
+# GitHub Release
+https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Merge_v1.0.1
+
+# 注意事項
+Windows向けアプリです。
+ご利用は自己責任でお願いいたします。
+大切なファイルは事前にバックアップを推奨します。
+本ソフトウェアの無断転載・再配布を禁止します。
 
 # URL
 https://peakheadz.booth.pm/items/8448196
