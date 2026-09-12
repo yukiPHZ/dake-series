@@ -371,4 +371,5 @@ Launcher詳細（`01_apps/DAKE_Launcher/main.py`）:
 - 変更対象は `requirements.txt` と本レポートのみ。対象外変更なし。
 - build/dist/spec/exe/config/venv/fixture/ローカルZIP/検証scriptはstage・commitしない。
 - 同じbranchへcommit/push、PR #29の本文更新のみ。main merge、Release、BOOTH、Store、Cloudflare更新なし。
-- 提出時の最終 `git status --short` が空であること、およびPR OPENとhead一致をcommit/push後に確認し、PR本文・最終報告へ記録する。
+- 検証commit `917581c` 直後の `git status --short`: 空（clean）。この確認記録だけを追加commitし、
+  最終push後にもclean・PR OPEN・head一致を再確認する。最終確認結果はPR本文・最終報告にも記録する。
