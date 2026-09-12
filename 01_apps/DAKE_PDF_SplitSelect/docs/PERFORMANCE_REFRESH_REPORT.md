@@ -216,3 +216,159 @@ DAKE正本にはソースを配布zipへ含めない方針、無断再配布禁�
 - packaged生成途中の厳密なA/Bタイミング試験、delete可能性の明示試験。
 - ライセンス・現在の配布条件の追加確認。
 - PRの実機体感確認が完了するまでmerge・正式出荷しない。
+
+## Phase 1.1: PR #29 出荷前ハードニング
+
+検証日: 2026-09-12 (JST)。上記はPhase 1の履歴として保持する。
+clean venv、Pillow、最終GUI保存、delete、配布ラインに関する最新の判定は本節を優先する。
+起動10回の計測値はPhase 1の成果物の値であり、今回のPillow除去成果物を再計測した値ではない。
+
+### 対象とclean build
+
+- 同じbranch `codex/pdf-split-select-fast-refresh`、同じPR #29を使用。新branch / PRなし。
+- 開始時: `git status --short` 空、PR OPEN、head `4e74e219ad3159e8315f3aa565800778ad5f1f14`。
+- branchを `git pull --ff-only` で確認（already up to date）。ORIGINALと本レポートを再読。
+- `origin/main` は調査用にfetchのみ。`c9e0a37f29436fbfbfc1d06e8fbbf685e07b25d8`。
+  mainとの比較で、調査したtools / Launcherの実装差分はなし（生成JSONのみ差分あり）。mainのmergeはしていない。
+- 新規 `splitselect-phase11-venv` をrepo外に作成。Python 3.12.4、`include-system-site-packages = false`。
+- 更新したrequirementsだけをpip installし、そのvenvを `PYTHON_EXE` に指定して現行 `build.bat` を実行。PASS。
+- `build.bat` / `main.py` / `pdf_backend.py` はPhase 1.1では変更していない。
+  onedir、両collect-all、共通アイコン指定をそのまま使用した。
+- venvのsys.pathにグローバルsite-packagesなし。`find_spec('PIL') is None`、`pip check` PASS。
+- 最終候補: `dist/DakePDF_Split_Select/DakePDF_Split_Select.exe` と同じフォルダの `_internal/`。
+- 最終exe SHA-256: `30724f0297427f77bad3beac82126459b59200f763f0bc876ffd3e7f69172c7b`。
+
+固定された直接依存: PyMuPDF 1.24.10 / pypdf 6.10.2 / pyinstaller 6.19.0 /
+pyinstaller-hooks-contrib 2026.4 / tkinterdnd2 0.4.3。
+今回解決された間接依存: PyMuPDFb 1.24.10 / altgraph 0.17.5 / packaging 26.3 /
+pefile 2024.8.26 / pywin32-ctypes 0.2.3 / setuptools 84.0.0。pipはvenv初期の24.0のまま。
+間接依存まですべてをlockした構成ではない。今回は固定した製品依存の更新を行っていない。
+
+### Pillow判定: REMOVE
+
+- 製品 `main.py` / `pdf_backend.py` のPillow / PIL importは0件（テキスト検索・AST確認）。
+- PyMuPDF 1.24.10の必須依存はPyMuPDFb 1.24.10。Pillow importは未使用の `pil_save()` 内。
+- tkinterdnd2 0.4.3にPillow必須依存なし。pypdfではimage/full extraのみで、今回そのextraを使用しない。
+- PyInstaller 6.19.0は今回の正しいICOファイルをそのまま扱う。Pillowはアイコン形式変換のオプション経路。
+- 除去前のAnalysis-00.tocにはPIL.Image / PIL.ImageTk等が取り込まれていた。
+  clean build後のAnalysis-00.tocでは `PIL|Pillow` 0件。
+- Pillow未インストールでビルド、GUIロード・サムネイル・両保存、CLI、回帰テストが成功した。
+  本アプリの検証対象経路では不要と判定し、requirementsの1行のみ削除。
+- 共通 `tools/make_booth_ready.py` は販促画像生成にPillowを使用する。
+  これは別の出荷ツール環境の依存であり、本アプリの実行・ビルド依存へ戻す根拠ではない。
+
+### 最終候補GUI / 保存
+
+新規fixtureはrepo外の `splitselect-phase11-evidence` に生成し、旧試作版の出力を流用していない。
+以下はすべて今回のclean buildのexeで再実行した結果。
+
+| 項目 | 結果と確認範囲 |
+| --- | --- |
+| exe起動 / import | PASS。例外ダイアログなし、初期UIを表示 |
+| icon | PASS。タイトルバー表示、共通ICOと同梱ICOのbytes一致 |
+| PDF追加 / thumbnail | PASS。30ページをPDF追加からロードし、先頭8画像を表示 |
+| click | PASS。P.1 ONで1ページ・選択中・ボタン有効、再クリックでOFF |
+| Shift | ソース回帰PASS。最終packagedでの物理Shift+クリックは未確認 |
+| range | PASS。`1-3,5,8-10` 単独で選択数7、保存結果も7ページ |
+| merged | PASS。クリック選択の1ページと、範囲単独の7ページをそれぞれ保存 |
+| single | PASS。1,2,3,5,8,9,10の7ファイル、各1ページ |
+| 完了dialog / OK | PASS。mergedの1/7ページ、singleの7ページで完了表示とOK操作 |
+| Explorer | PASS。OK後、試験保存先のExplorerウィンドウが開いたことを確認 |
+| F5 | PASS。ファイル未選択、0ページ、range空、選択0、画像空、未選択案内、完了表示消去 |
+| Ctrl+O / 再PDF | PASS。F5後のファイルダイアログ、300ページと別3ページのロード |
+| 通常終了 | PASS。閉じるボタン後に対象ウィンドウ消滅、強制終了はしていない |
+
+サムネイル選択が存在すればrangeより優先する既存仕様は変更していない。
+クリックで選んだP.1とrangeが併存した最初の保存は1ページ。
+P.1を再クリックで解除してrange単独とし、7ページ保存を再試験した。
+
+merged / singleはpypdfでページ数・順番・`PHASE11 PAGE NNN`内容をassert。
+さらにPyMuPDFで各出力ページと対応元ページを同じ既定倍率でレンダーし、全pixels一致をassert。
+全入力SHA-256は処理前後一致（PASS）:
+
+```text
+3   d786bf814eb876a390677e244bf076a290232bf4467aad04dcc6b64252a00c98
+30  388f01394beb24f153c729ba702b8a25d7254a67914b62517128c117e2c7d0b7
+100 751cb7f1577450992f1ec65ec27429aefde3678b3881bc2a0dcadbbbb8f0ae93
+300 296d3b4cc572dcbac7105420fe3476fb7f7e27e545100ebacb2cbc5b294e451b
+```
+
+### Refresh / delete / CLI / 静的回帰
+
+- 最終packaged: 300ページ専用コピーをロード → F5 → Ctrl+O → 3ページロード、PASS。
+  3ページの画像・ページ数・準備完了を確認。その後も旧画像・旧完了表示の復活なし。
+- 最初の画面取得時点で300ページの可視画像は準備完了だった。
+  **packaged生成途中の厳密タイミングは未確認**。通常F5のPASSで代用しない。
+- ソース制御試験では生成途中refresh / 新3ページ / 旧task停止 / generation無視 / closeがPASS。
+  今回の新3ページreadyは0.3855秒（テスト用80ms遅延込み）。製品コードへsleep追加なし。
+- refresh後、最終exeを起動したまま専用コピーをWindows上で
+  `disposable-handle-300.pdf` → rename → `moved/` へmove → delete。すべて成功（PASS）。
+  元fixture・出力PDFは削除していない。Windowsファイル操作を妨げる旧ハンドルがないことを実証。
+  packagedの内部taskカウンタは観測していないため、内部停止そのものはソース試験の結果と区別する。
+- clean venvの `tests/test_lifecycle.py`: **5 tests PASS / 10.707秒**。
+  3/30/100/300ページ初期要求3/16/16/16、cache最大3/30/96/96、evict後復帰と選択保持PASS。
+- 最終exeの `--from-shimarisu` CLIを9ケース再実行: 成功3件exit 0、エラー6件exit 1とstderr、PASS。
+  inputs先頭採用、pages、output PDF/フォルダ/省略、silent、不正範囲、超過、欠落引数を確認。
+- `python -m compileall -q main.py pdf_backend.py tests`: PASS。
+- UTF-8 AST、定数群外の日本語UI文字列0、UI_TEXT重複0・未定義参照0、PIL import0: PASS。
+- `git diff --check`: PASS。製品コード・非同期構造・UIレイアウトにPhase 1.1の変更なし。
+
+### Onedir配布ライン調査: B（出荷ツールに対応が必要）
+
+正式出荷ツールは実行していない。以下はコード・ローカル商品データ・GitHub Release APIを読み取った結果。
+Web/Storeの本番反映や購入・配信は試していない。外部の未発見スクリプトまで互換とは断定しない。
+
+| 対象 | 判定 | 根拠 / 次工程 |
+| --- | --- | --- |
+| onedir ZIP | compatible | repo外のみでフォルダ全体をZIP化・展開。1084ファイル全SHA一致、ZIP CRC正常、展開先exeのCLI保存exit 0 / 3ページ。30,227,806 bytes。正式booth_readyは未生成 |
+| BOOTH生成 | change required | `tools/make_booth_ready.py:447` create_zipはexe/README/注意事項のみ同梱、455 find_exeはdist直下のみ。現行では入れ子exeを見つけず、exeを渡しても_internalを落とす |
+| GitHub Release | change required | 現行v1.0.0の実assetは `DakePDF_Split_Select.exe` 単体（47,779,048 bytes）。次回は全onedir ZIPへ変更が必要。repo内py/ps1/bat/yml/yaml検索でRelease upload実装は未発見、従来アップロード工程自体はnot checked |
+| Launcher（現行distレイアウト） | change required | `AppMeta.standard_exe_path` は `app_folder/dist/exe_name`。新しい `dist/DakePDF_Split_Select/exe` は自動検出されない。下記の配置調整または既存手動指定で本体変更を回避可能 |
+| dakeapp商品リンク | compatible | ローカル `dakeapp-site/public/apps/pdf-split-select/index.html:40` はRelease tagページへリンク。exe直リンクではない。`tools/sync_dakeapp_apps_json.py:72` 以降もrelease_urlをそのままデータ化 |
+| Store商品表示 | compatible | ローカルstore.js:110 purchaseActionはStripe/BOOTH URLを使用、exeパス非依存。該当商品JSONはdownload_url/type null、GitHubはtag URL。決済後の実ファイル配信はnot checked |
+| formal shipping scripts | change required | `check_exe_launch.py:79`、`release_capture.py:153`、`check_booth_ready.py:401` もdist直下exe前提。検出・capture・検査を新配置対応にする必要あり |
+| Pack ZIP | compatible | `make_pack_ready.py:453` は個別ZIPをそのまま `apps/<folder>/` に入れる。修正済み個別ZIPを供給すれば内容の再解釈なし。正式Pack生成は未実行 |
+
+Launcher詳細（`01_apps/DAKE_Launcher/main.py`）:
+
+- 98行目: 標準exeはアプリフォルダ直下ではなく `dist/exe_name`。
+- 663行目 `resolve_exe_path`: `custom_exe_paths` が最優先。見つからなければ標準パスだけを確認。
+- 675行目 `choose_custom_exe`: 既存のファイル選択・パス保存機能あり。
+- 708行目 `launch_app`: 選択したexeを、その親フォルダをcwdとしてPopen。
+  Release URLはブラウザを開くだけで、Releaseから直接exeを起動・展開する仕組みではない。
+- 方法1: 既存の手動exe指定で新しい入れ子のexeを選ぶ。`_internal`を隣に保持する。
+- 方法2: 出荷/開発配置の別工程でonedirの**中身全体**を `<app_folder>/dist/` に置き、
+  `dist/exe` と `dist/_internal/` を並べる。これなら標準パスのLauncher変更は不要。
+  ただしBOOTH ZIPのexeだけ同梱する処理は、どちらの方法でも修正が必要。
+- Launcher実UIでの起動は未実行。上記は実コードのパス解決・Popen契約の確認結果。
+  今回Launcher、共有出荷スクリプト、DAKE_METAのexe_nameは変更していない。
+
+正式出荷の別Phaseで必要な最小対応:
+
+1. onefile / onedir両方を検出し、onedirの場合はexeと_internalの同階層関係を維持してZIPへ再帰同梱する。
+2. 検出・起動検査・captureを同じ規則へ合わせ、配布READMEに「ZIPを展開しフォルダ全体を保持」を明記する。
+3. Launcherは手動指定か上記配置調整を採用し、実際のLauncher起動で検証する。
+4. Releaseはexe単体ではなく全onedir ZIPを出荷単位にする。BOOTH/Store配信元も同じ検証済みZIPへ揃える。
+5. 両collect-allにより_internalに第三者ライブラリのpyファイル5件が含まれる（fitz 3件、tkinterdnd2 2件）。
+   本アプリのmain.pyを同梱しているという意味ではない。依存物を無差別削除せず、配布方針・ライセンス/noticeを整理する。
+
+### Human Review / formal shipping blocker
+
+- physical Explorer → app DnD: 未確認。ソースのDropイベント試験PASSとは区別。
+- 最終packagedのShift+クリック選択/解除: 未確認。操作APIはclickの修飾キー/keydown保持を提供せず、
+  一瞬のShiftキー送信を代用しない。ソースの範囲選択/解除回帰はPASS。
+- packaged生成途中のF5厳密タイミング: 未確認。ソース制御試験PASS、packaged通常F5 PASS。
+- 実DPI 125 / 150 / 200%: 未確認。OS設定は変更せず、Phase 1の100%確認を維持。
+- Launcher実UI、Web/Storeの本番配信、外部Releaseアップロード工程: 未確認。
+- 実務スキャン/重いベクター、長時間RSS、厳密コールド起動: Phase 1から継続未確認。
+- PyMuPDF 1.24.10 / PyMuPDFb 1.24.10、AGPL-3.0 / Artifex商用ライセンスの確認メモは維持。
+  契約状況・対応ソース提供・DAKEの再配布条件の整合は未解決。**merge blocker: NO / formal shipping blocker: YES**。
+  renderer replacement: 今回しない。法的に問題なしとは判定しない。
+- 配布ラインBの修正とHuman Review受入も正式出荷前に必要。現時点で出荷可能とは扱わない。
+
+### Phase 1.1 Git確認
+
+- 変更対象は `requirements.txt` と本レポートのみ。対象外変更なし。
+- build/dist/spec/exe/config/venv/fixture/ローカルZIP/検証scriptはstage・commitしない。
+- 同じbranchへcommit/push、PR #29の本文更新のみ。main merge、Release、BOOTH、Store、Cloudflare更新なし。
+- 提出時の最終 `git status --short` が空であること、およびPR OPENとhead一致をcommit/push後に確認し、PR本文・最終報告へ記録する。
