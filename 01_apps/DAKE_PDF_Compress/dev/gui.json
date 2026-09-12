@@ -1,0 +1,48 @@
+{
+  "passed": true,
+  "drop_response_seconds": 0.0,
+  "max_20ms_tick_gap": 0.06199999999989814,
+  "worker_count": 1,
+  "phases": [
+    "status_checking",
+    "status_ready",
+    "status_processing",
+    "status_analyzing",
+    "status_optimizing",
+    "status_verifying",
+    "status_images",
+    "status_saving",
+    "status_complete",
+    "status_idle",
+    "status_error"
+  ],
+  "dialogs": [
+    [
+      "info",
+      [
+        "圧縮完了",
+        "99.0%軽くなりました\n\n圧縮したPDFを同じフォルダに保存しました。"
+      ]
+    ],
+    [
+      "info",
+      [
+        "圧縮完了",
+        "99.0%軽くなりました\n\n圧縮したPDFを同じフォルダに保存しました。"
+      ]
+    ],
+    [
+      "warning",
+      [
+        "確認してください",
+        "PDFを読み込めませんでした。"
+      ]
+    ]
+  ],
+  "folder_open_calls": [
+    "LOCAL_WORK\\fixtures",
+    "LOCAL_WORK\\fixtures"
+  ],
+  "dnd_registered": true,
+  "notes": "Real Tk, callback DnD and dialog selection; native Explorer drag tested separately."
+}

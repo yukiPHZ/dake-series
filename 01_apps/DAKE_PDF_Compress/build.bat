@@ -1,41 +1,29 @@
 @echo off
 setlocal
-del /q version_info.txt 2>nul
-
-if exist build rmdir /s /q build
-if exist dist rmdir /s /q dist
-if exist *.spec del /q *.spec
-
+cd /d "%~dp0"
 set "PYTHON_CMD=python"
-where python >nul 2>&1
+set "PYTHON_ARGS="
+if defined DAKE_PYTHON set "PYTHON_CMD=%DAKE_PYTHON%"
+"%PYTHON_CMD%" --version >nul 2>&1
 if errorlevel 1 (
-    where py >nul 2>&1
-    if errorlevel 1 (
-        echo Python was not found. Please install Python and run this file again.
-        pause
-        exit /b 1
-    )
-    set "PYTHON_CMD=py -3"
+    set "PYTHON_CMD=py"
+    set "PYTHON_ARGS=-3"
 )
-
-set "DND_OPTION="
-%PYTHON_CMD% -c "import tkinterdnd2" >nul 2>&1
-if %errorlevel%==0 set "DND_OPTION=--collect-data=tkinterdnd2"
-%PYTHON_CMD% ..\..\tools\generate_version_info.py --app-dir . --out version_info.txt
-if errorlevel 1 (
-    echo VersionInfo generation failed.
-    pause
-    exit /b 1
-)
-
-%PYTHON_CMD% -m PyInstaller ^
+"%PYTHON_CMD%" %PYTHON_ARGS% -c "import pymupdf,tkinterdnd2; from adaptive import VERIFIED_PYMUPDF; assert pymupdf.__version__ == VERIFIED_PYMUPDF; assert callable(pymupdf.Document.rewrite_images)"
+if errorlevel 1 exit /b 1
+"%PYTHON_CMD%" %PYTHON_ARGS% ..\..\tools\generate_version_info.py --app-dir . --out version_info.txt
+if errorlevel 1 exit /b 1
+rem Do not recursively delete unrelated dist files.
+"%PYTHON_CMD%" %PYTHON_ARGS% -m PyInstaller ^
 --onefile ^
 --noconsole ^
 --clean ^
+--noconfirm ^
 --paths=..\..\00_core ^
 --icon=..\..\02_assets\dake_icon.ico ^
+--add-data "..\..\02_assets\dake_icon.ico;." ^
 --version-file version_info.txt ^
-%DND_OPTION% ^
+--collect-data=tkinterdnd2 ^
 --exclude-module pandas ^
 --exclude-module numpy ^
 --exclude-module PIL ^
@@ -45,5 +33,6 @@ if errorlevel 1 (
 --exclude-module scipy ^
 --name DakePDF_Compress ^
 main.py
-
-pause
+set "BUILD_RESULT=%ERRORLEVEL%"
+if not "%~1"=="--no-pause" pause
+exit /b %BUILD_RESULT%

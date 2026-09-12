@@ -2,15 +2,13 @@
 from __future__ import annotations
 
 import os
-import queue
+import multiprocessing as mp
 import shutil
 import subprocess
 import sys
-import tempfile
-import threading
 import time
 import webbrowser
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -18,7 +16,7 @@ CORE_DIR = Path(__file__).resolve().parents[2] / "00_core"
 if str(CORE_DIR) not in sys.path:
     sys.path.insert(0, str(CORE_DIR))
 
-from dake_quality_engine import atomic_replace, run_launch_check, safe_load_json_config, safe_run
+from dake_quality_engine import run_launch_check, safe_load_json_config, safe_run
 from dake_quality_engine.logging import write_debug_log
 
 tk = None
@@ -39,7 +37,6 @@ WINDOW_TITLE = "DakePDF圧縮"
 COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
 
 UI_TEXT = {
-    "brand_series": "シンプルそれDAKEシリーズ",
     "header_subtitle": "止まらない、迷わない、すぐ終わる。",
     "main_title": "PDFを圧縮する",
     "main_description": "PDFを追加して、画質を保ちながらしっかり軽くします。",
@@ -50,11 +47,18 @@ UI_TEXT = {
     "button_select": "PDFを選ぶ",
     "button_execute": "圧縮して保存",
     "button_clear": "クリア",
+    "status_checking": "PDFを確認中...",
+    "status_analyzing": "PDFを解析中",
+    "status_images": "画像を最適化中",
+    "status_optimizing": "PDFを整えています",
+    "status_verifying": "仕上がりを確認中",
+    "status_saving": "保存中",
+    "status_closing": "処理を終了しています",
+    "result_sizes": "{before} → {after}",
+    "result_reduction": "{rate:.1f}%軽くなりました",
     "status_idle": "PDF未選択",
     "status_ready": "圧縮できます",
-    "status_processing_base": "圧縮中",
     "status_processing": "圧縮中...",
-    "status_processing_dots": ["圧縮中.", "圧縮中..", "圧縮中..."],
     "status_phrase_1": "Simple",
     "status_phrase_2": "Simple, fast",
     "status_phrase_3": "Simple, fast, for real work.",
@@ -74,10 +78,8 @@ UI_TEXT = {
     "dialog_error_title": "確認してください",
     "dialog_filetype_pdf": "PDFファイル",
     "dialog_filetype_all": "すべてのファイル",
-    "message_complete": "PDFの圧縮が完了しました。",
-    "message_complete_detail": "保存先フォルダを開きます。",
-    "message_low_reduction": "このPDFはあまり圧縮できませんでした。すでに圧縮済み、またはPDF構造上、削減幅が小さい可能性があります。",
-    "message_fallback_used": "Ghostscriptが見つからない、またはうまく処理できなかったため、内蔵の圧縮処理で保存しました。",
+    "message_complete_detail": "圧縮したPDFを同じフォルダに保存しました。",
+    "message_low_reduction": "このPDFは、すでにかなり軽いようです。",
     "error_not_pdf": "PDFファイルを追加してください。",
     "error_multiple_files": "PDFは1つだけ追加してください。",
     "error_read_failed": "PDFを読み込めませんでした。",
@@ -85,12 +87,10 @@ UI_TEXT = {
     "error_save_failed": "PDFを保存できませんでした。",
     "error_output_missing": "圧縮後ファイルが作成されませんでした。",
     "error_file_in_use": "ファイルが使用中の可能性があります。PDFを閉じてからもう一度お試しください。",
-    "error_dependency_missing": "PDF処理に必要なライブラリが見つかりません。requirements.txt をインストールしてください。",
+    "error_dependency_missing": "PDF処理の準備ができません。アプリを入れ直してください。",
     "error_no_file": "先にPDFを追加してください。",
-    "error_no_reduction": "このPDFは圧縮効果がありませんでした。すでに圧縮済み、またはPDF構造上、削減幅が小さい可能性があります。",
-    "error_ghostscript_failed": "しっかり圧縮を実行できませんでした。内蔵の圧縮処理に切り替えます。",
+    "error_no_reduction": "このPDFは、すでにかなり軽いようです。元PDFをご利用ください。",
     "error_unknown": "処理中に問題が発生しました。",
-    "detail_suffix": "詳細: {detail}",
     "footer_left": "シンプルそれDAKEシリーズ",
     "footer_link_1": "戸建買取査定",
     "footer_link_2": "Instagram",
@@ -131,10 +131,7 @@ QUEUE_POLL_INTERVAL_MS = 80
 LOW_REDUCTION_THRESHOLD = 5.0
 FOOTER_NARROW_WIDTH = 900
 STATUS_ANIMATION_INTERVAL_MS = 450
-STATUS_PHRASE_DELAY_SECONDS = 1.6
-GHOSTSCRIPT_PDF_SETTINGS = "/ebook"
-GHOSTSCRIPT_LIGHTER_PDF_SETTINGS = "/screen"
-GHOSTSCRIPT_TIMEOUT_SECONDS = 300
+STATUS_PHRASE_DELAY_SECONDS = 8.0
 DEBUG_LOG_ENV = "DAKE_PDF_COMPRESS_DEBUG"
 CONFIG_FILENAME = "dake_pdf_compress_config.json"
 
@@ -149,7 +146,7 @@ Options:
 
 Output:
   Saves next to each source PDF as *_compressed.pdf.
-  Uses Ghostscript first when available, then built-in fallback.
+  Automatically selects a verified compression result.
   Prints output PDF path on success.
 """
 
@@ -185,14 +182,17 @@ class PdfResult:
     engine: str
     used_fallback: bool = False
     ghostscript_path: str | None = None
+    diagnostics: dict = field(default_factory=dict)
 
 
 def get_fitz() -> Any:
     global fitz, FITZ_IMPORT_ATTEMPTED
     if not FITZ_IMPORT_ATTEMPTED:
         try:
-            import fitz as fitz_module  # PyMuPDF
+            import pymupdf as fitz_module
 
+            fitz_module.TOOLS.mupdf_display_errors(False)
+            fitz_module.TOOLS.mupdf_display_warnings(False)
             fitz = fitz_module
         except Exception:
             fitz = None
@@ -350,19 +350,7 @@ def unique_output_path(source_path: Path) -> Path:
 
 def debug_log(message: str) -> None:
     if os.environ.get(DEBUG_LOG_ENV) == "1":
-        print(f"[DakePDF_Compress] {message}")
-
-
-def make_temp_pdf_path(source_path: Path) -> Path:
-    temp_handle, temp_name = tempfile.mkstemp(
-        prefix=".dake_pdf_compress_",
-        suffix=".pdf",
-        dir=str(source_path.parent),
-    )
-    os.close(temp_handle)
-    temp_path = Path(temp_name)
-    temp_path.unlink(missing_ok=True)
-    return temp_path
+        write_app_debug_log(message)
 
 
 def find_ghostscript() -> Path | None:
@@ -399,7 +387,7 @@ def validate_pdf(path: Path) -> None:
         doc = pdf_lib.open(str(path))
         if getattr(doc, "needs_pass", False):
             raise CompressError("error_encrypted")
-        if doc.page_count < 1:
+        if not doc.is_pdf or doc.page_count < 1:
             raise CompressError("error_read_failed")
     except CompressError:
         raise
@@ -415,263 +403,82 @@ def validate_pdf(path: Path) -> None:
                 pass
 
 
-def rewrite_images_if_supported(doc: Any) -> None:
-    rewrite_images = getattr(doc, "rewrite_images", None)
-    if rewrite_images is None:
-        return
-
+def compress_pdf(source_path: Path, phase=lambda key: None) -> PdfResult:
+    from adaptive import compress, library
     try:
-        rewrite_images(
-            dpi_threshold=220,
-            dpi_target=150,
-            quality=82,
-            lossy=True,
-            lossless=True,
-            bitonal=False,
-            color=True,
-            gray=True,
-        )
-    except TypeError:
-        try:
-            rewrite_images(dpi_threshold=220, dpi_target=150, quality=82)
-        except Exception:
-            pass
-    except Exception:
-        pass
-
-
-def save_optimized_pdf(doc: Any, output_path: Path) -> None:
-    try:
-        doc.ez_save(
-            str(output_path),
-            garbage=4,
-            clean=True,
-            deflate=True,
-            deflate_images=True,
-            deflate_fonts=True,
-        )
-    except AttributeError:
-        doc.save(str(output_path), garbage=4, clean=True, deflate=True)
-    except TypeError:
-        doc.save(str(output_path), garbage=4, clean=True, deflate=True)
-
-
-def verify_created_pdf(path: Path) -> None:
-    if not path.exists() or path.stat().st_size <= 0:
-        raise CompressError("error_output_missing")
-
-    doc = None
-    try:
-        doc = get_fitz().open(str(path))
-        if doc.page_count < 1:
-            raise CompressError("error_output_missing")
-    except CompressError:
-        raise
-    except Exception as exc:
-        raise CompressError("error_output_missing", str(exc)) from exc
-    finally:
-        if doc is not None:
-            try:
-                doc.close()
-            except Exception:
-                pass
-
-
-def save_pymupdf_compressed(source_path: Path, output_path: Path) -> None:
-    pdf_lib = get_fitz()
-    if pdf_lib is None:
-        raise CompressError("error_dependency_missing")
-
-    doc = None
-    try:
-        doc = pdf_lib.open(str(source_path))
-        if getattr(doc, "needs_pass", False):
-            raise CompressError("error_encrypted")
-        rewrite_images_if_supported(doc)
-        save_optimized_pdf(doc, output_path)
-    except CompressError:
-        raise
-    except PermissionError as exc:
-        raise CompressError("error_file_in_use", str(exc)) from exc
-    except Exception as exc:
-        raise CompressError("error_save_failed", str(exc)) from exc
-    finally:
-        if doc is not None:
-            try:
-                doc.close()
-            except Exception:
-                pass
-
-
-def run_ghostscript_compression(
-    source_path: Path,
-    output_path: Path,
-    ghostscript_path: Path,
-    pdf_settings: str = GHOSTSCRIPT_PDF_SETTINGS,
-) -> None:
-    command = [
-        str(ghostscript_path),
-        "-sDEVICE=pdfwrite",
-        "-dCompatibilityLevel=1.4",
-        f"-dPDFSETTINGS={pdf_settings}",
-        "-dNOPAUSE",
-        "-dQUIET",
-        "-dBATCH",
-        f"-sOutputFile={output_path}",
-        str(source_path),
-    ]
-    creationflags = 0
-    if sys.platform.startswith("win") and hasattr(subprocess, "CREATE_NO_WINDOW"):
-        creationflags = subprocess.CREATE_NO_WINDOW
-
-    try:
-        completed = subprocess.run(
-            command,
-            capture_output=True,
-            text=True,
-            timeout=GHOSTSCRIPT_TIMEOUT_SECONDS,
-            creationflags=creationflags,
-            check=False,
-        )
-    except PermissionError as exc:
-        raise CompressError("error_file_in_use", str(exc)) from exc
-    except subprocess.TimeoutExpired as exc:
-        raise CompressError("error_ghostscript_failed", str(exc)) from exc
-    except Exception as exc:
-        raise CompressError("error_ghostscript_failed", str(exc)) from exc
-
-    if completed.returncode != 0:
-        detail = (completed.stderr or completed.stdout or "").strip()
-        raise CompressError("error_ghostscript_failed", detail[:160] if detail else None)
-
-
-def build_pdf_result(
-    output_path: Path,
-    original_size: int,
-    engine: str,
-    used_fallback: bool,
-    ghostscript_path: Path | None,
-) -> PdfResult:
-    compressed_size = output_path.stat().st_size
-    reduction_rate = 0.0
-    if original_size > 0:
-        reduction_rate = max(0.0, (1 - (compressed_size / original_size)) * 100)
-
-    debug_log(f"engine={engine}")
-    debug_log(f"ghostscript_path={ghostscript_path if ghostscript_path else 'not_found'}")
-    debug_log(f"original_size={original_size}")
-    debug_log(f"compressed_size={compressed_size}")
-    debug_log(f"reduction_rate={reduction_rate:.1f}")
-    debug_log(f"fallback={used_fallback}")
-
-    return PdfResult(
-        output_path=output_path,
-        original_size=original_size,
-        compressed_size=compressed_size,
-        reduction_rate=reduction_rate,
-        low_reduction=reduction_rate < LOW_REDUCTION_THRESHOLD,
-        engine=engine,
-        used_fallback=used_fallback,
-        ghostscript_path=str(ghostscript_path) if ghostscript_path else None,
-    )
-
-
-def accept_smaller_pdf(
-    temp_path: Path,
-    output_path: Path,
-    original_size: int,
-) -> bool:
-    verify_created_pdf(temp_path)
-    if temp_path.stat().st_size >= original_size:
-        temp_path.unlink(missing_ok=True)
-        return False
-    try:
-        atomic_replace(temp_path, output_path)
-    except PermissionError as exc:
-        raise CompressError("error_file_in_use", str(exc)) from exc
-    except OSError as exc:
-        raise CompressError("error_save_failed", str(exc)) from exc
-    return True
-
-
-def compress_with_fallback(
-    source_path: Path,
-    output_path: Path,
-    original_size: int,
-    ghostscript_path: Path | None,
-    used_fallback: bool,
-) -> PdfResult:
-    temp_path = make_temp_pdf_path(source_path)
-    try:
-        save_pymupdf_compressed(source_path, temp_path)
-        if not accept_smaller_pdf(temp_path, output_path, original_size):
-            raise CompressError("error_no_reduction")
-        return build_pdf_result(
-            output_path=output_path,
-            original_size=original_size,
-            engine="pymupdf",
-            used_fallback=used_fallback,
-            ghostscript_path=ghostscript_path,
-        )
-    except PermissionError as exc:
-        raise CompressError("error_file_in_use", str(exc)) from exc
-    except CompressError:
-        raise
-    except Exception as exc:
-        raise CompressError("error_save_failed", str(exc)) from exc
-    finally:
-        if temp_path.exists():
-            try:
-                temp_path.unlink()
-            except Exception:
-                pass
-
-
-def compress_pdf(source_path: Path) -> PdfResult:
-    if get_fitz() is None:
-        raise CompressError("error_dependency_missing")
-
+        library()
+    except (ImportError, RuntimeError) as exc:
+        raise CompressError("error_dependency_missing", str(exc)) from exc
     validate_pdf(source_path)
-    original_size = source_path.stat().st_size
-    output_path = unique_output_path(source_path)
-    ghostscript_path = find_ghostscript()
+    gs = find_ghostscript()
+    try:
+        selected, profile, candidates = compress(source_path, gs, phase)
+        diagnostics = {"profile": profile, "candidates": candidates,
+                       "ghostscript": str(gs) if gs else None}
+        write_app_debug_log("adaptive compression", context=diagnostics)
+        if selected is None:
+            key = "error_no_reduction" if any(c.get("checks") == "passed" for c in candidates) else "error_unknown"
+            raise CompressError(key)
+        rate = (1 - selected["size"] / profile["bytes"]) * 100
+        return PdfResult(Path(selected["path"]), profile["bytes"], selected["size"],
+                         rate, rate < LOW_REDUCTION_THRESHOLD, selected["name"],
+                         ghostscript_path=str(gs) if gs else None, diagnostics=diagnostics)
+    except CompressError:
+        raise
+    except PermissionError as exc:
+        raise CompressError("error_file_in_use", str(exc)) from exc
+    except Exception as exc:
+        write_app_debug_log("compression failed", exc=exc)
+        raise CompressError("error_unknown", str(exc)) from exc
 
-    if ghostscript_path is not None:
-        temp_path = make_temp_pdf_path(source_path)
-        try:
-            run_ghostscript_compression(source_path, temp_path, ghostscript_path)
-            if accept_smaller_pdf(temp_path, output_path, original_size):
-                return build_pdf_result(
-                    output_path=output_path,
-                    original_size=original_size,
-                    engine="ghostscript",
-                    used_fallback=False,
-                    ghostscript_path=ghostscript_path,
-                )
-        except CompressError as exc:
-            debug_log(f"ghostscript_failed={exc.message_key}")
-            write_app_debug_log("ghostscript compression failed", exc=exc, context={"source": source_path})
-        except Exception as exc:
-            debug_log(f"ghostscript_failed={type(exc).__name__}")
-            write_app_debug_log("ghostscript compression failed", exc=exc, context={"source": source_path})
-        finally:
-            if temp_path.exists():
-                try:
-                    temp_path.unlink()
-                except Exception:
-                    pass
 
-    return compress_with_fallback(
-        source_path=source_path,
-        output_path=output_path,
-        original_size=original_size,
-        ghostscript_path=ghostscript_path,
-        used_fallback=True,
-    )
+def pdf_worker(connection):
+    """Exactly one GUI worker; all PDF access stays outside the Tk process."""
+    try:
+        while True:
+            command, generation, path = connection.recv()
+            if command == "stop":
+                return
+            try:
+                if command == "check":
+                    validate_pdf(path)
+                    payload = (path, path.stat().st_size, unique_output_path(path))
+                    connection.send(("checked", (generation, payload)))
+                else:
+                    result = compress_pdf(path, lambda key: connection.send(("phase", key)))
+                    connection.send(("success", result))
+            except Exception as exc:
+                write_app_debug_log("PDF worker failed", exc=exc)
+                key = exc.message_key if isinstance(exc, CompressError) else "error_unknown"
+                connection.send(("check_error" if command == "check" else "error", (generation, key)))
+    except (EOFError, BrokenPipeError, OSError):
+        pass
+    finally:
+        connection.close()
 
 
 def cli_write_error(message: str) -> None:
     print(message, file=sys.stderr)
+
+
+def restore_cli_streams() -> None:
+    """Windowed PyInstaller clears sys.stdout; retain inherited SHIMARISU pipes."""
+    if os.name != "nt":
+        return
+    import ctypes
+    import msvcrt
+    get_handle = ctypes.windll.kernel32.GetStdHandle
+    get_handle.argtypes = [ctypes.c_ulong]
+    get_handle.restype = ctypes.c_void_p
+    for name, code in (("stdout", -11), ("stderr", -12)):
+        if getattr(sys, name) is not None:
+            if hasattr(getattr(sys, name), "reconfigure"):
+                getattr(sys, name).reconfigure(encoding="utf-8")
+            continue
+        handle = get_handle(code & 0xffffffff)
+        if handle and handle != ctypes.c_void_p(-1).value:
+            fd = msvcrt.open_osfhandle(handle, os.O_WRONLY | os.O_BINARY)
+            setattr(sys, name, os.fdopen(fd, "w", encoding="utf-8", buffering=1))
 
 
 def cli_error_for_exception(exc: CompressError) -> str:
@@ -706,6 +513,8 @@ def collect_cli_inputs(argv: list[str]) -> list[Path]:
 
 
 def run_cli(argv: list[str]) -> int | None:
+    if "--help-cli" in argv or "--from-shimarisu" in argv:
+        restore_cli_streams()
     if "--help-cli" in argv:
         print(CLI_HELP_TEXT)
         return 0
@@ -760,7 +569,15 @@ class DakePdfCompressApp:
         self.font_family = choose_font_family(root)
         self.selected_pdf: Path | None = None
         self.is_processing = False
-        self.event_queue: queue.Queue[tuple[str, Any]] = queue.Queue()
+        self.is_checking = False
+        self.generation = 0
+        self.pending_check = None
+        self.worker_process = None
+        self.worker_connection = None
+        self.worker_busy = False
+        self.worker_started = 0.0
+        self.closing = False
+        self.phase_key = "status_processing"
         self.status_animation_after_id: str | None = None
         self.status_animation_index = 0
         self.status_animation_started_at = 0.0
@@ -780,8 +597,11 @@ class DakePdfCompressApp:
         self.setup_style()
         self.build_ui()
         self.setup_drop_targets()
-        self.root.after(QUEUE_POLL_INTERVAL_MS, self.poll_queue)
+        self.poll_after_id = self.root.after(QUEUE_POLL_INTERVAL_MS, self.poll_queue)
         self.root.bind("<Configure>", self.handle_root_configure)
+        self.root.protocol("WM_DELETE_WINDOW", self.close_app)
+        # Developer-only readiness evidence: no effect unless explicitly enabled.
+        self.root.after_idle(self.record_ready)
 
     def setup_style(self) -> None:
         style = ttk.Style(self.root)
@@ -955,7 +775,7 @@ class DakePdfCompressApp:
         self.status_badge.pack(side=tk.LEFT)
         self.progress = ttk.Progressbar(
             status_row,
-            mode="indeterminate",
+            mode="determinate",
             style="Dake.Horizontal.TProgressbar",
             length=180,
         )
@@ -965,6 +785,8 @@ class DakePdfCompressApp:
         self.footer.pack(fill=tk.X)
         self.update_footer_layout()
 
+        for widget in self.drop_area.winfo_children():
+            widget.bind("<Button-1>", self.select_pdf_dialog)
         self.update_action_state()
 
     def add_info_row(
@@ -987,8 +809,8 @@ class DakePdfCompressApp:
             frame,
             textvariable=value_var,
             fg=COLORS["text"],
-            font=(self.font_family, 11, "bold"),
-            wraplength=330,
+            font=(self.font_family, 14 if value_var is self.reduction_rate_var else 11, "bold"),
+            wraplength=290,
             justify=tk.LEFT,
         ).pack(anchor=tk.W, pady=(4, 0))
 
@@ -1101,28 +923,65 @@ class DakePdfCompressApp:
             self.show_error("error_read_failed")
             return
 
-        files = [path for path in paths if path.is_file()]
-        if len(files) != 1:
+        if len(paths) != 1:
             self.show_error("error_multiple_files")
             return
-        self.load_pdf(files[0])
+        self.load_pdf(paths[0])
 
     def load_pdf(self, path: Path) -> None:
-        try:
-            validate_pdf(path)
-        except CompressError as exc:
-            self.show_error(exc.message_key, exc.detail)
+        if self.is_processing or self.closing:
             return
-
-        output_path = unique_output_path(path)
-        self.selected_pdf = path
+        self.generation += 1
+        self.selected_pdf = None
+        self.is_checking = True
         self.file_name_var.set(truncate_middle(path.name, 58))
-        self.original_size_var.set(format_bytes(path.stat().st_size))
-        self.save_name_var.set(truncate_middle(output_path.name, 58))
+        self.original_size_var.set(UI_TEXT["value_not_yet"])
+        self.save_name_var.set(UI_TEXT["value_not_yet"])
         self.save_folder_var.set(truncate_middle(str(path.parent), 70))
         self.compressed_size_var.set(UI_TEXT["value_not_yet"])
         self.reduction_rate_var.set(UI_TEXT["value_not_yet"])
         self.notice_var.set("")
+        self.drop_title_var.set(UI_TEXT["status_checking"])
+        self.drop_subtitle_var.set(truncate_middle(path.name, 58))
+        self.set_status("status_checking", "processing")
+        self.start_progress()
+        self.update_action_state()
+        self.pending_check = ("check", self.generation, path)
+        # Paint first, then create / dispatch to the worker.
+        self.root.after_idle(self.dispatch_pending)
+
+    def ensure_worker(self) -> None:
+        if self.worker_process is not None and self.worker_process.is_alive():
+            return
+        ctx = mp.get_context("spawn")
+        parent, child = ctx.Pipe()
+        self.worker_connection = parent
+        self.worker_process = ctx.Process(target=pdf_worker, args=(child,))
+        self.worker_process.start()
+        child.close()
+
+    def dispatch_pending(self) -> None:
+        if self.closing or self.worker_busy or self.pending_check is None:
+            return
+        try:
+            self.ensure_worker()
+            self.worker_connection.send(self.pending_check)
+            self.pending_check = None
+            self.worker_busy = True
+            self.worker_started = time.monotonic()
+        except Exception as exc:
+            self.is_checking = False
+            self.worker_busy = False
+            self.show_error("error_unknown", str(exc))
+            self.update_action_state()
+
+    def apply_checked(self, payload) -> None:
+        path, size, output_path = payload
+        self.is_checking = False
+        self.stop_progress()
+        self.selected_pdf = path
+        self.original_size_var.set(format_bytes(size))
+        self.save_name_var.set(truncate_middle(output_path.name, 58))
         self.drop_title_var.set(UI_TEXT["drop_title_selected"])
         self.drop_subtitle_var.set(UI_TEXT["drop_subtitle_selected"])
         self.set_status("status_ready", "ready")
@@ -1131,6 +990,10 @@ class DakePdfCompressApp:
     def clear_selection(self) -> None:
         if self.is_processing:
             return
+        self.generation += 1
+        self.pending_check = None
+        self.is_checking = False
+        self.stop_progress()
         self.selected_pdf = None
         self.file_name_var.set(UI_TEXT["value_empty"])
         self.original_size_var.set(UI_TEXT["value_empty"])
@@ -1153,81 +1016,141 @@ class DakePdfCompressApp:
 
         source_path = self.selected_pdf
         self.is_processing = True
+        self.phase_key = "status_analyzing"
         self.notice_var.set("")
         self.set_status("status_processing", "processing")
         self.start_status_animation()
         self.update_action_state()
-        self.progress.start(10)
+        self.start_progress()
 
-        worker = threading.Thread(target=self.compress_worker, args=(source_path,), daemon=True)
-        worker.start()
-
-    def compress_worker(self, source_path: Path) -> None:
-        result = safe_run(compress_pdf, source_path, title=APP_NAME, log_dir=str(app_log_dir()))
-        if result.ok and result.value is not None:
-            self.event_queue.put(("success", result.value))
-            return
-        if isinstance(result.error, CompressError):
-            self.event_queue.put(("error", result.error))
-            return
-        detail = str(result.error) if result.error is not None else result.user_message
-        self.event_queue.put(("error", CompressError("error_unknown", detail)))
+        try:
+            self.ensure_worker()
+            self.worker_connection.send(("compress", self.generation, source_path))
+            self.worker_busy = True
+            self.worker_started = time.monotonic()
+        except Exception as exc:
+            self.handle_worker_error(CompressError("error_unknown", str(exc)))
 
     def poll_queue(self) -> None:
+        if self.closing:
+            return
         try:
-            while True:
-                event = self.event_queue.get_nowait()
-                self.handle_queue_event(event)
-        except queue.Empty:
-            pass
-        self.root.after(QUEUE_POLL_INTERVAL_MS, self.poll_queue)
+            if self.worker_connection is not None:
+                while self.worker_connection.poll():
+                    event = self.worker_connection.recv()
+                    if event[0] != "phase":
+                        self.worker_busy = False
+                    self.handle_queue_event(event)
+                    if self.closing:
+                        return
+            if self.worker_busy and self.worker_process is not None:
+                limit = 160 if self.is_processing else 30
+                if not self.worker_process.is_alive() or time.monotonic() - self.worker_started > limit:
+                    raise RuntimeError("PDF worker stopped or exceeded time budget")
+        except (EOFError, OSError, RuntimeError) as exc:
+            self.stop_worker()
+            self.is_checking = False
+            self.handle_worker_error(CompressError("error_unknown", str(exc)))
+        self.dispatch_pending()
+        self.poll_after_id = self.root.after(QUEUE_POLL_INTERVAL_MS, self.poll_queue)
+
+    def stop_worker(self) -> None:
+        if self.worker_process is not None:
+            if self.worker_process.is_alive():
+                self.worker_process.terminate()
+            self.worker_process.join(0.2)
+            if not self.worker_process.is_alive():
+                self.worker_process.close()
+            self.worker_process = None
+        if self.worker_connection is not None:
+            self.worker_connection.close()
+            self.worker_connection = None
+        self.worker_busy = False
+
+    def close_app(self) -> None:
+        if self.is_processing:
+            # Let the already-requested atomic save finish. Window stays responsive.
+            self.set_status("status_closing", "processing")
+            self.close_after_processing = True
+            return
+        self.closing = True
+        self.generation += 1
+        self.pending_check = None
+        self.stop_status_animation()
+        self.root.after_cancel(self.poll_after_id)
+        self.stop_worker()
+        self.root.destroy()
+
+    def record_ready(self) -> None:
+        path = os.environ.get("DAKE_STARTUP_READY_FILE")
+        if path:
+            if not self.root.winfo_viewable():
+                self.root.after(10, self.record_ready)
+                return
+            try:
+                Path(path).write_text(str(time.perf_counter_ns()), encoding="ascii")
+                if os.environ.get("DAKE_STARTUP_PROBE") == "1":
+                    self.root.after(50, self.close_app)
+            except OSError as exc:
+                write_app_debug_log("startup measurement unavailable", exc=exc)
 
     def handle_queue_event(self, event: tuple[str, Any]) -> None:
         event_type, payload = event
-        if event_type == "success":
+        if event_type == "checked":
+            generation, value = payload
+            if generation == self.generation:
+                self.apply_checked(value)
+        elif event_type == "check_error":
+            generation, key = payload
+            if generation == self.generation:
+                self.is_checking = False
+                self.stop_progress()
+                self.drop_title_var.set(UI_TEXT["status_error"])
+                self.show_error(key)
+                self.update_action_state()
+        elif event_type == "phase":
+            self.phase_key = payload
+            self.set_status(payload, "processing")
+        elif event_type == "success":
             self.handle_success(payload)
         elif event_type == "error":
-            self.handle_worker_error(payload)
+            self.handle_worker_error(CompressError(payload[1]))
 
     def handle_success(self, result: PdfResult) -> None:
         self.is_processing = False
-        self.progress.stop()
+        self.stop_progress()
         self.stop_status_animation()
         self.compressed_size_var.set(format_bytes(result.compressed_size))
-        self.reduction_rate_var.set(f"{result.reduction_rate:.1f}%")
+        summary = UI_TEXT["result_reduction"].format(rate=result.reduction_rate)
+        self.reduction_rate_var.set(summary)
+        self.drop_title_var.set(UI_TEXT["result_sizes"].format(
+            before=format_bytes(result.original_size), after=format_bytes(result.compressed_size)))
+        self.drop_subtitle_var.set(summary)
         self.save_name_var.set(truncate_middle(result.output_path.name, 58))
         self.save_folder_var.set(truncate_middle(str(result.output_path.parent), 70))
-
-        notices = []
-        if result.used_fallback:
-            notices.append(UI_TEXT["message_fallback_used"])
+        self.notice_var.set(UI_TEXT["message_low_reduction"] if result.low_reduction else "")
+        self.set_status("status_low_reduction" if result.low_reduction else "status_complete",
+                        "warning" if result.low_reduction else "success")
+        message = UI_TEXT["result_reduction"].format(rate=result.reduction_rate)
         if result.low_reduction:
-            notices.append(UI_TEXT["message_low_reduction"])
-        self.notice_var.set("\n".join(notices))
-
-        if result.low_reduction:
-            self.set_status("status_low_reduction", "warning")
-            message = f"{UI_TEXT['message_complete']}\n\n{self.notice_var.get()}\n\n{UI_TEXT['message_complete_detail']}"
-            dialog = messagebox.showwarning
-        else:
-            self.set_status("status_complete", "success")
-            if self.notice_var.get():
-                message = f"{UI_TEXT['message_complete']}\n\n{self.notice_var.get()}\n\n{UI_TEXT['message_complete_detail']}"
-            else:
-                message = f"{UI_TEXT['message_complete']}\n\n{UI_TEXT['message_complete_detail']}"
-            dialog = messagebox.showinfo
-
+            message += "\n\n" + UI_TEXT["message_low_reduction"]
+        message += "\n\n" + UI_TEXT["message_complete_detail"]
+        dialog = messagebox.showwarning if result.low_reduction else messagebox.showinfo
         self.update_action_state()
         dialog(UI_TEXT["dialog_complete_title"], message)
         self.open_output_folder(result.output_path.parent)
+        if getattr(self, "close_after_processing", False):
+            self.close_app()
 
     def handle_worker_error(self, exc: CompressError) -> None:
         self.is_processing = False
-        self.progress.stop()
+        self.stop_progress()
         self.stop_status_animation()
         self.set_status("status_error", "error")
         self.update_action_state()
         self.show_error(exc.message_key, exc.detail)
+        if getattr(self, "close_after_processing", False):
+            self.close_app()
 
     def open_output_folder(self, folder: Path) -> None:
         try:
@@ -1241,7 +1164,7 @@ class DakePdfCompressApp:
     def show_error(self, message_key: str, detail: str | None = None) -> None:
         message = UI_TEXT.get(message_key, UI_TEXT["error_unknown"])
         if detail:
-            message = f"{message}\n\n{UI_TEXT['detail_suffix'].format(detail=detail)}"
+            write_app_debug_log("user-visible error", context={"key": message_key, "detail": detail})
         self.notice_var.set(message)
         self.set_status("status_error", "error")
         messagebox.showwarning(UI_TEXT["dialog_error_title"], message)
@@ -1265,6 +1188,14 @@ class DakePdfCompressApp:
         self.status_animation_index = 0
         self.animate_processing_status()
 
+    def start_progress(self) -> None:
+        self.progress.configure(mode="indeterminate")
+        self.progress.start(10)
+
+    def stop_progress(self) -> None:
+        self.progress.stop()
+        self.progress.configure(mode="determinate", value=0)
+
     def stop_status_animation(self) -> None:
         if self.status_animation_after_id is not None:
             try:
@@ -1278,16 +1209,10 @@ class DakePdfCompressApp:
             return
 
         elapsed = time.monotonic() - self.status_animation_started_at
-        sequence = list(UI_TEXT["status_processing_dots"])
+        self.status_var.set(UI_TEXT[self.phase_key] + "." * (self.status_animation_index % 3 + 1))
         if elapsed >= STATUS_PHRASE_DELAY_SECONDS:
-            sequence.extend(
-                [
-                    UI_TEXT["status_phrase_1"],
-                    UI_TEXT["status_phrase_2"],
-                    UI_TEXT["status_phrase_3"],
-                ]
-            )
-        self.status_var.set(sequence[self.status_animation_index % len(sequence)])
+            phrases = ["status_phrase_1", "status_phrase_2", "status_phrase_3"]
+            self.notice_var.set(UI_TEXT[phrases[min(2, int((elapsed - STATUS_PHRASE_DELAY_SECONDS) / 4))]])
         self.status_animation_index += 1
         self.status_animation_after_id = self.root.after(
             STATUS_ANIMATION_INTERVAL_MS,
@@ -1295,7 +1220,7 @@ class DakePdfCompressApp:
         )
 
     def update_action_state(self) -> None:
-        has_pdf = self.selected_pdf is not None
+        has_pdf = self.selected_pdf is not None and not self.is_checking
         if self.is_processing:
             self.execute_button.configure(state=tk.DISABLED, bg=COLORS["disabled"], cursor="arrow")
             self.select_button.configure(state=tk.DISABLED, cursor="arrow")
@@ -1303,7 +1228,7 @@ class DakePdfCompressApp:
             return
 
         self.select_button.configure(state=tk.NORMAL, cursor="hand2")
-        self.clear_button.configure(state=tk.NORMAL if has_pdf else tk.DISABLED, cursor="hand2" if has_pdf else "arrow")
+        self.clear_button.configure(state=tk.NORMAL if has_pdf or self.is_checking else tk.DISABLED, cursor="hand2" if has_pdf or self.is_checking else "arrow")
         self.execute_button.configure(
             state=tk.NORMAL if has_pdf else tk.DISABLED,
             bg=COLORS["accent"] if has_pdf else COLORS["disabled"],
@@ -1314,6 +1239,8 @@ class DakePdfCompressApp:
 def check_runtime_dependencies() -> None:
     if get_fitz() is None:
         raise CompressError("error_dependency_missing")
+    from adaptive import library
+    library()
 
 
 def create_launch_check_window() -> Any:
@@ -1349,4 +1276,5 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
+    mp.freeze_support()
     raise SystemExit(main())

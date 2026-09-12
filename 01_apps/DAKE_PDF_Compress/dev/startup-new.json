@@ -1,0 +1,36 @@
+{
+  "exe": "LOCAL_WORK\\01_apps\\DAKE_PDF_Compress\\dist\\DakePDF_Compress.exe",
+  "runs": [
+    {
+      "run": 1,
+      "kind": "first launch (not OS-cold)",
+      "seconds": 1.9140146
+    },
+    {
+      "run": 2,
+      "kind": "warm",
+      "seconds": 1.3738389
+    },
+    {
+      "run": 3,
+      "kind": "warm",
+      "seconds": 1.4151764
+    },
+    {
+      "run": 4,
+      "kind": "warm",
+      "seconds": 1.4311897
+    },
+    {
+      "run": 5,
+      "kind": "warm",
+      "seconds": 1.4977215
+    },
+    {
+      "run": 6,
+      "kind": "warm",
+      "seconds": 1.4591775
+    }
+  ],
+  "warm_median": 1.4311897
+}

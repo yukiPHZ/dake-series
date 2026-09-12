@@ -1,0 +1,118 @@
+{
+  "source": [
+    {
+      "case": "help",
+      "exit": 0,
+      "stdout": "DakePDF_Compress CLI\r\nUsage:\r\n  DakePDF_Compress.exe --from-shimarisu --inputs \"A.pdf\" [\"B.pdf\" ...]\r\n\r\nOptions:\r\n  --from-shimarisu   Run without GUI for SHIMARISU.\r\n  --inputs           One or more PDF files.\r\n  --help-cli         Show this help and exit.\r\n\r\nOutput:\r\n  Saves next to each source PDF as *_compressed.pdf.\r\n  Automatically selects a verified compression result.\r\n  Prints output PDF path on success.\r\n\r\n",
+      "stderr": "",
+      "seconds": 0.1570000000001528
+    },
+    {
+      "case": "one",
+      "exit": 0,
+      "stdout": "LOCAL_WORK\\evidence\\cli-source\\正常 one_compressed_5.pdf\r\n",
+      "stderr": "",
+      "seconds": 0.7339999999999236
+    },
+    {
+      "case": "many",
+      "exit": 0,
+      "stdout": "LOCAL_WORK\\evidence\\cli-source\\正常 one_compressed_6.pdf\r\nLOCAL_WORK\\evidence\\cli-source\\正常 two_compressed_3.pdf\r\n",
+      "stderr": "",
+      "seconds": 1.0779999999999745
+    },
+    {
+      "case": "missing",
+      "exit": 1,
+      "stdout": "",
+      "stderr": "File not found.\r\n",
+      "seconds": 0.15599999999994907
+    },
+    {
+      "case": "not_pdf",
+      "exit": 1,
+      "stdout": "",
+      "stderr": "PDF only.\r\n",
+      "seconds": 0.1570000000001528
+    },
+    {
+      "case": "broken",
+      "exit": 1,
+      "stdout": "",
+      "stderr": "Cannot read PDF.\r\n",
+      "seconds": 0.26499999999987267
+    },
+    {
+      "case": "no_inputs",
+      "exit": 1,
+      "stdout": "",
+      "stderr": "No input PDF.\r\n",
+      "seconds": 0.1410000000000764
+    },
+    {
+      "case": "no_reduction",
+      "exit": 1,
+      "stdout": "",
+      "stderr": "No size reduction.\r\n",
+      "seconds": 0.6089999999999236
+    }
+  ],
+  "exe": [
+    {
+      "case": "help",
+      "exit": 0,
+      "stdout": "DakePDF_Compress CLI\r\nUsage:\r\n  DakePDF_Compress.exe --from-shimarisu --inputs \"A.pdf\" [\"B.pdf\" ...]\r\n\r\nOptions:\r\n  --from-shimarisu   Run without GUI for SHIMARISU.\r\n  --inputs           One or more PDF files.\r\n  --help-cli         Show this help and exit.\r\n\r\nOutput:\r\n  Saves next to each source PDF as *_compressed.pdf.\r\n  Automatically selects a verified compression result.\r\n  Prints output PDF path on success.\r\n\r\n",
+      "stderr": "",
+      "seconds": 1.5779999999999745
+    },
+    {
+      "case": "one",
+      "exit": 0,
+      "stdout": "LOCAL_WORK\\evidence\\cli-exe\\正常 one_compressed_4.pdf\r\n",
+      "stderr": "",
+      "seconds": 2.0
+    },
+    {
+      "case": "many",
+      "exit": 0,
+      "stdout": "LOCAL_WORK\\evidence\\cli-exe\\正常 one_compressed_5.pdf\r\nLOCAL_WORK\\evidence\\cli-exe\\正常 two_compressed_2.pdf\r\n",
+      "stderr": "",
+      "seconds": 2.6410000000000764
+    },
+    {
+      "case": "missing",
+      "exit": 1,
+      "stdout": "",
+      "stderr": "File not found.\r\n",
+      "seconds": 1.655999999999949
+    },
+    {
+      "case": "not_pdf",
+      "exit": 1,
+      "stdout": "",
+      "stderr": "PDF only.\r\n",
+      "seconds": 1.6869999999998981
+    },
+    {
+      "case": "broken",
+      "exit": 1,
+      "stdout": "",
+      "stderr": "Cannot read PDF.\r\n",
+      "seconds": 1.8600000000001273
+    },
+    {
+      "case": "no_inputs",
+      "exit": 1,
+      "stdout": "",
+      "stderr": "No input PDF.\r\n",
+      "seconds": 1.7649999999998727
+    },
+    {
+      "case": "no_reduction",
+      "exit": 1,
+      "stdout": "",
+      "stderr": "No size reduction.\r\n",
+      "seconds": 2.1100000000001273
+    }
+  ]
+}
