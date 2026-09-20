@@ -10,7 +10,7 @@ for %%F in (*.spec) do del /q "%%~fF"
 set "PYTHON_CMD="
 
 if defined PYTHON_EXE (
-  if exist "%PYTHON_EXE%" set "PYTHON_CMD=%PYTHON_EXE%"
+  if exist "%PYTHON_EXE%" set PYTHON_CMD="%PYTHON_EXE%"
 )
 
 if not defined PYTHON_CMD (
@@ -44,7 +44,7 @@ if errorlevel 1 (
 %PYTHON_CMD% -m PyInstaller ^
   --noconfirm ^
   --clean ^
-  --onefile ^
+  --onedir ^
   --windowed ^
   --noconsole ^
   --name=DakePDF_Split_One ^
@@ -55,5 +55,5 @@ if errorlevel 1 (
   main.py
 
 echo.
-echo Build complete: dist\DakePDF_Split_One.exe
+echo Build complete: dist\DakePDF_Split_One\DakePDF_Split_One.exe
 pause

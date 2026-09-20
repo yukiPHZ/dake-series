@@ -3,8 +3,11 @@ import json
 import os
 import queue
 import re
+import shutil
 import sys
+import tempfile
 import threading
+import time
 import tkinter as tk
 import webbrowser
 from argparse import ArgumentParser
@@ -12,8 +15,6 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from tkinter import filedialog, messagebox
-
-from pypdf import PdfReader, PdfWriter
 
 try:
     from tkinterdnd2 import DND_FILES, TkinterDnD
@@ -25,11 +26,7 @@ except Exception:
     HAS_DND = False
 
 
-APP_NAME = "PDF分割One"
-WINDOW_TITLE = "PDF分割One"
-EXE_NAME = "DakePDF_Split_One.exe"
 CONFIG_NAME = "dake_pdf_split_one_config.json"
-COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
 FONT_NAME = "Yu Gothic UI"
 WINDOW_WIDTH = 860
 WINDOW_HEIGHT = 520
@@ -60,11 +57,12 @@ THEME = {
 }
 
 UI_TEXT = {
-    "brand_series": "シンプルそれDAKEシリーズ",
+    "window_title": "PDF分割One",
     "main_title": "PDFを1ページずつ分割する",
     "main_description": "追加したPDFを全ページ1枚ずつに分けて保存します。",
     "button_select_folder": "保存先を選ぶ",
     "button_refresh": "リフレッシュ",
+    "button_cancel": "中止",
     "empty_title": "PDFを追加してください",
     "empty_subtitle": "ドラッグ＆ドロップ または クリックして追加",
     "status_idle": "未選択",
@@ -90,7 +88,6 @@ UI_TEXT = {
     "processing_detail": "{current}/{total} を分割しています: {name}",
     "processing_prepare_detail": "分割を始めています。",
     "complete_detail": "保存フォルダを開きます。",
-    "error_detail": "もう一度PDFを追加してください。",
     "save_folder_prefix": "保存先",
     "output_folder_prefix": "出力フォルダ",
     "footer_left": "シンプルそれDAKEシリーズ",
@@ -104,6 +101,7 @@ UI_TEXT = {
 
 @dataclass(frozen=True)
 class WorkerEvent:
+    generation: int
     kind: str
     payload: object | None = None
 
@@ -113,6 +111,10 @@ class PdfServiceError(Exception):
         super().__init__(code)
         self.code = code
         self.original = original
+
+
+class JobCancelled(Exception):
+    pass
 
 
 class CliError(Exception):
@@ -201,6 +203,8 @@ def resolve_cli_output_folder(source_pdf: Path, output: str | None) -> Path:
 
 
 def split_pdf_for_cli(source_pdf: Path, output_folder: Path) -> Path:
+    from pypdf import PdfReader, PdfWriter
+
     try:
         reader = PdfReader(str(source_pdf))
         total_pages = len(reader.pages)
@@ -269,58 +273,119 @@ class WorkerNotifier:
     def __init__(self):
         self.event_queue: queue.Queue[WorkerEvent] = queue.Queue()
 
-    def publish(self, kind: str, payload: object | None = None) -> None:
-        self.event_queue.put(WorkerEvent(kind=kind, payload=payload))
+    def publish(
+        self,
+        generation: int,
+        kind: str,
+        payload: object | None = None,
+    ) -> None:
+        self.event_queue.put(
+            WorkerEvent(generation=generation, kind=kind, payload=payload)
+        )
 
 
 class PdfSplitService:
-    OUTPUT_PATTERN = re.compile(r"^p\d{3,}\.pdf$", re.IGNORECASE)
-
     def split_all_pages(
         self,
         source_pdf: Path,
         save_root: Path,
+        cancel_event: threading.Event,
         on_loaded,
         on_progress,
     ) -> Path:
+        work_folder: Path | None = None
+        reader = None
         try:
+            if cancel_event.is_set():
+                raise JobCancelled
+
+            from pypdf import PdfReader, PdfWriter
+
+            if cancel_event.is_set():
+                raise JobCancelled
+
             reader = PdfReader(str(source_pdf))
             total_pages = len(reader.pages)
             if total_pages < 1:
                 raise PdfServiceError("open_failed")
+            if cancel_event.is_set():
+                raise JobCancelled
         except PdfServiceError:
+            raise
+        except JobCancelled:
             raise
         except Exception as exc:
             raise PdfServiceError("open_failed", exc) from exc
 
         try:
-            output_folder = self._build_output_folder(source_pdf, save_root)
-            output_folder.mkdir(parents=True, exist_ok=True)
-            self._clear_previous_outputs(output_folder)
-            on_loaded(total_pages, output_folder)
+            safe_stem = make_safe_stem(source_pdf.stem)
+            work_folder = Path(
+                tempfile.mkdtemp(
+                    prefix=f".{safe_stem}_split_work_",
+                    dir=save_root,
+                )
+            )
+            on_loaded(total_pages, self.next_output_folder(source_pdf, save_root))
 
             digits = max(3, len(str(total_pages)))
-            for index, page in enumerate(reader.pages, start=1):
+            for zero_based_index in range(total_pages):
+                if cancel_event.is_set():
+                    raise JobCancelled
+
+                page = reader.pages[zero_based_index]
+                if cancel_event.is_set():
+                    raise JobCancelled
+
+                index = zero_based_index + 1
                 writer = PdfWriter()
                 writer.add_page(page)
-                output_path = output_folder / f"p{index:0{digits}d}.pdf"
+                output_path = work_folder / f"p{index:0{digits}d}.pdf"
+                if cancel_event.is_set():
+                    raise JobCancelled
                 with output_path.open("wb") as stream:
                     writer.write(stream)
+                if cancel_event.is_set():
+                    raise JobCancelled
                 on_progress(index, total_pages, output_path.name)
+                if cancel_event.is_set():
+                    raise JobCancelled
 
-            return output_folder
+            while True:
+                if cancel_event.is_set():
+                    raise JobCancelled
+                output_folder = self.next_output_folder(source_pdf, save_root)
+                try:
+                    work_folder.rename(output_folder)
+                    work_folder = None
+                    return output_folder
+                except OSError:
+                    if output_folder.exists():
+                        continue
+                    raise
         except PdfServiceError:
+            raise
+        except JobCancelled:
             raise
         except Exception as exc:
             raise PdfServiceError("split_failed", exc) from exc
+        finally:
+            if work_folder is not None:
+                shutil.rmtree(work_folder, ignore_errors=True)
+            reader_stream = getattr(reader, "stream", None)
+            if reader_stream is not None:
+                try:
+                    reader_stream.close()
+                except Exception:
+                    pass
 
-    def _build_output_folder(self, source_pdf: Path, save_root: Path) -> Path:
-        return save_root / f"{make_safe_stem(source_pdf.stem)}_split"
-
-    def _clear_previous_outputs(self, output_folder: Path) -> None:
-        for item in output_folder.iterdir():
-            if item.is_file() and self.OUTPUT_PATTERN.fullmatch(item.name):
-                item.unlink()
+    def next_output_folder(self, source_pdf: Path, save_root: Path) -> Path:
+        base_name = f"{make_safe_stem(source_pdf.stem)}_split"
+        candidate = save_root / base_name
+        suffix = 2
+        while candidate.exists():
+            candidate = save_root / f"{base_name}_{suffix}"
+            suffix += 1
+        return candidate
 
 
 class StatusDots:
@@ -383,6 +448,9 @@ class FlatButton(tk.Label):
             fg=THEME["text"] if enabled else "#9CA3AF",
             cursor="hand2" if enabled else "arrow",
         )
+
+    def set_text(self, text: str) -> None:
+        self.configure(text=text)
 
 
 class HoverTooltip:
@@ -454,6 +522,10 @@ class SplitController:
         self.output_folder: Path | None = None
         self.save_folder = Path(self.config.last_save_folder)
         self.busy = False
+        self.job_generation = 0
+        self.current_cancel_event: threading.Event | None = None
+        self._workers: list[threading.Thread] = []
+        self._cancel_events: list[threading.Event] = []
 
     def attach_ui(self, ui) -> None:
         self.ui = ui
@@ -493,13 +565,25 @@ class SplitController:
             self.start_from_path(Path(selected))
 
     def refresh(self) -> None:
-        if self.busy:
-            return
-
+        self.job_generation += 1
+        if self.current_cancel_event is not None:
+            self.current_cancel_event.set()
+        self.current_cancel_event = None
+        self.busy = False
         self.current_source = None
         self.output_folder = None
         if self.ui:
             self.ui.show_idle()
+
+    def cancel_all_jobs(self) -> None:
+        self.job_generation += 1
+        self.busy = False
+        self.current_cancel_event = None
+        for cancel_event in self._cancel_events:
+            cancel_event.set()
+
+    def has_active_workers(self) -> bool:
+        return any(worker.is_alive() for worker in self._workers)
 
     def handle_drop_data(self, raw_data: str) -> None:
         if self.busy or not self.ui:
@@ -521,18 +605,24 @@ class SplitController:
             self.ui.show_error(UI_TEXT["error_not_pdf"])
             return
 
+        self.job_generation += 1
+        generation = self.job_generation
+        cancel_event = threading.Event()
         self.busy = True
+        self.current_cancel_event = cancel_event
+        self._cancel_events.append(cancel_event)
         self.current_source = path
-        self.output_folder = self.service._build_output_folder(path, self.save_folder)
+        self.output_folder = self.service.next_output_folder(path, self.save_folder)
         self.ui.set_interaction_enabled(False)
         self.ui.show_file_context(path, self.output_folder)
         self.ui.update_status("loading", UI_TEXT["loading_detail"])
 
         worker = threading.Thread(
             target=self._run_split_job,
-            args=(path, self.save_folder),
+            args=(generation, cancel_event, path, self.save_folder),
             daemon=True,
         )
+        self._workers.append(worker)
         worker.start()
 
     def process_worker_events(self) -> None:
@@ -543,6 +633,8 @@ class SplitController:
                 return
 
             if not self.ui:
+                continue
+            if event.generation != self.job_generation:
                 continue
 
             if event.kind == "loaded":
@@ -564,6 +656,7 @@ class SplitController:
             elif event.kind == "done":
                 payload = event.payload or {}
                 self.busy = False
+                self.current_cancel_event = None
                 self.ui.set_interaction_enabled(True)
                 self.ui.update_status("complete", UI_TEXT["complete_detail"])
                 completed_folder_text = str(payload.get("output_folder", "")).strip()
@@ -574,31 +667,57 @@ class SplitController:
                 self.ui.show_completion(self.output_folder)
             elif event.kind == "error":
                 self.busy = False
+                self.current_cancel_event = None
                 message = str(event.payload or UI_TEXT["error_split_failed"])
                 self.ui.set_interaction_enabled(True)
                 self.ui.show_error(message)
 
-    def _run_split_job(self, source_path: Path, save_folder: Path) -> None:
+    def _run_split_job(
+        self,
+        generation: int,
+        cancel_event: threading.Event,
+        source_path: Path,
+        save_folder: Path,
+    ) -> None:
         try:
             output_folder = self.service.split_all_pages(
                 source_pdf=source_path,
                 save_root=save_folder,
-                on_loaded=self._on_loaded,
-                on_progress=self._on_progress,
+                cancel_event=cancel_event,
+                on_loaded=lambda total, output: self._on_loaded(
+                    generation,
+                    total,
+                    output,
+                ),
+                on_progress=lambda current, total, name: self._on_progress(
+                    generation,
+                    current,
+                    total,
+                    name,
+                ),
             )
             self.notifier.publish(
+                generation,
                 "done",
                 {"output_folder": str(output_folder)},
             )
+        except JobCancelled:
+            self.notifier.publish(generation, "cancelled")
         except PdfServiceError as exc:
             message = {
                 "open_failed": UI_TEXT["error_open_failed"],
                 "split_failed": UI_TEXT["error_split_failed"],
             }.get(exc.code, UI_TEXT["error_split_failed"])
-            self.notifier.publish("error", message)
+            self.notifier.publish(generation, "error", message)
 
-    def _on_loaded(self, total_pages: int, output_folder: Path) -> None:
+    def _on_loaded(
+        self,
+        generation: int,
+        total_pages: int,
+        output_folder: Path,
+    ) -> None:
         self.notifier.publish(
+            generation,
             "loaded",
             {
                 "page_count": total_pages,
@@ -606,8 +725,15 @@ class SplitController:
             },
         )
 
-    def _on_progress(self, current: int, total: int, name: str) -> None:
+    def _on_progress(
+        self,
+        generation: int,
+        current: int,
+        total: int,
+        name: str,
+    ) -> None:
         self.notifier.publish(
+            generation,
             "progress",
             {"current": current, "total": total, "name": name},
         )
@@ -627,8 +753,10 @@ class SplitOneApp:
         self.panel_title_tooltip: HoverTooltip | None = None
         self.panel_subtitle_tooltip: HoverTooltip | None = None
         self.panel_meta_tooltip: HoverTooltip | None = None
+        self._closing = False
+        self._close_deadline = 0.0
 
-        self.root.title(WINDOW_TITLE)
+        self.root.title(UI_TEXT["window_title"])
         self.root.configure(bg=THEME["bg"])
         self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")
         self.root.resizable(False, False)
@@ -640,6 +768,9 @@ class SplitOneApp:
         self.controller.attach_ui(self)
         self._center_window()
         self._configure_drag_and_drop()
+        self.root.bind("<F5>", self._on_refresh_shortcut)
+        self.root.bind("<Control-o>", self._on_open_shortcut)
+        self.root.protocol("WM_DELETE_WINDOW", self._on_close)
         self._poll_worker_queue()
         self._animate_busy_status()
 
@@ -893,6 +1024,31 @@ class SplitOneApp:
     def _on_drop(self, event) -> None:
         self.controller.handle_drop_data(event.data)
 
+    def _on_refresh_shortcut(self, _event=None) -> str:
+        self.controller.refresh()
+        return "break"
+
+    def _on_open_shortcut(self, _event=None) -> str:
+        self.controller.choose_pdf()
+        return "break"
+
+    def _on_close(self) -> None:
+        if self._closing:
+            return
+        self._closing = True
+        self._close_deadline = time.monotonic() + 3.0
+        self.controller.cancel_all_jobs()
+        self._finish_close_when_ready()
+
+    def _finish_close_when_ready(self) -> None:
+        if (
+            not self.controller.has_active_workers()
+            or time.monotonic() >= self._close_deadline
+        ):
+            self.root.destroy()
+            return
+        self.root.after(50, self._finish_close_when_ready)
+
     def _poll_worker_queue(self) -> None:
         self.controller.process_worker_events()
         self.root.after(120, self._poll_worker_queue)
@@ -1054,7 +1210,10 @@ class SplitOneApp:
 
     def set_interaction_enabled(self, enabled: bool) -> None:
         self.folder_button.set_enabled(enabled)
-        self.refresh_button.set_enabled(enabled)
+        self.refresh_button.set_enabled(True)
+        self.refresh_button.set_text(
+            UI_TEXT["button_refresh"] if enabled else UI_TEXT["button_cancel"]
+        )
         self.drop_panel.configure(cursor="hand2" if enabled else "arrow")
 
 
@@ -1062,10 +1221,6 @@ def resource_base_dir() -> Path:
     if getattr(sys, "frozen", False):
         return Path(sys.executable).resolve().parent
     return Path(__file__).resolve().parent
-
-
-def resource_path(name: str) -> Path:
-    return resource_base_dir() / name
 
 
 def get_common_icon_path() -> Path:
