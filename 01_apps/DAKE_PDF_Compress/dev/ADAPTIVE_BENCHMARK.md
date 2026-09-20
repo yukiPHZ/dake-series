@@ -95,3 +95,21 @@ API根拠: [rewrite_images・保存](https://pymupdf.readthedocs.io/en/latest/do
 3. 個人情報を外部へ送らず手元の実務PDFで確認。サンプル外の文字/図面/印影が崩れないこと。
 4. 再起動後cold 3回とwarm 5回を測る。iLovePDF比較を希望する場合のみ、テスト専用PDFを人手で扱う。
 5. Gate通過後の正式version案は1.1.0。今回は正本version1.0.0と既存Release tagを維持。
+
+## Human Gate再現バグ回帰（2026-09-20）
+
+根本原因は、`page.get_drawings()`がfill-only drawingに対して返す`width=None`を、数値として`0 < width < 0.6`で比較していたこと。実10頁PDFで修正前の`TypeError: '<' not supported between instances of 'int' and 'NoneType'`を再現した。
+
+- `is_thin_stroke()`で、boolを除く有限のint/floatだけを評価する。fill-only、widthキーなし、文字列、NaN、Infinityは細線とみなさない。0.3は保護、1.0は非保護。
+- 3頁fixtureで、1頁目fill-only（type=f / width=None）、2頁目0.3pt、3頁目1.0ptを生成。`analyze()`は完走し、`protected_pages == [1]`を確認。
+- workerからGUIへ内部detailとcontextを維持。開発ログは`stage`、`page_index`、`candidate`、`exception_type`、`exception_message`を保存する。通常GUIは短い日本語のまま。
+- 品質閾値、候補計画、Adaptive Compressionの得点、UI文言は変更していない。
+
+|実PDF|頁|元bytes|出力bytes|削減率|実exe秒|profile kind|candidate plan|採用|視覚検証|
+|---|---:|---:|---:|---:|---:|---|---|---|---|
+|dake-pdf-sample-photo-heavy-a4-10-pages|10|3,200,000|1,668,484|47.86%|6.485|photo|A_lossless, B_balanced|B_balanced|PASS、MAE最大0.000832、changed/ink loss 0|
+|結合済み640頁|640|176,840,968|2,765,846|98.44%|4.766|photo|A_lossless, B_balanced|A_lossless|PASS、MAE/changed/ink loss 0|
+
+両方とも出力を再度開き、ページ数10/10、640/640を確認した。640頁はAだけで十分に小さくなったため、既存ルールどおりBを省略。Popplerで先頭・中間・最終の代表頁を描画し、640頁は元と出力のPNG SHA-256も一致した。
+
+最終回帰は、`py_compile`、単体11件、既存8カテゴリbenchmark、ソースCLI 8件、実exe CLI 8件、実Tk GUI、DnD callback/登録、日本語パス、効果なし、図面・細線をPASS。実Explorerから別ウインドウへの物理ドラッグは自動操作APIがウインドウ外座標を拒否するため未実施で、DnDは登録とcallback経路で確認した。正式出荷、Release、BOOTH、Store更新は実施していない。

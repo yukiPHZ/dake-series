@@ -46,6 +46,57 @@ class Regression(unittest.TestCase):
             with self.assertRaises(ValueError,msg=damage):
                 adaptive.verify_candidate(self.source,path,self.profile,'B_balanced')
 
+    def test_drawing_width_cases(self):
+        fixture=self.folder/'drawing-width-cases.pdf'
+        with pdf.open() as d:
+            fill=d.new_page();fill.draw_rect(pdf.Rect(50,50,200,200),color=None,fill=(0.8,0.8,0.8))
+            thin=d.new_page();thin.draw_line((50,100),(300,100),width=0.3)
+            normal=d.new_page();normal.draw_line((50,100),(300,100),width=1.0)
+            d.save(fixture)
+        with pdf.open(fixture) as d:
+            drawings=[page.get_drawings() for page in d]
+        self.assertTrue(any(item.get('type')=='f' and item.get('width') is None for item in drawings[0]))
+        self.assertFalse(adaptive.is_thin_stroke({'width':None}))
+        self.assertTrue(adaptive.is_thin_stroke({'width':0.3}))
+        self.assertFalse(adaptive.is_thin_stroke({'width':1.0}))
+        self.assertFalse(adaptive.is_thin_stroke({}))
+        for abnormal in ('0.3',object(),float('nan'),float('inf'),10**1000,True):
+            self.assertFalse(adaptive.is_thin_stroke({'width':abnormal}))
+        profile=adaptive.analyze(fixture)
+        self.assertEqual(profile['protected_pages'],[1])
+        self.assertEqual(profile['kind'],'drawing')
+
+    def test_worker_preserves_internal_error_detail(self):
+        source=self.source
+        class Connection:
+            def __init__(self): self.sent=[];self.read=False
+            def recv(self):
+                if self.read: raise EOFError
+                self.read=True;return ('compress',7,source)
+            def send(self,value): self.sent.append(value)
+            def close(self): pass
+        connection=Connection()
+        context={'stage':'analysis.drawings','page_index':4,'candidate':None,
+                 'exception_type':'TypeError','exception_message':'bad width'}
+        with patch.object(main,'compress_pdf',side_effect=main.CompressError('error_unknown','bad width',context)), \
+             patch.object(main,'write_app_debug_log') as log:
+            main.pdf_worker(connection)
+        event,payload=connection.sent[-1]
+        self.assertEqual(event,'error')
+        self.assertEqual(payload,(7,'error_unknown','bad width',context))
+        self.assertEqual(log.call_args.kwargs['context'],context)
+
+    def test_app_log_fallback_keeps_error_context(self):
+        context={'stage':'analysis.drawings','page_index':4,'candidate':None,
+                 'exception_type':'TypeError','exception_message':'bad width'}
+        with patch.object(main,'write_debug_log',return_value=None), \
+             patch.object(main,'app_log_dir',return_value=self.folder/'logs'):
+            main.write_app_debug_log('PDF worker failed',exc=TypeError('bad width'),context=context)
+        content=next((self.folder/'logs').glob('*.log')).read_text(encoding='utf-8')
+        for expected in ('stage=analysis.drawings','page_index=4','candidate=None',
+                         'exception_type=TypeError','exception_message=bad width','TypeError: bad width'):
+            self.assertIn(expected,content)
+
     def test_raster_stamp_and_lines_rejected(self):
         # No native text: only the visual checker can catch this loss.
         raster=self.folder/'raster.pdf'

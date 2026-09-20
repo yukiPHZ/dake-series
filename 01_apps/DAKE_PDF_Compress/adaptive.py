@@ -22,6 +22,28 @@ CANDIDATE_TIMEOUT = 60.0
 TOTAL_CANDIDATE_BUDGET = 120.0
 
 
+class AdaptiveStageError(RuntimeError):
+    """Preserve internal stage context without exposing it in the normal UI."""
+
+    def __init__(self, stage, exc, *, page_index=None, candidate=None):
+        super().__init__(f"{type(exc).__name__}: {exc}")
+        self.stage = stage
+        self.page_index = page_index
+        self.candidate = candidate
+        self.exception_type = type(exc).__name__
+        self.exception_message = str(exc)
+
+
+def is_thin_stroke(drawing):
+    """Return true only for a finite numeric stroke width below 0.6 pt."""
+    width = drawing.get("width")
+    return (
+        isinstance(width, (int, float))
+        and not isinstance(width, bool)
+        and 0 < width < 0.6
+    )
+
+
 def library():
     import pymupdf as pdf
     pdf.TOOLS.mupdf_display_errors(False)
@@ -111,8 +133,11 @@ def analyze(path):
             area = min(1.0, sum((pdf.Rect(im["bbox"]) & page.rect).get_area()
                                 for im in placements) / max(1, page.rect.get_area()))
             areas.append(area)
-            drawings = page.get_drawings()
-            if any(0 < d.get("width", 0) < 0.6 for d in drawings):
+            try:
+                drawings = page.get_drawings()
+            except Exception as exc:
+                raise AdaptiveStageError("analysis.drawings", exc, page_index=index) from exc
+            if any(is_thin_stroke(drawing) for drawing in drawings):
                 protected_pages.append(index)
             if area >= 0.45:
                 thumb = page.get_pixmap(matrix=pdf.Matrix(0.35, 0.35), colorspace=pdf.csGRAY)
@@ -131,7 +156,8 @@ def analyze(path):
                 "image_page_ratio": sum(bool(doc[i].get_images()) for i in sampled) / len(sampled),
                 "sampled_image_coverage": coverage, "image_modes": modes,
                 "text_chars": sum(p["chars"] for p in page_info), "kind": kind,
-                "analysis_pages": sampled, "visual_pages": visual_pages, "page_info": page_info,
+                "analysis_pages": sampled, "visual_pages": visual_pages,
+                "protected_pages": protected_pages, "page_info": page_info,
                 "interactive": any(p["links"] or p["annots"] or p["widgets"] for p in page_info),
                 "embedded_files": doc.embfile_count(), "toc": doc.get_toc()}
 
@@ -292,7 +318,15 @@ def compress(source, ghostscript=None, phase=lambda key: None):
                 candidates.append(run_candidate(source, path, profile, name, ghostscript, phase,
                                                 min(CANDIDATE_TIMEOUT, remaining)))
             except Exception as exc:
-                candidates.append({"name": name, "rejected": str(exc)})
+                candidates.append({
+                    "name": name,
+                    "rejected": str(exc),
+                    "stage": getattr(exc, "stage", "candidate"),
+                    "page_index": getattr(exc, "page_index", None),
+                    "candidate": getattr(exc, "candidate", name),
+                    "exception_type": getattr(exc, "exception_type", type(exc).__name__),
+                    "exception_message": getattr(exc, "exception_message", str(exc)),
+                })
         chosen = choose_candidate(candidates, profile["bytes"])
         if chosen is None:
             return None, profile, candidates

@@ -166,10 +166,12 @@ CLI_ERROR_TEXT = {
 
 
 class CompressError(Exception):
-    def __init__(self, message_key: str, detail: str | None = None) -> None:
+    def __init__(self, message_key: str, detail: str | None = None,
+                 context: dict[str, object] | None = None) -> None:
         super().__init__(detail or message_key)
         self.message_key = message_key
         self.detail = detail
+        self.context = context or {}
 
 
 @dataclass
@@ -268,7 +270,24 @@ def write_app_debug_log(
     exc: BaseException | None = None,
     context: dict[str, object] | None = None,
 ) -> None:
-    write_debug_log(message, log_dir=app_log_dir(), exc=exc, context=context)
+    path = write_debug_log(message, log_dir=app_log_dir(), exc=exc, context=context)
+    if path is not None:
+        return
+    # Keep app diagnostics available even if the shared logger cannot write.
+    try:
+        from datetime import datetime
+        import traceback
+        log_path = app_log_dir() / f"{datetime.now():%Y-%m-%d}.log"
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        lines = [f"[{datetime.now():%Y-%m-%d %H:%M:%S}] {message}"]
+        for key, value in (context or {}).items():
+            lines.append(f"{key}={value}")
+        if exc is not None:
+            lines.append("".join(traceback.format_exception(exc)))
+        with log_path.open("a", encoding="utf-8") as file:
+            file.write("\n".join(lines) + "\n")
+    except Exception:
+        pass
 
 
 def resource_icon_path() -> Path:
@@ -418,7 +437,14 @@ def compress_pdf(source_path: Path, phase=lambda key: None) -> PdfResult:
         write_app_debug_log("adaptive compression", context=diagnostics)
         if selected is None:
             key = "error_no_reduction" if any(c.get("checks") == "passed" for c in candidates) else "error_unknown"
-            raise CompressError(key)
+            failure = next((c for c in candidates if c.get("rejected")), {})
+            raise CompressError(key, failure.get("exception_message"), context={
+                "stage": failure.get("stage", "candidate_selection"),
+                "page_index": failure.get("page_index"),
+                "candidate": failure.get("candidate"),
+                "exception_type": failure.get("exception_type", "CompressError"),
+                "exception_message": failure.get("exception_message", key),
+            })
         rate = (1 - selected["size"] / profile["bytes"]) * 100
         return PdfResult(Path(selected["path"]), profile["bytes"], selected["size"],
                          rate, rate < LOW_REDUCTION_THRESHOLD, selected["name"],
@@ -428,8 +454,15 @@ def compress_pdf(source_path: Path, phase=lambda key: None) -> PdfResult:
     except PermissionError as exc:
         raise CompressError("error_file_in_use", str(exc)) from exc
     except Exception as exc:
-        write_app_debug_log("compression failed", exc=exc)
-        raise CompressError("error_unknown", str(exc)) from exc
+        context = {
+            "stage": getattr(exc, "stage", "compression"),
+            "page_index": getattr(exc, "page_index", None),
+            "candidate": getattr(exc, "candidate", None),
+            "exception_type": getattr(exc, "exception_type", type(exc).__name__),
+            "exception_message": getattr(exc, "exception_message", str(exc)),
+        }
+        write_app_debug_log("compression failed", exc=exc, context=context)
+        raise CompressError("error_unknown", str(exc), context=context) from exc
 
 
 def pdf_worker(connection):
@@ -439,18 +472,32 @@ def pdf_worker(connection):
             command, generation, path = connection.recv()
             if command == "stop":
                 return
+            stage = "validation" if command == "check" else "compression"
             try:
                 if command == "check":
                     validate_pdf(path)
                     payload = (path, path.stat().st_size, unique_output_path(path))
                     connection.send(("checked", (generation, payload)))
                 else:
-                    result = compress_pdf(path, lambda key: connection.send(("phase", key)))
+                    def report_phase(key):
+                        nonlocal stage
+                        stage = key
+                        connection.send(("phase", key))
+                    result = compress_pdf(path, report_phase)
                     connection.send(("success", result))
             except Exception as exc:
-                write_app_debug_log("PDF worker failed", exc=exc)
+                cause = exc.__cause__ or exc
+                context = dict(getattr(exc, "context", {}) or {})
+                context.setdefault("stage", stage)
+                context.setdefault("page_index", None)
+                context.setdefault("candidate", None)
+                context.setdefault("exception_type", type(cause).__name__)
+                context.setdefault("exception_message", str(cause))
+                write_app_debug_log("PDF worker failed", exc=exc, context=context)
                 key = exc.message_key if isinstance(exc, CompressError) else "error_unknown"
-                connection.send(("check_error" if command == "check" else "error", (generation, key)))
+                detail = exc.detail if isinstance(exc, CompressError) else str(exc)
+                connection.send(("check_error" if command == "check" else "error",
+                                 (generation, key, detail, context)))
     except (EOFError, BrokenPipeError, OSError):
         pass
     finally:
@@ -1101,12 +1148,12 @@ class DakePdfCompressApp:
             if generation == self.generation:
                 self.apply_checked(value)
         elif event_type == "check_error":
-            generation, key = payload
+            generation, key, detail, _context = payload
             if generation == self.generation:
                 self.is_checking = False
                 self.stop_progress()
                 self.drop_title_var.set(UI_TEXT["status_error"])
-                self.show_error(key)
+                self.show_error(key, detail)
                 self.update_action_state()
         elif event_type == "phase":
             self.phase_key = payload
@@ -1114,7 +1161,8 @@ class DakePdfCompressApp:
         elif event_type == "success":
             self.handle_success(payload)
         elif event_type == "error":
-            self.handle_worker_error(CompressError(payload[1]))
+            _generation, key, detail, context = payload
+            self.handle_worker_error(CompressError(key, detail, context))
 
     def handle_success(self, result: PdfResult) -> None:
         self.is_processing = False
