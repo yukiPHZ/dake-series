@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import queue
 import re
@@ -6,15 +8,13 @@ import sys
 import threading
 import webbrowser
 from dataclasses import dataclass
+from collections import OrderedDict
 from datetime import datetime
 from enum import Enum
-from itertools import count
 from pathlib import Path
 from typing import Optional
 
-import fitz
-from PIL import Image, ImageTk
-from pypdf import PdfReader, PdfWriter
+from pdf_backend import PdfRenderWorker
 import tkinter as tk
 import tkinter.font as tkfont
 from tkinter import filedialog, messagebox, ttk
@@ -36,12 +36,9 @@ COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
 
 UI_TEXT = {
     "button_add_pdf": "PDF追加",
-    "button_choose_save_dir": "保存先選択",
     "button_select_save_folder": "保存先選択",
     "button_refresh": "リフレッシュ",
     "button_clear_selection": "選択解除",
-    "button_extract_merged": "抽出する",
-    "button_extract_single": "1ページずつ出力",
     "button_extract": "抽出する",
     "button_split_each": "1ページずつ出力",
     "label_file_name": "ファイル名",
@@ -60,21 +57,12 @@ UI_TEXT = {
     "label_thumbnail_selected": "選択中",
     "label_drop_multiple_error": "PDFは1ファイルだけ指定してください。",
     "label_drop_file_error": "PDFファイルを指定してください。",
-    "label_status_unloaded": "未読込",
-    "label_status_loading": "読込中",
-    "label_status_ready": "準備完了",
-    "label_status_selecting": "選択中",
     "label_status_processing": "処理中...",
     "label_status_complete": "完了",
     "label_status_error": "エラー",
-    "message_unloaded": "PDFを追加してください。",
-    "message_loading": "PDFを読み込んでいます。",
-    "message_ready": "見て選んで抜く準備ができました。",
-    "message_selecting": "抽出するページを選んでください。",
     "message_processing_extract": "選択されたページを書き出しています。",
     "message_complete_merged": "{count} ページを1つのPDFにまとめて保存しました。",
     "message_complete_single": "{count} ページを1ページずつ保存しました。",
-    "message_range_secondary": "サムネイル選択を優先しています。",
     "message_error_save_dir": "保存先フォルダを選んでください。",
     "message_error_selection": "抽出するページを選んでください。",
     "message_error_range_format": "範囲入力は 1-3,5,8-10 の形式で入力してください。",
@@ -120,6 +108,12 @@ UI_TEXT = {
     "status_message_loading": "PDFを読み込んでいます...",
     "status_message_ready": "抽出するページを選んでください。",
     "status_message_selecting": "抽出するページを選んでください。",
+    "cli_pages_required": "pagesを指定してください。",
+    "cli_output_required": "出力先を指定してください。",
+    "cli_pdf_required": "PDFを指定してください。",
+    "cli_pdf_missing": "PDFが見つかりません。",
+    "cli_pdf_unreadable": "PDFを読み取れません。",
+    "cli_extract_failed": "抽出に失敗しました。",
 }
 
 FOOTER_URLS = {
@@ -155,6 +149,7 @@ CARD_GAP_Y = 20
 CANVAS_PADDING_X = 16
 CANVAS_PADDING_Y = 16
 SHIFT_MASK = 0x0001
+THUMBNAIL_CACHE_LIMIT = 96
 
 
 def pick_font_family(root: tk.Misc) -> str:
@@ -265,13 +260,13 @@ def parse_shimarisu_cli_args(argv: list[str]) -> ShimarisuCliArgs:
             continue
         if arg == "--pages":
             if index + 1 >= len(argv) or argv[index + 1].startswith("--"):
-                raise ShimarisuCliError("pagesを指定してください。")
+                raise ShimarisuCliError(UI_TEXT["cli_pages_required"])
             pages = argv[index + 1]
             index += 2
             continue
         if arg == "--output":
             if index + 1 >= len(argv) or argv[index + 1].startswith("--"):
-                raise ShimarisuCliError("出力先を指定してください。")
+                raise ShimarisuCliError(UI_TEXT["cli_output_required"])
             output = argv[index + 1]
             index += 2
             continue
@@ -331,30 +326,32 @@ def write_cli_error(message: str) -> None:
 
 def run_shimarisu_cli(argv: list[str]) -> int:
     try:
+        from pypdf import PdfReader, PdfWriter
+
         args = parse_shimarisu_cli_args(argv)
         if not args.inputs:
-            raise ShimarisuCliError("PDFを指定してください。")
+            raise ShimarisuCliError(UI_TEXT["cli_pdf_required"])
 
         source_path = Path(args.inputs[0])
         if not source_path.exists() or not source_path.is_file():
-            raise ShimarisuCliError("PDFが見つかりません。")
+            raise ShimarisuCliError(UI_TEXT["cli_pdf_missing"])
         if source_path.suffix.lower() != ".pdf":
-            raise ShimarisuCliError("PDFファイルを指定してください。")
+            raise ShimarisuCliError(UI_TEXT["label_drop_file_error"])
         if not args.pages or not args.pages.strip():
-            raise ShimarisuCliError("pagesを指定してください。")
+            raise ShimarisuCliError(UI_TEXT["cli_pages_required"])
 
         try:
             reader = PdfReader(str(source_path))
             page_count = len(reader.pages)
         except Exception as error:
-            raise ShimarisuCliError("PDFを読み取れません。") from error
+            raise ShimarisuCliError(UI_TEXT["cli_pdf_unreadable"]) from error
 
         try:
             pages = sorted(parse_range_expression(args.pages, page_count))
         except RangeParseError as error:
             raise ShimarisuCliError(str(error)) from error
         if not pages:
-            raise ShimarisuCliError("pagesを指定してください。")
+            raise ShimarisuCliError(UI_TEXT["cli_pages_required"])
 
         output_path = resolve_shimarisu_output_path(source_path, args.output)
         writer = PdfWriter()
@@ -367,7 +364,7 @@ def run_shimarisu_cli(argv: list[str]) -> int:
         write_cli_error(str(error))
         return 1
     except Exception:
-        write_cli_error("抽出に失敗しました。")
+        write_cli_error(UI_TEXT["cli_extract_failed"])
         return 1
 
 
@@ -379,12 +376,9 @@ def open_directory(path: str) -> None:
         subprocess.run(["xdg-open", path], check=False)
 
 
-def resource_path(name: str) -> str:
-    base_dir = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
-    return str(base_dir / name)
-
-
 def get_common_icon_path() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(sys._MEIPASS) / "dake_icon.ico"
     return Path(__file__).resolve().parent / ".." / ".." / "02_assets" / "dake_icon.ico"
 
 
@@ -462,11 +456,11 @@ class ThumbnailViewport(ttk.Frame):
         self.document_ready_callback = document_ready_callback
         self.page_count = 0
         self.columns = 1
-        self.thumbnail_cache: dict[int, ImageTk.PhotoImage] = {}
-        self.requested_pages: set[int] = set()
+        self.thumbnail_cache = OrderedDict()
+        self.visible_pages: tuple[int, ...] = ()
+        self.nearby_pages: tuple[int, ...] = ()
         self.selected_pages: set[int] = set()
         self.empty_message = UI_TEXT["label_thumbnail_empty"]
-        self.ready_reported = False
         self._redraw_job = None
 
         self.canvas = tk.Canvas(
@@ -494,38 +488,45 @@ class ThumbnailViewport(ttk.Frame):
         self.canvas.bind("<Button-1>", self._on_click)
 
     def reset(self, message: Optional[str] = None) -> None:
+        if self._redraw_job is not None:
+            self.after_cancel(self._redraw_job)
+            self._redraw_job = None
         self.page_count = 0
         self.columns = 1
         self.thumbnail_cache.clear()
-        self.requested_pages.clear()
+        self.visible_pages = ()
+        self.nearby_pages = ()
         self.selected_pages.clear()
-        self.ready_reported = False
         if message is not None:
             self.empty_message = message
         self.canvas.delete("all")
         self.canvas.configure(scrollregion=(0, 0, 0, 0))
+        self.canvas.yview_moveto(0)
         self._draw_empty_state()
 
     def set_document(self, page_count: int) -> None:
         self.page_count = page_count
         self.thumbnail_cache.clear()
-        self.requested_pages.clear()
+        self.visible_pages = ()
+        self.nearby_pages = ()
         self.selected_pages.clear()
-        self.ready_reported = False
         self._schedule_redraw()
 
     def set_selected_pages(self, pages: set[int]) -> None:
+        if self.selected_pages == pages:
+            return
         self.selected_pages = set(pages)
         self._schedule_redraw()
 
-    def clear_cache(self) -> None:
-        self.thumbnail_cache.clear()
-        self.requested_pages.clear()
-        self._schedule_redraw()
-
-    def set_thumbnail(self, page_index: int, photo_image: ImageTk.PhotoImage) -> None:
+    def set_thumbnail(self, page_index: int, photo_image: tk.PhotoImage) -> None:
         self.thumbnail_cache[page_index] = photo_image
-        self.requested_pages.discard(page_index)
+        self.thumbnail_cache.move_to_end(page_index)
+        while len(self.thumbnail_cache) > THUMBNAIL_CACHE_LIMIT:
+            # Visible images stay alive while older offscreen images are evicted.
+            victim = next((page for page in self.thumbnail_cache if page not in self.visible_pages), None)
+            if victim is None:
+                victim = next(iter(self.thumbnail_cache))
+            del self.thumbnail_cache[victim]
         self._schedule_redraw()
 
     def _on_scrollbar(self, *args) -> None:
@@ -585,9 +586,8 @@ class ThumbnailViewport(ttk.Frame):
         return max(1, (usable_width + CARD_GAP_X) // (CARD_WIDTH + CARD_GAP_X))
 
     def _schedule_redraw(self) -> None:
-        if self._redraw_job:
-            self.after_cancel(self._redraw_job)
-        self._redraw_job = self.after(16, self._redraw)
+        if self._redraw_job is None:
+            self._redraw_job = self.after(16, self._redraw)
 
     def _redraw(self) -> None:
         self._redraw_job = None
@@ -608,8 +608,8 @@ class ThumbnailViewport(ttk.Frame):
         y0 = self.canvas.canvasy(0)
         y1 = y0 + canvas_height
         row_height = CARD_HEIGHT + CARD_GAP_Y
-        start_row = max(0, int(y0 // row_height) - 1)
-        end_row = min(rows - 1, int(y1 // row_height) + 1)
+        start_row = max(0, int((y0 - CANVAS_PADDING_Y) // row_height))
+        end_row = min(rows - 1, int((y1 - CANVAS_PADDING_Y) // row_height))
 
         visible_indices: list[int] = []
         for row in range(start_row, end_row + 1):
@@ -619,16 +619,22 @@ class ThumbnailViewport(ttk.Frame):
                     continue
                 visible_indices.append(index)
 
+        self.visible_pages = tuple(visible_indices)
+        if visible_indices:
+            self.nearby_pages = tuple(page for page in range(
+                max(0, visible_indices[0] - 8), min(self.page_count, visible_indices[-1] + 9)
+            ) if page not in self.visible_pages)
+        else:
+            self.nearby_pages = ()
+        self.request_thumbnail_callback(self.visible_pages, self.nearby_pages)
         for page_index in visible_indices:
             self._draw_page_card(page_index)
 
         visible_complete = bool(visible_indices) and all(
             page_index in self.thumbnail_cache for page_index in visible_indices
         )
-        if visible_complete != self.ready_reported:
-            self.ready_reported = visible_complete
-            if self.document_ready_callback is not None:
-                self.after_idle(self.document_ready_callback, visible_complete)
+        if self.document_ready_callback is not None:
+            self.document_ready_callback(visible_complete)
 
     def _draw_empty_state(self) -> None:
         canvas_width = max(self.canvas.winfo_width(), 360)
@@ -691,10 +697,8 @@ class ThumbnailViewport(ttk.Frame):
                 width=THUMBNAIL_WIDTH - 20,
                 justify="center",
             )
-            if page_index not in self.requested_pages:
-                self.requested_pages.add(page_index)
-                self.request_thumbnail_callback(page_index)
         else:
+            self.thumbnail_cache.move_to_end(page_index)
             self.canvas.create_image(
                 (preview_x1 + preview_x2) / 2,
                 (preview_y1 + preview_y2) / 2,
@@ -731,16 +735,18 @@ class DakePdfSplitSelectApp(BASE_WINDOW):
         self.configure(bg=COLORS["bg"])
         self.font_family = pick_font_family(self)
         icon_path = get_common_icon_path().resolve()
-        if not getattr(sys, "frozen", False) and icon_path.exists():
+        if icon_path.exists():
             try:
                 self.iconbitmap(str(icon_path))
             except tk.TclError:
                 pass
 
-        self.queue_events: queue.Queue = queue.Queue()
-        self.render_queue: queue.PriorityQueue = queue.PriorityQueue()
-        self.render_order = count()
+        self.queue_events: queue.Queue = queue.Queue(maxsize=32)
         self.render_generation = 0
+        self.render_request_id = 0
+        self._thumbnail_demand = None
+        self._closing = False
+        self._poll_job = None
         self.pdf_path: Optional[str] = None
         self.page_count = 0
         self.current_pdf_path: Optional[str] = None
@@ -757,10 +763,8 @@ class DakePdfSplitSelectApp(BASE_WINDOW):
         self.completed_state_message = ""
         self.document_ready = False
         self.visible_thumbnails_ready = False
-        self.generated_thumbnail_count = 0
-        self.generated_thumbnail_pages: set[int] = set()
         self.queued_thumbnail_pages: set[int] = set()
-        self.thumbnail_generation_complete = False
+        self.thumbnail_error_message = ""
         self.thumbnail_selection_anchor: Optional[int] = None
 
         self.file_name_var = tk.StringVar(value=UI_TEXT["label_file_default"])
@@ -1163,6 +1167,9 @@ class DakePdfSplitSelectApp(BASE_WINDOW):
             column += 1
 
     def _bind_events(self) -> None:
+        self.protocol("WM_DELETE_WINDOW", self._on_close)
+        self.bind("<Control-o>", lambda _event: self._choose_pdf())
+        self.bind("<F5>", lambda _event: self.refresh_all())
         self.range_var.trace_add("write", self._on_range_changed)
         if DND_READY and hasattr(self, "drop_target_register"):
             self.drop_target_register(DND_FILES)
@@ -1172,11 +1179,25 @@ class DakePdfSplitSelectApp(BASE_WINDOW):
                 self.thumbnail_viewport.canvas.dnd_bind("<<Drop>>", self._on_drop)
 
     def _start_background_workers(self) -> None:
-        render_thread = threading.Thread(target=self._render_worker, daemon=True)
-        render_thread.start()
+        self.render_worker = PdfRenderWorker(self.queue_events, THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT)
 
-    def _queue_render_task(self, priority: int, task: dict) -> None:
-        self.render_queue.put((priority, next(self.render_order), task))
+    def _on_close(self) -> None:
+        if self.is_processing or self._closing:
+            return
+        self._closing = True
+        self.render_generation += 1
+        self.render_worker.stop()
+        if self._poll_job is not None:
+            self.after_cancel(self._poll_job)
+        self.thumbnail_viewport.reset()
+        self.withdraw()
+        self._wait_for_worker_close()
+
+    def _wait_for_worker_close(self) -> None:
+        if self.render_worker.thread.is_alive():
+            self.after(20, self._wait_for_worker_close)
+        else:
+            self.destroy()
 
     def _set_status(self, state: AppState, message: str) -> None:
         self.current_status = StatusPayload(state=state, message=message)
@@ -1210,17 +1231,16 @@ class DakePdfSplitSelectApp(BASE_WINDOW):
     def _reset_thumbnail_generation_state(self) -> None:
         self.document_ready = False
         self.visible_thumbnails_ready = False
-        self.generated_thumbnail_count = 0
-        self.generated_thumbnail_pages.clear()
         self.queued_thumbnail_pages.clear()
-        self.thumbnail_generation_complete = False
+        self._thumbnail_demand = None
+        self.thumbnail_error_message = ""
 
     def _update_document_ready_state(self) -> None:
         is_ready = bool(
             self.current_pdf_path
             and self.page_count > 0
-            and self.thumbnail_generation_complete
             and self.visible_thumbnails_ready
+            and not self.thumbnail_error_message
         )
         if self.document_ready == is_ready:
             return
@@ -1278,7 +1298,13 @@ class DakePdfSplitSelectApp(BASE_WINDOW):
             self.clear_selection_button.configure(state="normal")
 
     def _sync_selection_status(self) -> None:
-        if self.current_pdf_path and not self.document_ready:
+        if self.is_processing or self._closing:
+            return
+        if self.thumbnail_error_message or self.range_error_message:
+            self._set_status(AppState.ERROR, self.thumbnail_error_message or self.range_error_message)
+        elif not self.current_pdf_path:
+            self.set_status("status_idle")
+        elif not self.document_ready:
             self.set_status("status_loading")
         elif self.selected_pages:
             self.set_status("status_selecting")
@@ -1286,6 +1312,9 @@ class DakePdfSplitSelectApp(BASE_WINDOW):
             self.set_status("status_ready")
 
     def clear_selection(self) -> None:
+        if self.is_processing:
+            return
+        self.completed_state_message = ""
         self.thumbnail_selected_pages.clear()
         self.range_selected_pages.clear()
         self.selected_pages.clear()
@@ -1298,7 +1327,10 @@ class DakePdfSplitSelectApp(BASE_WINDOW):
         self._sync_selection_status()
 
     def refresh_all(self) -> None:
+        if self.is_processing or self._closing:
+            return
         self.render_generation += 1
+        self.render_worker.reset(self.render_generation)
         self.current_pdf_path = None
         self.current_pdf_name = ""
         self.total_pages = 0
@@ -1313,16 +1345,17 @@ class DakePdfSplitSelectApp(BASE_WINDOW):
         self.selected_pages.clear()
         self.range_error_var.set("")
         self.range_input_var.set("")
-        self.thumbnail_viewport.thumbnail_cache.clear()
-        self.thumbnail_viewport.requested_pages.clear()
         self.thumbnail_viewport.reset(UI_TEXT["label_thumbnail_empty"])
-        self.file_name_var.set("")
-        self.total_pages_var.set("")
-        self.update_selection_ui()
-        self.update_action_buttons()
+        self.file_name_var.set(UI_TEXT["label_file_default"])
+        self.total_pages_var.set(UI_TEXT["label_total_pages_default"])
+        if not self.save_dir_is_manual:
+            self.save_dir = None
         self.set_status("status_idle")
+        self._refresh_ui_state()
 
     def _choose_pdf(self) -> None:
+        if self.is_processing or self._closing:
+            return
         path = filedialog.askopenfilename(
             title=UI_TEXT["file_dialog_title_pdf"],
             filetypes=[(UI_TEXT["file_dialog_pdf_filter"], "*.pdf")],
@@ -1345,9 +1378,13 @@ class DakePdfSplitSelectApp(BASE_WINDOW):
         self.refresh_all()
 
     def _load_pdf_async(self, path: str, keep_current_selection: bool = False) -> None:
+        if self.is_processing or self._closing:
+            return
         target_path = Path(path)
         self.render_generation += 1
         generation = self.render_generation
+        self.render_worker.reset(generation, str(target_path))
+        self.completed_state_message = ""
         self.pdf_path = str(target_path)
         self.current_pdf_path = str(target_path)
         self.current_pdf_name = target_path.name
@@ -1372,87 +1409,22 @@ class DakePdfSplitSelectApp(BASE_WINDOW):
         self.set_status("status_loading")
         self._refresh_ui_state()
 
-        thread = threading.Thread(
-            target=self._load_pdf_worker,
-            args=(str(target_path), generation),
-            daemon=True,
-        )
-        thread.start()
-
-    def _load_pdf_worker(self, path: str, generation: int) -> None:
-        try:
-            with fitz.open(path) as document:
-                page_count = document.page_count
-            self.queue_events.put(("pdf_loaded", generation, path, page_count))
-        except Exception as error:
-            self.queue_events.put(("pdf_load_failed", generation, build_pdf_load_error_message(error)))
-
-    def _enqueue_thumbnail_render(self, generation: int, page_index: int, priority: int) -> None:
-        if generation != self.render_generation or not self.pdf_path:
+    def _request_thumbnail(self, visible_pages, nearby_pages) -> None:
+        if not self.pdf_path or self.thumbnail_error_message:
             return
-        if page_index < 0 or page_index >= self.page_count:
+        demand = (visible_pages, nearby_pages)
+        if demand == self._thumbnail_demand:
             return
-        if page_index in self.generated_thumbnail_pages or page_index in self.queued_thumbnail_pages:
-            return
-        self.queued_thumbnail_pages.add(page_index)
-        self._queue_render_task(
-            priority=priority,
-            task={
-                "kind": "render",
-                "generation": generation,
-                "path": self.pdf_path,
-                "page_index": page_index,
-            },
-        )
-
-    def _enqueue_thumbnail_generation_batch(self, generation: int, start_index: int = 0, batch_size: int = 24) -> None:
-        if generation != self.render_generation or self.page_count == 0:
-            return
-        end_index = min(start_index + batch_size, self.page_count)
-        for page_index in range(start_index, end_index):
-            self._enqueue_thumbnail_render(generation, page_index, priority=2)
-        if end_index < self.page_count:
-            self.after(1, self._enqueue_thumbnail_generation_batch, generation, end_index, batch_size)
-
-    def _request_thumbnail(self, page_index: int) -> None:
-        self._enqueue_thumbnail_render(self.render_generation, page_index, priority=1)
-
-    def _render_worker(self) -> None:
-        current_path = None
-        current_generation = -1
-        document = None
-        while True:
-            _, _, task = self.render_queue.get()
-            kind = task.get("kind")
-            generation = task.get("generation", -1)
-            path = task.get("path")
-
-            if kind != "render":
-                continue
-
-            try:
-                if path != current_path or generation != current_generation:
-                    if document is not None:
-                        document.close()
-                        document = None
-                    current_path = path
-                    current_generation = generation
-                    document = fitz.open(path)
-
-                if document is None or generation != current_generation:
-                    continue
-
-                page = document.load_page(task["page_index"])
-                pixmap = page.get_pixmap(matrix=fitz.Matrix(1.0, 1.0), alpha=False)
-                image = Image.frombytes("RGB", [pixmap.width, pixmap.height], pixmap.samples)
-                image.thumbnail((THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT), Image.Resampling.LANCZOS)
-                self.queue_events.put(("thumbnail_ready", generation, task["page_index"], image))
-            except Exception as error:
-                self.queue_events.put(
-                    ("thumbnail_failed", generation, task["page_index"], build_thumbnail_error_message(error))
-                )
+        self._thumbnail_demand = demand
+        self.render_request_id += 1
+        cache = self.thumbnail_viewport.thumbnail_cache
+        pages = [page for page in visible_pages + nearby_pages if page not in cache]
+        self.queued_thumbnail_pages = set(pages)
+        self.render_worker.request(self.render_generation, self.render_request_id, pages)
 
     def _toggle_thumbnail_page(self, page_number: int, shift_pressed: bool = False) -> None:
+        if self.is_processing or not 1 <= page_number <= self.page_count:
+            return
         self.completed_state_message = ""
         if shift_pressed and self.thumbnail_selection_anchor is not None:
             start_page = min(self.thumbnail_selection_anchor, page_number)
@@ -1523,7 +1495,7 @@ class DakePdfSplitSelectApp(BASE_WINDOW):
         self.choose_save_dir_button.configure(state="normal" if choose_dir_enabled else "disabled")
         self.range_entry.configure(state="normal" if range_enabled else "disabled")
 
-        if self.current_status.state == AppState.ERROR and not self.range_error_message and self.document_ready:
+        if self.current_status.state == AppState.ERROR and not self.range_error_message:
             return
 
         if self.is_processing:
@@ -1558,13 +1530,15 @@ class DakePdfSplitSelectApp(BASE_WINDOW):
             self.save_dir_var.set(UI_TEXT["label_save_dir_default"])
 
     def _poll_worker_events(self) -> None:
-        while True:
+        if self._closing:
+            return
+        for _ in range(8):
             try:
                 event = self.queue_events.get_nowait()
             except queue.Empty:
                 break
             self._handle_worker_event(event)
-        self.after(50, self._poll_worker_events)
+        self._poll_job = self.after(20, self._poll_worker_events)
 
     def _handle_worker_event(self, event) -> None:
         event_type = event[0]
@@ -1585,7 +1559,6 @@ class DakePdfSplitSelectApp(BASE_WINDOW):
                 self.save_dir = str(Path(path).parent)
                 self.save_dir_is_manual = False
             self.thumbnail_viewport.set_document(page_count)
-            self.after(0, self._enqueue_thumbnail_generation_batch, generation, 0, 24)
             self.completed_state_message = ""
             if self.range_var.get().strip():
                 self._on_range_changed()
@@ -1607,36 +1580,31 @@ class DakePdfSplitSelectApp(BASE_WINDOW):
             self.page_count = 0
             self._reset_thumbnail_generation_state()
             self.selected_pages.clear()
-            self.total_pages_var.set("")
-            self.file_name_var.set("")
+            self.total_pages_var.set(UI_TEXT["label_total_pages_default"])
+            self.file_name_var.set(UI_TEXT["label_file_default"])
             self.thumbnail_viewport.reset(UI_TEXT["label_thumbnail_empty"])
             self.completed_state_message = ""
-            self._set_status(AppState.ERROR, error_message)
+            self._set_status(AppState.ERROR, build_pdf_load_error_message(error_message))
             self._refresh_ui_state()
             return
 
         if event_type == "thumbnail_ready":
-            _, generation, page_index, image = event
-            if generation != self.render_generation:
+            _, generation, request_id, page_index, image = event
+            if generation != self.render_generation or request_id != self.render_request_id:
                 return
             self.queued_thumbnail_pages.discard(page_index)
-            if page_index not in self.generated_thumbnail_pages:
-                self.generated_thumbnail_pages.add(page_index)
-                self.generated_thumbnail_count = len(self.generated_thumbnail_pages)
-                if self.generated_thumbnail_count == self.page_count and self.page_count > 0:
-                    self.thumbnail_generation_complete = True
-            photo = ImageTk.PhotoImage(image)
+            photo = tk.PhotoImage(master=self, data=image, format="PPM")
             self.thumbnail_viewport.set_thumbnail(page_index, photo)
-            self._update_document_ready_state()
             return
 
         if event_type == "thumbnail_failed":
-            _, generation, page_index, error_message = event
+            _, generation, request_id, page_index, error_message = event
             if generation != self.render_generation:
                 return
-            self.queued_thumbnail_pages.discard(page_index)
-            self.thumbnail_viewport.requested_pages.discard(page_index)
-            self._set_status(AppState.ERROR, error_message)
+            self.queued_thumbnail_pages.clear()
+            self.document_ready = False
+            self.thumbnail_error_message = build_thumbnail_error_message(error_message)
+            self._set_status(AppState.ERROR, self.thumbnail_error_message)
             return
 
         if event_type == "extract_complete":
@@ -1699,6 +1667,8 @@ class DakePdfSplitSelectApp(BASE_WINDOW):
 
     def _extract_worker(self, mode: str, pages: list[int], pdf_path: str, save_dir: str) -> None:
         try:
+            from pypdf import PdfReader, PdfWriter
+
             source_path = Path(pdf_path)
             output_dir = Path(save_dir)
             output_dir.mkdir(parents=True, exist_ok=True)

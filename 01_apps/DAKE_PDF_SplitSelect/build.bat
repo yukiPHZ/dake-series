@@ -2,11 +2,11 @@
 setlocal
 cd /d "%~dp0"
 
-set "PYTHON_EXE="
+rem Set PYTHON_EXE to use an existing verified interpreter.
 set "PYTHON_ARGS="
 set "APP_NAME=DakePDF_Split_Select"
 set "ENTRY_FILE=main.py"
-set "OUTPUT_EXE=dist\%APP_NAME%.exe"
+set "OUTPUT_EXE=dist\%APP_NAME%\%APP_NAME%.exe"
 
 if exist "%~dp0.venv\Scripts\python.exe" (
   set "PYTHON_EXE=%~dp0.venv\Scripts\python.exe"
@@ -30,21 +30,14 @@ if not defined PYTHON_EXE (
 if not defined PYTHON_EXE goto :python_missing
 if not exist "%ENTRY_FILE%" goto :entry_missing
 
-if exist build rmdir /s /q build
-if exist dist rmdir /s /q dist
-for %%F in (*.spec) do del /q "%%~fF"
-del /q version_info.txt 2>nul
-
-call :run %PYTHON_EXE% %PYTHON_ARGS% -m pip install --upgrade pip
+call :run "%PYTHON_EXE%" %PYTHON_ARGS% -m pip install -r requirements.txt
 if errorlevel 1 goto :fail
 
-call :run %PYTHON_EXE% %PYTHON_ARGS% -m pip install -r requirements.txt
+call :run "%PYTHON_EXE%" %PYTHON_ARGS% ..\..\tools\generate_version_info.py --app-dir . --out version_info.txt
 if errorlevel 1 goto :fail
 
-call :run %PYTHON_EXE% %PYTHON_ARGS% ..\..\tools\generate_version_info.py --app-dir . --out version_info.txt
-if errorlevel 1 goto :fail
-
-call :run %PYTHON_EXE% %PYTHON_ARGS% -m PyInstaller --noconfirm --clean --onefile --windowed --noconsole --name=DakePDF_Split_Select --paths=..\..\00_core --icon=..\..\02_assets\dake_icon.ico --version-file version_info.txt --hidden-import=tkinterdnd2 --collect-all=tkinterdnd2 --hidden-import=fitz --collect-all=fitz "%ENTRY_FILE%"
+rem Keep full collection until physical DnD regression can be verified.
+call :run "%PYTHON_EXE%" %PYTHON_ARGS% -m PyInstaller --noconfirm --clean --onedir --windowed --noconsole --name=DakePDF_Split_Select --paths=..\..\00_core --icon=..\..\02_assets\dake_icon.ico --add-data "..\..\02_assets\dake_icon.ico;." --version-file version_info.txt --collect-all=fitz --collect-all=tkinterdnd2 "%ENTRY_FILE%"
 if errorlevel 1 goto :fail
 
 if not exist "%OUTPUT_EXE%" goto :output_missing

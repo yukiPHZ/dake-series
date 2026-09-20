@@ -13,6 +13,7 @@ PDFから必要ページだけを見て選び、すばやく抜き出すため�
 ## ファイル構成
 
 - `main.py`
+- `pdf_backend.py`（PDFハンドルを所有するレンダーワーカー）
 - `requirements.txt`
 - `build.bat`
 - `README.md`
@@ -48,6 +49,11 @@ DakePDF_Split_Select.exe --from-shimarisu --inputs "sample.pdf" --pages "1-3" --
 4. `抽出する` で 1 つの PDF にまとめて保存します。
 5. `1ページずつ出力` でページごとに保存します。
 
+`Ctrl+O` でPDF追加、`F5` でリフレッシュできます。
+リフレッシュは現在のPDF・選択・範囲入力・エラーと旧レンダー要求を破棄します。
+手動指定した保存先と出力済みファイルは保持します。
+サムネイルは可視範囲と近接ページだけ生成し、画像キャッシュは最大96ページです。
+
 ## 動作ルール
 
 - サムネイル選択がある場合はそちらを優先します。
@@ -61,7 +67,20 @@ DakePDF_Split_Select.exe --from-shimarisu --inputs "sample.pdf" --pages "1-3" --
 build.bat
 ```
 
-生成物は `dist\DakePDF_Split_Select` に出力されます。
+検証済みPython 3.12環境を使い、依存は `requirements.txt` の固定バージョンでビルドします。
+必要なら `PYTHON_EXE` 環境変数にPython実行ファイルのフルパスを設定してください。
+生成物は `dist\DakePDF_Split_Select\DakePDF_Split_Select.exe` です（onedir）。
+実行時には同じフォルダの `_internal` が必要です。exeだけを取り出さずフォルダ全体で扱います。
+今回のPRはビルド検証のみで、既存Releaseや配布物は更新しません。
+
+## 回帰検証
+
+```powershell
+python tests/test_lifecycle.py
+```
+
+Windows上で実際のTkウィンドウを使い、一時生成PDFで検証します。
+測定条件と未確認事項は `docs/PERFORMANCE_REFRESH_REPORT.md` を参照してください。
 
 ## 文言管理
 
