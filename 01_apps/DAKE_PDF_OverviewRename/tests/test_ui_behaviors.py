@@ -8,7 +8,9 @@ from unittest.mock import Mock
 
 import main
 import pytest
+from PIL import Image
 from main import OverviewRenameApp, UI_TEXT
+from rename_core import FileSnapshot, RenameEntry, RenamePlan, UndoEntry, UndoRecord
 
 
 class FakeVariable:
@@ -53,10 +55,7 @@ def test_root_scoped_wheel_ignores_preview_toplevel() -> None:
 
 
 def test_real_tk_wheel_binding_and_refresh_integration(monkeypatch, tmp_path: Path) -> None:
-    try:
-        root = tk.Tk()
-    except tk.TclError as exc:
-        pytest.skip(f"Tk display is unavailable: {exc}")
+    root = _create_tk_root()
     root.geometry("900x620+2500+100")
     app = OverviewRenameApp(root)
     first_surfaces: tuple[tk.Widget, tk.Widget, tk.Widget] | None = None
@@ -334,10 +333,7 @@ def test_reload_stale_generation_thumbnail_is_ignored() -> None:
 
 
 def test_real_tk_reload_48_cards_reflects_add_delete_and_external_rename(tmp_path: Path) -> None:
-    try:
-        root = tk.Tk()
-    except tk.TclError as exc:
-        pytest.skip(f"Tk display is unavailable: {exc}")
+    root = _create_tk_root()
     root.geometry("900x620+2500+100")
     app = OverviewRenameApp(root)
     app.scanner.request = Mock()
@@ -390,6 +386,364 @@ def test_real_tk_reload_48_cards_reflects_add_delete_and_external_rename(tmp_pat
         app.closing = True
         if app._poll_after is not None:
             root.after_cancel(app._poll_after)
+        app.scanner.shutdown()
+        app.render_pool.shutdown()
+        app.preview_worker.shutdown()
+        root.destroy()
+
+
+def _layout_test_app() -> OverviewRenameApp:
+    app = OverviewRenameApp.__new__(OverviewRenameApp)
+    app._layout_after = None
+    app._current_columns = 0
+    app._laid_out_count = 0
+    app.canvas = SimpleNamespace(winfo_width=lambda: 900)
+    app.size_var = FakeVariable("normal")
+    app.cards = []
+    app.cards_frame = SimpleNamespace(grid_columnconfigure=Mock())
+    app._update_scrollregion = Mock()
+    return app
+
+
+def test_empty_layout_then_32_cards_grids_every_frame() -> None:
+    app = _layout_test_app()
+    app._layout_cards()
+    assert app._current_columns > 0
+
+    app.cards = [SimpleNamespace(frame=Mock()) for _ in range(32)]
+    app._layout_cards()
+
+    assert app._laid_out_count == 32
+    assert all(card.frame.grid.call_count == 1 for card in app.cards)
+
+
+def test_layout_adds_second_batch_when_columns_are_unchanged() -> None:
+    app = _layout_test_app()
+    app.cards = [SimpleNamespace(frame=Mock()) for _ in range(main.CARD_BATCH_SIZE)]
+    app._layout_cards()
+    first_batch = list(app.cards)
+    second_batch = [SimpleNamespace(frame=Mock()) for _ in range(8)]
+    app.cards.extend(second_batch)
+
+    app._layout_cards()
+
+    assert app._laid_out_count == 32
+    assert all(card.frame.grid.call_count == 1 for card in first_batch)
+    assert all(card.frame.grid.call_count == 1 for card in second_batch)
+
+
+def test_xlarge_uses_sufficient_base_resolution() -> None:
+    _, image_width, image_height = main.SIZE_CONFIG["xlarge"]
+    assert main.UI_TEXT["size_xlarge"] == "特大"
+    assert main.THUMB_RENDER_BOX[0] >= image_width
+    assert main.THUMB_RENDER_BOX[1] >= image_height
+
+
+def _success_test_app() -> OverviewRenameApp:
+    app = OverviewRenameApp.__new__(OverviewRenameApp)
+    app.busy = True
+    app.success_var = FakeVariable("")
+    app.status_var = FakeVariable("working")
+    app._status_stacked = None
+    app.root = SimpleNamespace(after_idle=Mock())
+    app.status_row = object()
+    app._responsive_status = Mock()
+    app._reschedule_unrendered = Mock()
+    app._sync_status = Mock()
+    app._style_card = Mock()
+    return app
+
+
+def test_rename_success_uses_separate_non_modal_feedback(tmp_path: Path) -> None:
+    original_path = tmp_path / "before.pdf"
+    renamed_path = tmp_path / "after.pdf"
+    original_path.write_bytes(b"before")
+    renamed_path.write_bytes(b"after")
+    original_snapshot = FileSnapshot.capture(original_path)
+    renamed_snapshot = FileSnapshot.capture(renamed_path)
+    plan = RenamePlan(tmp_path, (RenameEntry(original_snapshot, renamed_path),))
+    record = UndoRecord(tmp_path, (UndoEntry(original_path, renamed_snapshot),))
+    card = SimpleNamespace(
+        snapshot=original_snapshot,
+        original_name=original_path.name,
+        variable=FakeVariable(original_path.stem),
+        name_label=Mock(),
+    )
+    app = _success_test_app()
+    app.cards = [card]
+    app.undo_record = None
+
+    app._accept_operation("rename", record, plan)
+
+    assert app.status_var.get() == "working"
+    assert app.success_var.get() == UI_TEXT["success_rename"].format(count=1)
+    assert app.undo_record is record
+
+
+def test_undo_success_uses_same_feedback_channel(tmp_path: Path) -> None:
+    renamed_path = tmp_path / "after.pdf"
+    original_path = tmp_path / "before.pdf"
+    renamed_path.write_bytes(b"after")
+    renamed_snapshot = FileSnapshot.capture(renamed_path)
+    original_path.write_bytes(b"before")
+    plan = RenamePlan(tmp_path, (RenameEntry(renamed_snapshot, original_path),))
+    record = UndoRecord(tmp_path, (UndoEntry(original_path, renamed_snapshot),))
+    card = SimpleNamespace(
+        snapshot=renamed_snapshot,
+        original_name=renamed_path.name,
+        variable=FakeVariable(renamed_path.stem),
+        name_label=Mock(),
+    )
+    app = _success_test_app()
+    app.cards = [card]
+    app.undo_record = record
+
+    app._accept_operation("undo", plan, record)
+
+    assert app.success_var.get() == UI_TEXT["success_undo"].format(count=1)
+    assert app.undo_record is None
+
+
+def test_thumbnail_progress_does_not_clear_success_feedback() -> None:
+    app = OverviewRenameApp.__new__(OverviewRenameApp)
+    app.cards = [SimpleNamespace(pending=False, entry=Mock())]
+    app.rendered_count = 1
+    app.busy = False
+    app.folder = Path("folder")
+    app.undo_record = None
+    app.status_var = FakeVariable("")
+    app.success_var = FakeVariable("keep success")
+    app.apply_button = Mock()
+    app.undo_button = Mock()
+    app.refresh_button = Mock()
+    app.reload_button = Mock()
+    app.select_button = Mock()
+
+    app._sync_status()
+
+    assert app.success_var.get() == "keep success"
+
+
+def test_next_name_edit_clears_success_feedback() -> None:
+    app = OverviewRenameApp.__new__(OverviewRenameApp)
+    app.success_var = FakeVariable("completed")
+    app._status_stacked = False
+    app.root = SimpleNamespace(after_idle=Mock())
+    app.status_row = object()
+    app._responsive_status = Mock()
+    app._style_card = Mock()
+    app._sync_status = Mock()
+    card = SimpleNamespace(variable=FakeVariable("next name"), hint_label=Mock())
+
+    app._on_name_changed(card)
+
+    assert app.success_var.get() == ""
+
+
+def _make_ui_pdf(path: Path, index: int, total: int) -> None:
+    image = Image.new("RGB", (240, 340), "white")
+    image.save(path, "PDF", resolution=72.0)
+
+
+def _create_tk_root() -> tk.Tk:
+    error: tk.TclError | None = None
+    for _ in range(5):
+        try:
+            return tk.Tk()
+        except tk.TclError as exc:
+            error = exc
+            main.time.sleep(0.2)
+    pytest.skip(f"Tk display is unavailable: {error}")
+
+
+def test_real_tk_first_load_progressive_layout_reload_and_xlarge(tmp_path: Path) -> None:
+    root = _create_tk_root()
+    root.geometry("900x620+2500+100")
+    app = OverviewRenameApp(root)
+    for index in range(48):
+        _make_ui_pdf(tmp_path / f"first_{index:04d}.pdf", index, 48)
+    progressive_states: list[bool] = []
+    accept_thumbnail = app._accept_thumbnail
+
+    def track_thumbnail(result) -> None:
+        accept_thumbnail(result)
+        if 0 < app.rendered_count < 48:
+            progressive_states.append(
+                any(card.photo is not None for card in app.cards)
+                and all(card.frame.winfo_manager() == "grid" for card in app.cards)
+            )
+
+    app._accept_thumbnail = track_thumbnail
+
+    def wait_for_complete() -> bool:
+        deadline = main.time.monotonic() + 30
+        while app.rendered_count < 48 and main.time.monotonic() < deadline:
+            root.update()
+        root.update_idletasks()
+        assert app.rendered_count == 48
+        assert len(app.cards) == 48
+        assert all(card.frame.winfo_manager() == "grid" for card in app.cards)
+        return any(progressive_states)
+
+    try:
+        root.update()
+        app._layout_cards()
+        assert app.cards == []
+        assert app._current_columns > 0
+
+        app._start_load(tmp_path)
+        assert wait_for_complete()
+
+        progressive_states.clear()
+        app.reload()
+        assert wait_for_complete()
+
+        first_card = app.cards[0]
+        first_card.variable.set("pending_name")
+        undo_marker = object()
+        app.undo_record = undo_marker
+        app.render_pool.replace = Mock()
+        app.size_var.set("xlarge")
+        app.change_size()
+        root.update()
+        assert first_card.variable.get() == "pending_name"
+        assert first_card.pending
+        assert app.undo_record is undo_marker
+        assert all(card.frame.winfo_manager() == "grid" for card in app.cards)
+        assert all(call.args[1] == [] for call in app.render_pool.replace.call_args_list)
+        assert app.size_buttons["xlarge"].cget("text") == UI_TEXT["size_xlarge"]
+
+        app.size_var.set("normal")
+        app.change_size()
+        root.update()
+        assert first_card.variable.get() == "pending_name"
+        assert first_card.pending
+        assert app.undo_record is undo_marker
+        assert all(card.frame.winfo_manager() == "grid" for card in app.cards)
+    finally:
+        app.closing = True
+        if app._poll_after is not None:
+            root.after_cancel(app._poll_after)
+        if app._layout_after is not None:
+            root.after_cancel(app._layout_after)
+        app._close_preview()
+        app.scanner.shutdown()
+        app.render_pool.shutdown()
+        app.preview_worker.shutdown()
+        root.destroy()
+
+
+def test_preview_fit_zoom_clamp_pan_quality_and_reset(monkeypatch, tmp_path: Path) -> None:
+    root = _create_tk_root()
+    root.geometry("900x620+2500+100")
+    app = OverviewRenameApp(root)
+    request = Mock()
+    cancel = Mock()
+    monkeypatch.setattr(app.preview_worker, "request", request)
+    monkeypatch.setattr(app.preview_worker, "cancel", cancel)
+    first_path = tmp_path / "first.pdf"
+    second_path = tmp_path / "second.pdf"
+    first_path.write_bytes(b"first")
+    second_path.write_bytes(b"second")
+    first = SimpleNamespace(identifier=0, snapshot=FileSnapshot.capture(first_path))
+    second = SimpleNamespace(identifier=1, snapshot=FileSnapshot.capture(second_path))
+
+    try:
+        app.show_preview(first)
+        root.update()
+        initial_request = request.call_args.args[0]
+        app._accept_preview(
+            main.RenderResult(initial_request, Image.new("RGB", main.PREVIEW_RENDER_BOX, "white"), 1, None)
+        )
+        root.update()
+        assert app._preview_zoom == 1.0
+        assert app.preview_zoom_var.get() == "100%"
+        assert app._preview_canvas is not None
+        assert app._preview_image_item is not None
+
+        main_scroll = app.canvas.yview()
+        center_x = app._preview_canvas.winfo_width() // 2
+        center_y = app._preview_canvas.winfo_height() // 2
+        event = SimpleNamespace(delta=120, x=center_x, y=center_y)
+        app._preview_canvas.event_generate("<MouseWheel>", delta=120, x=center_x, y=center_y)
+        root.update()
+        assert app._preview_zoom > 1.0
+        assert app.preview_zoom_var.get() != "100%"
+        assert app.canvas.yview() == main_scroll
+        event.delta = -120
+        app._on_preview_wheel(event)
+        assert app._preview_zoom == pytest.approx(1.0)
+
+        event.delta = 120
+        for _ in range(20):
+            app._on_preview_wheel(event)
+        assert app._preview_zoom == main.PREVIEW_ZOOM_MAX
+        assert app._preview_display_size[0] <= app._preview_base_image.size[0]
+        assert app._preview_display_size[1] <= app._preview_base_image.size[1]
+        before_pan = (app._preview_canvas.xview(), app._preview_canvas.yview())
+        app._on_preview_pan_start(SimpleNamespace(x=center_x, y=center_y))
+        app._on_preview_pan_move(SimpleNamespace(x=center_x - 180, y=center_y - 140))
+        after_pan = (app._preview_canvas.xview(), app._preview_canvas.yview())
+        assert after_pan != before_pan
+
+        event.delta = -120
+        for _ in range(40):
+            app._on_preview_wheel(event)
+        assert app._preview_zoom == main.PREVIEW_ZOOM_MIN
+
+        accepted_base = app._preview_base_image
+        stale_request = main.RenderRequest(
+            app.preview_generation - 1, "preview", 0, first.snapshot, main.PREVIEW_RENDER_BOX
+        )
+        app._accept_preview(main.RenderResult(stale_request, Image.new("RGB", (20, 20), "red"), 1, None))
+        assert app._preview_base_image is accepted_base
+
+        app.show_preview(second)
+        root.update()
+        assert app._preview_zoom == 1.0
+        assert app.preview_zoom_var.get() == "100%"
+        assert app._preview_base_image is None
+        assert app._preview_canvas.xview()[0] == pytest.approx(0.0)
+        assert app._preview_canvas.yview()[0] == pytest.approx(0.0)
+
+        second_request = request.call_args.args[0]
+        app._accept_preview(
+            main.RenderResult(second_request, Image.new("RGB", (100, 100), "white"), 1, None)
+        )
+        root.update()
+        app._preview_requested_box = (100, 100)
+        request.reset_mock()
+        scheduled: list[str] = []
+        for _ in range(5):
+            app._schedule_preview_quality()
+            assert app._preview_zoom_after is not None
+            scheduled.append(app._preview_zoom_after)
+        assert len(set(scheduled)) == 5
+        assert request.call_count == 0
+        root.after_cancel(app._preview_zoom_after)
+        app._preview_zoom_after = None
+        app._request_preview_quality()
+        assert request.call_count == 1
+        quality_request = request.call_args.args[0]
+        assert quality_request.box[0] > 100 or quality_request.box[1] > 100
+        assert quality_request.box[0] <= main.PREVIEW_MAX_RENDER_BOX[0]
+        assert quality_request.box[1] <= main.PREVIEW_MAX_RENDER_BOX[1]
+
+        app._schedule_preview_quality()
+        assert app._preview_zoom_after is not None
+        app._close_preview()
+        assert app._preview_zoom_after is None
+        assert app._preview_resize_after is None
+        assert app._preview_canvas is None
+        assert app._preview_snapshot is None
+    finally:
+        app.closing = True
+        if app._poll_after is not None:
+            root.after_cancel(app._poll_after)
+        if app._layout_after is not None:
+            root.after_cancel(app._layout_after)
+        if app._preview_window is not None:
+            app._close_preview()
         app.scanner.shutdown()
         app.render_pool.shutdown()
         app.preview_worker.shutdown()
