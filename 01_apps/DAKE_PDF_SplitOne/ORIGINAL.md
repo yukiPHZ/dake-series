@@ -13,9 +13,9 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - short_title: PDF分割One
 - category: PDF
 - status: available
-- version: 未設定（既存ファイルに明示なし）
+- version: 1.0.1
 - price: 500円
-- distribution: GitHub Release / BOOTH / dakeapp.com / Store（Storeは未確定）
+- distribution: GitHub Release / BOOTH / dakeapp.com / Store
 - target_platform: Windows
 
 ## 目的
@@ -166,7 +166,8 @@ PDFを1ファイル追加すると、全ページを1枚ずつのPDFへ自動分
   "update_summary": "READMEメタ情報とRelease本文を整備。スクリーンショットをassets/screenshot.webpに作成。",
   "folder_name": "DAKE_PDF_SplitOne",
   "exe_name": "DakePDF_Split_One.exe",
-  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitOne_v1.0.0",
+  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitOne_v1.0.1",
+  "version": "1.0.1",
   "screenshot_path": "assets/screenshot.webp",
   "status": "available",
   "show_in_launcher": true,
@@ -185,6 +186,7 @@ PDFを1ファイル追加すると、全ページを1枚ずつのPDFへ自動分
 - 1ページずつ自動保存
 - ドラッグ＆ドロップ対応
 - Windows向けexe
+- F5で処理を中断して初期状態に戻し、Ctrl+Oで次のPDFを開けます
 
 ## booth_product生成用情報
 
@@ -196,6 +198,7 @@ PDFを1ファイル追加すると、全ページを1枚ずつのPDFへ自動分
 ・1ページずつ自動保存
 ・ドラッグ＆ドロップ対応
 ・Windows向けexe
+・F5で初期状態に戻し、Ctrl+Oで次のPDFを選択
 
 実務の流れを、
 少し静かにするための道具です。
@@ -210,7 +213,8 @@ PDFを1ファイル追加すると、全ページを1枚ずつのPDFへ自動分
 - 商品画像: assets/booth_thumbnail.jpg
 - 補助画像: assets/screenshot.jpg
 - 作品ファイル: booth_ready/DakePDF_Split_One.zip
-- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitOne_v1.0.0
+- 第三者ライセンス: THIRD_PARTY_NOTICES.txt と third_party_licenses/ を同梱。onedir runtime内のライセンス文書も保持する
+- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitOne_v1.0.1
 - BOOTH URL: https://peakheadz.booth.pm/items/8448207
 
 ## Store表示用情報
@@ -242,11 +246,11 @@ PDFを1ファイル追加すると、全ページを1枚ずつのPDFへ自動分
 
 ## 配布・ダウンロード方針
 
-- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitOne_v1.0.0
+- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitOne_v1.0.1
 - BOOTH: https://peakheadz.booth.pm/items/8448207
 - dakeapp.com: show_on_site=true
 - Launcher: show_in_launcher=true
-- Store: 未確定
+- Store: store.dakeapp.com（販売ビュー。商品情報は本ファイルから生成）
 
 ## 免責・注意事項
 
@@ -289,7 +293,7 @@ https://peakheadz.com
 - 実装優先順位: 起動、cancel / generation、安全な一時出力、非破壊確定。サムネイル、fitz、LRU cacheなどSplitSelect固有構造は導入しない
 - 外部公開しない: 個人情報、APIキー、未公開メモ
 - 自動操作しない: BOOTH公開、Store決済、GitHub Release更新
-- 正式出荷blocker: onedirを扱う共通出荷ラインの整備。Launcher / BOOTH / Release対応はこの改善へ混ぜない
+- 正式出荷基盤: onefile / onedir共通出荷ツールを使用し、runtime folder一式を同じ検証済みZIPでReleaseとBOOTHへ渡す
 
 ## 派生物一覧
 

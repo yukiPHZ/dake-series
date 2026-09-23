@@ -1,0 +1,8 @@
+Third-party notices for DakePDF_Split_One v1.0.1
+
+The distribution uses pypdf 6.10.2 and a PyInstaller 6.19.0
+bootloader. Their original license texts are included under
+third_party_licenses/ in this ZIP. Other license files bundled with
+the onedir runtime remain in DakePDF_Split_One/_internal/.
+
+This notice does not replace the original license texts.

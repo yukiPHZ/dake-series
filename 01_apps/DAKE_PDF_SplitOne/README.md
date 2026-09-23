@@ -58,6 +58,8 @@ build.bat
 
 ビルドが成功すると `dist\DakePDF_Split_One\DakePDF_Split_One.exe` と `_internal` フォルダが生成されます。exe単体ではなくフォルダ一式で動作します。
 
+正式配布ZIPには、runtimeフォルダ一式、README.txt、注意事項.txt、THIRD_PARTY_NOTICES.txt、third_party_licensesを同梱します。
+
 `python` や `py` がPATHにない場合は、先に `set PYTHON_EXE=C:\Path\To\python.exe` を指定してから `build.bat` を実行できます。
 
 ## Shimarisu CLI
@@ -65,8 +67,8 @@ build.bat
 `--from-shimarisu` がある場合だけ、GUIを表示せずにCLIモードでPDFをページ単位に分割します。通常起動では従来どおりGUIを表示します。
 
 ```bat
-dist\DakePDF_Split_One.exe --from-shimarisu --inputs "C:\path\sample.pdf"
-dist\DakePDF_Split_One.exe --from-shimarisu --inputs "C:\path\sample.pdf" --output "C:\path\out" --silent
+dist\DakePDF_Split_One\DakePDF_Split_One.exe --from-shimarisu --inputs "C:\path\sample.pdf"
+dist\DakePDF_Split_One\DakePDF_Split_One.exe --from-shimarisu --inputs "C:\path\sample.pdf" --output "C:\path\out" --silent
 ```
 
 - `--inputs`: PDFファイルを1件以上指定します。複数指定時は先頭の1件だけ使用します
@@ -90,7 +92,8 @@ dist\DakePDF_Split_One.exe --from-shimarisu --inputs "C:\path\sample.pdf" --outp
   "update_summary": "READMEメタ情報とRelease本文を整備。スクリーンショットをassets/screenshot.webpに作成。",
   "folder_name": "DAKE_PDF_SplitOne",
   "exe_name": "DakePDF_Split_One.exe",
-  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitOne_v1.0.0",
+  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitOne_v1.0.1",
+  "version": "1.0.1",
   "screenshot_path": "assets/screenshot.webp",
   "status": "available",
   "show_in_launcher": true,
@@ -107,3 +110,4 @@ dist\DakePDF_Split_One.exe --from-shimarisu --inputs "C:\path\sample.pdf" --outp
 - 1ページずつ自動保存
 - ドラッグ＆ドロップ対応
 - Windows向けexe
+- F5で処理を中断して初期状態に戻し、Ctrl+Oで次のPDFを開けます
