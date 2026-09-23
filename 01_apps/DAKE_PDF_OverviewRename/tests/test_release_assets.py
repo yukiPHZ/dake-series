@@ -63,7 +63,7 @@ def test_readme_meta_matches_original_and_has_formal_release_flags() -> None:
     assert meta["status"] == "available"
     assert meta["release_url"] == (
         "https://github.com/yukiPHZ/dake-series/releases/tag/"
-        "DAKE_PDF_OverviewRename_v1.0.0"
+        "DAKE_PDF_OverviewRename_v1.0.1"
     )
     assert meta["show_in_launcher"] is True
     assert meta["show_on_site"] is True
@@ -87,7 +87,7 @@ def test_booth_views_set_price_and_github_release_url() -> None:
     assert release
     assert release.group(1).strip() == (
         "https://github.com/yukiPHZ/dake-series/releases/tag/"
-        "DAKE_PDF_OverviewRename_v1.0.0"
+        "DAKE_PDF_OverviewRename_v1.0.1"
     )
     booth_url = re.search(r"(?ms)^# URL\s*\n(.*?)(?=^# |\Z)", canonical)
     assert booth_url
