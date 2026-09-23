@@ -36,11 +36,13 @@ UI_TEXT = {
     "main_description": "フォルダ内のPDFをサムネイルで一覧表示し、その場で名前を変更します。",
     "select_folder": "フォルダを選ぶ",
     "refresh": "リフレッシュ",
+    "reload": "再読み込み",
     "folder_unselected": "フォルダ未選択",
     "view_size": "表示サイズ",
     "size_small": "小",
     "size_normal": "標準",
     "size_large": "大",
+    "size_xlarge": "特大",
     "undo": "変更を元に戻す",
     "apply": "名前変更を反映 {count}",
     "page_count": "{count}ページ",
@@ -57,6 +59,8 @@ UI_TEXT = {
     "status_undoing": "変更を元に戻しています…",
     "status_complete": "{count}件の名前を変更しました。",
     "status_undo_complete": "{count}件を元の名前へ戻しました。",
+    "success_rename": "✓ {count}件の名前変更が完了しました",
+    "success_undo": "✓ {count}件を元の名前へ戻しました",
     "dialog_folder": "PDFフォルダを選択",
     "discard_title": "未反映の変更",
     "discard_message": "入力中の名前を破棄してもよいですか？",
@@ -93,6 +97,8 @@ UI_TEXT = {
     "preview_title": "1ページ目のプレビュー",
     "preview_loading": "大きいプレビューを読み込んでいます…",
     "preview_error": "プレビューできませんでした。",
+    "preview_zoom": "{percent}%",
+    "preview_zoom_hint": "ホイール: 拡大・縮小 / 左ドラッグ: 移動",
     "footer_brand": "シンプルそれDAKEシリーズ / 止まらない、迷わない、すぐ終わる。",
     "footer_link_1": "戸建買取査定",
     "footer_link_2": "Instagram",
@@ -126,12 +132,18 @@ WINDOW_MIN_SIZE = (900, 620)
 CARD_BATCH_SIZE = 24
 POLL_MS = 45
 THUMB_WORKERS = 3
-THUMB_RENDER_BOX = (270, 350)
-PREVIEW_RENDER_BOX = (850, 1050)
+THUMB_RENDER_BOX = (350, 455)
+PREVIEW_RENDER_BOX = (1800, 2400)
+PREVIEW_MAX_RENDER_BOX = (3000, 3600)
+PREVIEW_ZOOM_MIN = 0.5
+PREVIEW_ZOOM_MAX = 3.0
+PREVIEW_ZOOM_STEP = 1.2
+PREVIEW_RENDER_DEBOUNCE_MS = 120
 SIZE_CONFIG = {
     "small": (190, 160, 205),
     "normal": (240, 210, 270),
     "large": (300, 270, 350),
+    "xlarge": (380, 350, 455),
 }
 
 _PDFIUM = None
@@ -504,10 +516,24 @@ class OverviewRenameApp:
         self._layout_after: str | None = None
         self._poll_after: str | None = None
         self._current_columns = 0
+        self._laid_out_count = 0
         self._preview_window: tk.Toplevel | None = None
         self._preview_label: tk.Label | None = None
+        self._preview_canvas: tk.Canvas | None = None
+        self._preview_image_item: int | None = None
+        self._preview_message_item: int | None = None
         self._preview_photo = None
+        self._preview_base_image = None
+        self._preview_snapshot: FileSnapshot | None = None
+        self._preview_zoom = 1.0
+        self._preview_user_zoomed = False
+        self._preview_display_size = (0, 0)
+        self._preview_image_offset = (0, 0)
+        self._preview_requested_box = PREVIEW_RENDER_BOX
+        self._preview_zoom_after: str | None = None
+        self._preview_resize_after: str | None = None
         self._toolbar_stacked: bool | None = None
+        self._status_stacked: bool | None = None
         self._footer_stacked: bool | None = None
         self.render_pool = RenderPool()
         self.preview_worker = LatestPreviewWorker()
@@ -516,6 +542,8 @@ class OverviewRenameApp:
         self.size_var = tk.StringVar(value="normal")
         self.path_var = tk.StringVar(value=UI_TEXT["folder_unselected"])
         self.status_var = tk.StringVar(value=UI_TEXT["status_empty"])
+        self.success_var = tk.StringVar(value="")
+        self.preview_zoom_var = tk.StringVar(value=UI_TEXT["preview_zoom"].format(percent=100))
         self._build_ui()
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
         self._poll_after = self.root.after(POLL_MS, self._poll_results)
@@ -542,26 +570,42 @@ class OverviewRenameApp:
         self.select_button = self._button(self.toolbar, UI_TEXT["select_folder"], self.choose_folder)
         self.select_button.grid(row=0, column=0, padx=(0, 8))
         self.refresh_button = self._button(self.toolbar, UI_TEXT["refresh"], self.refresh)
-        self.refresh_button.grid(row=0, column=1, padx=(0, 12))
+        self.refresh_button.grid(row=0, column=1, padx=(0, 8))
+        self.reload_button = self._button(self.toolbar, UI_TEXT["reload"], self.reload)
+        self.reload_button.grid(row=0, column=2, padx=(0, 12))
         self.path_label = tk.Label(self.toolbar, textvariable=self.path_var, bg=THEME["card"], fg=THEME["muted"], font=(self.font, 9), anchor="w")
-        self.path_label.grid(row=0, column=2, sticky="ew")
+        self.path_label.grid(row=0, column=3, sticky="ew")
         self.size_controls = tk.Frame(self.toolbar, bg=THEME["card"])
-        self.size_controls.grid(row=0, column=3, padx=12)
+        self.size_controls.grid(row=0, column=4, padx=12)
         tk.Label(self.size_controls, text=UI_TEXT["view_size"], bg=THEME["card"], fg=THEME["muted"], font=(self.font, 9)).pack(side="left", padx=(0, 4))
-        for value, key in (("small", "size_small"), ("normal", "size_normal"), ("large", "size_large")):
-            tk.Radiobutton(
+        self.size_buttons: dict[str, tk.Radiobutton] = {}
+        for value, key in (("small", "size_small"), ("normal", "size_normal"), ("large", "size_large"), ("xlarge", "size_xlarge")):
+            button = tk.Radiobutton(
                 self.size_controls, text=UI_TEXT[key], value=value, variable=self.size_var, command=self.change_size,
                 bg=THEME["card"], fg=THEME["text"], activebackground=THEME["card"], selectcolor=THEME["pending"],
                 font=(self.font, 9), indicatoron=False, padx=7, pady=4, relief="flat",
-            ).pack(side="left")
+            )
+            button.pack(side="left")
+            self.size_buttons[value] = button
         self.undo_button = self._button(self.toolbar, UI_TEXT["undo"], self.undo, secondary=True)
-        self.undo_button.grid(row=0, column=4, padx=(0, 8))
+        self.undo_button.grid(row=0, column=5, padx=(0, 8))
         self.apply_button = self._button(self.toolbar, UI_TEXT["apply"].format(count=0), self.apply, primary=True)
-        self.apply_button.grid(row=0, column=5)
-        self.toolbar.grid_columnconfigure(2, weight=1)
+        self.apply_button.grid(row=0, column=6)
+        self.toolbar.grid_columnconfigure(3, weight=1)
 
-        status = tk.Label(shell, textvariable=self.status_var, bg=THEME["background"], fg=THEME["muted"], font=(self.font, 9), anchor="w")
-        status.pack(fill="x", padx=26, pady=(9, 7))
+        self.status_row = tk.Frame(shell, bg=THEME["background"])
+        self.status_row.pack(fill="x", padx=26, pady=(9, 7))
+        self.status_label = tk.Label(
+            self.status_row, textvariable=self.status_var, bg=THEME["background"], fg=THEME["muted"],
+            font=(self.font, 9), anchor="w",
+        )
+        self.success_label = tk.Label(
+            self.status_row, textvariable=self.success_var, bg=THEME["background"], fg=THEME["success"],
+            font=(self.font, 9, "bold"), anchor="e",
+        )
+        self.status_label.grid(row=0, column=0, sticky="ew")
+        self.success_label.grid(row=0, column=1, sticky="e", padx=(16, 0))
+        self.status_row.grid_columnconfigure(0, weight=1)
 
         viewport = tk.Frame(shell, bg=THEME["background"])
         viewport.pack(fill="both", expand=True, padx=(24, 17))
@@ -609,6 +653,7 @@ class OverviewRenameApp:
         if event is not None and event.widget is not self.root:
             return
         self._responsive_toolbar()
+        self._responsive_status()
         self._responsive_footer()
 
     def _responsive_toolbar(self) -> None:
@@ -616,6 +661,7 @@ class OverviewRenameApp:
         fixed = (
             self.select_button.winfo_reqwidth()
             + self.refresh_button.winfo_reqwidth()
+            + self.reload_button.winfo_reqwidth()
             + self.size_controls.winfo_reqwidth()
             + self.undo_button.winfo_reqwidth()
             + self.apply_button.winfo_reqwidth()
@@ -625,22 +671,40 @@ class OverviewRenameApp:
         if stacked == self._toolbar_stacked:
             return
         self._toolbar_stacked = stacked
-        for widget in (self.select_button, self.refresh_button, self.path_label, self.size_controls, self.undo_button, self.apply_button):
+        for widget in (self.select_button, self.refresh_button, self.reload_button, self.path_label, self.size_controls, self.undo_button, self.apply_button):
             widget.grid_forget()
         if stacked:
             self.select_button.grid(row=0, column=0, padx=(0, 8), pady=(0, 8))
-            self.refresh_button.grid(row=0, column=1, padx=(0, 12), pady=(0, 8))
-            self.path_label.grid(row=0, column=2, columnspan=3, sticky="ew", pady=(0, 8))
-            self.size_controls.grid(row=1, column=0, columnspan=3, sticky="w")
-            self.undo_button.grid(row=1, column=3, padx=(8, 8))
-            self.apply_button.grid(row=1, column=4)
+            self.refresh_button.grid(row=0, column=1, padx=(0, 8), pady=(0, 8))
+            self.reload_button.grid(row=0, column=2, padx=(0, 12), pady=(0, 8))
+            self.path_label.grid(row=0, column=3, columnspan=3, sticky="ew", pady=(0, 8))
+            self.size_controls.grid(row=1, column=0, columnspan=4, sticky="w")
+            self.undo_button.grid(row=1, column=4, padx=(8, 8))
+            self.apply_button.grid(row=1, column=5)
         else:
             self.select_button.grid(row=0, column=0, padx=(0, 8))
-            self.refresh_button.grid(row=0, column=1, padx=(0, 12))
-            self.path_label.grid(row=0, column=2, sticky="ew")
-            self.size_controls.grid(row=0, column=3, padx=12)
-            self.undo_button.grid(row=0, column=4, padx=(0, 8))
-            self.apply_button.grid(row=0, column=5)
+            self.refresh_button.grid(row=0, column=1, padx=(0, 8))
+            self.reload_button.grid(row=0, column=2, padx=(0, 12))
+            self.path_label.grid(row=0, column=3, sticky="ew")
+            self.size_controls.grid(row=0, column=4, padx=12)
+            self.undo_button.grid(row=0, column=5, padx=(0, 8))
+            self.apply_button.grid(row=0, column=6)
+
+    def _responsive_status(self) -> None:
+        available = max(self.status_row.winfo_width(), 1)
+        required = self.status_label.winfo_reqwidth() + self.success_label.winfo_reqwidth() + 16
+        stacked = bool(self.success_var.get()) and required > available
+        if stacked == self._status_stacked:
+            return
+        self._status_stacked = stacked
+        self.status_label.grid_forget()
+        self.success_label.grid_forget()
+        if stacked:
+            self.status_label.grid(row=0, column=0, columnspan=2, sticky="ew")
+            self.success_label.grid(row=1, column=0, columnspan=2, sticky="w", pady=(3, 0))
+        else:
+            self.status_label.grid(row=0, column=0, sticky="ew")
+            self.success_label.grid(row=0, column=1, sticky="e", padx=(16, 0))
 
     def _responsive_footer(self) -> None:
         available = max(self.root.winfo_width() - 48, 1)
@@ -690,11 +754,16 @@ class OverviewRenameApp:
         width = max(self.canvas.winfo_width(), WINDOW_MIN_SIZE[0] - 60)
         card_width = SIZE_CONFIG[self.size_var.get()][0]
         columns = max(1, width // (card_width + 14))
-        if columns == self._current_columns and self.cards:
+        columns_changed = columns != self._current_columns
+        start = 0 if columns_changed else min(self._laid_out_count, len(self.cards))
+        if not columns_changed and start >= len(self.cards):
+            self._update_scrollregion()
             return
         self._current_columns = columns
-        for index, card in enumerate(self.cards):
+        for index in range(start, len(self.cards)):
+            card = self.cards[index]
             card.frame.grid(row=index // columns, column=index % columns, padx=7, pady=7, sticky="n")
+        self._laid_out_count = len(self.cards)
         for column in range(columns):
             self.cards_frame.grid_columnconfigure(column, weight=1)
         self._update_scrollregion()
@@ -705,6 +774,7 @@ class OverviewRenameApp:
         self.cards.clear()
         self.rendered_count = 0
         self._current_columns = 0
+        self._laid_out_count = 0
         self._update_scrollregion()
 
     def has_pending(self) -> bool:
@@ -727,7 +797,16 @@ class OverviewRenameApp:
             return
         self._reset_to_initial()
 
+    def reload(self) -> None:
+        if self.busy or self.folder is None or not self._confirm_discard():
+            return
+        folder = self.folder
+        self._close_preview()
+        self._start_load(folder)
+        self.canvas.yview_moveto(0.0)
+
     def _reset_to_initial(self) -> None:
+        self._clear_success()
         self.scan_token += 1
         self.generation += 1
         self.scanner.cancel(self.scan_token)
@@ -742,6 +821,7 @@ class OverviewRenameApp:
         self._sync_controls()
 
     def _start_load(self, folder: Path) -> None:
+        self._clear_success()
         self.scan_token += 1
         self.generation += 1
         self.preview_generation += 1
@@ -828,6 +908,7 @@ class OverviewRenameApp:
         tk.Label(holder, text=UI_TEXT["empty_hint"], bg=THEME["background"], fg=THEME["muted"], font=(self.font, 10)).pack(pady=8)
 
     def _on_name_changed(self, card: CardState) -> None:
+        self._clear_success()
         entered_pdf = card.variable.get().casefold().endswith(".pdf")
         card.hint_label.configure(text=UI_TEXT["pdf_suffix_hint"] if entered_pdf else "")
         self._style_card(card)
@@ -847,11 +928,27 @@ class OverviewRenameApp:
         self.status_var.set(UI_TEXT["status_summary"].format(total=len(self.cards), ready=self.rendered_count, pending=sum(card.pending for card in self.cards)))
         self._sync_controls()
 
+    def _set_success(self, message: str) -> None:
+        self.success_var.set(message)
+        self._status_stacked = None
+        self.root.after_idle(self._responsive_status)
+
+    def _clear_success(self) -> None:
+        success_var = getattr(self, "success_var", None)
+        if success_var is None or not success_var.get():
+            return
+        success_var.set("")
+        self._status_stacked = None
+        root = getattr(self, "root", None)
+        if root is not None and hasattr(root, "after_idle") and hasattr(self, "status_row"):
+            root.after_idle(self._responsive_status)
+
     def _sync_controls(self) -> None:
         pending = sum(card.pending for card in self.cards)
         self.apply_button.configure(text=UI_TEXT["apply"].format(count=pending), state="normal" if pending and not self.busy else "disabled")
         self.undo_button.configure(state="normal" if self.undo_record is not None and not self.busy else "disabled")
         self.refresh_button.configure(state="normal" if self.folder is not None and not self.busy else "disabled")
+        self.reload_button.configure(state="normal" if self.folder is not None and not self.busy else "disabled")
         self.select_button.configure(state="disabled" if self.busy else "normal")
         for card in self.cards:
             card.entry.configure(state="disabled" if self.busy else "normal")
@@ -868,6 +965,7 @@ class OverviewRenameApp:
             if card.base_image is not None:
                 self._apply_card_image(card)
         self._current_columns = 0
+        self._laid_out_count = 0
         self._layout_cards()
         self.root.update_idletasks()
         self.canvas.yview_moveto(scroll)
@@ -904,41 +1002,278 @@ class OverviewRenameApp:
     def show_preview(self, card: CardState) -> None:
         if self.busy:
             return
+        self._cancel_preview_callbacks()
         self.preview_generation += 1
+        self.preview_worker.cancel(self.preview_generation)
         if self._preview_window is None or not self._preview_window.winfo_exists():
             self._preview_window = tk.Toplevel(self.root)
             self._preview_window.title(UI_TEXT["preview_title"])
             self._preview_window.geometry("900x700")
             self._preview_window.configure(bg=THEME["background"])
             apply_window_icon(self._preview_window)
-            self._preview_label = tk.Label(self._preview_window, bg=THEME["background"], fg=THEME["muted"], font=(self.font, 10))
-            self._preview_label.pack(fill="both", expand=True, padx=16, pady=16)
+            preview_toolbar = tk.Frame(self._preview_window, bg=THEME["card"], padx=14, pady=8)
+            preview_toolbar.pack(fill="x")
+            tk.Label(
+                preview_toolbar, textvariable=self.preview_zoom_var, bg=THEME["card"], fg=THEME["text"],
+                font=(self.font, 10, "bold"),
+            ).pack(side="left")
+            tk.Label(
+                preview_toolbar, text=UI_TEXT["preview_zoom_hint"], bg=THEME["card"], fg=THEME["muted"],
+                font=(self.font, 9),
+            ).pack(side="right")
+            self._preview_canvas = tk.Canvas(
+                self._preview_window, bg=THEME["background"], highlightthickness=0, cursor="fleur",
+            )
+            self._preview_canvas.pack(fill="both", expand=True, padx=16, pady=16)
+            self._preview_canvas.bind("<ButtonPress-1>", self._on_preview_pan_start)
+            self._preview_canvas.bind("<B1-Motion>", self._on_preview_pan_move)
+            self._preview_canvas.bind("<Configure>", self._on_preview_resize)
+            self._preview_window.bind("<MouseWheel>", self._on_preview_wheel, add="+")
+            self._preview_window.bind("<Escape>", lambda _event: self._close_preview())
             self._preview_window.protocol("WM_DELETE_WINDOW", self._close_preview)
         self._preview_window.deiconify()
         self._preview_window.lift()
-        if self._preview_label is not None:
-            self._preview_label.configure(text=UI_TEXT["preview_loading"], image="")
+        self._preview_snapshot = card.snapshot
+        self._preview_zoom = 1.0
+        self._preview_user_zoomed = False
+        self._preview_display_size = (0, 0)
+        self._preview_image_offset = (0, 0)
+        self._preview_base_image = None
+        self._preview_photo = None
+        self._preview_image_item = None
+        self._preview_message_item = None
+        self._preview_requested_box = PREVIEW_RENDER_BOX
+        self.preview_zoom_var.set(UI_TEXT["preview_zoom"].format(percent=100))
+        if self._preview_canvas is not None:
+            self._preview_canvas.delete("all")
+            self._preview_canvas.update_idletasks()
+            self._show_preview_message(UI_TEXT["preview_loading"], THEME["muted"])
+            self._preview_canvas.xview_moveto(0.0)
+            self._preview_canvas.yview_moveto(0.0)
         self.preview_worker.request(RenderRequest(self.preview_generation, "preview", card.identifier, card.snapshot, PREVIEW_RENDER_BOX))
 
+    def _cancel_preview_callbacks(self) -> None:
+        root = getattr(self, "root", None)
+        for attribute in ("_preview_zoom_after", "_preview_resize_after"):
+            callback = getattr(self, attribute, None)
+            if callback is not None and root is not None:
+                try:
+                    root.after_cancel(callback)
+                except Exception:
+                    pass
+            setattr(self, attribute, None)
+
+    def _show_preview_message(self, message: str, color: str) -> None:
+        if self._preview_canvas is None:
+            return
+        width = max(self._preview_canvas.winfo_width(), 1)
+        height = max(self._preview_canvas.winfo_height(), 1)
+        self._preview_canvas.delete("all")
+        self._preview_image_item = None
+        self._preview_message_item = self._preview_canvas.create_text(
+            width // 2, height // 2, text=message, fill=color, font=(self.font, 10), anchor="center",
+        )
+
+    def _preview_anchor(self, x: float, y: float) -> tuple[float, float, float, float] | None:
+        if self._preview_canvas is None or not all(self._preview_display_size):
+            return None
+        image_width, image_height = self._preview_display_size
+        offset_x, offset_y = self._preview_image_offset
+        image_x = self._preview_canvas.canvasx(x) - offset_x
+        image_y = self._preview_canvas.canvasy(y) - offset_y
+        return (
+            min(max(image_x / image_width, 0.0), 1.0),
+            min(max(image_y / image_height, 0.0), 1.0),
+            x,
+            y,
+        )
+
+    def _set_preview_origin(self, left: float, top: float) -> None:
+        if self._preview_canvas is None:
+            return
+        viewport_width = max(self._preview_canvas.winfo_width(), 1)
+        viewport_height = max(self._preview_canvas.winfo_height(), 1)
+        image_width, image_height = self._preview_display_size
+        region_width = max(viewport_width, image_width)
+        region_height = max(viewport_height, image_height)
+        max_left = max(region_width - viewport_width, 0)
+        max_top = max(region_height - viewport_height, 0)
+        left = min(max(left, 0.0), float(max_left))
+        top = min(max(top, 0.0), float(max_top))
+        self._preview_canvas.xview_moveto(left / region_width if region_width else 0.0)
+        self._preview_canvas.yview_moveto(top / region_height if region_height else 0.0)
+
+    def _apply_preview_image(self, anchor: tuple[float, float, float, float] | None = None) -> None:
+        if self._preview_canvas is None or self._preview_base_image is None:
+            return
+        self._preview_canvas.update_idletasks()
+        viewport_width = max(self._preview_canvas.winfo_width(), 1)
+        viewport_height = max(self._preview_canvas.winfo_height(), 1)
+        source_width, source_height = self._preview_base_image.size
+        fit_scale = min(viewport_width / source_width, viewport_height / source_height)
+        fit_width = max(1, round(source_width * fit_scale))
+        fit_height = max(1, round(source_height * fit_scale))
+        target_width = max(1, round(fit_width * self._preview_zoom))
+        target_height = max(1, round(fit_height * self._preview_zoom))
+        _, pil_modules = load_preview_dependencies()
+        Image, ImageTk = pil_modules
+        image = self._preview_base_image.copy()
+        if image.size != (target_width, target_height):
+            image = image.resize((target_width, target_height), Image.Resampling.LANCZOS)
+        self._preview_photo = ImageTk.PhotoImage(image)
+        offset_x = max((viewport_width - target_width) // 2, 0)
+        offset_y = max((viewport_height - target_height) // 2, 0)
+        if self._preview_image_item is None:
+            self._preview_image_item = self._preview_canvas.create_image(
+                offset_x, offset_y, image=self._preview_photo, anchor="nw",
+            )
+        else:
+            self._preview_canvas.itemconfigure(self._preview_image_item, image=self._preview_photo)
+            self._preview_canvas.coords(self._preview_image_item, offset_x, offset_y)
+        if self._preview_message_item is not None:
+            self._preview_canvas.delete(self._preview_message_item)
+            self._preview_message_item = None
+        self._preview_display_size = (target_width, target_height)
+        self._preview_image_offset = (offset_x, offset_y)
+        self._preview_canvas.configure(
+            scrollregion=(0, 0, max(viewport_width, target_width), max(viewport_height, target_height))
+        )
+        if anchor is None:
+            self._set_preview_origin(0.0, 0.0)
+        else:
+            ratio_x, ratio_y, pointer_x, pointer_y = anchor
+            self._set_preview_origin(
+                offset_x + ratio_x * target_width - pointer_x,
+                offset_y + ratio_y * target_height - pointer_y,
+            )
+        self.preview_zoom_var.set(UI_TEXT["preview_zoom"].format(percent=round(self._preview_zoom * 100)))
+
+    def _on_preview_wheel(self, event) -> str:
+        if self._preview_base_image is None or self._preview_canvas is None:
+            return "break"
+        pointer_x = event.x
+        pointer_y = event.y
+        if hasattr(event, "x_root") and hasattr(event, "y_root"):
+            pointer_x = event.x_root - self._preview_canvas.winfo_rootx()
+            pointer_y = event.y_root - self._preview_canvas.winfo_rooty()
+        anchor = self._preview_anchor(pointer_x, pointer_y)
+        if event.delta > 0:
+            zoom = min(PREVIEW_ZOOM_MAX, self._preview_zoom * PREVIEW_ZOOM_STEP)
+        elif event.delta < 0:
+            zoom = max(PREVIEW_ZOOM_MIN, self._preview_zoom / PREVIEW_ZOOM_STEP)
+        else:
+            return "break"
+        if abs(zoom - self._preview_zoom) < 1e-9:
+            return "break"
+        self._preview_zoom = zoom
+        self._preview_user_zoomed = abs(zoom - 1.0) > 1e-9
+        self._apply_preview_image(anchor)
+        self._schedule_preview_quality()
+        return "break"
+
+    def _schedule_preview_quality(self) -> None:
+        if self._preview_zoom_after is not None:
+            try:
+                self.root.after_cancel(self._preview_zoom_after)
+            except Exception:
+                pass
+            self._preview_zoom_after = None
+        if self._preview_base_image is None:
+            return
+        display_width, display_height = self._preview_display_size
+        base_width, base_height = self._preview_base_image.size
+        if display_width <= base_width and display_height <= base_height:
+            return
+        self._preview_zoom_after = self.root.after(PREVIEW_RENDER_DEBOUNCE_MS, self._request_preview_quality)
+
+    def _request_preview_quality(self) -> None:
+        self._preview_zoom_after = None
+        if self._preview_snapshot is None or self._preview_canvas is None:
+            return
+        display_width, display_height = self._preview_display_size
+        requested_width, requested_height = self._preview_requested_box
+        desired = (
+            min(PREVIEW_MAX_RENDER_BOX[0], max(PREVIEW_RENDER_BOX[0], round(display_width * 1.1))),
+            min(PREVIEW_MAX_RENDER_BOX[1], max(PREVIEW_RENDER_BOX[1], round(display_height * 1.1))),
+        )
+        if desired[0] <= requested_width and desired[1] <= requested_height:
+            return
+        self._preview_requested_box = desired
+        self.preview_generation += 1
+        self.preview_worker.request(
+            RenderRequest(self.preview_generation, "preview", -1, self._preview_snapshot, desired)
+        )
+
+    def _on_preview_pan_start(self, event) -> str:
+        if self._preview_canvas is not None:
+            self._preview_canvas.scan_mark(event.x, event.y)
+        return "break"
+
+    def _on_preview_pan_move(self, event) -> str:
+        if self._preview_canvas is not None:
+            self._preview_canvas.scan_dragto(event.x, event.y, gain=1)
+        return "break"
+
+    def _on_preview_resize(self, _event=None) -> None:
+        if self._preview_resize_after is not None:
+            try:
+                self.root.after_cancel(self._preview_resize_after)
+            except Exception:
+                pass
+        self._preview_resize_after = self.root.after(80, self._finish_preview_resize)
+
+    def _finish_preview_resize(self) -> None:
+        self._preview_resize_after = None
+        if self._preview_canvas is None or self._preview_base_image is None:
+            return
+        anchor = None
+        if self._preview_user_zoomed:
+            anchor = self._preview_anchor(
+                self._preview_canvas.winfo_width() / 2,
+                self._preview_canvas.winfo_height() / 2,
+            )
+        self._apply_preview_image(anchor)
+        self._schedule_preview_quality()
+
     def _close_preview(self) -> None:
+        self._cancel_preview_callbacks()
         self.preview_generation += 1
         self.preview_worker.cancel(self.preview_generation)
         if self._preview_window is not None:
             self._preview_window.destroy()
         self._preview_window = None
         self._preview_label = None
+        self._preview_canvas = None
+        self._preview_image_item = None
+        self._preview_message_item = None
         self._preview_photo = None
+        self._preview_base_image = None
+        self._preview_snapshot = None
+        self._preview_zoom = 1.0
+        self._preview_user_zoomed = False
+        self._preview_display_size = (0, 0)
+        self._preview_image_offset = (0, 0)
 
     def _accept_preview(self, result: RenderResult) -> None:
-        if result.request.generation != self.preview_generation or self._preview_label is None:
+        if (
+            result.request.generation != self.preview_generation
+            or self._preview_canvas is None
+            or self._preview_snapshot is None
+            or result.request.snapshot.path != self._preview_snapshot.path
+        ):
             return
         if result.error is not None or result.image is None:
-            self._preview_label.configure(text=UI_TEXT["preview_error"], image="", fg=THEME["error"])
+            if self._preview_base_image is None:
+                self._show_preview_message(UI_TEXT["preview_error"], THEME["error"])
             return
-        _, pil_modules = load_preview_dependencies()
-        _, ImageTk = pil_modules
-        self._preview_photo = ImageTk.PhotoImage(result.image)
-        self._preview_label.configure(text="", image=self._preview_photo)
+        anchor = self._preview_anchor(
+            self._preview_canvas.winfo_width() / 2,
+            self._preview_canvas.winfo_height() / 2,
+        )
+        self._preview_base_image = result.image
+        self._preview_requested_box = result.request.box
+        self._apply_preview_image(anchor)
+        self._schedule_preview_quality()
 
     def _validation_message(self, error: RenameValidationError) -> str:
         lines: list[str] = []
@@ -978,6 +1313,7 @@ class OverviewRenameApp:
     def _begin_operation(self, kind: str, payload: RenamePlan | UndoRecord) -> None:
         if self.folder is None:
             return
+        self._clear_success()
         self.busy = True
         self.generation += 1
         self.preview_generation += 1
@@ -1037,7 +1373,7 @@ class OverviewRenameApp:
                 card.variable.set(snapshot.path.stem)
                 card.name_label.configure(text=snapshot.path.name)
                 self._style_card(card)
-            self.status_var.set(UI_TEXT["status_complete"].format(count=len(record.entries)))
+            success_message = UI_TEXT["success_rename"].format(count=len(record.entries))
         else:
             plan = value
             record = context
@@ -1053,9 +1389,10 @@ class OverviewRenameApp:
                 card.name_label.configure(text=snapshot.path.name)
                 self._style_card(card)
             self.undo_record = None
-            self.status_var.set(UI_TEXT["status_undo_complete"].format(count=len(plan.entries)))
+            success_message = UI_TEXT["success_undo"].format(count=len(plan.entries))
         self._reschedule_unrendered()
-        self._sync_controls()
+        self._sync_status()
+        self._set_success(success_message)
 
     def _reschedule_unrendered(self) -> None:
         self._reprioritize_unrendered()
@@ -1123,6 +1460,7 @@ class OverviewRenameApp:
                 self.root.after_cancel(self._layout_after)
             except Exception:
                 pass
+        self._close_preview()
         self.scanner.shutdown()
         self.render_pool.shutdown()
         self.preview_worker.shutdown()

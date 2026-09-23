@@ -19,7 +19,7 @@ APP_DIR = Path(__file__).resolve().parents[1]
 if str(APP_DIR) not in sys.path:
     sys.path.insert(0, str(APP_DIR))
 
-from main import RenderPool, RenderRequest, scan_pdf_folder
+from main import THUMB_RENDER_BOX, RenderPool, RenderRequest, scan_pdf_folder
 from rename_core import FileSnapshot, RenameRequest, rename_batch, undo_rename
 
 
@@ -54,7 +54,7 @@ def run_trial(root: Path, count: int) -> dict[str, object]:
     pool = RenderPool(worker_count=3)
     generation = count
     requests = [
-        RenderRequest(generation, "thumbnail", index, snapshot, (270, 350))
+        RenderRequest(generation, "thumbnail", index, snapshot, THUMB_RENDER_BOX)
         for index, snapshot in enumerate(snapshots)
     ]
     started = time.perf_counter()

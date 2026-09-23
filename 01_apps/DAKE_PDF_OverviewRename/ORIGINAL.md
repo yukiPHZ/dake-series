@@ -13,7 +13,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示、実�
 - short_title: `PDF俯瞰名前変更`
 - category: `PDF`
 - status: `available`
-- version: `1.0.0`
+- version: `1.0.1`
 - app_type: `market`
 - completion_goal: `formal_release`
 - price: `500円`
@@ -120,8 +120,9 @@ PDFをサムネイルで俯瞰する
 
 - `フォルダを選ぶ`
 - `リフレッシュ`（現在のフォルダ選択を解除し、起動直後の状態へ戻す）
+- `再読み込み`（現在選択中の同一フォルダを再スキャンする）
 - 選択フォルダのパス
-- `表示サイズ 小 / 標準 / 大`
+- `表示サイズ 小 / 標準 / 大 / 特大`
 - `変更を元に戻す`
 - `名前変更を反映 n`
 
@@ -153,6 +154,8 @@ PDFをサムネイルで俯瞰する
 
 入力開始によってサムネイル進捗が消えないようにします。処理中、完了、エラーは明確に分けます。
 
+名前変更とUndoの成功時は、通常の件数・サムネイル進捗とは別の非モーダル表示領域へ、`THEME["success"]` を使った太字の `✓ 完了` メッセージを表示します。サムネイル進捗更新では消さず、次の編集、フォルダ選択、リフレッシュ、再読み込み、Undo開始または次の名前変更開始で消します。
+
 ### フッター
 
 必須表示:
@@ -183,15 +186,26 @@ DAKE共通アイコン `02_assets/dake_icon.ico` を使用します。
 - 初期順序はファイル名の昇順です。
 - PDFカード枠とファイル名を先に表示し、全サムネイル完成を待ちません。
 - 見えている範囲を優先してサムネイルを生成します。
+- 起動直後のCanvas resizeがカード0件の状態で完了していても、初回フォルダ読み込みで追加した全カードを必ずgrid配置します。列数が同じでも未配置の追加batchを配置し、visible-first優先順位を計算する前にframe位置を確定します。
 - 1ファイルのプレビュー失敗で一覧全体を失敗にしません。
 - 暗号化PDF、破損PDF、0ページPDFなどは、そのカードだけ `プレビューできません` とし、可能なら名前入力は維持します。
 - 表示サイズを切り替えても、入力中の名前、変更待ち状態、スクロール位置を不用意に失いません。
+- `特大` は内容確認を優先した表示とし、低解像度の「大」画像を単純拡大しません。thumbnail base imageを特大表示に耐える最大解像度で1回生成し、小・標準・大・特大はそこから縮小します。
 - 表示サイズ切替だけで、全PDFをPDFiumから再レンダリングし直しません。キャッシュ画像から派生するか、旧世代の未開始ジョブを破棄します。
 - リフレッシュでは同じフォルダを再読込せず、破棄確認後に古いジョブ、カード、Undo履歴、大プレビューを破棄してフォルダ未選択の初期状態へ戻します。
+- 再読み込みはフォルダ選択中だけ有効にし、フォルダ選択ダイアログを開かず、現在選択中の同一フォルダをファイル名昇順で再スキャンします。
+- 再読み込みでは現在のカード、入力中の名前、変更待ち状態、Undo履歴、大プレビュー、古いscan/render/preview jobと旧generation結果を破棄します。選択フォルダと表示サイズは維持し、スクロール位置は先頭へ戻します。
+- 再読み込みを連打しても未開始scan/render jobを蓄積せず、名前変更またはUndoの処理中は再読み込みできません。
 
 ## 大プレビュー
 
 - サムネイルクリックで1ページ目を大きく表示します。
+- 初期表示はプレビューウインドウへ収まるfit表示を100%とします。
+- プレビュー上のマウスホイールで50%から300%まで段階的に拡大・縮小し、現在倍率を表示します。イベントはプレビュー内で消費し、本体一覧をスクロールしません。
+- 拡大縮小は可能な限りマウスカーソル位置を基準にし、拡大後は左ドラッグでパンできます。
+- fit表示より大きい表示でも文字や線を実用的に確認できる高解像度base imageをworkerで生成します。base解像度が不足するときだけdebounceしたLatest Jobで再renderし、ホイール連打で未開始jobを蓄積しません。
+- プレビューを開いたまま別カードへ切り替えた場合と、閉じて開き直した場合はzoomとpanをfitへ戻し、古いPDFまたは古いgenerationの結果を適用しません。
+- fit状態のwindow resizeは新しい表示領域へ追従し、明示的なzoom中は倍率を不用意にresetしません。
 - 外部PDFビューアを主経路にしません。
 - 新しいカードを選択した後に、古いプレビュー結果を表示しません。
 - 大プレビューには Latest Job / generation 管理を適用できます。
@@ -212,6 +226,7 @@ DAKE共通アイコン `02_assets/dake_icon.ico` を使用します。
 
 - 別フォルダを選ぶ
 - リフレッシュする
+- 再読み込みする
 - アプリを閉じる
 
 表示サイズの変更では確認を出さず、入力を保持します。
@@ -266,7 +281,7 @@ DAKE共通アイコン `02_assets/dake_icon.ico` を使用します。
 - Undoも2段階リネームとロールバックを使用します。
 - Undo成功後はUndo履歴を消します。
 - 新しい一括変更を行った場合は、以前のUndo履歴を置き換えます。
-- フォルダ変更またはリフレッシュでUndo履歴を破棄します。
+- フォルダ変更、リフレッシュまたは再読み込みでUndo履歴を破棄します。
 
 ## 応答性・ジョブ管理
 
@@ -286,7 +301,7 @@ UIは止めるな
 - workerからTk WidgetやStringVarを直接操作しません。
 - worker → queue → after → UI thread の責務を守ります。
 - worker数を入力件数に比例させません。
-- フォルダ変更・リフレッシュ・表示サイズ変更で古くなった未開始ジョブを蓄積しません。
+- フォルダ変更・リフレッシュ・再読み込み・表示サイズ変更で古くなった未開始ジョブを蓄積しません。
 - 古いgenerationの結果をUIへ反映しません。
 - 終了時にworker、executor、pending job、after、timerを停止します。
 - `bind_all` は使わず、このアプリのroot配下だけでマウスホイールを一覧Canvasへルーティングします。Canvas背景、カード、サムネイル、元ファイル名、名前入力欄の上で縦スクロールでき、大プレビューでは本一覧を動かしません。
@@ -450,7 +465,7 @@ PDFを開かず、見ながら名前を変える。
   "launcher_description": "PDFを開かず、サムネイルを見ながら名前を変更します。",
   "site_title": "DakePDF俯瞰名前変更",
   "site_description": "フォルダ内のPDFをサムネイルで俯瞰しながら、PDFごとに名前を変更できるWindows向けアプリです。",
-  "update_summary": "初回正式版。PDFの俯瞰表示、安全な一括名前変更、Undoに対応。",
+  "update_summary": "v1.0.1。再読み込み、特大表示、プレビューzoom・pan、完了フィードバックを追加。",
   "folder_name": "DAKE_PDF_OverviewRename",
   "exe_name": "DakePDF_OverviewRename.exe",
   "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.0",
@@ -543,7 +558,7 @@ build、dist、spec、設定ファイル、個人データ、ソース一式を�
 - 公開画像: 一時作成した `C:\Users\Public\Documents\DAKE_synthetic_release_20260902_48` の無機密合成PDF 48件だけを使い、実アプリ画面から `assets/screenshot.webp` / `assets/screenshot.jpg` / `assets/booth_thumbnail.jpg` を作成。一時フォルダはキャプチャ後に削除済み
 - 第三者ライセンス: ビルド環境の pypdfium2 5.13.0 / PDFium 153.0.7999.0（origin: pdfium-binaries）のwheelに記録されたLicense-File全19件を原文のまま `third_party_licenses/pypdfium2-5.13.0/` と配布物へ収録。コピー元とのSHA-256集合一致を確認
 - 派生ビュー: `README.md`、`DAKE_META`、`release_body.md`、`booth_product.txt`、`booth_ready/` を本正本から整備。価格、GitHub Release URL、BOOTH URLを正式出荷値へ統一
-- 正式版: `version: 1.0.0`、`price: 500円`、`status: available`
+- 次期パッチ版: `version: 1.0.1`、`price: 500円`、`status: available`。コードと配布ビューを準備し、公開はPR受入後の別工程
 - 公開対象: `show_in_launcher: true`、`show_on_site: true`
 - Phase 3正式出荷: Issue #19に従い、実在する公開URLを作成後に本正本へ順次記録する
 - GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.0（v1.0.0、公開・HTTP 200・配布zip添付を確認）
@@ -552,6 +567,7 @@ build、dist、spec、設定ファイル、個人データ、ソース一式を�
 - dakeapp.com: https://dakeapp.com/apps/pdf-overview-rename/（商品名、説明、画像、GitHub Release、BOOTH、Store導線を本番表示で確認）
 - Store: https://store.dakeapp.com/product/?id=dake_pdf_overview_rename（500円、`Stripe対応`、Stripe購入導線、BOOTH補助導線、商品画像を本番表示で確認）
 - Cloudflare Pages: dakeapp-site / dake-store-site ともmainマージ後の本番デプロイ成功、および上記カスタムドメインの公開表示を確認
+- v1.0.1開発: 同一フォルダを再スキャンする `再読み込み`、初回・追加batchのカード配置修正、非モーダルのrename/Undo成功表示、表示サイズ `特大`、大プレビューのホイールzoom・倍率表示・pan・高解像度Latest Jobを追加。現行v1.0.0のGitHub Release、BOOTH、dakeapp.com、Store、Stripe、Cloudflareは本PRでは更新しない
 
 ## Codex作業時の注意
 

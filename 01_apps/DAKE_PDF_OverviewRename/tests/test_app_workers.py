@@ -95,6 +95,39 @@ def test_render_failure_is_isolated(monkeypatch, tmp_path: Path) -> None:
         pool.shutdown()
 
 
+def test_preview_worker_replaces_pending_zoom_requests(monkeypatch, tmp_path: Path) -> None:
+    first = make_snapshot(tmp_path, "first.pdf")
+    skipped = make_snapshot(tmp_path, "skipped.pdf")
+    latest = make_snapshot(tmp_path, "latest.pdf")
+    started = threading.Event()
+    release = threading.Event()
+    calls: list[str] = []
+
+    def fake_render(path: Path, _box: tuple[int, int]):
+        calls.append(path.name)
+        if path.name == "first.pdf":
+            started.set()
+            assert release.wait(3)
+        return object(), 1
+
+    monkeypatch.setattr(main, "render_first_page", fake_render)
+    worker = LatestPreviewWorker()
+    try:
+        worker.request(RenderRequest(1, "preview", 0, first, (100, 100)))
+        assert started.wait(2)
+        worker.request(RenderRequest(2, "preview", 1, skipped, (200, 200)))
+        worker.request(RenderRequest(3, "preview", 2, latest, (300, 300)))
+        release.set()
+        results = [worker.results.get(timeout=3), worker.results.get(timeout=3)]
+        assert [result.request.generation for result in results] == [1, 3]
+        assert calls == ["first.pdf", "latest.pdf"]
+        with pytest.raises(queue.Empty):
+            worker.results.get(timeout=0.1)
+    finally:
+        release.set()
+        worker.shutdown()
+
+
 def test_thumbnail_and_preview_workers_serialize_all_pdfium_calls(
     monkeypatch, tmp_path: Path
 ) -> None:
