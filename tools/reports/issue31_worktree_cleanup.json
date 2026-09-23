@@ -1,0 +1,80 @@
+[
+  {
+    "path": "C:\\Users\\yukiz\\devlop\\.codex_worktrees\\dake-series-pdf-merge-final-acceptance",
+    "head": "f3314db5fae27ad34af55ae3c1082a18cf50a885",
+    "bytes": 147600347.0,
+    "removed": true
+  },
+  {
+    "path": "C:\\Users\\yukiz\\Documents\\New project\\_codex_work\\dake-pdf-merge-v101",
+    "head": "a8a4260832b567792b0c84f49a0d80fb1bd02ffb",
+    "bytes": 198898656.0,
+    "removed": true
+  },
+  {
+    "path": "C:\\Users\\yukiz\\Documents\\New project\\dake-series-overview-release",
+    "head": "e136c68f35e67380f6390513fdec03caeb997d6a",
+    "bytes": 146375374.0,
+    "removed": true
+  },
+  {
+    "path": "C:\\Users\\yukiz\\Documents\\New project\\dake-series-publication",
+    "head": "717777532146962a31a53790ec78ea9e76ac7779",
+    "bytes": 34827204.0,
+    "removed": true
+  },
+  {
+    "path": "C:\\Users\\yukiz\\Documents\\New project\\dake-series-split-one",
+    "head": "31f4a204923dfa51110de7e7a6ce8ee45edf0e78",
+    "bytes": 140887356.0,
+    "removed": true
+  },
+  {
+    "path": "C:\\Users\\yukiz\\Documents\\New project\\dake-series-splitone-release",
+    "head": "a3320c1cca238ad11803d9cf0c109411dff34024",
+    "bytes": 176786630.0,
+    "removed": true
+  },
+  {
+    "path": "C:\\Users\\yukiz\\Documents\\New project\\dake-split-fast",
+    "head": "31f4a204923dfa51110de7e7a6ce8ee45edf0e78",
+    "bytes": 160324538.0,
+    "removed": true
+  },
+  {
+    "path": "C:\\Users\\yukiz\\Documents\\New project\\_codex_work\\dake-store-site-overview-rename",
+    "head": "ec9b4b30cc8ce0b84f241ea65ca862ffc5f4a4b9",
+    "bytes": 6676068.0,
+    "removed": true
+  },
+  {
+    "path": "C:\\Users\\yukiz\\Documents\\New project\\_codex_work\\dake-store-site-pdf-merge-v101",
+    "head": "1e6d2cc3ab86a579c3b67e009b67820f82ac6b39",
+    "bytes": 6676109.0,
+    "removed": true
+  },
+  {
+    "path": "C:\\Users\\yukiz\\Documents\\New project\\dake-store-issue31",
+    "head": "60b41c3ae0d6e7c109ef40fe5c129697a65c1223",
+    "bytes": 6677058.0,
+    "removed": true
+  },
+  {
+    "path": "C:\\Users\\yukiz\\Documents\\New project\\_codex_work\\dakeapp-site-overview-rename",
+    "head": "416f42fed7532c46ab04723a7c31686d8f3d61f8",
+    "bytes": 2643313.0,
+    "removed": true
+  },
+  {
+    "path": "C:\\Users\\yukiz\\Documents\\New project\\_codex_work\\dakeapp-site-pdf-merge-v101",
+    "head": "43a75f71bc28b4bf7cfc6b694e0511edeab77a03",
+    "bytes": 2806682.0,
+    "removed": true
+  },
+  {
+    "path": "C:\\Users\\yukiz\\Documents\\New project\\dakeapp-site-issue31",
+    "head": "27433004f2f23f0b5afe21b2baf253db82544263",
+    "bytes": 2810371.0,
+    "removed": true
+  }
+]
