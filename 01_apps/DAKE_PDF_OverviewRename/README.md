@@ -63,7 +63,7 @@ Windows配布版で使う pypdfium2 5.13.0 / PDFium 153.0.7999.0（pdfium-binari
 
 ## 正式版情報
 
-開発中の次期パッチ版はバージョン1.0.1です。現行公開版はバージョン1.0.0、販売価格500円です。[GitHub Release](https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.0)から正式配布zipをダウンロードできます。[BOOTH](https://peakheadz.booth.pm/items/8798555)でも販売しています。本PRでは公開先を更新しません。
+現行公開版はバージョン1.0.1、販売価格500円です。[GitHub Release](https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.1)から正式配布zipをダウンロードできます。[BOOTH](https://peakheadz.booth.pm/items/8798555)の既存商品も同版へ更新しています。dakeapp.com と Store の反映は別途確認します。
 
 ## DAKE_META
 

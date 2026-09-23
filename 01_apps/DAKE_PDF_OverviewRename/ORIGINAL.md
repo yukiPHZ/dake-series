@@ -559,16 +559,16 @@ build、dist、spec、設定ファイル、個人データ、ソース一式を�
 - 公開画像: 一時作成した `C:\Users\Public\Documents\DAKE_synthetic_release_20260902_48` の無機密合成PDF 48件だけを使い、実アプリ画面から `assets/screenshot.webp` / `assets/screenshot.jpg` / `assets/booth_thumbnail.jpg` を作成。一時フォルダはキャプチャ後に削除済み
 - 第三者ライセンス: ビルド環境の pypdfium2 5.13.0 / PDFium 153.0.7999.0（origin: pdfium-binaries）のwheelに記録されたLicense-File全19件を原文のまま `third_party_licenses/pypdfium2-5.13.0/` と配布物へ収録。コピー元とのSHA-256集合一致を確認
 - 派生ビュー: `README.md`、`DAKE_META`、`release_body.md`、`booth_product.txt`、`booth_ready/` を本正本から整備。価格、GitHub Release URL、BOOTH URLを正式出荷値へ統一
-- 次期パッチ版: `version: 1.0.1`、`price: 500円`、`status: available`。コードと配布ビューを準備し、公開はPR受入後の別工程
+- 現行公開版: `version: 1.0.1`、`price: 500円`、`status: available`。GitHub ReleaseとBOOTH既存商品に反映済み
 - 公開対象: `show_in_launcher: true`、`show_on_site: true`
-- Phase 3正式出荷: Issue #19に従い、実在する公開URLを作成後に本正本へ順次記録する
-- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.0（v1.0.0、公開・HTTP 200・配布zip添付を確認）
+- Phase 3正式出荷: v1.0.0時点の実績。v1.0.1のdakeapp.com / Store反映はIssue #31で別途確認する
+- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.1（v1.0.1、34,140,032バイトの配布zipを添付。SHA-256: 2b84ba6cdb14f33e5b3ecb0aa0558c24a3fa9b430a9cd3d30c1eabb3de1b7541）
 - BOOTH: https://peakheadz.booth.pm/items/8798555（500円、購入可能、商品画像2点、配布zip設定を確認）
 - Stripe: Product `prod_VBbAdnHXBZVPjN`、Price `price_1UBDyVHrsJubFuDOfPQGhhSM`、Payment Link `plink_1UBE1sHrsJubFuDOhzt7u8BQ` を本番モードで作成。公開Checkoutで商品名、500円、購入ボタン、メール導線を確認し、実購入は未実施
 - dakeapp.com: https://dakeapp.com/apps/pdf-overview-rename/（商品名、説明、画像、GitHub Release、BOOTH、Store導線を本番表示で確認）
 - Store: https://store.dakeapp.com/product/?id=dake_pdf_overview_rename（500円、`Stripe対応`、Stripe購入導線、BOOTH補助導線、商品画像を本番表示で確認）
 - Cloudflare Pages: dakeapp-site / dake-store-site ともmainマージ後の本番デプロイ成功、および上記カスタムドメインの公開表示を確認
-- v1.0.1開発: 同一フォルダを再スキャンする `再読み込み`、初回・追加batchのカード配置修正、非モーダルのrename/Undo成功表示、表示サイズ `特大`、大プレビューのホイールzoom・倍率表示・pan・高解像度Latest Jobを追加。現行v1.0.0のGitHub Release、BOOTH、dakeapp.com、Store、Stripe、Cloudflareは本PRでは更新しない
+- v1.0.1更新: 同一フォルダを再スキャンする `再読み込み`、初回・追加batchのカード配置修正、非モーダルのrename/Undo成功表示、表示サイズ `特大`、大プレビューのホイールzoom・倍率表示・pan・高解像度Latest Jobを追加。既存のStripe Product / Price / Payment Linkは変更していない
 
 ## Codex作業時の注意
 
