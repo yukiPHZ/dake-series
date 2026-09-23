@@ -468,7 +468,8 @@ PDFを開かず、見ながら名前を変える。
   "update_summary": "v1.0.1。再読み込み、特大表示、プレビューzoom・pan、完了フィードバックを追加。",
   "folder_name": "DAKE_PDF_OverviewRename",
   "exe_name": "DakePDF_OverviewRename.exe",
-  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.0",
+  "version": "1.0.1",
+  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.1",
   "app_type": "market",
   "completion_goal": "formal_release",
   "screenshot_path": "assets/screenshot.webp",
@@ -492,7 +493,7 @@ Windows
 - 商品画像: assets/booth_thumbnail.jpg
 - 補助画像: assets/screenshot.jpg
 - 作品ファイル: booth_ready/DakePDF_OverviewRename.zip
-- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.0
+- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.1
 - BOOTH URL: https://peakheadz.booth.pm/items/8798555
 
 ## Store表示用情報
@@ -518,7 +519,7 @@ Windows
 
 GitHub Release、BOOTH、dakeapp.com、Storeを正式配布先とし、DAKE正式出荷ラインに従います。
 
-- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.0
+- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.1
 - BOOTH URL: https://peakheadz.booth.pm/items/8798555
 - BOOTH配布zip: booth_ready/DakePDF_OverviewRename.zip
 - Store URL: https://store.dakeapp.com/product/?id=dake_pdf_overview_rename

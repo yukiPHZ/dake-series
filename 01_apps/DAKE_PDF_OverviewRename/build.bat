@@ -9,24 +9,28 @@ del /q *.spec 2>nul
 where pyinstaller >nul 2>nul
 if %errorlevel%==0 (
     set "PYINSTALLER=pyinstaller"
+    set "PYTHON_CMD=py"
     goto build
 )
 
 where python >nul 2>nul
 if %errorlevel%==0 (
     set "PYINSTALLER=python -m PyInstaller"
+    set "PYTHON_CMD=python"
     goto build
 )
 
 where py >nul 2>nul
 if %errorlevel%==0 (
     set "PYINSTALLER=py -m PyInstaller"
+    set "PYTHON_CMD=py"
     goto build
 )
 
 set "CODEX_PY=%USERPROFILE%\AppData\Local\Programs\Python\Python312\python.exe"
 if exist "%CODEX_PY%" (
     set PYINSTALLER="%CODEX_PY%" -m PyInstaller
+    set PYTHON_CMD="%CODEX_PY%"
     goto build
 )
 
@@ -35,12 +39,15 @@ echo Run pip install -r requirements.txt, then run build.bat again.
 exit /b 1
 
 :build
+%PYTHON_CMD% ..\..\tools\generate_version_info.py --app-dir . --out version_info.txt
+if errorlevel 1 exit /b 1
 %PYINSTALLER% ^
 --onefile ^
 --noconsole ^
 --clean ^
 --name=DakePDF_OverviewRename ^
 --icon=..\..\02_assets\dake_icon.ico ^
+--version-file=version_info.txt ^
 --add-data=..\..\02_assets\dake_icon.ico;. ^
 main.py
 
