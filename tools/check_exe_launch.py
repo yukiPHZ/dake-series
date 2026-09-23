@@ -18,6 +18,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from shipping_artifacts import find_exe as find_distribution_exe
+
 
 ROOT = Path(__file__).resolve().parents[1]
 APPS_DIR = ROOT / "01_apps"
@@ -76,13 +78,7 @@ def metadata_for_app(app_dir: Path) -> tuple[dict[str, Any], str]:
 
 
 def find_exe(app_dir: Path, meta: dict[str, Any]) -> Path | None:
-    exe_name = str(meta.get("exe_name") or "").strip()
-    if exe_name:
-        candidate = app_dir / "dist" / exe_name
-        if candidate.exists():
-            return candidate
-    exes = sorted((app_dir / "dist").glob("*.exe")) if (app_dir / "dist").exists() else []
-    return exes[0] if exes else None
+    return find_distribution_exe(app_dir, str(meta.get("exe_name") or "").strip())
 
 
 def has_launch_check(app_dir: Path) -> bool:
@@ -116,7 +112,7 @@ def run_launch_check(exe_path: Path, timeout_seconds: float) -> tuple[str, int |
     try:
         process = subprocess.Popen(
             [str(exe_path), "--launch-check"],
-            cwd=str(exe_path.parent.parent),
+            cwd=str(exe_path.parent),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
@@ -144,7 +140,7 @@ def run_gui_smoke(exe_path: Path, gui_seconds: float) -> tuple[str, int | str, f
     try:
         process = subprocess.Popen(
             [str(exe_path)],
-            cwd=str(exe_path.parent.parent),
+            cwd=str(exe_path.parent),
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )

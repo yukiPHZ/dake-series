@@ -96,7 +96,11 @@ class AppMeta:
 
     @property
     def standard_exe_path(self) -> Path:
-        return self.folder_path / "dist" / self.exe_name
+        dist = self.folder_path / "dist"
+        direct = dist / self.exe_name
+        if direct.is_file():
+            return direct
+        return dist / Path(self.exe_name).stem / self.exe_name
 
 
 def launcher_dir() -> Path:

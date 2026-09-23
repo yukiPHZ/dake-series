@@ -23,13 +23,13 @@ import json
 import os
 import re
 import shutil
-import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 from release_source_policy import metadata_line
+from shipping_artifacts import find_exe as find_distribution_exe, write_verified_zip
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -447,20 +447,11 @@ def create_booth_thumbnail(src: Path, dst: Path, title: str, description: str) -
 
 
 def create_zip(zip_path: Path, exe_path: Path, readme_path: Path, notice_path: Path) -> None:
-    zip_path.parent.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-        archive.write(exe_path, arcname=exe_path.name)
-        archive.write(readme_path, arcname="README.txt")
-        archive.write(notice_path, arcname="注意事項.txt")
+    write_verified_zip(zip_path, exe_path, readme_path, notice_path)
 
 
 def find_exe(app_dir: Path, meta: dict | None) -> Path | None:
-    if meta and meta.get("exe_name"):
-        expected = app_dir / "dist" / meta["exe_name"]
-        if expected.exists():
-            return expected
-    exes = sorted((app_dir / "dist").glob("*.exe"))
-    return exes[0] if exes else None
+    return find_distribution_exe(app_dir, str((meta or {}).get("exe_name") or ""))
 
 
 def process_app(app_dir: Path, *, dry_run: bool = False) -> AppResult:
@@ -611,8 +602,12 @@ def process_app(app_dir: Path, *, dry_run: bool = False) -> AppResult:
         if dry_run:
             result.generated.append(f"booth_ready/{zip_name} (dry-run)")
         else:
-            create_zip(booth_dir / zip_name, exe_path, readme_txt, notice_txt)
-            result.generated.append(f"booth_ready/{zip_name}")
+            try:
+                create_zip(booth_dir / zip_name, exe_path, readme_txt, notice_txt)
+                result.generated.append(f"booth_ready/{zip_name}")
+            except (OSError, ValueError) as exc:
+                result.missing.append(f"runtime ZIP verification failed: {exc}")
+                result.ok = False
 
     for required in ["build.bat", ".gitignore"]:
         if not (app_dir / required).exists():

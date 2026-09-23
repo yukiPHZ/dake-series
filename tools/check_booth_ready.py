@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from release_source_policy import app_url_for, read_app_source
+from shipping_artifacts import find_exe as find_distribution_exe, is_onedir, verify_runtime_zip
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -398,7 +399,15 @@ def check_app(app_dir: Path) -> AppCheck:
     result.zip_file = booth_ready_dir.exists() and any(booth_ready_dir.glob("*.zip"))
     result.build_bat = build_path.exists()
     result.main_py = main_path.exists()
-    result.dist_exe = dist_dir.exists() and any(dist_dir.glob("*.exe"))
+    exe_path = find_distribution_exe(app_dir, str(source.meta.get("exe_name") or "") if source.meta else "")
+    result.dist_exe = exe_path is not None
+    if exe_path is not None and is_onedir(exe_path):
+        zip_path = booth_ready_dir / f"{exe_path.stem}.zip"
+        try:
+            verify_runtime_zip(zip_path, exe_path)
+        except (OSError, ValueError) as exc:
+            result.zip_file = False
+            result.actions.append(f"onedir runtime ZIP needs rebuild: {exc}")
     apply_release_artifact_flags(app_dir, result)
 
     if result.build_bat:

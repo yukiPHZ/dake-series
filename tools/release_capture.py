@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import Any
 
 from release_source_policy import app_dirs as source_app_dirs, app_url_for, find_app as source_find_app, read_app_source, site_slug
+from shipping_artifacts import find_exe as find_distribution_exe
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -150,14 +151,7 @@ def booth_url_state(app_dir: Path) -> tuple[bool, str]:
 
 
 def find_exe(app_dir: Path, meta: dict[str, Any]) -> Path | None:
-    exe_name = str(meta.get("exe_name") or "").strip()
-    if exe_name:
-        candidate = app_dir / "dist" / exe_name
-        if candidate.exists():
-            return candidate
-    dist = app_dir / "dist"
-    exes = sorted(dist.glob("*.exe")) if dist.exists() else []
-    return exes[0] if exes else None
+    return find_distribution_exe(app_dir, str(meta.get("exe_name") or "").strip())
 
 
 def has_launch_check(app_dir: Path) -> bool:
