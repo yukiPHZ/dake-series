@@ -11,6 +11,7 @@ PDFを全ページ1枚ずつに自動分割します。
 ・1ページずつ自動保存
 ・ドラッグ＆ドロップ対応
 ・Windows向けexe
+・F5で処理を中断して初期状態に戻し、Ctrl+Oで次のPDFを開けます
 
 実務の流れを、
 少し静かにするための道具です。
@@ -32,6 +33,15 @@ assets/screenshot.jpg
 
 # 作品ファイル
 booth_ready/DakePDF_Split_One.zip
+
+# GitHub Release
+https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitOne_v1.0.1
+
+# 注意事項
+Windows向けアプリです。
+ご利用は自己責任でお願いいたします。
+大切なファイルは事前にバックアップを推奨します。
+本ソフトウェアの無断転載・再配布を禁止します。
 
 # URL
 https://peakheadz.booth.pm/items/8448207

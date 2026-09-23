@@ -1,37 +1,47 @@
-商品名
+# 商品名
 DakePDF分割One
 
-概要
-PDFを1ファイル追加すると、全ページを1枚ずつのPDFへ自動分割できるWindows向けアプリです。
+# 価格案
+500円
 
-できること
-- PDF全ページ分割アプリ
-- 1ページずつ自動保存
-- ドラッグ＆ドロップ対応
-- Windows向けexe
+# 商品紹介文
+PDFを全ページ1枚ずつに自動分割します。
 
-使い方
-1. ZIPを解凍します。
-2. DakePDF_Split_One.exe を起動します。
-3. 画面の案内に従って処理します。
+・PDF全ページ分割アプリ
+・1ページずつ自動保存
+・ドラッグ＆ドロップ対応
+・Windows向けexe
+・F5で処理を中断して初期状態に戻し、Ctrl+Oで次のPDFを開けます
 
-注意事項
-- Windows向けアプリです。
-- 大切なファイルは事前にバックアップしてください。
-- 環境によってはWindowsの保護画面が表示される場合があります。
+実務の流れを、
+少し静かにするための道具です。
 
-対象
-日々の実務を少し早く、少し静かに進めたい方向けです。
+# タグ
+PDF
+Windows
+実務
+ツール
+仕事効率化
+軽量
+シンプル
 
-配布物
-- DakePDF_Split_One.exe
-- README.txt
-- 注意事項.txt
+# BOOTH商品画像
+assets/booth_thumbnail.jpg
 
-免責
-本ソフトウェアの利用によって発生した損害について、作者は責任を負いません。
+# 補助画像
+assets/screenshot.jpg
 
-コピーライト
-© 2026 PEAKHEADZ / Vibe-Coded by Yukihiko Kikuta
+# 作品ファイル
+booth_ready/DakePDF_Split_One.zip
 
-BOOTH URL: https://peakheadz.booth.pm/items/8448207
+# GitHub Release
+https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitOne_v1.0.1
+
+# 注意事項
+Windows向けアプリです。
+ご利用は自己責任でお願いいたします。
+大切なファイルは事前にバックアップを推奨します。
+本ソフトウェアの無断転載・再配布を禁止します。
+
+# URL
+https://peakheadz.booth.pm/items/8448207
