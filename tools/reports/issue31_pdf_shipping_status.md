@@ -10,7 +10,7 @@ Four PDF applications were handled independently. `ORIGINAL.md` remains the sour
 |---|---|---|---|
 | DAKE_PDF_OverviewRename | Release, existing BOOTH item, Store, dakeapp.com verified | 57 tests and packaged synthetic/GUI checks passed | CLOSED |
 | DAKE_PDF_Merge | Existing Release is public; Store and dakeapp.com show v1.0.1 | Physical DnD and held-edge auto-scroll remain unverified, but are not release blockers under user acceptance | IN PROGRESS: replace the existing BOOTH downloadable with the verified ZIP |
-| DAKE_PDF_SplitSelect | Improved code and shared onedir tooling are on main; no v1.0.1 Release created | PyMuPDF redistribution basis unresolved; packaged physical GUI checks outstanding | HOLD: no v1.0.1 external distribution |
+| DAKE_PDF_SplitSelect | Improved code and shared onedir tooling are on main; no v1.0.1 Release created | PyMuPDF redistribution basis unresolved | HOLD: no v1.0.1 external distribution |
 | DAKE_PDF_SplitOne | Release, existing BOOTH item, Store, dakeapp.com verified | Extracted ZIP CLI/GUI passed; physical DnD and normal close remain unverified, nonblocking | CLOSED by user acceptance |
 
 ## Shared onedir shipping
@@ -37,7 +37,7 @@ PR #32 merged as `25cdb0a2ed6cce6a4d0e6dafebdda67aac267afd`. The onefile/onedir-
 
 - Performance PR #29: `4a354dabc88368326a49de9ebaf57a970b29a5d5`. The shared onedir support is available, but no v1.0.1 Release was created.
 - `requirements.txt` pins `PyMuPDF==1.24.10`; `build.bat` collects `fitz`; `docs/PERFORMANCE_REFRESH_REPORT.md` records AGPL-3.0 metadata and unresolved distribution conditions. No repository evidence was found for an AGPL-compliant DAKE distribution decision, a commercial redistribution agreement, or a replacement renderer with completed license audit. [Artifex's licensing guidance](https://artifex.com/licensing) describes AGPL and commercial paths. This report makes no legal clearance decision.
-- Keep the new version's external Release/BOOTH distribution on HOLD. Existing products or old Releases were not modified or retracted. Physical Explorer DnD, packaged Shift+click/F5, actual DPI 125/150/200%, and Launcher live UI are also not claimed as passed.
+- Keep the new version's external Release/BOOTH distribution on HOLD **solely for the unresolved PyMuPDF license basis**. Existing products or old Releases were not modified or retracted. Physical Explorer DnD, packaged Shift+click/F5, actual DPI 125/150/200%, and Launcher live UI are separately recorded as unverified, not additional HOLD grounds.
 
 ## SplitOne
 
