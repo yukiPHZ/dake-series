@@ -36,11 +36,15 @@ if errorlevel 1 goto :fail
 call :run "%PYTHON_EXE%" %PYTHON_ARGS% ..\..\tools\generate_version_info.py --app-dir . --out version_info.txt
 if errorlevel 1 goto :fail
 
-rem Keep full collection until physical DnD regression can be verified.
-call :run "%PYTHON_EXE%" %PYTHON_ARGS% -m PyInstaller --noconfirm --clean --onedir --windowed --noconsole --name=DakePDF_Split_Select --paths=..\..\00_core --icon=..\..\02_assets\dake_icon.ico --add-data "..\..\02_assets\dake_icon.ico;." --version-file version_info.txt --collect-all=fitz --collect-all=tkinterdnd2 "%ENTRY_FILE%"
+rem The installed pypdfium2 hook collects the PDFium binary; keep the DnD collect.
+call :run "%PYTHON_EXE%" %PYTHON_ARGS% -m PyInstaller --noconfirm --clean --onedir --windowed --noconsole --name=DakePDF_Split_Select --paths=..\..\00_core --icon=..\..\02_assets\dake_icon.ico --add-data "..\..\02_assets\dake_icon.ico;." --version-file version_info.txt --collect-all=tkinterdnd2 "%ENTRY_FILE%"
 if errorlevel 1 goto :fail
 
 if not exist "%OUTPUT_EXE%" goto :output_missing
+copy /Y THIRD_PARTY_NOTICES.txt "dist\%APP_NAME%\THIRD_PARTY_NOTICES.txt" >nul
+if errorlevel 1 goto :fail
+xcopy /E /I /Y "third_party_licenses" "dist\%APP_NAME%\third_party_licenses" >nul
+if errorlevel 1 goto :fail
 
 echo.
 echo Build completed.

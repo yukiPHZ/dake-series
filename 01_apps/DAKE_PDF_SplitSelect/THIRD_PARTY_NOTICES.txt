@@ -1,0 +1,37 @@
+DakePDF分割Select - Third-Party Notices
+
+Windows onedir候補は、PDFのサムネイル表示に次を使用します。
+
+- pypdfium2 5.13.0
+- PDFium 153.0.7999.0
+
+ビルド用clean venvへインストールした pypdfium2-5.13.0 Windows x64 wheel の
+dist-info/METADATA に記載された License-File 全19件を、内容を変更せず
+third_party_licenses/pypdfium2-5.13.0/ に収録しています。
+BUILD_LICENSES は wheel 内の data/windows_x64/BUILD_LICENSES から配置しました。
+実wheelとのファイル名・SHA-256集合一致を検証してから配布候補を作成します。
+
+収録内容:
+
+- LICENSES/Apache-2.0.txt
+- LICENSES/BSD-3-Clause.txt
+- LICENSES/CC-BY-4.0.txt
+- BUILD_LICENSES/abseil.txt
+- BUILD_LICENSES/agg23.txt
+- BUILD_LICENSES/fast_float.txt
+- BUILD_LICENSES/freetype.txt
+- BUILD_LICENSES/icu.txt
+- BUILD_LICENSES/lcms.txt
+- BUILD_LICENSES/libjpeg_turbo.ijg
+- BUILD_LICENSES/libjpeg_turbo.md
+- BUILD_LICENSES/libopenjpeg.txt
+- BUILD_LICENSES/libpng.txt
+- BUILD_LICENSES/libtiff.txt
+- BUILD_LICENSES/llvm-libc.txt
+- BUILD_LICENSES/pdfium-binaries.txt
+- BUILD_LICENSES/pdfium.txt
+- BUILD_LICENSES/simdutf.txt
+- BUILD_LICENSES/zlib.txt
+
+各文書の条件は同梱した原文を参照してください。
+参照: https://github.com/pypdfium2-team/pypdfium2

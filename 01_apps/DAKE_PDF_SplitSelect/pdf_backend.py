@@ -5,6 +5,36 @@ import threading
 from collections import deque
 
 
+def render_page_ppm(document, index, width, height):
+    import pypdfium2.raw as pdfium_c
+
+    page = document[index]
+    bitmap = None
+    try:
+        page_width, page_height = page.get_size()
+        if page_width <= 0 or page_height <= 0:
+            raise ValueError("PDF page has invalid dimensions")
+        scale = min(width / page_width, height / page_height)
+        bitmap = page.render(
+            scale=scale,
+            force_bitmap_format=pdfium_c.FPDFBitmap_BGR,
+            rev_byteorder=True,
+        )
+        row_bytes = bitmap.width * 3
+        if bitmap.stride < row_bytes:
+            raise ValueError("PDF bitmap has invalid stride")
+        pixels = memoryview(bitmap.buffer).cast("B")
+        rgb = b"".join(
+            pixels[row * bitmap.stride:row * bitmap.stride + row_bytes]
+            for row in range(bitmap.height)
+        )
+        return f"P6\n{bitmap.width} {bitmap.height}\n255\n".encode("ascii") + rgb
+    finally:
+        if bitmap is not None:
+            bitmap.close()
+        page.close()
+
+
 class PdfRenderWorker:
     def __init__(self, events, width, height):
         self.events = events
@@ -18,6 +48,7 @@ class PdfRenderWorker:
         self.closed = threading.Event()
         self.closed.set()
         self.rendered_count = 0
+        self.render_page = render_page_ppm
         self.thread = threading.Thread(target=self._run, name="pdf-render", daemon=True)
         self.thread.start()
 
@@ -80,30 +111,30 @@ class PdfRenderWorker:
                     if cancel.is_set() or (view_cancel and view_cancel.is_set()):
                         continue
                     if kind == "open":
-                        import fitz
+                        import pypdfium2 as pdfium
 
                         if document is not None:
                             document.close()
                             document = None
-                        document = fitz.open(value)
+                        try:
+                            document = pdfium.PdfDocument(value)
+                        except pdfium.PdfiumError as error:
+                            if "password" in str(error).lower():
+                                raise ValueError("PDF password required") from error
+                            raise
                         self.closed.clear()
                         document_generation = generation
                         self.rendered_count = 0
-                        if document.needs_pass:
-                            raise ValueError("PDF password required")
-                        if document.page_count == 0:
+                        page_count = len(document)
+                        if page_count == 0:
                             raise ValueError("PDF document contains no pages")
-                        self._emit(("pdf_loaded", generation, value, document.page_count), cancel)
+                        self._emit(("pdf_loaded", generation, value, page_count), cancel)
                     elif kind == "render":
                         if document is None or document_generation != generation:
                             raise ValueError("PDF document is not open")
-                        import fitz
-
-                        page = document.load_page(value)
-                        scale = min(self.width / page.rect.width, self.height / page.rect.height)
-                        pixmap = page.get_pixmap(matrix=fitz.Matrix(scale, scale), colorspace=fitz.csRGB, alpha=False)
+                        ppm = self.render_page(document, value, self.width, self.height)
                         self.rendered_count += 1
-                        self._emit(("thumbnail_ready", generation, request_id, value, pixmap.tobytes("ppm")), cancel, view_cancel)
+                        self._emit(("thumbnail_ready", generation, request_id, value, ppm), cancel, view_cancel)
                 except Exception as error:
                     if document is not None:
                         document.close()

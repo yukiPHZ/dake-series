@@ -14,24 +14,72 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import main
 
 
+def write_fixture(path, count, *, landscape=False, rotated=False, image=False):
+    from pypdf import PdfWriter
+    from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject, NumberObject
+
+    writer = PdfWriter()
+    font = DictionaryObject({
+        NameObject("/Type"): NameObject("/Font"),
+        NameObject("/Subtype"): NameObject("/Type1"),
+        NameObject("/BaseFont"): NameObject("/Helvetica"),
+    })
+    font_ref = writer._add_object(font)
+    for index in range(count):
+        page = writer.add_blank_page(width=842 if landscape else 595, height=595 if landscape else 842)
+        resources = DictionaryObject({NameObject("/Font"): DictionaryObject({NameObject("/F1"): font_ref})})
+        drawing = f"{index / max(count, 1):.3f} 0.4 0.8 rg 50 100 250 300 re f\n"
+        drawing += f"BT /F1 36 Tf 72 510 Td (PAGE {index + 1:03}) Tj ET\n"
+        if image:
+            pixels = bytes(component for y in range(8) for x in range(8)
+                           for component in (x * 32, y * 32, 128))
+            bitmap = DecodedStreamObject()
+            bitmap.set_data(pixels)
+            bitmap = bitmap.flate_encode()
+            bitmap.update({
+                NameObject("/Type"): NameObject("/XObject"),
+                NameObject("/Subtype"): NameObject("/Image"),
+                NameObject("/Width"): NumberObject(8),
+                NameObject("/Height"): NumberObject(8),
+                NameObject("/ColorSpace"): NameObject("/DeviceRGB"),
+                NameObject("/BitsPerComponent"): NumberObject(8),
+            })
+            resources[NameObject("/XObject")] = DictionaryObject({NameObject("/Im1"): writer._add_object(bitmap)})
+            drawing += "q 200 0 0 200 310 250 cm /Im1 Do Q\n"
+        page[NameObject("/Resources")] = resources
+        stream = DecodedStreamObject()
+        stream.set_data(drawing.encode("ascii"))
+        page[NameObject("/Contents")] = writer._add_object(stream)
+        if rotated:
+            page.rotate(90)
+    with path.open("wb") as output:
+        writer.write(output)
+
+
 class LifecycleTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.temp = tempfile.TemporaryDirectory(prefix="dake-regression-")
         cls.root = Path(cls.temp.name)
         # Importing the UI module must not initialize any PDF/image backend.
-        assert not any(name in sys.modules for name in ("fitz", "pypdf", "PIL.Image", "PIL.ImageTk"))
-        import fitz
+        check = subprocess.run(
+            [sys.executable, "-c", "import main, sys; assert not any(name in sys.modules for name in "
+             "('pypdfium2', 'pypdf', 'PIL.Image', 'PIL.ImageTk'))"],
+            cwd=Path(main.__file__).parent, capture_output=True,
+        )
+        assert check.returncode == 0, check.stderr
         cls.pdfs = {}
         for count in (3, 30, 100, 300):
             path = cls.root / f"pages-{count}.pdf"
-            with fitz.open() as doc:
-                for index in range(count):
-                    page = doc.new_page()
-                    page.insert_text((72, 72), f"PAGE {index + 1:03}", fontsize=36)
-                    page.draw_rect(fitz.Rect(50, 100, 300, 400), color=(index / count, 0.4, 0.8))
-                doc.save(path)
+            write_fixture(path, count)
             cls.pdfs[count] = path
+        cls.visual_pdfs = {}
+        for name, options in (("landscape", {"landscape": True}),
+                              ("rotated", {"rotated": True}),
+                              ("scanned", {"image": True})):
+            path = cls.root / f"{name}.pdf"
+            write_fixture(path, 1, **options)
+            cls.visual_pdfs[name] = path
         cls.hashes = {n: hashlib.sha256(p.read_bytes()).hexdigest() for n, p in cls.pdfs.items()}
 
     @classmethod
@@ -135,15 +183,14 @@ class LifecycleTests(unittest.TestCase):
             self.app.refresh_all()
 
     def test_refresh_cancel_and_handle(self):
-        import fitz
-        original = fitz.Page.get_pixmap
+        original = self.app.render_worker.render_page
 
-        def slow_page(page, *args, **kwargs):
+        def slow_page(*args, **kwargs):
             time.sleep(0.08)
-            return original(page, *args, **kwargs)
+            return original(*args, **kwargs)
 
         for immediate_new_pdf in (False, True):
-            with patch.object(fitz.Page, "get_pixmap", slow_page):
+            with patch.object(self.app.render_worker, "render_page", slow_page):
                 self.app._load_pdf_async(str(self.pdfs[300]))
                 self.spin(lambda: bool(self.app.queued_thumbnail_pages))
                 old_generation = self.app.render_generation
@@ -223,7 +270,6 @@ class LifecycleTests(unittest.TestCase):
 
     def test_fast_scroll_drop_and_error_recovery(self):
         from types import SimpleNamespace
-        import fitz
         self.app._on_drop(SimpleNamespace(data=self.app.tk.call("list", str(self.pdfs[300]))))
         self.spin(lambda: self.app.document_ready)
         vp = self.app.thumbnail_viewport
@@ -235,7 +281,7 @@ class LifecycleTests(unittest.TestCase):
         self.assertLessEqual(len(self.app.render_worker.pending), len(vp.visible_pages) + 16)
         self.app.refresh_all()
         self.spin(self.app.render_worker.closed.is_set)
-        with patch.object(fitz.Page, "get_pixmap", side_effect=RuntimeError("test render failure")):
+        with patch.object(self.app.render_worker, "render_page", side_effect=RuntimeError("test render failure")):
             self.app._load_pdf_async(str(self.pdfs[3]))
             self.spin(lambda: self.app.current_status.state == main.AppState.ERROR)
             self.assertIn("test render failure", self.app.status_message_var.get())
@@ -248,6 +294,57 @@ class LifecycleTests(unittest.TestCase):
         self.assertTrue(self.app.render_worker.closed.is_set())
         self.app.refresh_all()
         self.assertEqual(self.app.state_var.get(), main.UI_TEXT["status_idle"])
+
+    def test_ppm_orientation_color_and_bitmap_lifetime(self):
+        import pypdfium2 as pdfium
+        from pdf_backend import render_page_ppm
+
+        for name, path in self.visual_pdfs.items():
+            document = pdfium.PdfDocument(str(path))
+            try:
+                ppm = render_page_ppm(document, 0, main.THUMBNAIL_WIDTH, main.THUMBNAIL_HEIGHT)
+            finally:
+                document.close()
+            header, dimensions, max_value, pixels = ppm.split(b"\n", 3)
+            width, height = map(int, dimensions.split())
+            self.assertEqual((header, max_value), (b"P6", b"255"))
+            self.assertEqual(len(pixels), width * height * 3)
+            self.assertLessEqual(width, main.THUMBNAIL_WIDTH)
+            self.assertLessEqual(height, main.THUMBNAIL_HEIGHT)
+            self.assertGreater(len(set(pixels)), 2, name)
+            if name == "landscape" or name == "rotated":
+                self.assertGreater(width, height, name)
+            else:
+                self.assertLess(width, height, name)
+            if name == "scanned":
+                colors = set(zip(pixels[0::3], pixels[1::3], pixels[2::3]))
+                self.assertGreater(len(colors), 16)
+                offset = (140 * width + 40) * 3
+                red, green, blue = pixels[offset:offset + 3]
+                self.assertLess(red, green)
+                self.assertLess(green, blue)
+
+    def test_password_and_invalid_pdf_recovery(self):
+        from pypdf import PdfWriter
+
+        protected = self.root / "protected.pdf"
+        writer = PdfWriter()
+        writer.add_blank_page(width=100, height=100)
+        writer.encrypt("secret")
+        with protected.open("wb") as output:
+            writer.write(output)
+        self.app._load_pdf_async(str(protected))
+        self.spin(lambda: self.app.current_status.state == main.AppState.ERROR)
+        self.assertIn("password", self.app.status_message_var.get().lower())
+        self.assertTrue(self.app.render_worker.closed.is_set())
+        self.app.refresh_all()
+        invalid = self.root / "invalid.pdf"
+        invalid.write_bytes(b"not a PDF")
+        self.app._load_pdf_async(str(invalid))
+        self.spin(lambda: self.app.current_status.state == main.AppState.ERROR)
+        self.assertTrue(self.app.render_worker.closed.is_set())
+        self.app.refresh_all()
+        self.load(3)
 
     def test_shutdown_and_save_guard(self):
         self.load(3)
