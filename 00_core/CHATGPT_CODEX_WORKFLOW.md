@@ -89,6 +89,70 @@ Storeは正本ではない。商品情報をStore側で手編集せず、必要�
 
 完了報告では、Store商品詳細URL、`payment_status`、Stripe Payment Link有無、BOOTH導線有無、dake-store-site同期結果、Cloudflare Pages反映確認を報告する。
 
+
+## ローカル作業ルートと一時worktreeの片付け
+
+### 正式なローカル開発ルート
+
+Windows上の正式なローカル開発ルートは次とする。
+
+```text
+C:\Users\yukiz\devlop
+```
+
+DAKEシリーズの正式なローカルrepoは次を基準とする。
+
+```text
+C:\Users\yukiz\devlop\DAKE_series
+```
+
+Codexは、正式成果物・最新の通常作業状態・出荷用ローカル成果物を、最終的にこの配下へ集約する。
+
+### 一時worktree / 一時作業コピー
+
+競合回避、並行作業、隔離検証などのために、一時worktreeや一時コピーを別ディレクトリへ作成することは許可する。
+
+ただし、それらは**一時作業場所であり正式な保存先ではない**。
+
+例:
+
+- `C:\Users\yukiz\Documents\New project\...`
+- `_codex_work\...`
+- `_codex_worktrees\...`
+- その他の検証専用ディレクトリ
+
+### 完了時の必須片付け
+
+一時worktree / 一時作業コピーを使用した作業は、次をすべて満たして初めて完了とする。
+
+1. 必要な変更がcommit済み
+2. 必要なcommitがpush済み
+3. PR / merge等、指定されたGit工程が完了
+4. 正式成果物が必要な場合、`C:\Users\yukiz\devlop` 配下の正式repo / 正式成果物置き場へ同期済み
+5. 同期後のファイル内容・SHA-256等を必要に応じて再確認
+6. 一時worktreeに未commit・未pushの必要変更がないことを確認
+7. 一時worktree / 一時コピーを削除
+8. Git worktreeを使用した場合は `git worktree remove` と `git worktree prune` を適切に実施
+9. 一時build / dist / ZIP / venv / synthetic fixture等も、今後必要なものを除き削除
+
+**完成物を一時フォルダに置きっぱなしにしない。**
+
+### 削除時の安全条件
+
+- 未commit / 未push / 未mergeの必要作業が残っている一時worktreeは削除しない
+- BOOTH等への手動アップロード待ち成果物は、先に正式ローカルルートへコピー・検証してから一時場所を削除する
+- ユーザー作成ファイル、他repo、他プロジェクトのフォルダを巻き込んで削除しない
+- 削除対象を明示できない状態で一括削除しない
+
+### 完了報告
+
+一時worktree等を使用した場合、Codexの完了報告へ次を含める。
+
+- 一時作業場所
+- 正式ルートへ同期した成果物
+- 一時場所を削除したか
+- `git worktree list` / `git status` 等で残存・未反映がないこと
+
 ## アーカイブ基準
 
 以下を満たしたチャットはアーカイブ候補。
