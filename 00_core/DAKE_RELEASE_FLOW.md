@@ -1,5 +1,11 @@
 # DAKE_RELEASE_FLOW
 
+## onedir 配布の例外
+
+起動時間などの検証により PyInstaller onedir を正式採用したアプリは、`dist/<exe stem>/` 全体を一つの実行環境として扱う。`_internal` などの隣接ファイルを含め、フォルダ構造を維持した ZIP を `tools/make_booth_ready.py` で作成・検証する。EXE だけを抜き出して配布しない。
+
+GitHub Release と BOOTH には同じ検証済み ZIP を添付し、SHA-256 と ZIP 展開後のファイル配置・起動を確認する。Launcher の標準配置は `dist/<exe stem>/<exe_name>` とし、既存の `dist/<exe_name>` および利用者指定の EXE パスも引き続き扱う。Store やサイトにはローカルの EXE 位置を公開ダウンロード URL として転記しない。
+
 ## DAKE正式出荷ライン
 
 DAKEの正式出荷ラインは以下で固定します。

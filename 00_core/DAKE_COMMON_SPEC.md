@@ -20,7 +20,7 @@ booth_product.txt
 ↓
 build
 ↓
-dist/*.exe
+dist/*.exe または dist/<exe stem>/<exe_name> と runtime 一式
 ↓
 GitHub Release
 ↓
@@ -59,7 +59,7 @@ Cloudflare反映確認
 - `assets/booth_thumbnail.jpg`
 - `booth_product.txt`（通常は `booth_ready/booth_product.txt`）
 - `booth_ready/`
-- `dist/*.exe`
+- `dist/*.exe` または検証済み onedir runtime 一式
 - GitHub Release
 - BOOTH ready
 - BOOTH掲載または掲載準備
