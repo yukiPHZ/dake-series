@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import hashlib
+import importlib.util
 import queue
 import tempfile
 import threading
@@ -15,7 +16,11 @@ APP_DIR = Path(__file__).resolve().parents[1]
 if str(APP_DIR) not in sys.path:
     sys.path.insert(0, str(APP_DIR))
 
-import main as splitone
+spec = importlib.util.spec_from_file_location("dake_pdf_splitone_main", APP_DIR / "main.py")
+assert spec and spec.loader
+splitone = importlib.util.module_from_spec(spec)
+sys.modules[spec.name] = splitone
+spec.loader.exec_module(splitone)
 
 
 def create_fixture_pdf(path: Path, page_count: int, width_base: int = 200) -> None:
