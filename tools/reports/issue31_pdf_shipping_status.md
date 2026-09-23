@@ -9,9 +9,9 @@ Four PDF applications were handled independently. `ORIGINAL.md` remains the sour
 | App | v1.0.1 publication | Final gate | Decision |
 |---|---|---|---|
 | DAKE_PDF_OverviewRename | Release, existing BOOTH item, Store, dakeapp.com verified | 57 tests and packaged synthetic/GUI checks passed | CLOSED |
-| DAKE_PDF_Merge | Existing Release is public; Store and dakeapp.com point to v1.0.1 | Explorer-to-app physical DnD, held-edge distant drag/autoscroll, final packaged review unverified | HOLD: do not replace BOOTH ZIP yet |
+| DAKE_PDF_Merge | Existing Release is public; Store and dakeapp.com show v1.0.1 | Physical DnD and held-edge auto-scroll remain unverified, but are not release blockers under user acceptance | IN PROGRESS: replace the existing BOOTH downloadable with the verified ZIP |
 | DAKE_PDF_SplitSelect | Improved code and shared onedir tooling are on main; no v1.0.1 Release created | PyMuPDF redistribution basis unresolved; packaged physical GUI checks outstanding | HOLD: no v1.0.1 external distribution |
-| DAKE_PDF_SplitOne | Release, existing BOOTH item, Store, dakeapp.com verified | Extracted ZIP CLI/GUI passed; Explorer-to-app physical DnD and normal-close final check unverified | HOLD for final CLOSED declaration; publication already live |
+| DAKE_PDF_SplitOne | Release, existing BOOTH item, Store, dakeapp.com verified | Extracted ZIP CLI/GUI passed; physical DnD and normal close remain unverified, nonblocking | CLOSED by user acceptance |
 
 ## Shared onedir shipping
 
@@ -29,9 +29,9 @@ PR #32 merged as `25cdb0a2ed6cce6a4d0e6dafebdda67aac267afd`. The onefile/onedir-
 
 - Acceptance PR #26: `ec63604c29f4a20decc238a2a05a47d5b01bc31b`; release-preparation PR #28: `1b14c3fa71ff57dd666c4aeb56508062424d9505`.
 - [Existing public v1.0.1 Release](https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Merge_v1.0.1) contains `DakePDF_Merge.exe`, 51,906,304 bytes, SHA-256 `ee5a78072fd719df2cebb18fe7b8e4ea0aba196f2425a120ef2cf24454fd90b7`. A fresh public download matched both. The EXE left in the original repo's ignored `dist` has a different SHA; it must not be used as the formal asset.
-- [Existing BOOTH item](https://peakheadz.booth.pm/items/8448196) remains 500 JPY and was not altered while the physical DnD gate is open. [Store](https://store.dakeapp.com/product/?id=dake_pdf_merge) shows v1.0.1, the existing Stripe link and BOOTH link. [dakeapp.com](https://dakeapp.com/apps/pdf-merge/) points Download to v1.0.1, though its update date remains old.
-- The ignored `booth_ready/DakePDF_Merge.zip` is **not** the formal v1.0.1 package: its embedded EXE SHA-256 is `537d7fcad484024b7bf74872cc4f36e09370c89be86cc62ca315f512a88ec89f`, unlike the public Release asset. It must not be uploaded. A separate unpublished replacement candidate was built from the downloaded, SHA-matched Release EXE and existing README/notice; ZIP SHA-256 `906327af209961cc88764c2b5077f1a7fc8a444f4927dddff82a1519f3502947`, 51,060,039 bytes, with all entries SHA-verified. It remains outside Git and BOOTH pending the physical gate.
-- The downloaded formal EXE opens a Windows GUI. The browser-only Computer Use surface in this task cannot bind native Windows windows, so physical Explorer DnD and held-edge drag could not be asserted. Thirty synthetic one-page PDFs were prepared outside Git for the narrowly scoped final check. Do not claim CLOSED or replace the BOOTH ZIP until that check passes.
+- [Existing BOOTH item](https://peakheadz.booth.pm/items/8448196) remains 500 JPY. Its downloadable is still ID `9647349`; replacement is a remaining publication task, not an acceptance-test gate. [Store](https://store.dakeapp.com/product/?id=dake_pdf_merge) shows v1.0.1, the existing Stripe link and BOOTH link. [dakeapp.com](https://dakeapp.com/apps/pdf-merge/) now shows the v1.0.1 update and points Download to the public v1.0.1 Release; site PR [#15](https://github.com/yukiPHZ/dakeapp-site/pull/15) passed 17 tests and Cloudflare Pages, merged, and was verified live.
+- The ignored `booth_ready/DakePDF_Merge.zip` is **not** the formal v1.0.1 package: its embedded EXE SHA-256 is `537d7fcad484024b7bf74872cc4f36e09370c89be86cc62ca315f512a88ec89f`, unlike the public Release asset. It must not be uploaded. A separate replacement candidate was built from the downloaded, SHA-matched Release EXE and existing README/notice at `C:/Users/yukiz/Documents/New project/issue31-merge-artifact/DakePDF_Merge.zip`; ZIP SHA-256 `906327af209961cc88764c2b5077f1a7fc8a444f4927dddff82a1519f3502947`, 51,060,039 bytes, with all entries SHA-verified. It remains outside Git.
+- User acceptance treats Merge as complete. Physical Explorer DnD and held-edge auto-scroll were not observed by Codex and remain **unverified, nonblocking**. The verified ZIP has not yet replaced BOOTH's active downloadable: the seller UI exposes only an OS file drag-and-drop area, with no file input or chooser event reachable through the connected browser surface. No old file was deselected or deleted. Merge remains in publication progress solely for the BOOTH downloadable replacement and post-save verification; it is not on product-quality HOLD.
 
 ## SplitSelect
 
@@ -46,13 +46,10 @@ PR #32 merged as `25cdb0a2ed6cce6a4d0e6dafebdda67aac267afd`. The onefile/onedir-
 - ZIP has 1,140 SHA-verified entries including the runtime folder, `_internal`, README, notice, and third-party notices/licenses. Extracted ZIP CLI split a synthetic three-page PDF into three one-page outputs, preserved the source hash, and opened a visible GUI. App and shipping tests passed (9/9). No PyMuPDF payload was found in this ZIP.
 - [Existing BOOTH item](https://peakheadz.booth.pm/items/8448207): 500 JPY; effective downloadable is new ZIP ID `9731063`, old ZIP deselected. Public description includes the F5/Ctrl+O change and v1.0.1 Release link.
 - [Store detail](https://store.dakeapp.com/product/?id=dake_pdf_splitone) shows v1.0.1, 500 JPY, existing Stripe link `https://buy.stripe.com/28E14ndEd7cb0m47DH0gw0z`, and BOOTH link. [dakeapp.com detail](https://dakeapp.com/apps/pdf-split-one/) shows the v1.0.1 Download link and update. The Store sync preserved 56 items, `source_policy`, `do_not_edit`, and the payment-status distribution (stripe_ready 54, booth_only 1, preparing 1). The site test suite passed 17/17 after correcting a stale fixed page-count assertion.
-- A final physical Explorer-to-app drop and normal-close check remains unverified. Publication was not rolled back; this verification gap blocks a CLOSED declaration.
+- A final physical Explorer-to-app drop and normal-close check remains **unverified, nonblocking**. The user explicitly accepted the app as complete; publication is live and SplitOne is CLOSED.
 
-## Remaining human-only checks
+## Remaining work and unverified notes
 
-Native Windows UI access is unavailable to the connected Computer Use tool in this task. These are the only requested human actions; authentication, payment, and publication do not require user intervention.
-
-1. Merge: open the SHA-verified v1.0.1 EXE, drag prepared synthetic PDFs from Explorer into the app, then hold a card at the list's lower edge long enough to confirm auto-scroll and correct reorder. Report DnD and edge-drag PASS/FAIL separately.
-2. SplitOne: open the packaged onedir EXE, drop a synthetic PDF from Explorer, verify a one-page output, then close normally. Report DnD and close PASS/FAIL.
-
-If Merge passes, replace only its existing BOOTH downloadable with a verified v1.0.1 ZIP, keep 500 JPY and existing Stripe configuration, then confirm the live page. If SplitOne passes, close its remaining verification gate. SplitSelect remains HOLD independently until documented license clearance and remaining GUI checks.
+- Merge: upload the verified v1.0.1 ZIP to the existing BOOTH item, select only the new file, retain the 500 JPY price and existing Stripe configuration, save, then verify the effective downloadable ID. The current browser automation cannot provide an OS file to BOOTH's drag-only control. This is an **operational publication task**, not a physical-GUI acceptance blocker; do not use the mismatched ignored ZIP.
+- Merge: physical Explorer DnD and edge auto-scroll are recorded as unverified only. SplitOne: physical Explorer DnD and normal close are recorded as unverified only. Neither prevents formal shipment or requires a new user acceptance decision.
+- SplitSelect alone remains on HOLD for new external distribution until its PyMuPDF redistribution basis is documented and reviewed. This status is independent of Merge and SplitOne.
