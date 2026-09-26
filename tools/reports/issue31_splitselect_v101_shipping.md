@@ -44,4 +44,5 @@
 - `ORIGINAL.md`を正本とし、README / DAKE_META / BOOTH説明 / generated JSON / Storeは派生ビューとして同期した。
 - 既存Stripe Product / Price / Payment Link、既存BOOTH商品URLと価格は変更していない。
 - 古いローカルonefile EXEは公開v1.0.0アセットとSHA一致を確認したうえで正式distから除き、v1.0.1 onedir EXEを共通出荷処理が選択する状態にした。公開v1.0.0 Releaseは保持。
-- 一時worktreeは正式ルートへの同期・成果物照合後に、他作業のworktreeと混同せず整理する。
+- `C:\Users\yukiz\Documents\New project\dake-series-splitselect-pdfium` はtracked差分なし、PR commitがmainに含まれること、正式ZIPがdevlop側にあることを確認後、`git worktree remove --force`と`git worktree prune`で削除した。今回のTEMP展開検証フォルダも削除した。
+- `devlop/.codex_worktrees/dake-series-quality-pdf-lookhere-preserved` は別案件のworktreeとして保持。`Documents/New project`内の古いPhase 11証跡・venvも今回のPR #45一時worktreeではないため触っていない。
