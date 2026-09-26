@@ -73,7 +73,7 @@ build.bat
 生成物は `dist\DakePDF_Split_Select\DakePDF_Split_Select.exe` です（onedir）。
 実行時には同じフォルダの `_internal` が必要です。exeだけを取り出さずフォルダ全体で扱います。
 PDFiumの第三者ライセンス文書もonedirフォルダ全体に同梱します。`THIRD_PARTY_NOTICES.txt` を参照してください。
-今回のPRはビルド検証のみで、既存Releaseや配布物は更新しません。
+v1.0.1ではPDFiumでサムネイルを描画します。既存のPPM表示、ページ選択、保存、CLI操作は維持しています。
 
 ## 回帰検証
 
@@ -100,10 +100,10 @@ Windows上で実際のTkウィンドウを使い、一時生成PDFで検証し�
   "launcher_description": "PDFから必要ページだけを選んで保存します。",
   "site_title": "DakePDF分割Select",
   "site_description": "PDFの必要ページだけをサムネイルや範囲入力で選び、1つのPDFとして保存できるWindows向けアプリです。",
-  "update_summary": "READMEメタ情報とRelease本文を整備。スクリーンショットをassets/screenshot.webpに作成。",
+  "update_summary": "v1.0.1: サムネイル描画をPDFiumへ移行し、起動・ページ選択・保存の操作を維持。",
   "folder_name": "DAKE_PDF_SplitSelect",
   "exe_name": "DakePDF_Split_Select.exe",
-  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitSelect_v1.0.0",
+  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitSelect_v1.0.1",
   "screenshot_path": "assets/screenshot.webp",
   "status": "available",
   "show_in_launcher": true,
@@ -116,6 +116,8 @@ Windows上で実際のTkウィンドウを使い、一時生成PDFで検証し�
 
 ## RELEASE_BODY
 
+- v1.0.1: サムネイル描画をPDFiumへ移行。表示・選択・保存・CLIの操作は従来どおりです。
+- ZIPを解凍し、DakePDF_Split_Selectフォルダ内のexeを起動してください。_internalと第三者ライセンス文書も同梱しています。
 - PDFページ選択保存アプリ
 - サムネイル選択に対応
 - 範囲入力にも対応

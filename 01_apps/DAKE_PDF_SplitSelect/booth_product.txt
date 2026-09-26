@@ -10,9 +10,12 @@ PDFの必要ページだけをサムネイルや範囲入力で選び、1つのP
 - 範囲入力にも対応
 - Windows向けexe
 
+v1.0.1ではサムネイル描画をPDFiumへ移行しました。
+ページ選択と保存の操作は従来どおりです。
+
 使い方
 1. ZIPを解凍します。
-2. DakePDF_Split_Select.exe を起動します。
+2. DakePDF_Split_Select フォルダ内の DakePDF_Split_Select.exe を起動します。_internal フォルダも同じ場所に置いてください。
 3. 画面の案内に従って処理します。
 
 注意事項
@@ -24,7 +27,7 @@ PDFの必要ページだけをサムネイルや範囲入力で選び、1つのP
 日々の実務を少し早く、少し静かに進めたい方向けです。
 
 配布物
-- DakePDF_Split_Select.exe
+- DakePDF_Split_Select フォルダ（exe、_internal、THIRD_PARTY_NOTICES.txt、third_party_licenses）
 - README.txt
 - 注意事項.txt
 

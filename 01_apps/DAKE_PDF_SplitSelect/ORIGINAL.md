@@ -13,9 +13,9 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - short_title: PDF分割Select
 - category: PDF
 - status: available
-- version: 未設定（既存ファイルに明示なし）
+- version: 1.0.1
 - price: 500円
-- distribution: GitHub Release / BOOTH / dakeapp.com / Store（Storeは未確定）
+- distribution: GitHub Release / BOOTH / dakeapp.com / Store
 - target_platform: Windows
 
 ## 目的
@@ -127,10 +127,10 @@ PDFの必要ページだけをサムネイルや範囲入力で選び、1つのP
   "launcher_description": "PDFから必要ページだけを選んで保存します。",
   "site_title": "DakePDF分割Select",
   "site_description": "PDFの必要ページだけをサムネイルや範囲入力で選び、1つのPDFとして保存できるWindows向けアプリです。",
-  "update_summary": "READMEメタ情報とRelease本文を整備。スクリーンショットをassets/screenshot.webpに作成。",
+  "update_summary": "v1.0.1: サムネイル描画をPDFiumへ移行し、起動・ページ選択・保存の操作を維持。",
   "folder_name": "DAKE_PDF_SplitSelect",
   "exe_name": "DakePDF_Split_Select.exe",
-  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitSelect_v1.0.0",
+  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitSelect_v1.0.1",
   "screenshot_path": "assets/screenshot.webp",
   "status": "available",
   "show_in_launcher": true,
@@ -145,6 +145,8 @@ PDFの必要ページだけをサムネイルや範囲入力で選び、1つのP
 
 ## release_body生成用情報
 
+- v1.0.1: サムネイル描画をPDFiumへ移行。表示・選択・保存・CLIの操作は従来どおりです。
+- ZIPを解凍し、DakePDF_Split_Selectフォルダ内のexeを起動する。_internalと第三者ライセンス文書も同梱する。
 - PDFページ選択保存アプリ
 - サムネイル選択に対応
 - 範囲入力にも対応
@@ -154,6 +156,7 @@ PDFの必要ページだけをサムネイルや範囲入力で選び、1つのP
 
 - 商品名: DakePDF分割Select
 - 価格案: 500円
+- 更新内容: v1.0.1ではサムネイル描画をPDFiumへ移行。選択・保存の操作は従来どおりです。
 - 商品紹介文: PDFから必要ページだけを選んで保存します。
 
 ・PDFページ選択保存アプリ
@@ -174,7 +177,7 @@ PDFの必要ページだけをサムネイルや範囲入力で選び、1つのP
 - 商品画像: assets/booth_thumbnail.jpg
 - 補助画像: assets/screenshot.jpg
 - 作品ファイル: booth_ready/DakePDF_Split_Select.zip
-- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitSelect_v1.0.0
+- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitSelect_v1.0.1
 - BOOTH URL: https://peakheadz.booth.pm/items/8448213
 
 ## Store表示用情報
@@ -195,7 +198,7 @@ PDFの必要ページだけをサムネイルや範囲入力で選び、1つのP
 - ダウンロード導線: 未確定
 - サポート方針: 未確定
 - Stripe Payment Link: https://buy.stripe.com/3cI00j6bL8gf8SAcY10gw0A
-- Store雋ｩ螢ｲ迥ｶ諷・ stripe_ready
+- Store販売状態: stripe_ready
 
 ## 価格・販売方針
 
@@ -206,7 +209,7 @@ PDFの必要ページだけをサムネイルや範囲入力で選び、1つのP
 
 ## 配布・ダウンロード方針
 
-- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitSelect_v1.0.0
+- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitSelect_v1.0.1
 - BOOTH: https://peakheadz.booth.pm/items/8448213
 - dakeapp.com: show_on_site=true
 - Launcher: show_in_launcher=true
@@ -229,9 +232,10 @@ https://peakheadz.com
 
 ## 同梱ファイル方針
 
-- exe: DakePDF_Split_Select.exe
+- exe: DakePDF_Split_Select/DakePDF_Split_Select.exe（onedirのフォルダ構成を維持）
 - README.txt: あり
 - 注意事項.txt: あり
+- PDFium第三者ライセンス: onedir内のTHIRD_PARTY_NOTICES.txtとthird_party_licenses一式を同梱
 - 入れないもの: ソースコード、build、dist、spec、個人設定ファイル、APIキー、個人情報
 
 ## スクリーンショット・画像方針
@@ -249,9 +253,9 @@ https://peakheadz.com
 ## Codex作業時の注意
 
 - 触ってよい: ORIGINAL.md、起動性能・リフレッシュ改善に必要な main.py / PDF処理層 / build.bat / requirements.txt / テスト / 性能レポート
-- 触らない: 対象外アプリ、販売用assets、booth_ready、Store/Stripe実装。今回の到達点は検証済みPR OPENであり、merge・Release更新・正式出荷は別工程。
+- 触らない: 対象外アプリ、販売用assets、Store/Stripe決済実装。配布更新では既存商品と既存Payment Linkを維持する。
 - 外部公開しない: 個人情報、APIキー、未公開メモ
-- 自動操作しない: BOOTH公開、Store決済、GitHub Release更新
+- 自動操作しない: Store決済。BOOTH商品更新とGitHub Release公開は明示された出荷依頼と検証がある場合に限る。
 
 ## 起動性能方針
 
@@ -304,7 +308,7 @@ PDF基本情報取得済み、現在画面に必要なサムネイル表示済�
 - release_body.md: GitHub Release用ビュー
 - booth_product.txt: BOOTH登録用ビュー
 - booth_ready/booth_product.txt: BOOTH登録時の実使用ビュー（優先参照: booth_ready/booth_product.txt）
-- Store: 未構築。Store専用正本は作らず、ORIGINAL由来のgeneratedを読む方針
+- Store: ORIGINAL由来のgeneratedを読む販売ビュー。Store専用正本は作らない。
 
 ## 参照した既存ファイル
 
