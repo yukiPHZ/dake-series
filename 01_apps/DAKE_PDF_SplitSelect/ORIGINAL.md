@@ -255,7 +255,7 @@ https://peakheadz.com
 
 ## 起動性能方針
 
-- 起動直後はUI表示を最優先する。fitz / Pillow / pypdfなど、UI表示に不要なPDFバックエンドはロード・レンダー・保存・CLI実行時に遅延読み込みする。
+- 起動直後はUI表示を最優先する。pypdfium2は固定レンダーワーカー内、pypdfは保存・CLI時に遅延読み込みする。PyMuPDF / fitz / PyMuPDFb と Pillow は製品依存に含めない。
 - TkinterDnDは安定性を優先し、既存のドロップ入力を維持する。
 - packaged版の起動速度を実測する。現行相当onefileとonedirを各10回以上測り、個別値・中央値・p90・最速・最遅を記録する。
 - SelectはPyInstaller onedirを正式候補として検証し、起動・PDF入力・DnD・表示・保存・リフレッシュが正常なら採用する。共通buildルールのonefile推奨に対する本アプリの例外とする。
@@ -295,7 +295,7 @@ PDF基本情報取得済み、現在画面に必要なサムネイル表示済�
 - 既存のmerged / single保存、Shift選択、範囲入力、完了ダイアログ、保存フォルダopenを維持する。元PDFは変更しない。
 - --from-shimarisu の inputs / pages / output / silent、および既存exit code (成功0・失敗1) を維持する。
 - 3 / 30 / 100 / 300ページ、途中refresh・即別PDF・元PDF rename/move、LRU再生成、保存後SHA-256不変を検証する。
-- packaged版とDPI確認状況、未確認項目、PyMuPDFライセンスと配布条件の追加確認要否を docs/PERFORMANCE_REFRESH_REPORT.md に記録する。未確認をPASSにしない。
+- packaged版とDPI確認状況、未確認項目、PDFium wheel由来の第三者ライセンス照合結果を docs/PERFORMANCE_REFRESH_REPORT.md に記録する。未確認をPASSにしない。
 
 ## 派生物一覧
 

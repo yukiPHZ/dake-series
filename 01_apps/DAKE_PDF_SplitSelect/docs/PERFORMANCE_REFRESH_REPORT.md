@@ -373,3 +373,29 @@ Launcher詳細（`01_apps/DAKE_Launcher/main.py`）:
 - 同じbranchへcommit/push、PR #29の本文更新のみ。main merge、Release、BOOTH、Store、Cloudflare更新なし。
 - 検証commit `917581c` 直後の `git status --short`: 空（clean）。この確認記録だけを追加commitし、
   最終push後にもclean・PR OPEN・head一致を再確認する。最終確認結果はPR本文・最終報告にも記録する。
+
+## Issue #44 PDFium migration (unpublished candidate)
+
+The Phase 1/1.1 PyMuPDF and licensing notes above describe the previous renderer.
+This candidate does not authorize an external release before ChatGPT review.
+
+- The single worker lazily owns `pypdfium2.PdfDocument`; it returns PPM P6 RGB bytes to
+  the unchanged Tk UI. Bitmap and page close in `finally`; document closes on refresh,
+  replacement, stop, and error. `pypdf` remains the save/CLI backend; Pillow is absent.
+- Clean Python 3.12.4 venv: `pip check` passed; `find_spec('fitz')` and `find_spec('PIL')`
+  returned `None`. Formal `build.bat` onedir succeeded with one `pdfium.dll` and all 19
+  installed-wheel license files. Product source fitz imports, Analysis-00.toc forbidden
+  entries, and onedir forbidden filenames each counted **0**.
+- Ten tests passed, covering 3/30/100/300 pages, visible-first +/-8, LRU max 96,
+  selection, saves, refresh, protected/invalid input, PPM image/orientation and nine CLI
+  cases. The unpublished ZIP roundtrip matched all 1,091 files by SHA-256; its extracted
+  EXE passed the nine CLI cases and a real Tk GUI load/render/select/save/F5/close cycle
+  on synthetic PDF input. Physical Explorer DnD, DPI variants and real scans remain
+  unverified rather than claimed PASS.
+- Ten warmed onedir launches to first window handle: 0.283, 0.249, 0.253, 0.240,
+  0.255, 0.247, 0.244, 0.254, 0.257, 0.314 s. Median 0.253 s; p90 0.283 s.
+  All ten closed normally via WM_CLOSE. This is not a cold-boot benchmark.
+- Installed pypdfium2 5.13.0 / PDFium 153.0.7999.0 wheel metadata lists 19 License-File
+  entries. Repository and onedir copies match that installed wheel by name and SHA-256.
+  Eight hashes differ from OverviewRename's same-version copy, so those were not reused.
+  See `tools/reports/issue44_splitselect_pdfium_migration.md` for audit details.

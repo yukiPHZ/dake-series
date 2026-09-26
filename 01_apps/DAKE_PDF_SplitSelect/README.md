@@ -16,6 +16,7 @@ PDFから必要ページだけを見て選び、すばやく抜き出すため�
 - `pdf_backend.py`（PDFハンドルを所有するレンダーワーカー）
 - `requirements.txt`
 - `build.bat`
+- `THIRD_PARTY_NOTICES.txt` / `third_party_licenses/`（PDFium配布時のライセンス文書）
 - `README.md`
 
 ## 起動
@@ -71,6 +72,7 @@ build.bat
 必要なら `PYTHON_EXE` 環境変数にPython実行ファイルのフルパスを設定してください。
 生成物は `dist\DakePDF_Split_Select\DakePDF_Split_Select.exe` です（onedir）。
 実行時には同じフォルダの `_internal` が必要です。exeだけを取り出さずフォルダ全体で扱います。
+PDFiumの第三者ライセンス文書もonedirフォルダ全体に同梱します。`THIRD_PARTY_NOTICES.txt` を参照してください。
 今回のPRはビルド検証のみで、既存Releaseや配布物は更新しません。
 
 ## 回帰検証
