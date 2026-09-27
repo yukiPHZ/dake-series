@@ -1,0 +1,2 @@
+require('./local-test-env.cjs')();const {spawnSync}=require('node:child_process'),path=require('node:path');const root=path.resolve(__dirname,'..');const env={...process.env};delete env.ELECTRON_RUN_AS_NODE;
+const result=spawnSync(require('electron'),[path.join(root,'scripts','check-packaged-native.cjs'),...process.argv.slice(2)],{cwd:root,env,stdio:'inherit',windowsHide:true,timeout:120000});if(result.error)throw result.error;process.exitCode=result.status;

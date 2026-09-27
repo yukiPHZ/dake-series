@@ -1,0 +1,61 @@
+{
+  "started": "2026-09-27T00:46:33.493Z",
+  "output": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\app-flow-1790469993487",
+  "checks": [
+    "startup blank document is clean",
+    "view changes never dirty the document",
+    "sample integrates raster, path, editable text",
+    "real PNG file imported through native bridge",
+    "image adjustment UI changes persistent filter",
+    "numeric transform UI applies size",
+    "duplicate UI adds editable layer",
+    "undo redo buttons restore object graph",
+    "native bridge writes project to chosen file",
+    "second save keeps exact previous file in .bak",
+    "save clears obsolete crash recovery",
+    "project embeds pixels and vector paths",
+    "saved project reopens through UI with layers",
+    "saved and reopened complex artwork exports byte-identical PNG pixels",
+    "broken file reports error and preserves artwork",
+    "png export UI produces nonempty real file",
+    "jpeg export UI produces nonempty real file",
+    "webp export UI produces nonempty real file",
+    "svg export UI produces nonempty real file",
+    "PNG export dimensions independent of viewport",
+    "SVG export preserves path text embedded pixels",
+    "exported SVG reimports to editable group",
+    "export refuses to overwrite source image",
+    "all imported source file bytes remain unchanged",
+    "unsaved changes reach autosave on disk",
+    "autosave roundtrip retains editable graph",
+    "native close can be cancelled without losing artwork",
+    "no unexpected renderer errors"
+  ],
+  "performance": {
+    "readyMs": 405,
+    "pngExportMs": 192,
+    "jpegExportMs": 191,
+    "webpExportMs": 219,
+    "svgExportMs": 283
+  },
+  "errors": [
+    "Error: Error invoking remote method 'stadio:openProject': Error: このファイルは対応するDAKE STADIO作品ではありません。",
+    "Error: Error invoking remote method 'stadio:exportFile': Error: 配置した元ファイルには上書きできません。別の名前で保存してください。"
+  ],
+  "sourceFingerprints": {
+    "png": {
+      "before": "21cc523ed329b4e83c698f862a1b8b303045f4e32d149086c19d49055fc17ad6",
+      "after": "21cc523ed329b4e83c698f862a1b8b303045f4e32d149086c19d49055fc17ad6"
+    },
+    "svg": {
+      "before": "efeb2e790f91132692ce14f2b2cfaf5a54a0e62dcdee4cfd82b51cc40956e044",
+      "after": "efeb2e790f91132692ce14f2b2cfaf5a54a0e62dcdee4cfd82b51cc40956e044"
+    }
+  },
+  "expectedErrors": [
+    "Error: Error invoking remote method 'stadio:openProject': Error: このファイルは対応するDAKE STADIO作品ではありません。",
+    "Error: Error invoking remote method 'stadio:exportFile': Error: 配置した元ファイルには上書きできません。別の名前で保存してください。"
+  ],
+  "unexpectedErrors": [],
+  "passed": true
+}

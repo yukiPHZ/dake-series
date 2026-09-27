@@ -1,0 +1,3155 @@
+{
+  "output": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790470018501",
+  "started": "2026-09-27T00:46:58.501Z",
+  "checks": [
+    {
+      "work": "banner",
+      "name": "preset and dimension fields produce new editable artwork"
+    },
+    {
+      "work": "banner",
+      "name": "real file drop passes through Chromium File and native path boundary",
+      "detail": "source-photo.png"
+    },
+    {
+      "work": "banner",
+      "name": "layer rename persists through panel dialog"
+    },
+    {
+      "work": "banner",
+      "name": "native pointer brush changes pixels in the imported image"
+    },
+    {
+      "work": "banner",
+      "name": "layer rename persists through panel dialog"
+    },
+    {
+      "work": "banner",
+      "name": "layer panel selection matches requested layers"
+    },
+    {
+      "work": "banner",
+      "name": "mask can be disabled without losing source"
+    },
+    {
+      "work": "banner",
+      "name": "mask release restores image and vector source layers"
+    },
+    {
+      "work": "banner",
+      "name": "layer panel selection matches requested layers"
+    },
+    {
+      "work": "banner",
+      "name": "layer rename persists through panel dialog"
+    },
+    {
+      "work": "banner",
+      "name": "Google Fonts UI uses actual downloaded font with embedded license"
+    },
+    {
+      "work": "banner",
+      "name": "layer rename persists through panel dialog"
+    },
+    {
+      "work": "banner",
+      "name": "text tracking leading and font are edited through DOM fields"
+    },
+    {
+      "work": "banner",
+      "name": "layer rename persists through panel dialog"
+    },
+    {
+      "work": "banner",
+      "name": "text tracking leading and font are edited through DOM fields"
+    },
+    {
+      "work": "banner",
+      "name": "layer rename persists through panel dialog"
+    },
+    {
+      "work": "banner",
+      "name": "layer rename persists through panel dialog"
+    },
+    {
+      "work": "banner",
+      "name": "layer panel selection matches requested layers"
+    },
+    {
+      "work": "banner",
+      "name": "alignment UI aligns selected layers"
+    },
+    {
+      "work": "banner",
+      "name": "group UI creates editable group"
+    },
+    {
+      "work": "banner",
+      "name": "layer DOM drag-and-drop changes stacking order"
+    },
+    {
+      "work": "banner",
+      "name": "guide panel stores horizontal and vertical guides"
+    },
+    {
+      "work": "banner",
+      "name": "layer panel selection matches requested layers"
+    },
+    {
+      "work": "banner",
+      "name": "native save writes versioned editable document and embedded font"
+    },
+    {
+      "work": "banner",
+      "name": "at least three visible composition elements overlap the artboard",
+      "detail": 5
+    },
+    {
+      "work": "banner",
+      "name": "rendered artwork is not an empty or white canvas",
+      "detail": {
+        "inkPixels": 515564,
+        "ratio": 0.24863233024691359
+      }
+    },
+    {
+      "work": "flyer",
+      "name": "preset and dimension fields produce new editable artwork"
+    },
+    {
+      "work": "flyer",
+      "name": "real file drop passes through Chromium File and native path boundary",
+      "detail": "source-photo.png"
+    },
+    {
+      "work": "flyer",
+      "name": "layer rename persists through panel dialog"
+    },
+    {
+      "work": "flyer",
+      "name": "Google Fonts UI uses actual downloaded font with embedded license"
+    },
+    {
+      "work": "flyer",
+      "name": "layer rename persists through panel dialog"
+    },
+    {
+      "work": "flyer",
+      "name": "text tracking leading and font are edited through DOM fields"
+    },
+    {
+      "work": "flyer",
+      "name": "layer rename persists through panel dialog"
+    },
+    {
+      "work": "flyer",
+      "name": "text tracking leading and font are edited through DOM fields"
+    },
+    {
+      "work": "flyer",
+      "name": "layer rename persists through panel dialog"
+    },
+    {
+      "work": "flyer",
+      "name": "text tracking leading and font are edited through DOM fields"
+    },
+    {
+      "work": "flyer",
+      "name": "layer rename persists through panel dialog"
+    },
+    {
+      "work": "flyer",
+      "name": "text tracking leading and font are edited through DOM fields"
+    },
+    {
+      "work": "flyer",
+      "name": "guide panel stores horizontal and vertical guides"
+    },
+    {
+      "work": "flyer",
+      "name": "layout dialog persists print unit dpi and snap settings"
+    },
+    {
+      "work": "flyer",
+      "name": "native save writes versioned editable document and embedded font"
+    },
+    {
+      "work": "flyer",
+      "name": "at least three visible composition elements overlap the artboard",
+      "detail": 5
+    },
+    {
+      "work": "flyer",
+      "name": "rendered artwork is not an empty or white canvas",
+      "detail": {
+        "inkPixels": 2466654,
+        "ratio": 0.2701693499549673
+      }
+    },
+    {
+      "work": "logo",
+      "name": "preset and dimension fields produce new editable artwork"
+    },
+    {
+      "work": "logo",
+      "name": "layer rename persists through panel dialog"
+    },
+    {
+      "work": "logo",
+      "name": "layer rename persists through panel dialog"
+    },
+    {
+      "work": "logo",
+      "name": "layer panel selection matches requested layers"
+    },
+    {
+      "work": "logo",
+      "name": "layer rename persists through panel dialog"
+    },
+    {
+      "work": "logo",
+      "name": "layer panel selection matches requested layers"
+    },
+    {
+      "work": "logo",
+      "name": "union and subtract produce a vector with independent contours"
+    },
+    {
+      "work": "logo",
+      "name": "node insert modifies editable curve topology"
+    },
+    {
+      "work": "logo",
+      "name": "native pointer pen creates a closed cubic path"
+    },
+    {
+      "work": "logo",
+      "name": "layer rename persists through panel dialog"
+    },
+    {
+      "work": "logo",
+      "name": "Google Fonts UI uses actual downloaded font with embedded license"
+    },
+    {
+      "work": "logo",
+      "name": "layer rename persists through panel dialog"
+    },
+    {
+      "work": "logo",
+      "name": "text tracking leading and font are edited through DOM fields"
+    },
+    {
+      "work": "logo",
+      "name": "layer panel selection matches requested layers"
+    },
+    {
+      "work": "logo",
+      "name": "layer panel selection matches requested layers"
+    },
+    {
+      "work": "logo",
+      "name": "outline produces editable paths retaining source text metadata",
+      "detail": {
+        "before": {
+          "left": 174,
+          "top": 745,
+          "width": 600,
+          "height": 113
+        },
+        "after": {
+          "left": 183.70000000000002,
+          "top": 757.914,
+          "width": 348.9000030517577,
+          "height": 76.40000000000009
+        }
+      }
+    },
+    {
+      "work": "logo",
+      "name": "layer rename persists through panel dialog"
+    },
+    {
+      "work": "logo",
+      "name": "rasterize UI generates actual image layer"
+    },
+    {
+      "work": "logo",
+      "name": "guide panel stores horizontal and vertical guides"
+    },
+    {
+      "work": "logo",
+      "name": "native save writes versioned editable document and embedded font"
+    },
+    {
+      "work": "logo",
+      "name": "at least three visible composition elements overlap the artboard",
+      "detail": 4
+    },
+    {
+      "work": "logo",
+      "name": "rendered artwork is not an empty or white canvas",
+      "detail": {
+        "inkPixels": 145055,
+        "ratio": 0.145055
+      }
+    },
+    {
+      "work": "card",
+      "name": "preset and dimension fields produce new editable artwork"
+    },
+    {
+      "work": "card",
+      "name": "real file drop passes through Chromium File and native path boundary",
+      "detail": "source-mark.svg"
+    },
+    {
+      "work": "card",
+      "name": "layer rename persists through panel dialog"
+    },
+    {
+      "work": "card",
+      "name": "Google Fonts UI uses actual downloaded font with embedded license"
+    },
+    {
+      "work": "card",
+      "name": "layer rename persists through panel dialog"
+    },
+    {
+      "work": "card",
+      "name": "text tracking leading and font are edited through DOM fields"
+    },
+    {
+      "work": "card",
+      "name": "layer rename persists through panel dialog"
+    },
+    {
+      "work": "card",
+      "name": "text tracking leading and font are edited through DOM fields"
+    },
+    {
+      "work": "card",
+      "name": "layer rename persists through panel dialog"
+    },
+    {
+      "work": "card",
+      "name": "text tracking leading and font are edited through DOM fields"
+    },
+    {
+      "work": "card",
+      "name": "layer rename persists through panel dialog"
+    },
+    {
+      "work": "card",
+      "name": "guide panel stores horizontal and vertical guides"
+    },
+    {
+      "work": "card",
+      "name": "native save writes versioned editable document and embedded font"
+    },
+    {
+      "work": "card",
+      "name": "at least three visible composition elements overlap the artboard",
+      "detail": 5
+    },
+    {
+      "work": "card",
+      "name": "rendered artwork is not an empty or white canvas",
+      "detail": {
+        "inkPixels": 37964,
+        "ratio": 0.04601027729299981
+      }
+    },
+    {
+      "work": "card",
+      "name": "business card full canvas includes 3mm bleed and inner safe region"
+    },
+    {
+      "work": "card",
+      "name": "uninstalled Japanese family chosen against actual Windows font inventory",
+      "detail": {
+        "family": "Zen Kaku Gothic New",
+        "installedCount": 301
+      }
+    },
+    {
+      "work": "custom",
+      "name": "preset and dimension fields produce new editable artwork"
+    },
+    {
+      "work": "custom",
+      "name": "Google Fonts UI uses actual downloaded font with embedded license"
+    },
+    {
+      "work": "custom",
+      "name": "switch to local font prunes unused embedded descriptor and dynamic face"
+    },
+    {
+      "work": "custom",
+      "name": "layer panel selection matches requested layers"
+    },
+    {
+      "work": "custom",
+      "name": "font undo restores embedded descriptor and loaded dynamic face",
+      "detail": {
+        "text": "Zen Kaku Gothic New",
+        "fonts": [
+          {
+            "family": "Zen Kaku Gothic New",
+            "sha256": "0081cedabc4921982fcd061f845a005664ac7fb642af2dd34b4007bc63ccd235",
+            "weight": 700,
+            "style": "normal"
+          }
+        ],
+        "faces": [
+          {
+            "family": "Zen Kaku Gothic New",
+            "status": "loaded",
+            "weight": "700",
+            "style": "normal"
+          }
+        ]
+      }
+    },
+    {
+      "work": "custom",
+      "name": "layer panel selection matches requested layers"
+    },
+    {
+      "work": "custom",
+      "name": "layer panel selection matches requested layers"
+    },
+    {
+      "work": "custom",
+      "name": "font redo and second undo remain reversible"
+    },
+    {
+      "work": "custom",
+      "name": "text style selector changes selected font style"
+    },
+    {
+      "work": "custom",
+      "name": "layer rename persists through panel dialog"
+    },
+    {
+      "work": "custom",
+      "name": "layer rename persists through panel dialog"
+    },
+    {
+      "work": "custom",
+      "name": "native save writes versioned editable document and embedded font"
+    },
+    {
+      "work": "custom",
+      "name": "previously absent font is a loaded actual FontFace"
+    },
+    {
+      "work": "custom",
+      "name": "new document prunes previous Noto dynamic faces"
+    },
+    {
+      "work": "custom",
+      "name": "Google font binary and license were downloaded via actual native request",
+      "detail": [
+        {
+          "transport": "node-https-get",
+          "url": "https://raw.githubusercontent.com/google/fonts/23e54b51ddffbc7713c583748e3bd86f62b1fa4a/ofl/notosansjp/NotoSansJP%5Bwght%5D.ttf",
+          "blocked": false
+        },
+        {
+          "transport": "node-https-get",
+          "url": "https://raw.githubusercontent.com/google/fonts/23e54b51ddffbc7713c583748e3bd86f62b1fa4a/ofl/notosansjp/OFL.txt",
+          "blocked": false
+        },
+        {
+          "transport": "node-https-get",
+          "url": "https://raw.githubusercontent.com/google/fonts/23e54b51ddffbc7713c583748e3bd86f62b1fa4a/ofl/zenkakugothicnew/ZenKakuGothicNew-Bold.ttf",
+          "blocked": false
+        },
+        {
+          "transport": "node-https-get",
+          "url": "https://raw.githubusercontent.com/google/fonts/23e54b51ddffbc7713c583748e3bd86f62b1fa4a/ofl/zenkakugothicnew/OFL.txt",
+          "blocked": false
+        }
+      ]
+    },
+    {
+      "work": "custom",
+      "name": "font requests never contain artwork text or CSS text subset query"
+    },
+    {
+      "work": null,
+      "name": "renderer reports no unexpected errors",
+      "detail": []
+    },
+    {
+      "work": null,
+      "name": "resume uses a different Electron process"
+    },
+    {
+      "work": null,
+      "name": "resume starts with fresh user profile and no font cache"
+    },
+    {
+      "work": "banner",
+      "name": "document metadata survives process restart"
+    },
+    {
+      "work": "banner",
+      "name": "offline reopen preserves rendered pixels within recorded interpolation tolerance",
+      "detail": {
+        "byteIdentical": true,
+        "differenceBounds": null,
+        "maximumChannelDifference": 0,
+        "changedPixels": 0,
+        "totalPixels": 2073600,
+        "changedRatio": 0,
+        "meanRGBDifference": 0,
+        "threshold": {
+          "maxChannel": 3,
+          "changedRatio": 0.02,
+          "meanRGB": 0.02
+        }
+      }
+    },
+    {
+      "work": "banner",
+      "name": "all serialized text font metadata and geometry survive restart (1e-8 numeric precision)"
+    },
+    {
+      "work": "banner",
+      "name": "embedded Japanese font is loaded without network"
+    },
+    {
+      "work": "banner",
+      "name": "layer panel selection matches requested layers"
+    },
+    {
+      "work": "banner",
+      "name": "post-restart property edits mark document dirty"
+    },
+    {
+      "work": "banner",
+      "name": "native save writes versioned editable document and embedded font"
+    },
+    {
+      "work": "banner",
+      "name": "png native export creates a real nonempty file"
+    },
+    {
+      "work": "banner",
+      "name": "png decoder confirms document pixel dimensions"
+    },
+    {
+      "work": "banner",
+      "name": "jpeg native export creates a real nonempty file"
+    },
+    {
+      "work": "banner",
+      "name": "jpeg decoder confirms document pixel dimensions"
+    },
+    {
+      "work": "banner",
+      "name": "webp native export creates a real nonempty file"
+    },
+    {
+      "work": "banner",
+      "name": "webp decoder confirms document pixel dimensions"
+    },
+    {
+      "work": "banner",
+      "name": "svg native export creates a real nonempty file"
+    },
+    {
+      "work": "banner",
+      "name": "SVG contains vector paths and no external resource reference"
+    },
+    {
+      "work": "banner",
+      "name": "pdf native export creates a real nonempty file"
+    },
+    {
+      "work": "banner",
+      "name": "PDF output has PDF header and page MediaBox"
+    },
+    {
+      "work": "flyer",
+      "name": "document metadata survives process restart"
+    },
+    {
+      "work": "flyer",
+      "name": "offline reopen preserves rendered pixels within recorded interpolation tolerance",
+      "detail": {
+        "byteIdentical": false,
+        "differenceBounds": [
+          491,
+          408,
+          1112,
+          547
+        ],
+        "maximumChannelDifference": 1,
+        "changedPixels": 16,
+        "totalPixels": 9130029,
+        "changedRatio": 1.7524588366586788e-06,
+        "meanRGBDifference": 1.314344127494009e-06,
+        "threshold": {
+          "maxChannel": 3,
+          "changedRatio": 0.02,
+          "meanRGB": 0.02
+        }
+      }
+    },
+    {
+      "work": "flyer",
+      "name": "all serialized text font metadata and geometry survive restart (1e-8 numeric precision)"
+    },
+    {
+      "work": "flyer",
+      "name": "embedded Japanese font is loaded without network"
+    },
+    {
+      "work": "flyer",
+      "name": "layer panel selection matches requested layers"
+    },
+    {
+      "work": "flyer",
+      "name": "post-restart property edits mark document dirty"
+    },
+    {
+      "work": "flyer",
+      "name": "native save writes versioned editable document and embedded font"
+    },
+    {
+      "work": "flyer",
+      "name": "png native export creates a real nonempty file"
+    },
+    {
+      "work": "flyer",
+      "name": "png decoder confirms document pixel dimensions"
+    },
+    {
+      "work": "flyer",
+      "name": "jpeg native export creates a real nonempty file"
+    },
+    {
+      "work": "flyer",
+      "name": "jpeg decoder confirms document pixel dimensions"
+    },
+    {
+      "work": "flyer",
+      "name": "webp native export creates a real nonempty file"
+    },
+    {
+      "work": "flyer",
+      "name": "webp decoder confirms document pixel dimensions"
+    },
+    {
+      "work": "flyer",
+      "name": "svg native export creates a real nonempty file"
+    },
+    {
+      "work": "flyer",
+      "name": "SVG contains vector paths and no external resource reference"
+    },
+    {
+      "work": "flyer",
+      "name": "pdf native export creates a real nonempty file"
+    },
+    {
+      "work": "flyer",
+      "name": "PDF output has PDF header and page MediaBox"
+    },
+    {
+      "work": "logo",
+      "name": "document metadata survives process restart"
+    },
+    {
+      "work": "logo",
+      "name": "offline reopen preserves rendered pixels within recorded interpolation tolerance",
+      "detail": {
+        "byteIdentical": true,
+        "differenceBounds": null,
+        "maximumChannelDifference": 0,
+        "changedPixels": 0,
+        "totalPixels": 1000000,
+        "changedRatio": 0,
+        "meanRGBDifference": 0,
+        "threshold": {
+          "maxChannel": 3,
+          "changedRatio": 0.02,
+          "meanRGB": 0.02
+        }
+      }
+    },
+    {
+      "work": "logo",
+      "name": "all serialized text font metadata and geometry survive restart (1e-8 numeric precision)"
+    },
+    {
+      "work": "logo",
+      "name": "embedded Japanese font is loaded without network"
+    },
+    {
+      "work": "logo",
+      "name": "layer panel selection matches requested layers"
+    },
+    {
+      "work": "logo",
+      "name": "post-restart property edits mark document dirty"
+    },
+    {
+      "work": "logo",
+      "name": "native save writes versioned editable document and embedded font"
+    },
+    {
+      "work": "logo",
+      "name": "png native export creates a real nonempty file"
+    },
+    {
+      "work": "logo",
+      "name": "png decoder confirms document pixel dimensions"
+    },
+    {
+      "work": "logo",
+      "name": "jpeg native export creates a real nonempty file"
+    },
+    {
+      "work": "logo",
+      "name": "jpeg decoder confirms document pixel dimensions"
+    },
+    {
+      "work": "logo",
+      "name": "webp native export creates a real nonempty file"
+    },
+    {
+      "work": "logo",
+      "name": "webp decoder confirms document pixel dimensions"
+    },
+    {
+      "work": "logo",
+      "name": "svg native export creates a real nonempty file"
+    },
+    {
+      "work": "logo",
+      "name": "SVG contains vector paths and no external resource reference"
+    },
+    {
+      "work": "logo",
+      "name": "pdf native export creates a real nonempty file"
+    },
+    {
+      "work": "logo",
+      "name": "PDF output has PDF header and page MediaBox"
+    },
+    {
+      "work": "card",
+      "name": "document metadata survives process restart"
+    },
+    {
+      "work": "card",
+      "name": "card pixel differences are confined to imported SVG circle edge",
+      "detail": [
+        227,
+        150,
+        271,
+        208
+      ]
+    },
+    {
+      "work": "card",
+      "name": "offline reopen preserves rendered pixels within recorded interpolation tolerance",
+      "detail": {
+        "byteIdentical": false,
+        "differenceBounds": [
+          227,
+          150,
+          271,
+          208
+        ],
+        "maximumChannelDifference": 6,
+        "changedPixels": 173,
+        "totalPixels": 825120,
+        "changedRatio": 0.000209666472755478,
+        "meanRGBDifference": 0.0002221899036907763,
+        "threshold": {
+          "maxChannel": 8,
+          "changedRatio": 0.001,
+          "meanRGB": 0.001
+        },
+        "allowedReason": "Only imported SVG circle edge antialiasing; geometry and text separately compared"
+      }
+    },
+    {
+      "work": "card",
+      "name": "all serialized text font metadata and geometry survive restart (1e-8 numeric precision)"
+    },
+    {
+      "work": "card",
+      "name": "embedded Japanese font is loaded without network"
+    },
+    {
+      "work": "card",
+      "name": "layer panel selection matches requested layers"
+    },
+    {
+      "work": "card",
+      "name": "post-restart property edits mark document dirty"
+    },
+    {
+      "work": "card",
+      "name": "native save writes versioned editable document and embedded font"
+    },
+    {
+      "work": "card",
+      "name": "png native export creates a real nonempty file"
+    },
+    {
+      "work": "card",
+      "name": "png decoder confirms document pixel dimensions"
+    },
+    {
+      "work": "card",
+      "name": "jpeg native export creates a real nonempty file"
+    },
+    {
+      "work": "card",
+      "name": "jpeg decoder confirms document pixel dimensions"
+    },
+    {
+      "work": "card",
+      "name": "webp native export creates a real nonempty file"
+    },
+    {
+      "work": "card",
+      "name": "webp decoder confirms document pixel dimensions"
+    },
+    {
+      "work": "card",
+      "name": "svg native export creates a real nonempty file"
+    },
+    {
+      "work": "card",
+      "name": "SVG contains vector paths and no external resource reference"
+    },
+    {
+      "work": "card",
+      "name": "pdf native export creates a real nonempty file"
+    },
+    {
+      "work": "card",
+      "name": "PDF output has PDF header and page MediaBox"
+    },
+    {
+      "work": "card",
+      "name": "all imported source files remain byte-identical"
+    },
+    {
+      "work": "card",
+      "name": "offline project reopening performs no external request",
+      "detail": []
+    },
+    {
+      "work": "absent-font",
+      "name": "font remains absent from Windows after earlier download"
+    },
+    {
+      "work": "absent-font",
+      "name": "fresh offline process restores identical embedded font and license"
+    },
+    {
+      "work": "absent-font",
+      "name": "offline embedded uninstalled family loads actual FontFace"
+    },
+    {
+      "work": "absent-font",
+      "name": "loading another document prunes previous dynamic faces"
+    },
+    {
+      "work": "absent-font",
+      "name": "uninstalled embedded font reproduces pixels offline",
+      "detail": {
+        "byteIdentical": true,
+        "differenceBounds": null,
+        "maximumChannelDifference": 0,
+        "changedPixels": 0,
+        "totalPixels": 600000,
+        "changedRatio": 0,
+        "meanRGBDifference": 0,
+        "threshold": {
+          "maxChannel": 3,
+          "changedRatio": 0.02,
+          "meanRGB": 0.02
+        }
+      }
+    },
+    {
+      "work": "absent-font",
+      "name": "layer panel selection matches requested layers"
+    },
+    {
+      "work": "absent-font",
+      "name": "native save writes versioned editable document and embedded font"
+    },
+    {
+      "work": "absent-font",
+      "name": "offline uninstalled font remains editable"
+    },
+    {
+      "work": "absent-font",
+      "name": "offline font smoke performs no external request",
+      "detail": []
+    },
+    {
+      "work": "safety",
+      "name": "invalid new-document new-dpi preserves complete current document"
+    },
+    {
+      "work": "safety",
+      "name": "invalid new-document new-safe preserves complete current document"
+    },
+    {
+      "work": "safety",
+      "name": "Tab hides inspector without dirtying artwork"
+    },
+    {
+      "work": "safety",
+      "name": "inspector resizing leaves document clean"
+    },
+    {
+      "work": "safety",
+      "name": "native view command toggles rulers without dirtying artwork"
+    },
+    {
+      "work": "safety",
+      "name": "workspace reset changes view only"
+    },
+    {
+      "work": "safety",
+      "name": "actual CDP .dake drop restores current path and clean state"
+    },
+    {
+      "work": null,
+      "name": "renderer reports no unexpected errors",
+      "detail": []
+    },
+    {
+      "name": "Preparation and offline reopening used distinct Electron PIDs"
+    },
+    {
+      "name": "All four PDFs independently parsed and rendered with correct physical size and matching raster appearance"
+    }
+  ],
+  "phaseResults": {
+    "prepare": {
+      "phase": "prepare",
+      "processId": 37876,
+      "started": "2026-09-27T00:46:58.572Z",
+      "output": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790470018501",
+      "checks": [
+        {
+          "work": "banner",
+          "name": "preset and dimension fields produce new editable artwork"
+        },
+        {
+          "work": "banner",
+          "name": "real file drop passes through Chromium File and native path boundary",
+          "detail": "source-photo.png"
+        },
+        {
+          "work": "banner",
+          "name": "layer rename persists through panel dialog"
+        },
+        {
+          "work": "banner",
+          "name": "native pointer brush changes pixels in the imported image"
+        },
+        {
+          "work": "banner",
+          "name": "layer rename persists through panel dialog"
+        },
+        {
+          "work": "banner",
+          "name": "layer panel selection matches requested layers"
+        },
+        {
+          "work": "banner",
+          "name": "mask can be disabled without losing source"
+        },
+        {
+          "work": "banner",
+          "name": "mask release restores image and vector source layers"
+        },
+        {
+          "work": "banner",
+          "name": "layer panel selection matches requested layers"
+        },
+        {
+          "work": "banner",
+          "name": "layer rename persists through panel dialog"
+        },
+        {
+          "work": "banner",
+          "name": "Google Fonts UI uses actual downloaded font with embedded license"
+        },
+        {
+          "work": "banner",
+          "name": "layer rename persists through panel dialog"
+        },
+        {
+          "work": "banner",
+          "name": "text tracking leading and font are edited through DOM fields"
+        },
+        {
+          "work": "banner",
+          "name": "layer rename persists through panel dialog"
+        },
+        {
+          "work": "banner",
+          "name": "text tracking leading and font are edited through DOM fields"
+        },
+        {
+          "work": "banner",
+          "name": "layer rename persists through panel dialog"
+        },
+        {
+          "work": "banner",
+          "name": "layer rename persists through panel dialog"
+        },
+        {
+          "work": "banner",
+          "name": "layer panel selection matches requested layers"
+        },
+        {
+          "work": "banner",
+          "name": "alignment UI aligns selected layers"
+        },
+        {
+          "work": "banner",
+          "name": "group UI creates editable group"
+        },
+        {
+          "work": "banner",
+          "name": "layer DOM drag-and-drop changes stacking order"
+        },
+        {
+          "work": "banner",
+          "name": "guide panel stores horizontal and vertical guides"
+        },
+        {
+          "work": "banner",
+          "name": "layer panel selection matches requested layers"
+        },
+        {
+          "work": "banner",
+          "name": "native save writes versioned editable document and embedded font"
+        },
+        {
+          "work": "banner",
+          "name": "at least three visible composition elements overlap the artboard",
+          "detail": 5
+        },
+        {
+          "work": "banner",
+          "name": "rendered artwork is not an empty or white canvas",
+          "detail": {
+            "inkPixels": 515564,
+            "ratio": 0.24863233024691359
+          }
+        },
+        {
+          "work": "flyer",
+          "name": "preset and dimension fields produce new editable artwork"
+        },
+        {
+          "work": "flyer",
+          "name": "real file drop passes through Chromium File and native path boundary",
+          "detail": "source-photo.png"
+        },
+        {
+          "work": "flyer",
+          "name": "layer rename persists through panel dialog"
+        },
+        {
+          "work": "flyer",
+          "name": "Google Fonts UI uses actual downloaded font with embedded license"
+        },
+        {
+          "work": "flyer",
+          "name": "layer rename persists through panel dialog"
+        },
+        {
+          "work": "flyer",
+          "name": "text tracking leading and font are edited through DOM fields"
+        },
+        {
+          "work": "flyer",
+          "name": "layer rename persists through panel dialog"
+        },
+        {
+          "work": "flyer",
+          "name": "text tracking leading and font are edited through DOM fields"
+        },
+        {
+          "work": "flyer",
+          "name": "layer rename persists through panel dialog"
+        },
+        {
+          "work": "flyer",
+          "name": "text tracking leading and font are edited through DOM fields"
+        },
+        {
+          "work": "flyer",
+          "name": "layer rename persists through panel dialog"
+        },
+        {
+          "work": "flyer",
+          "name": "text tracking leading and font are edited through DOM fields"
+        },
+        {
+          "work": "flyer",
+          "name": "guide panel stores horizontal and vertical guides"
+        },
+        {
+          "work": "flyer",
+          "name": "layout dialog persists print unit dpi and snap settings"
+        },
+        {
+          "work": "flyer",
+          "name": "native save writes versioned editable document and embedded font"
+        },
+        {
+          "work": "flyer",
+          "name": "at least three visible composition elements overlap the artboard",
+          "detail": 5
+        },
+        {
+          "work": "flyer",
+          "name": "rendered artwork is not an empty or white canvas",
+          "detail": {
+            "inkPixels": 2466654,
+            "ratio": 0.2701693499549673
+          }
+        },
+        {
+          "work": "logo",
+          "name": "preset and dimension fields produce new editable artwork"
+        },
+        {
+          "work": "logo",
+          "name": "layer rename persists through panel dialog"
+        },
+        {
+          "work": "logo",
+          "name": "layer rename persists through panel dialog"
+        },
+        {
+          "work": "logo",
+          "name": "layer panel selection matches requested layers"
+        },
+        {
+          "work": "logo",
+          "name": "layer rename persists through panel dialog"
+        },
+        {
+          "work": "logo",
+          "name": "layer panel selection matches requested layers"
+        },
+        {
+          "work": "logo",
+          "name": "union and subtract produce a vector with independent contours"
+        },
+        {
+          "work": "logo",
+          "name": "node insert modifies editable curve topology"
+        },
+        {
+          "work": "logo",
+          "name": "native pointer pen creates a closed cubic path"
+        },
+        {
+          "work": "logo",
+          "name": "layer rename persists through panel dialog"
+        },
+        {
+          "work": "logo",
+          "name": "Google Fonts UI uses actual downloaded font with embedded license"
+        },
+        {
+          "work": "logo",
+          "name": "layer rename persists through panel dialog"
+        },
+        {
+          "work": "logo",
+          "name": "text tracking leading and font are edited through DOM fields"
+        },
+        {
+          "work": "logo",
+          "name": "layer panel selection matches requested layers"
+        },
+        {
+          "work": "logo",
+          "name": "layer panel selection matches requested layers"
+        },
+        {
+          "work": "logo",
+          "name": "outline produces editable paths retaining source text metadata",
+          "detail": {
+            "before": {
+              "left": 174,
+              "top": 745,
+              "width": 600,
+              "height": 113
+            },
+            "after": {
+              "left": 183.70000000000002,
+              "top": 757.914,
+              "width": 348.9000030517577,
+              "height": 76.40000000000009
+            }
+          }
+        },
+        {
+          "work": "logo",
+          "name": "layer rename persists through panel dialog"
+        },
+        {
+          "work": "logo",
+          "name": "rasterize UI generates actual image layer"
+        },
+        {
+          "work": "logo",
+          "name": "guide panel stores horizontal and vertical guides"
+        },
+        {
+          "work": "logo",
+          "name": "native save writes versioned editable document and embedded font"
+        },
+        {
+          "work": "logo",
+          "name": "at least three visible composition elements overlap the artboard",
+          "detail": 4
+        },
+        {
+          "work": "logo",
+          "name": "rendered artwork is not an empty or white canvas",
+          "detail": {
+            "inkPixels": 145055,
+            "ratio": 0.145055
+          }
+        },
+        {
+          "work": "card",
+          "name": "preset and dimension fields produce new editable artwork"
+        },
+        {
+          "work": "card",
+          "name": "real file drop passes through Chromium File and native path boundary",
+          "detail": "source-mark.svg"
+        },
+        {
+          "work": "card",
+          "name": "layer rename persists through panel dialog"
+        },
+        {
+          "work": "card",
+          "name": "Google Fonts UI uses actual downloaded font with embedded license"
+        },
+        {
+          "work": "card",
+          "name": "layer rename persists through panel dialog"
+        },
+        {
+          "work": "card",
+          "name": "text tracking leading and font are edited through DOM fields"
+        },
+        {
+          "work": "card",
+          "name": "layer rename persists through panel dialog"
+        },
+        {
+          "work": "card",
+          "name": "text tracking leading and font are edited through DOM fields"
+        },
+        {
+          "work": "card",
+          "name": "layer rename persists through panel dialog"
+        },
+        {
+          "work": "card",
+          "name": "text tracking leading and font are edited through DOM fields"
+        },
+        {
+          "work": "card",
+          "name": "layer rename persists through panel dialog"
+        },
+        {
+          "work": "card",
+          "name": "guide panel stores horizontal and vertical guides"
+        },
+        {
+          "work": "card",
+          "name": "native save writes versioned editable document and embedded font"
+        },
+        {
+          "work": "card",
+          "name": "at least three visible composition elements overlap the artboard",
+          "detail": 5
+        },
+        {
+          "work": "card",
+          "name": "rendered artwork is not an empty or white canvas",
+          "detail": {
+            "inkPixels": 37964,
+            "ratio": 0.04601027729299981
+          }
+        },
+        {
+          "work": "card",
+          "name": "business card full canvas includes 3mm bleed and inner safe region"
+        },
+        {
+          "work": "card",
+          "name": "uninstalled Japanese family chosen against actual Windows font inventory",
+          "detail": {
+            "family": "Zen Kaku Gothic New",
+            "installedCount": 301
+          }
+        },
+        {
+          "work": "custom",
+          "name": "preset and dimension fields produce new editable artwork"
+        },
+        {
+          "work": "custom",
+          "name": "Google Fonts UI uses actual downloaded font with embedded license"
+        },
+        {
+          "work": "custom",
+          "name": "switch to local font prunes unused embedded descriptor and dynamic face"
+        },
+        {
+          "work": "custom",
+          "name": "layer panel selection matches requested layers"
+        },
+        {
+          "work": "custom",
+          "name": "font undo restores embedded descriptor and loaded dynamic face",
+          "detail": {
+            "text": "Zen Kaku Gothic New",
+            "fonts": [
+              {
+                "family": "Zen Kaku Gothic New",
+                "sha256": "0081cedabc4921982fcd061f845a005664ac7fb642af2dd34b4007bc63ccd235",
+                "weight": 700,
+                "style": "normal"
+              }
+            ],
+            "faces": [
+              {
+                "family": "Zen Kaku Gothic New",
+                "status": "loaded",
+                "weight": "700",
+                "style": "normal"
+              }
+            ]
+          }
+        },
+        {
+          "work": "custom",
+          "name": "layer panel selection matches requested layers"
+        },
+        {
+          "work": "custom",
+          "name": "layer panel selection matches requested layers"
+        },
+        {
+          "work": "custom",
+          "name": "font redo and second undo remain reversible"
+        },
+        {
+          "work": "custom",
+          "name": "text style selector changes selected font style"
+        },
+        {
+          "work": "custom",
+          "name": "layer rename persists through panel dialog"
+        },
+        {
+          "work": "custom",
+          "name": "layer rename persists through panel dialog"
+        },
+        {
+          "work": "custom",
+          "name": "native save writes versioned editable document and embedded font"
+        },
+        {
+          "work": "custom",
+          "name": "previously absent font is a loaded actual FontFace"
+        },
+        {
+          "work": "custom",
+          "name": "new document prunes previous Noto dynamic faces"
+        },
+        {
+          "work": "custom",
+          "name": "Google font binary and license were downloaded via actual native request",
+          "detail": [
+            {
+              "transport": "node-https-get",
+              "url": "https://raw.githubusercontent.com/google/fonts/23e54b51ddffbc7713c583748e3bd86f62b1fa4a/ofl/notosansjp/NotoSansJP%5Bwght%5D.ttf",
+              "blocked": false
+            },
+            {
+              "transport": "node-https-get",
+              "url": "https://raw.githubusercontent.com/google/fonts/23e54b51ddffbc7713c583748e3bd86f62b1fa4a/ofl/notosansjp/OFL.txt",
+              "blocked": false
+            },
+            {
+              "transport": "node-https-get",
+              "url": "https://raw.githubusercontent.com/google/fonts/23e54b51ddffbc7713c583748e3bd86f62b1fa4a/ofl/zenkakugothicnew/ZenKakuGothicNew-Bold.ttf",
+              "blocked": false
+            },
+            {
+              "transport": "node-https-get",
+              "url": "https://raw.githubusercontent.com/google/fonts/23e54b51ddffbc7713c583748e3bd86f62b1fa4a/ofl/zenkakugothicnew/OFL.txt",
+              "blocked": false
+            }
+          ]
+        },
+        {
+          "work": "custom",
+          "name": "font requests never contain artwork text or CSS text subset query"
+        },
+        {
+          "work": null,
+          "name": "renderer reports no unexpected errors",
+          "detail": []
+        }
+      ],
+      "steps": [
+        {
+          "work": "banner",
+          "name": "drop, raster painting and nondestructive mask",
+          "ms": 2660
+        },
+        {
+          "work": "banner",
+          "name": "Japanese typography, layout and layer grouping",
+          "ms": 6194
+        },
+        {
+          "work": "logo",
+          "name": "boolean shapes and editable bezier nodes",
+          "ms": 3559
+        },
+        {
+          "work": "logo",
+          "name": "font outline and pixel conversion",
+          "ms": 3321
+        }
+      ],
+      "errors": [],
+      "network": [
+        {
+          "transport": "node-https-get",
+          "url": "https://raw.githubusercontent.com/google/fonts/23e54b51ddffbc7713c583748e3bd86f62b1fa4a/ofl/notosansjp/NotoSansJP%5Bwght%5D.ttf",
+          "blocked": false
+        },
+        {
+          "transport": "node-https-get",
+          "url": "https://raw.githubusercontent.com/google/fonts/23e54b51ddffbc7713c583748e3bd86f62b1fa4a/ofl/notosansjp/OFL.txt",
+          "blocked": false
+        },
+        {
+          "transport": "node-https-get",
+          "url": "https://raw.githubusercontent.com/google/fonts/23e54b51ddffbc7713c583748e3bd86f62b1fa4a/ofl/zenkakugothicnew/ZenKakuGothicNew-Bold.ttf",
+          "blocked": false
+        },
+        {
+          "transport": "node-https-get",
+          "url": "https://raw.githubusercontent.com/google/fonts/23e54b51ddffbc7713c583748e3bd86f62b1fa4a/ofl/zenkakugothicnew/OFL.txt",
+          "blocked": false
+        }
+      ],
+      "works": {
+        "banner": {
+          "title": "暮らしを、軽やかに。",
+          "width": 1920,
+          "height": 1080,
+          "meta": {
+            "dpi": 96,
+            "unit": "px",
+            "bleed": 0,
+            "safe": 32,
+            "guides": {
+              "horizontal": [
+                165
+              ],
+              "vertical": [
+                120
+              ]
+            },
+            "snap": {
+              "enabled": true,
+              "objects": true,
+              "artboard": true,
+              "guides": true,
+              "grid": false,
+              "gridSize": 16
+            }
+          },
+          "baselinePngSha256": "1d2d39d8f23854673b58d232df7a7031d9679ee24a812266a3f61ee31ebea1af",
+          "documentSha256": "fe69e4139672449a848b5ea478a5ab22621543f4b58d0d53c497ca2dc2ac2bff",
+          "textState": [
+            {
+              "id": "ac63cd36-0678-498f-9740-af24cd595067",
+              "text": "暮らしを、\n軽やかに。",
+              "fontFamily": "Noto Sans JP",
+              "fontWeight": 500,
+              "charSpacing": 40,
+              "lineHeight": 1.35,
+              "left": 110,
+              "top": 255
+            },
+            {
+              "id": "c23b0662-e738-4cea-951d-6f399b0cdcf5",
+              "text": "暮らしの道具 展\n2026.10.24 – 25  /  10:00–18:00",
+              "fontFamily": "Noto Sans JP",
+              "fontWeight": 500,
+              "charSpacing": 25,
+              "lineHeight": 1.35,
+              "left": 120,
+              "top": 635
+            }
+          ]
+        },
+        "flyer": {
+          "title": "暮らしの道具 展 / チラシ",
+          "width": 2551,
+          "height": 3579,
+          "meta": {
+            "dpi": 300,
+            "unit": "mm",
+            "bleed": 35.43307086614173,
+            "safe": 59.05511811023622,
+            "guides": {
+              "horizontal": [
+                354.33070866141736
+              ],
+              "vertical": [
+                236.2204724409449
+              ]
+            },
+            "snap": {
+              "enabled": true,
+              "objects": true,
+              "artboard": true,
+              "guides": true,
+              "grid": true,
+              "gridSize": 59.05511811023622
+            }
+          },
+          "baselinePngSha256": "d145eee2cc315a1ed750945ee29f7340395a5fa688e33bcbcdbe3ab9e9c3d4dd",
+          "documentSha256": "fa68478d2d45ebe7415b7e8ae04a66b4a082bc8addb5d0f9fda040b9c4173b8d",
+          "textState": [
+            {
+              "id": "8e2d6f55-02e6-488a-87d4-43d1e2fe5bdb",
+              "text": "暮らしの道具 展",
+              "fontFamily": "Noto Sans JP",
+              "fontWeight": 500,
+              "charSpacing": 25,
+              "lineHeight": 1.35,
+              "left": 250,
+              "top": 390.0000000000001
+            },
+            {
+              "id": "2f2930df-9ea7-4e98-a898-0ef08bd40602",
+              "text": "触れて、選ぶ。\n明日からの暮らしに、新しいひとつを。",
+              "fontFamily": "Noto Sans JP",
+              "fontWeight": 500,
+              "charSpacing": 25,
+              "lineHeight": 1.35,
+              "left": 263,
+              "top": 800
+            },
+            {
+              "id": "c5bd46ea-73c7-4c24-93e5-9a6953f6a37d",
+              "text": "2026年10月24日（土）・25日（日）\n10:00–18:00　/　入場無料",
+              "fontFamily": "Noto Sans JP",
+              "fontWeight": 500,
+              "charSpacing": 25,
+              "lineHeight": 1.35,
+              "left": 264.00000000000006,
+              "top": 2800
+            },
+            {
+              "id": "48f4c807-595c-40b8-bc99-57ab8643c539",
+              "text": "緑のギャラリー\n架空市みどり町1-2-3",
+              "fontFamily": "Noto Sans JP",
+              "fontWeight": 500,
+              "charSpacing": 25,
+              "lineHeight": 1.35,
+              "left": 265,
+              "top": 3190
+            }
+          ]
+        },
+        "logo": {
+          "title": "MIDORI / ロゴ",
+          "width": 1000,
+          "height": 1000,
+          "meta": {
+            "dpi": 96,
+            "unit": "px",
+            "bleed": 0,
+            "safe": 40,
+            "guides": {
+              "horizontal": [
+                100
+              ],
+              "vertical": [
+                100
+              ]
+            },
+            "snap": {
+              "enabled": true,
+              "objects": true,
+              "artboard": true,
+              "guides": true,
+              "grid": false,
+              "gridSize": 16
+            }
+          },
+          "baselinePngSha256": "627077758f86133a690d1a6ac95c1929ce56166d5839846c1fd423e95d2328cb",
+          "documentSha256": "0475da29257b04faf1b552f8d9593c6bfdc5e83036bea2e4c48e94802d12cde6",
+          "textState": [
+            {
+              "id": "d3a7e8db-c6e7-41b3-b883-c562bec22341",
+              "text": "MIDORI",
+              "fontFamily": "Noto Sans JP",
+              "fontWeight": 500,
+              "charSpacing": 25,
+              "lineHeight": 1.35,
+              "left": 174,
+              "top": 745
+            }
+          ]
+        },
+        "card": {
+          "title": "緑野 花 / 名刺",
+          "width": 1146,
+          "height": 720,
+          "meta": {
+            "dpi": 300,
+            "unit": "mm",
+            "bleed": 35.43307086614173,
+            "safe": 47.24409448818898,
+            "guides": {
+              "horizontal": [
+                118.11023622047244
+              ],
+              "vertical": [
+                118.11023622047244
+              ]
+            },
+            "snap": {
+              "enabled": true,
+              "objects": true,
+              "artboard": true,
+              "guides": true,
+              "grid": false,
+              "gridSize": 16
+            }
+          },
+          "baselinePngSha256": "242cacc6518e42b1d3a21336b86c779028ffca57c74c7ce7499a4c457689167a",
+          "documentSha256": "b1d8f698f4d61c335984941b6324563cf3374824c6858d05109607a09f73802e",
+          "textState": [
+            {
+              "id": "b88c7dc1-4a84-4834-97a1-f7682b2bdd16",
+              "text": "緑野 花",
+              "fontFamily": "Noto Sans JP",
+              "fontWeight": 500,
+              "charSpacing": 25,
+              "lineHeight": 1.35,
+              "left": 385,
+              "top": 175
+            },
+            {
+              "id": "20754d0e-2df3-4f3e-82c9-539793ed1825",
+              "text": "デザインと暮らしの道具",
+              "fontFamily": "Noto Sans JP",
+              "fontWeight": 500,
+              "charSpacing": 25,
+              "lineHeight": 1.35,
+              "left": 389.00000000000006,
+              "top": 305
+            },
+            {
+              "id": "c1c2dee8-28d3-4380-a324-914e7b5b6516",
+              "text": "midori@example.invalid\n架空市みどり町 1-2-3",
+              "fontFamily": "Noto Sans JP",
+              "fontWeight": 500,
+              "charSpacing": 25,
+              "lineHeight": 1.35,
+              "left": 135,
+              "top": 510.00000000000006
+            }
+          ]
+        }
+      },
+      "sources": {
+        "source-photo.png": "e276d869341715994429ba3da6c866964df9686645e66f98b2638c5f254bb7b6",
+        "source-mark.svg": "ef9311359f30433c55b911f7fc086453bf7a4795a829018b0ae2554a31537d4f"
+      },
+      "fontUndoDebug": {
+        "text": "Zen Kaku Gothic New",
+        "fonts": [
+          {
+            "family": "Zen Kaku Gothic New",
+            "sha256": "0081cedabc4921982fcd061f845a005664ac7fb642af2dd34b4007bc63ccd235",
+            "weight": 700,
+            "style": "normal"
+          }
+        ],
+        "faces": [
+          {
+            "family": "Zen Kaku Gothic New",
+            "status": "loaded",
+            "weight": "700",
+            "style": "normal"
+          }
+        ]
+      },
+      "absentFont": {
+        "family": "Zen Kaku Gothic New",
+        "installedCount": 301,
+        "installed": false,
+        "sha256": "0081cedabc4921982fcd061f845a005664ac7fb642af2dd34b4007bc63ccd235",
+        "faces": [
+          {
+            "family": "Zen Kaku Gothic New",
+            "status": "loaded",
+            "weight": "700",
+            "style": "normal"
+          }
+        ]
+      },
+      "expectedErrors": [],
+      "unexpectedErrors": [],
+      "passed": true,
+      "finished": "2026-09-27T00:47:35.043Z"
+    },
+    "resume": {
+      "phase": "resume",
+      "processId": 36920,
+      "started": "2026-09-27T00:47:35.226Z",
+      "output": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790470018501",
+      "checks": [
+        {
+          "work": null,
+          "name": "resume uses a different Electron process"
+        },
+        {
+          "work": null,
+          "name": "resume starts with fresh user profile and no font cache"
+        },
+        {
+          "work": "banner",
+          "name": "document metadata survives process restart"
+        },
+        {
+          "work": "banner",
+          "name": "offline reopen preserves rendered pixels within recorded interpolation tolerance",
+          "detail": {
+            "byteIdentical": true,
+            "differenceBounds": null,
+            "maximumChannelDifference": 0,
+            "changedPixels": 0,
+            "totalPixels": 2073600,
+            "changedRatio": 0,
+            "meanRGBDifference": 0,
+            "threshold": {
+              "maxChannel": 3,
+              "changedRatio": 0.02,
+              "meanRGB": 0.02
+            }
+          }
+        },
+        {
+          "work": "banner",
+          "name": "all serialized text font metadata and geometry survive restart (1e-8 numeric precision)"
+        },
+        {
+          "work": "banner",
+          "name": "embedded Japanese font is loaded without network"
+        },
+        {
+          "work": "banner",
+          "name": "layer panel selection matches requested layers"
+        },
+        {
+          "work": "banner",
+          "name": "post-restart property edits mark document dirty"
+        },
+        {
+          "work": "banner",
+          "name": "native save writes versioned editable document and embedded font"
+        },
+        {
+          "work": "banner",
+          "name": "png native export creates a real nonempty file"
+        },
+        {
+          "work": "banner",
+          "name": "png decoder confirms document pixel dimensions"
+        },
+        {
+          "work": "banner",
+          "name": "jpeg native export creates a real nonempty file"
+        },
+        {
+          "work": "banner",
+          "name": "jpeg decoder confirms document pixel dimensions"
+        },
+        {
+          "work": "banner",
+          "name": "webp native export creates a real nonempty file"
+        },
+        {
+          "work": "banner",
+          "name": "webp decoder confirms document pixel dimensions"
+        },
+        {
+          "work": "banner",
+          "name": "svg native export creates a real nonempty file"
+        },
+        {
+          "work": "banner",
+          "name": "SVG contains vector paths and no external resource reference"
+        },
+        {
+          "work": "banner",
+          "name": "pdf native export creates a real nonempty file"
+        },
+        {
+          "work": "banner",
+          "name": "PDF output has PDF header and page MediaBox"
+        },
+        {
+          "work": "flyer",
+          "name": "document metadata survives process restart"
+        },
+        {
+          "work": "flyer",
+          "name": "offline reopen preserves rendered pixels within recorded interpolation tolerance",
+          "detail": {
+            "byteIdentical": false,
+            "differenceBounds": [
+              491,
+              408,
+              1112,
+              547
+            ],
+            "maximumChannelDifference": 1,
+            "changedPixels": 16,
+            "totalPixels": 9130029,
+            "changedRatio": 1.7524588366586788e-06,
+            "meanRGBDifference": 1.314344127494009e-06,
+            "threshold": {
+              "maxChannel": 3,
+              "changedRatio": 0.02,
+              "meanRGB": 0.02
+            }
+          }
+        },
+        {
+          "work": "flyer",
+          "name": "all serialized text font metadata and geometry survive restart (1e-8 numeric precision)"
+        },
+        {
+          "work": "flyer",
+          "name": "embedded Japanese font is loaded without network"
+        },
+        {
+          "work": "flyer",
+          "name": "layer panel selection matches requested layers"
+        },
+        {
+          "work": "flyer",
+          "name": "post-restart property edits mark document dirty"
+        },
+        {
+          "work": "flyer",
+          "name": "native save writes versioned editable document and embedded font"
+        },
+        {
+          "work": "flyer",
+          "name": "png native export creates a real nonempty file"
+        },
+        {
+          "work": "flyer",
+          "name": "png decoder confirms document pixel dimensions"
+        },
+        {
+          "work": "flyer",
+          "name": "jpeg native export creates a real nonempty file"
+        },
+        {
+          "work": "flyer",
+          "name": "jpeg decoder confirms document pixel dimensions"
+        },
+        {
+          "work": "flyer",
+          "name": "webp native export creates a real nonempty file"
+        },
+        {
+          "work": "flyer",
+          "name": "webp decoder confirms document pixel dimensions"
+        },
+        {
+          "work": "flyer",
+          "name": "svg native export creates a real nonempty file"
+        },
+        {
+          "work": "flyer",
+          "name": "SVG contains vector paths and no external resource reference"
+        },
+        {
+          "work": "flyer",
+          "name": "pdf native export creates a real nonempty file"
+        },
+        {
+          "work": "flyer",
+          "name": "PDF output has PDF header and page MediaBox"
+        },
+        {
+          "work": "logo",
+          "name": "document metadata survives process restart"
+        },
+        {
+          "work": "logo",
+          "name": "offline reopen preserves rendered pixels within recorded interpolation tolerance",
+          "detail": {
+            "byteIdentical": true,
+            "differenceBounds": null,
+            "maximumChannelDifference": 0,
+            "changedPixels": 0,
+            "totalPixels": 1000000,
+            "changedRatio": 0,
+            "meanRGBDifference": 0,
+            "threshold": {
+              "maxChannel": 3,
+              "changedRatio": 0.02,
+              "meanRGB": 0.02
+            }
+          }
+        },
+        {
+          "work": "logo",
+          "name": "all serialized text font metadata and geometry survive restart (1e-8 numeric precision)"
+        },
+        {
+          "work": "logo",
+          "name": "embedded Japanese font is loaded without network"
+        },
+        {
+          "work": "logo",
+          "name": "layer panel selection matches requested layers"
+        },
+        {
+          "work": "logo",
+          "name": "post-restart property edits mark document dirty"
+        },
+        {
+          "work": "logo",
+          "name": "native save writes versioned editable document and embedded font"
+        },
+        {
+          "work": "logo",
+          "name": "png native export creates a real nonempty file"
+        },
+        {
+          "work": "logo",
+          "name": "png decoder confirms document pixel dimensions"
+        },
+        {
+          "work": "logo",
+          "name": "jpeg native export creates a real nonempty file"
+        },
+        {
+          "work": "logo",
+          "name": "jpeg decoder confirms document pixel dimensions"
+        },
+        {
+          "work": "logo",
+          "name": "webp native export creates a real nonempty file"
+        },
+        {
+          "work": "logo",
+          "name": "webp decoder confirms document pixel dimensions"
+        },
+        {
+          "work": "logo",
+          "name": "svg native export creates a real nonempty file"
+        },
+        {
+          "work": "logo",
+          "name": "SVG contains vector paths and no external resource reference"
+        },
+        {
+          "work": "logo",
+          "name": "pdf native export creates a real nonempty file"
+        },
+        {
+          "work": "logo",
+          "name": "PDF output has PDF header and page MediaBox"
+        },
+        {
+          "work": "card",
+          "name": "document metadata survives process restart"
+        },
+        {
+          "work": "card",
+          "name": "card pixel differences are confined to imported SVG circle edge",
+          "detail": [
+            227,
+            150,
+            271,
+            208
+          ]
+        },
+        {
+          "work": "card",
+          "name": "offline reopen preserves rendered pixels within recorded interpolation tolerance",
+          "detail": {
+            "byteIdentical": false,
+            "differenceBounds": [
+              227,
+              150,
+              271,
+              208
+            ],
+            "maximumChannelDifference": 6,
+            "changedPixels": 173,
+            "totalPixels": 825120,
+            "changedRatio": 0.000209666472755478,
+            "meanRGBDifference": 0.0002221899036907763,
+            "threshold": {
+              "maxChannel": 8,
+              "changedRatio": 0.001,
+              "meanRGB": 0.001
+            },
+            "allowedReason": "Only imported SVG circle edge antialiasing; geometry and text separately compared"
+          }
+        },
+        {
+          "work": "card",
+          "name": "all serialized text font metadata and geometry survive restart (1e-8 numeric precision)"
+        },
+        {
+          "work": "card",
+          "name": "embedded Japanese font is loaded without network"
+        },
+        {
+          "work": "card",
+          "name": "layer panel selection matches requested layers"
+        },
+        {
+          "work": "card",
+          "name": "post-restart property edits mark document dirty"
+        },
+        {
+          "work": "card",
+          "name": "native save writes versioned editable document and embedded font"
+        },
+        {
+          "work": "card",
+          "name": "png native export creates a real nonempty file"
+        },
+        {
+          "work": "card",
+          "name": "png decoder confirms document pixel dimensions"
+        },
+        {
+          "work": "card",
+          "name": "jpeg native export creates a real nonempty file"
+        },
+        {
+          "work": "card",
+          "name": "jpeg decoder confirms document pixel dimensions"
+        },
+        {
+          "work": "card",
+          "name": "webp native export creates a real nonempty file"
+        },
+        {
+          "work": "card",
+          "name": "webp decoder confirms document pixel dimensions"
+        },
+        {
+          "work": "card",
+          "name": "svg native export creates a real nonempty file"
+        },
+        {
+          "work": "card",
+          "name": "SVG contains vector paths and no external resource reference"
+        },
+        {
+          "work": "card",
+          "name": "pdf native export creates a real nonempty file"
+        },
+        {
+          "work": "card",
+          "name": "PDF output has PDF header and page MediaBox"
+        },
+        {
+          "work": "card",
+          "name": "all imported source files remain byte-identical"
+        },
+        {
+          "work": "card",
+          "name": "offline project reopening performs no external request",
+          "detail": []
+        },
+        {
+          "work": "absent-font",
+          "name": "font remains absent from Windows after earlier download"
+        },
+        {
+          "work": "absent-font",
+          "name": "fresh offline process restores identical embedded font and license"
+        },
+        {
+          "work": "absent-font",
+          "name": "offline embedded uninstalled family loads actual FontFace"
+        },
+        {
+          "work": "absent-font",
+          "name": "loading another document prunes previous dynamic faces"
+        },
+        {
+          "work": "absent-font",
+          "name": "uninstalled embedded font reproduces pixels offline",
+          "detail": {
+            "byteIdentical": true,
+            "differenceBounds": null,
+            "maximumChannelDifference": 0,
+            "changedPixels": 0,
+            "totalPixels": 600000,
+            "changedRatio": 0,
+            "meanRGBDifference": 0,
+            "threshold": {
+              "maxChannel": 3,
+              "changedRatio": 0.02,
+              "meanRGB": 0.02
+            }
+          }
+        },
+        {
+          "work": "absent-font",
+          "name": "layer panel selection matches requested layers"
+        },
+        {
+          "work": "absent-font",
+          "name": "native save writes versioned editable document and embedded font"
+        },
+        {
+          "work": "absent-font",
+          "name": "offline uninstalled font remains editable"
+        },
+        {
+          "work": "absent-font",
+          "name": "offline font smoke performs no external request",
+          "detail": []
+        },
+        {
+          "work": "safety",
+          "name": "invalid new-document new-dpi preserves complete current document"
+        },
+        {
+          "work": "safety",
+          "name": "invalid new-document new-safe preserves complete current document"
+        },
+        {
+          "work": "safety",
+          "name": "Tab hides inspector without dirtying artwork"
+        },
+        {
+          "work": "safety",
+          "name": "inspector resizing leaves document clean"
+        },
+        {
+          "work": "safety",
+          "name": "native view command toggles rulers without dirtying artwork"
+        },
+        {
+          "work": "safety",
+          "name": "workspace reset changes view only"
+        },
+        {
+          "work": "safety",
+          "name": "actual CDP .dake drop restores current path and clean state"
+        },
+        {
+          "work": null,
+          "name": "renderer reports no unexpected errors",
+          "detail": []
+        }
+      ],
+      "steps": [
+        {
+          "work": "banner",
+          "name": "open embedded-font document with native network disabled",
+          "ms": 647
+        },
+        {
+          "work": "banner",
+          "name": "re-edit text and vector after restart then save and export",
+          "ms": 2710
+        },
+        {
+          "work": "flyer",
+          "name": "open embedded-font document with native network disabled",
+          "ms": 847
+        },
+        {
+          "work": "flyer",
+          "name": "re-edit text and vector after restart then save and export",
+          "ms": 3847
+        },
+        {
+          "work": "logo",
+          "name": "open embedded-font document with native network disabled",
+          "ms": 459
+        },
+        {
+          "work": "logo",
+          "name": "re-edit text and vector after restart then save and export",
+          "ms": 2082
+        },
+        {
+          "work": "card",
+          "name": "open embedded-font document with native network disabled",
+          "ms": 444
+        },
+        {
+          "work": "card",
+          "name": "re-edit text and vector after restart then save and export",
+          "ms": 2031
+        }
+      ],
+      "errors": [
+        "Error: INVALID_LAYOUT",
+        "Error: INVALID_LAYOUT"
+      ],
+      "network": [],
+      "works": {
+        "banner": {
+          "title": "暮らしを、軽やかに。",
+          "width": 1920,
+          "height": 1080,
+          "meta": {
+            "dpi": 96,
+            "unit": "px",
+            "bleed": 0,
+            "safe": 32,
+            "guides": {
+              "horizontal": [
+                165
+              ],
+              "vertical": [
+                120
+              ]
+            },
+            "snap": {
+              "enabled": true,
+              "objects": true,
+              "artboard": true,
+              "guides": true,
+              "grid": false,
+              "gridSize": 16
+            }
+          },
+          "baselinePngSha256": "1d2d39d8f23854673b58d232df7a7031d9679ee24a812266a3f61ee31ebea1af",
+          "documentSha256": "fe69e4139672449a848b5ea478a5ab22621543f4b58d0d53c497ca2dc2ac2bff",
+          "textState": [
+            {
+              "id": "ac63cd36-0678-498f-9740-af24cd595067",
+              "text": "暮らしを、\n軽やかに。",
+              "fontFamily": "Noto Sans JP",
+              "fontWeight": 500,
+              "charSpacing": 40,
+              "lineHeight": 1.35,
+              "left": 110,
+              "top": 255
+            },
+            {
+              "id": "c23b0662-e738-4cea-951d-6f399b0cdcf5",
+              "text": "暮らしの道具 展\n2026.10.24 – 25  /  10:00–18:00",
+              "fontFamily": "Noto Sans JP",
+              "fontWeight": 500,
+              "charSpacing": 25,
+              "lineHeight": 1.35,
+              "left": 120,
+              "top": 635
+            }
+          ],
+          "exports": {
+            "png": {
+              "path": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790470018501\\banner.png",
+              "bytes": 475981,
+              "sha256": "e2d45c6b3a43874629867c25a18e08de9e3d8119e57d66f4b163b833f6f54259",
+              "ms": 205,
+              "dimensions": {
+                "width": 1920,
+                "height": 1080
+              }
+            },
+            "jpeg": {
+              "path": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790470018501\\banner.jpg",
+              "bytes": 128527,
+              "sha256": "e08c1c84ac2ea0a92bf0897718c31f335bae01264557409b6ca241d3637b52a9",
+              "ms": 201,
+              "dimensions": {
+                "width": 1920,
+                "height": 1080
+              }
+            },
+            "webp": {
+              "path": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790470018501\\banner.webp",
+              "bytes": 63906,
+              "sha256": "bf9c8fb594de0c202b560c3ddce8a0d87f9ffe70e25e2945ad37b093970448f6",
+              "ms": 322,
+              "dimensions": {
+                "width": 1920,
+                "height": 1080
+              }
+            },
+            "svg": {
+              "path": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790470018501\\banner.svg",
+              "bytes": 721334,
+              "sha256": "7edd100aafc704a94fc8ca2f38751c159e852d96abe8f2f33d069cafe87e1df2",
+              "ms": 320,
+              "dimensions": {
+                "width": 1920,
+                "height": 1080
+              }
+            },
+            "pdf": {
+              "path": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790470018501\\banner.pdf",
+              "bytes": 238012,
+              "sha256": "2d0ddb27eafe6c798dc767844d06ff1db52927a0a03a16c0f34229b3c628ff35",
+              "ms": 385
+            }
+          },
+          "reopenPixels": {
+            "byteIdentical": true,
+            "differenceBounds": null,
+            "maximumChannelDifference": 0,
+            "changedPixels": 0,
+            "totalPixels": 2073600,
+            "changedRatio": 0,
+            "meanRGBDifference": 0,
+            "threshold": {
+              "maxChannel": 3,
+              "changedRatio": 0.02,
+              "meanRGB": 0.02
+            }
+          }
+        },
+        "flyer": {
+          "title": "暮らしの道具 展 / チラシ",
+          "width": 2551,
+          "height": 3579,
+          "meta": {
+            "dpi": 300,
+            "unit": "mm",
+            "bleed": 35.43307086614173,
+            "safe": 59.05511811023622,
+            "guides": {
+              "horizontal": [
+                354.33070866141736
+              ],
+              "vertical": [
+                236.2204724409449
+              ]
+            },
+            "snap": {
+              "enabled": true,
+              "objects": true,
+              "artboard": true,
+              "guides": true,
+              "grid": true,
+              "gridSize": 59.05511811023622
+            }
+          },
+          "baselinePngSha256": "d145eee2cc315a1ed750945ee29f7340395a5fa688e33bcbcdbe3ab9e9c3d4dd",
+          "documentSha256": "fa68478d2d45ebe7415b7e8ae04a66b4a082bc8addb5d0f9fda040b9c4173b8d",
+          "textState": [
+            {
+              "id": "8e2d6f55-02e6-488a-87d4-43d1e2fe5bdb",
+              "text": "暮らしの道具 展",
+              "fontFamily": "Noto Sans JP",
+              "fontWeight": 500,
+              "charSpacing": 25,
+              "lineHeight": 1.35,
+              "left": 250,
+              "top": 390.0000000000001
+            },
+            {
+              "id": "2f2930df-9ea7-4e98-a898-0ef08bd40602",
+              "text": "触れて、選ぶ。\n明日からの暮らしに、新しいひとつを。",
+              "fontFamily": "Noto Sans JP",
+              "fontWeight": 500,
+              "charSpacing": 25,
+              "lineHeight": 1.35,
+              "left": 263,
+              "top": 800
+            },
+            {
+              "id": "c5bd46ea-73c7-4c24-93e5-9a6953f6a37d",
+              "text": "2026年10月24日（土）・25日（日）\n10:00–18:00　/　入場無料",
+              "fontFamily": "Noto Sans JP",
+              "fontWeight": 500,
+              "charSpacing": 25,
+              "lineHeight": 1.35,
+              "left": 264.00000000000006,
+              "top": 2800
+            },
+            {
+              "id": "48f4c807-595c-40b8-bc99-57ab8643c539",
+              "text": "緑のギャラリー\n架空市みどり町1-2-3",
+              "fontFamily": "Noto Sans JP",
+              "fontWeight": 500,
+              "charSpacing": 25,
+              "lineHeight": 1.35,
+              "left": 265,
+              "top": 3190
+            }
+          ],
+          "exports": {
+            "png": {
+              "path": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790470018501\\flyer.png",
+              "bytes": 1551973,
+              "sha256": "63c761a18fd39ac46bcfd70512b22b24d4e63e65341ec916232e84b52af76c7a",
+              "ms": 318,
+              "dimensions": {
+                "width": 2551,
+                "height": 3579
+              }
+            },
+            "jpeg": {
+              "path": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790470018501\\flyer.jpg",
+              "bytes": 368292,
+              "sha256": "06c56fd7357910fc32e647e8ccac6e46e2931aa0639005e6ac6ddbb8b48dc35e",
+              "ms": 266,
+              "dimensions": {
+                "width": 2551,
+                "height": 3579
+              }
+            },
+            "webp": {
+              "path": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790470018501\\flyer.webp",
+              "bytes": 154296,
+              "sha256": "6aa311b119a950bc5adfca86fd54fc6bcad2b94be19c359e2c7c29690929cce3",
+              "ms": 833,
+              "dimensions": {
+                "width": 2551,
+                "height": 3579
+              }
+            },
+            "svg": {
+              "path": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790470018501\\flyer.svg",
+              "bytes": 708550,
+              "sha256": "e9a6c5a0175e16182cf99af409cab8fd23122ec58e2c23c93b7d1de93256d8bb",
+              "ms": 297,
+              "dimensions": {
+                "width": 2551,
+                "height": 3579
+              }
+            },
+            "pdf": {
+              "path": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790470018501\\flyer.pdf",
+              "bytes": 758526,
+              "sha256": "ac9f30675ae2fbfacbd8b4c85373d07187a8ab989b90b41849d3132264812f5c",
+              "ms": 789
+            }
+          },
+          "reopenPixels": {
+            "byteIdentical": false,
+            "differenceBounds": [
+              491,
+              408,
+              1112,
+              547
+            ],
+            "maximumChannelDifference": 1,
+            "changedPixels": 16,
+            "totalPixels": 9130029,
+            "changedRatio": 1.7524588366586788e-06,
+            "meanRGBDifference": 1.314344127494009e-06,
+            "threshold": {
+              "maxChannel": 3,
+              "changedRatio": 0.02,
+              "meanRGB": 0.02
+            }
+          }
+        },
+        "logo": {
+          "title": "MIDORI / ロゴ",
+          "width": 1000,
+          "height": 1000,
+          "meta": {
+            "dpi": 96,
+            "unit": "px",
+            "bleed": 0,
+            "safe": 40,
+            "guides": {
+              "horizontal": [
+                100
+              ],
+              "vertical": [
+                100
+              ]
+            },
+            "snap": {
+              "enabled": true,
+              "objects": true,
+              "artboard": true,
+              "guides": true,
+              "grid": false,
+              "gridSize": 16
+            }
+          },
+          "baselinePngSha256": "627077758f86133a690d1a6ac95c1929ce56166d5839846c1fd423e95d2328cb",
+          "documentSha256": "0475da29257b04faf1b552f8d9593c6bfdc5e83036bea2e4c48e94802d12cde6",
+          "textState": [
+            {
+              "id": "d3a7e8db-c6e7-41b3-b883-c562bec22341",
+              "text": "MIDORI",
+              "fontFamily": "Noto Sans JP",
+              "fontWeight": 500,
+              "charSpacing": 25,
+              "lineHeight": 1.35,
+              "left": 174,
+              "top": 745
+            }
+          ],
+          "exports": {
+            "png": {
+              "path": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790470018501\\logo.png",
+              "bytes": 54039,
+              "sha256": "d4798d02936fe0eb73d4c166e9ea995f6f198ef651156137986708603cc2ba98",
+              "ms": 190,
+              "dimensions": {
+                "width": 1000,
+                "height": 1000
+              }
+            },
+            "jpeg": {
+              "path": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790470018501\\logo.jpg",
+              "bytes": 40300,
+              "sha256": "fbe7dfce770dd7c2f84aad7c85e7913eebbd23c3a08cba18295040fd592158ca",
+              "ms": 214,
+              "dimensions": {
+                "width": 1000,
+                "height": 1000
+              }
+            },
+            "webp": {
+              "path": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790470018501\\logo.webp",
+              "bytes": 18998,
+              "sha256": "f3e1bef77e6b4b1c329f30ba3217622f69e0b1ab96dd3a3ec1e83e091f41de00",
+              "ms": 264,
+              "dimensions": {
+                "width": 1000,
+                "height": 1000
+              }
+            },
+            "svg": {
+              "path": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790470018501\\logo.svg",
+              "bytes": 11491,
+              "sha256": "9314bba94b1d65ddb49cd2f50493cfbd66973adcb821bd72cd9dde3859cb43fa",
+              "ms": 196,
+              "dimensions": {
+                "width": 1000,
+                "height": 1000
+              }
+            },
+            "pdf": {
+              "path": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790470018501\\logo.pdf",
+              "bytes": 23356,
+              "sha256": "9a15e6aba9f807a38634aa24c24abec683d3cdc412cef174177775252296fcfd",
+              "ms": 263
+            }
+          },
+          "reopenPixels": {
+            "byteIdentical": true,
+            "differenceBounds": null,
+            "maximumChannelDifference": 0,
+            "changedPixels": 0,
+            "totalPixels": 1000000,
+            "changedRatio": 0,
+            "meanRGBDifference": 0,
+            "threshold": {
+              "maxChannel": 3,
+              "changedRatio": 0.02,
+              "meanRGB": 0.02
+            }
+          }
+        },
+        "card": {
+          "title": "緑野 花 / 名刺",
+          "width": 1146,
+          "height": 720,
+          "meta": {
+            "dpi": 300,
+            "unit": "mm",
+            "bleed": 35.43307086614173,
+            "safe": 47.24409448818898,
+            "guides": {
+              "horizontal": [
+                118.11023622047244
+              ],
+              "vertical": [
+                118.11023622047244
+              ]
+            },
+            "snap": {
+              "enabled": true,
+              "objects": true,
+              "artboard": true,
+              "guides": true,
+              "grid": false,
+              "gridSize": 16
+            }
+          },
+          "baselinePngSha256": "242cacc6518e42b1d3a21336b86c779028ffca57c74c7ce7499a4c457689167a",
+          "documentSha256": "b1d8f698f4d61c335984941b6324563cf3374824c6858d05109607a09f73802e",
+          "textState": [
+            {
+              "id": "b88c7dc1-4a84-4834-97a1-f7682b2bdd16",
+              "text": "緑野 花",
+              "fontFamily": "Noto Sans JP",
+              "fontWeight": 500,
+              "charSpacing": 25,
+              "lineHeight": 1.35,
+              "left": 385,
+              "top": 175
+            },
+            {
+              "id": "20754d0e-2df3-4f3e-82c9-539793ed1825",
+              "text": "デザインと暮らしの道具",
+              "fontFamily": "Noto Sans JP",
+              "fontWeight": 500,
+              "charSpacing": 25,
+              "lineHeight": 1.35,
+              "left": 389.00000000000006,
+              "top": 305
+            },
+            {
+              "id": "c1c2dee8-28d3-4380-a324-914e7b5b6516",
+              "text": "midori@example.invalid\n架空市みどり町 1-2-3",
+              "fontFamily": "Noto Sans JP",
+              "fontWeight": 500,
+              "charSpacing": 25,
+              "lineHeight": 1.35,
+              "left": 135,
+              "top": 510.00000000000006
+            }
+          ],
+          "exports": {
+            "png": {
+              "path": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790470018501\\card.png",
+              "bytes": 54646,
+              "sha256": "33a3b42eaa3944f7e4d1f8a2d28cfa7b5c4e293cd7393b09b0aa4d1463c6c9ad",
+              "ms": 189,
+              "dimensions": {
+                "width": 1146,
+                "height": 720
+              }
+            },
+            "jpeg": {
+              "path": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790470018501\\card.jpg",
+              "bytes": 37709,
+              "sha256": "067298aedf1cf254b2b1690ceb0ebc37998366091e084f2ded9ae53477236a5f",
+              "ms": 197,
+              "dimensions": {
+                "width": 1146,
+                "height": 720
+              }
+            },
+            "webp": {
+              "path": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790470018501\\card.webp",
+              "bytes": 20448,
+              "sha256": "b96e352a77598c2a12570dbb4fb2a7947fc8b53166462442026ae8eae8d2c3f6",
+              "ms": 204,
+              "dimensions": {
+                "width": 1146,
+                "height": 720
+              }
+            },
+            "svg": {
+              "path": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790470018501\\card.svg",
+              "bytes": 5797,
+              "sha256": "92a9a39717f85884854b905ac4e2b6f0162638aeb16ce5be3e36651de93d785c",
+              "ms": 198,
+              "dimensions": {
+                "width": 1146,
+                "height": 720
+              }
+            },
+            "pdf": {
+              "path": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790470018501\\card.pdf",
+              "bytes": 23981,
+              "sha256": "4f1b3b0715cf955fa8ec3c3eeb2007c4ac8480ed26e15cb9863912750a348feb",
+              "ms": 262
+            }
+          },
+          "reopenPixels": {
+            "byteIdentical": false,
+            "differenceBounds": [
+              227,
+              150,
+              271,
+              208
+            ],
+            "maximumChannelDifference": 6,
+            "changedPixels": 173,
+            "totalPixels": 825120,
+            "changedRatio": 0.000209666472755478,
+            "meanRGBDifference": 0.0002221899036907763,
+            "threshold": {
+              "maxChannel": 8,
+              "changedRatio": 0.001,
+              "meanRGB": 0.001
+            },
+            "allowedReason": "Only imported SVG circle edge antialiasing; geometry and text separately compared"
+          }
+        }
+      },
+      "sources": {
+        "source-photo.png": "e276d869341715994429ba3da6c866964df9686645e66f98b2638c5f254bb7b6",
+        "source-mark.svg": "ef9311359f30433c55b911f7fc086453bf7a4795a829018b0ae2554a31537d4f"
+      },
+      "absentFont": {
+        "family": "Zen Kaku Gothic New",
+        "sha256": "0081cedabc4921982fcd061f845a005664ac7fb642af2dd34b4007bc63ccd235",
+        "faces": [
+          {
+            "family": "Zen Kaku Gothic New",
+            "status": "loaded"
+          }
+        ],
+        "pixels": {
+          "byteIdentical": true,
+          "differenceBounds": null,
+          "maximumChannelDifference": 0,
+          "changedPixels": 0,
+          "totalPixels": 600000,
+          "changedRatio": 0,
+          "meanRGBDifference": 0,
+          "threshold": {
+            "maxChannel": 3,
+            "changedRatio": 0.02,
+            "meanRGB": 0.02
+          }
+        }
+      },
+      "resizerDebug": {
+        "handle": {
+          "x": 1210.5,
+          "y": 145
+        },
+        "events": [
+          {
+            "type": "pointermove",
+            "target": "panel-resizer",
+            "x": 1210.5,
+            "y": 145,
+            "buttons": 0,
+            "pointerId": 1
+          },
+          {
+            "type": "mousemove",
+            "target": "panel-resizer",
+            "x": 1210,
+            "y": 145,
+            "buttons": 0
+          },
+          {
+            "type": "pointerdown",
+            "target": "panel-resizer",
+            "x": 1210.5,
+            "y": 145,
+            "buttons": 1,
+            "pointerId": 1
+          },
+          {
+            "type": "pointermove",
+            "target": "",
+            "x": 1170.5,
+            "y": 145,
+            "buttons": 1,
+            "pointerId": 1
+          },
+          {
+            "type": "pointerup",
+            "target": "panel-resizer",
+            "x": 1170.5,
+            "y": 145,
+            "buttons": 0,
+            "pointerId": 1
+          }
+        ],
+        "after": {
+          "dirty": false,
+          "inlineWidth": "349.5px",
+          "hidden": false,
+          "hit": "<textarea id=\"prop-text\" rows=\"3\">再開後にも、編集できる。</textarea>"
+        }
+      },
+      "expectedErrors": [
+        "Error: INVALID_LAYOUT",
+        "Error: INVALID_LAYOUT"
+      ],
+      "unexpectedErrors": [],
+      "passed": true,
+      "finished": "2026-09-27T00:47:51.035Z"
+    }
+  },
+  "processes": [
+    37876,
+    36920
+  ],
+  "pdfValidation": {
+    "banner": {
+      "pages": 1,
+      "mediaBoxPoints": [
+        1440,
+        810
+      ],
+      "expectedPoints": [
+        1440,
+        810
+      ],
+      "physicalMm": [
+        508,
+        285.75
+      ],
+      "explicitTrimBox": false,
+      "explicitBleedBox": false,
+      "images": [
+        {
+          "width": 1920,
+          "height": 1080,
+          "colorSpace": "/DeviceRGB"
+        }
+      ],
+      "renderedPng": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790470018501\\banner-pdf-render.png",
+      "renderMeanAbsoluteError": 0.56724,
+      "renderer": "Poppler pdftoppm,96dpi",
+      "parser": "pypdf"
+    },
+    "flyer": {
+      "pages": 1,
+      "mediaBoxPoints": [
+        612.24,
+        858.96
+      ],
+      "expectedPoints": [
+        612.24,
+        858.96
+      ],
+      "physicalMm": [
+        215.98466666666667,
+        303.022
+      ],
+      "explicitTrimBox": false,
+      "explicitBleedBox": false,
+      "images": [
+        {
+          "width": 2551,
+          "height": 3579,
+          "colorSpace": "/DeviceRGB"
+        }
+      ],
+      "renderedPng": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790470018501\\flyer-pdf-render.png",
+      "renderMeanAbsoluteError": 1.36567,
+      "renderer": "Poppler pdftoppm,96dpi",
+      "parser": "pypdf"
+    },
+    "logo": {
+      "pages": 1,
+      "mediaBoxPoints": [
+        750,
+        750
+      ],
+      "expectedPoints": [
+        750,
+        750
+      ],
+      "physicalMm": [
+        264.5833333333333,
+        264.5833333333333
+      ],
+      "explicitTrimBox": false,
+      "explicitBleedBox": false,
+      "images": [
+        {
+          "width": 1000,
+          "height": 1000,
+          "colorSpace": "/DeviceRGB"
+        }
+      ],
+      "renderedPng": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790470018501\\logo-pdf-render.png",
+      "renderMeanAbsoluteError": 0.40528,
+      "renderer": "Poppler pdftoppm,96dpi",
+      "parser": "pypdf"
+    },
+    "card": {
+      "pages": 1,
+      "mediaBoxPoints": [
+        275.04,
+        172.8
+      ],
+      "expectedPoints": [
+        275.03999999999996,
+        172.79999999999998
+      ],
+      "physicalMm": [
+        97.028,
+        60.96000000000001
+      ],
+      "explicitTrimBox": false,
+      "explicitBleedBox": false,
+      "images": [
+        {
+          "width": 1146,
+          "height": 720,
+          "colorSpace": "/DeviceRGB"
+        }
+      ],
+      "renderedPng": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790470018501\\card-pdf-render.png",
+      "renderMeanAbsoluteError": 1.70702,
+      "renderer": "Poppler pdftoppm,96dpi",
+      "parser": "pypdf"
+    }
+  },
+  "artifacts": [
+    {
+      "file": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\artifacts\\production\\banner-edited.dake",
+      "bytes": 13514190,
+      "sha256": "93e823b0431c5733c7ac662910a60a2da18a5913318f2d4f808b34e5eac23ab8"
+    },
+    {
+      "file": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\artifacts\\production\\banner.png",
+      "bytes": 475981,
+      "sha256": "e2d45c6b3a43874629867c25a18e08de9e3d8119e57d66f4b163b833f6f54259"
+    },
+    {
+      "file": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\artifacts\\production\\banner.jpg",
+      "bytes": 128527,
+      "sha256": "e08c1c84ac2ea0a92bf0897718c31f335bae01264557409b6ca241d3637b52a9"
+    },
+    {
+      "file": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\artifacts\\production\\banner.webp",
+      "bytes": 63906,
+      "sha256": "bf9c8fb594de0c202b560c3ddce8a0d87f9ffe70e25e2945ad37b093970448f6"
+    },
+    {
+      "file": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\artifacts\\production\\banner.svg",
+      "bytes": 721334,
+      "sha256": "7edd100aafc704a94fc8ca2f38751c159e852d96abe8f2f33d069cafe87e1df2"
+    },
+    {
+      "file": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\artifacts\\production\\banner.pdf",
+      "bytes": 238012,
+      "sha256": "2d0ddb27eafe6c798dc767844d06ff1db52927a0a03a16c0f34229b3c628ff35"
+    },
+    {
+      "file": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\artifacts\\production\\banner-edited-screen.png",
+      "bytes": 206066,
+      "sha256": "72e4b2f39c36dd8266cc2a69d8f1dbad84e84e5a83dca60501b6d44497494722"
+    },
+    {
+      "file": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\artifacts\\production\\banner-pdf-render.png",
+      "bytes": 209905,
+      "sha256": "33073249f5687db856df0f17a16ee3bb5610ca1613d7109b2778812152d14e7c"
+    },
+    {
+      "file": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\artifacts\\production\\flyer-edited.dake",
+      "bytes": 13514014,
+      "sha256": "b13adb804e8db93dd9abce23239a887154531c22160c739c565704094e98b2f6"
+    },
+    {
+      "file": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\artifacts\\production\\flyer.png",
+      "bytes": 1551973,
+      "sha256": "63c761a18fd39ac46bcfd70512b22b24d4e63e65341ec916232e84b52af76c7a"
+    },
+    {
+      "file": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\artifacts\\production\\flyer.jpg",
+      "bytes": 368292,
+      "sha256": "06c56fd7357910fc32e647e8ccac6e46e2931aa0639005e6ac6ddbb8b48dc35e"
+    },
+    {
+      "file": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\artifacts\\production\\flyer.webp",
+      "bytes": 154296,
+      "sha256": "6aa311b119a950bc5adfca86fd54fc6bcad2b94be19c359e2c7c29690929cce3"
+    },
+    {
+      "file": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\artifacts\\production\\flyer.svg",
+      "bytes": 708550,
+      "sha256": "e9a6c5a0175e16182cf99af409cab8fd23122ec58e2c23c93b7d1de93256d8bb"
+    },
+    {
+      "file": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\artifacts\\production\\flyer.pdf",
+      "bytes": 758526,
+      "sha256": "ac9f30675ae2fbfacbd8b4c85373d07187a8ab989b90b41849d3132264812f5c"
+    },
+    {
+      "file": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\artifacts\\production\\flyer-edited-screen.png",
+      "bytes": 200239,
+      "sha256": "ce1657c00b847dfd0ffa08ce1080f3d1dbf226a9e51c1f89f109b87422851138"
+    },
+    {
+      "file": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\artifacts\\production\\flyer-pdf-render.png",
+      "bytes": 138856,
+      "sha256": "77419e48fd5ca011b8f3eaf7b5defc41cdb567819d5d9e8ba9d30152aed9973a"
+    },
+    {
+      "file": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\artifacts\\production\\logo-edited.dake",
+      "bytes": 12806202,
+      "sha256": "e35cf7f064f13a902067458635e723ab2c743925911081ab4a89961017f5335b"
+    },
+    {
+      "file": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\artifacts\\production\\logo.png",
+      "bytes": 54039,
+      "sha256": "d4798d02936fe0eb73d4c166e9ea995f6f198ef651156137986708603cc2ba98"
+    },
+    {
+      "file": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\artifacts\\production\\logo.jpg",
+      "bytes": 40300,
+      "sha256": "fbe7dfce770dd7c2f84aad7c85e7913eebbd23c3a08cba18295040fd592158ca"
+    },
+    {
+      "file": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\artifacts\\production\\logo.webp",
+      "bytes": 18998,
+      "sha256": "f3e1bef77e6b4b1c329f30ba3217622f69e0b1ab96dd3a3ec1e83e091f41de00"
+    },
+    {
+      "file": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\artifacts\\production\\logo.svg",
+      "bytes": 11491,
+      "sha256": "9314bba94b1d65ddb49cd2f50493cfbd66973adcb821bd72cd9dde3859cb43fa"
+    },
+    {
+      "file": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\artifacts\\production\\logo.pdf",
+      "bytes": 23356,
+      "sha256": "9a15e6aba9f807a38634aa24c24abec683d3cdc412cef174177775252296fcfd"
+    },
+    {
+      "file": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\artifacts\\production\\logo-edited-screen.png",
+      "bytes": 238964,
+      "sha256": "7d3e680cf726d5df31bc07069d7c0272496ecfc745bc529be121acf6443e021f"
+    },
+    {
+      "file": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\artifacts\\production\\logo-pdf-render.png",
+      "bytes": 40148,
+      "sha256": "92a55064d8e20c694b82f6a64690d98a5259ab6a3bc43fb052037debb19574ae"
+    },
+    {
+      "file": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\artifacts\\production\\card-edited.dake",
+      "bytes": 12798220,
+      "sha256": "dabc8cf36e516940826cb71c7905058bf79435cd209f55e3395e12dc4030c596"
+    },
+    {
+      "file": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\artifacts\\production\\card.png",
+      "bytes": 54646,
+      "sha256": "33a3b42eaa3944f7e4d1f8a2d28cfa7b5c4e293cd7393b09b0aa4d1463c6c9ad"
+    },
+    {
+      "file": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\artifacts\\production\\card.jpg",
+      "bytes": 37709,
+      "sha256": "067298aedf1cf254b2b1690ceb0ebc37998366091e084f2ded9ae53477236a5f"
+    },
+    {
+      "file": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\artifacts\\production\\card.webp",
+      "bytes": 20448,
+      "sha256": "b96e352a77598c2a12570dbb4fb2a7947fc8b53166462442026ae8eae8d2c3f6"
+    },
+    {
+      "file": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\artifacts\\production\\card.svg",
+      "bytes": 5797,
+      "sha256": "92a9a39717f85884854b905ac4e2b6f0162638aeb16ce5be3e36651de93d785c"
+    },
+    {
+      "file": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\artifacts\\production\\card.pdf",
+      "bytes": 23981,
+      "sha256": "4f1b3b0715cf955fa8ec3c3eeb2007c4ac8480ed26e15cb9863912750a348feb"
+    },
+    {
+      "file": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\artifacts\\production\\card-edited-screen.png",
+      "bytes": 125202,
+      "sha256": "62ffba8f1d477eab115e52bcb8f53701fa4ecdf37a1df2865d28518a7a66efe9"
+    },
+    {
+      "file": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\artifacts\\production\\card-pdf-render.png",
+      "bytes": 9844,
+      "sha256": "abc677de3e7a529740cfaf0b77a26210f39846a3a3f5c678aa2c0c499c800458"
+    }
+  ],
+  "passed": true,
+  "finished": "2026-09-27T00:47:52.909Z",
+  "notes": [
+    "Native file-dialog answers are replaced by isolated paths; DOM controls, CDP file drops, Canvas, workers, preload, IPC, storage and exporters are real.",
+    "Prepare downloads a Google font via native HTTPS; resume has fresh user data and blocks external native requests.",
+    "PDF exports are RGB raster pages; this does not establish PDF/X, CMYK or commercial print acceptance.",
+    "Automated pixel and geometry checks do not replace final human visual review of generated artwork."
+  ],
+  "visualReview": {
+    "completed": true,
+    "method": "4 final PNGs and 4 independent Poppler PDF renders match SHA256 of directly inspected previous pass; final app screenshot directly inspected again.",
+    "files": [
+      {
+        "file": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790470018501\\banner.png",
+        "sha256": "e2d45c6b3a43874629867c25a18e08de9e3d8119e57d66f4b163b833f6f54259",
+        "matchesVisuallyInspectedFile": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790469352199\\banner.png"
+      },
+      {
+        "file": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790470018501\\banner-pdf-render.png",
+        "sha256": "33073249f5687db856df0f17a16ee3bb5610ca1613d7109b2778812152d14e7c",
+        "matchesVisuallyInspectedFile": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790469352199\\banner-pdf-render.png"
+      },
+      {
+        "file": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790470018501\\flyer.png",
+        "sha256": "63c761a18fd39ac46bcfd70512b22b24d4e63e65341ec916232e84b52af76c7a",
+        "matchesVisuallyInspectedFile": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790469352199\\flyer.png"
+      },
+      {
+        "file": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790470018501\\flyer-pdf-render.png",
+        "sha256": "77419e48fd5ca011b8f3eaf7b5defc41cdb567819d5d9e8ba9d30152aed9973a",
+        "matchesVisuallyInspectedFile": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790469352199\\flyer-pdf-render.png"
+      },
+      {
+        "file": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790470018501\\logo.png",
+        "sha256": "d4798d02936fe0eb73d4c166e9ea995f6f198ef651156137986708603cc2ba98",
+        "matchesVisuallyInspectedFile": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790469352199\\logo.png"
+      },
+      {
+        "file": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790470018501\\logo-pdf-render.png",
+        "sha256": "92a55064d8e20c694b82f6a64690d98a5259ab6a3bc43fb052037debb19574ae",
+        "matchesVisuallyInspectedFile": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790469352199\\logo-pdf-render.png"
+      },
+      {
+        "file": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790470018501\\card.png",
+        "sha256": "33a3b42eaa3944f7e4d1f8a2d28cfa7b5c4e293cd7393b09b0aa4d1463c6c9ad",
+        "matchesVisuallyInspectedFile": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790469352199\\card.png"
+      },
+      {
+        "file": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790470018501\\card-pdf-render.png",
+        "sha256": "abc677de3e7a529740cfaf0b77a26210f39846a3a3f5c678aa2c0c499c800458",
+        "matchesVisuallyInspectedFile": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\production-1790469352199\\card-pdf-render.png"
+      }
+    ],
+    "result": "Japanese text readable, intended image/vector placement and spacing, no blank output or clipping observed; transparent logo becomes white in PDF as specified."
+  }
+}

@@ -1,0 +1,1 @@
+require('./local-test-env.cjs')();const {spawnSync}=require('node:child_process');const env={...process.env};delete env.ELECTRON_RUN_AS_NODE;const p=spawnSync(require('electron'),['scripts/check-pdf-performance.cjs'],{env,stdio:'inherit',windowsHide:true,timeout:120000});if(p.error)throw p.error;process.exitCode=p.status;

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="320" height="240" viewBox="0 0 320 240" xml:space="preserve">
+<desc>Created with Fabric.js 7.4.0</desc>
+<defs>
+<clipPath id="CLIPPATH_9" >
+	<rect transform="matrix(1 0 0 1 160 120)" x="-160" y="-120" rx="0" ry="0" width="320" height="240" />
+</clipPath>
+</defs>
+<g clip-path="url(#CLIPPATH_9)" >
+<g transform="matrix(0.978147600734 0.207911690818 -0.207911690818 0.978147600734 52.888553304819 57.660895654725)" id="ec8cc6d3-b3cf-4847-a471-011a55c41613"  >
+<rect style="stroke: rgb(27,59,69); stroke-width: 0; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: rgb(255,0,0); fill-rule: nonzero; opacity: 0.75;" vector-effect="non-scaling-stroke"  x="-40" y="-30" rx="0" ry="0" width="80" height="60" />
+</g>
+<g transform="matrix(1 0 0 1 167.44 58.8)" id="253dbdae-355d-4c0a-a014-9fcb627d2545"  >
+<ellipse style="stroke: rgb(27,59,69); stroke-width: 0; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: rgb(0,255,0); fill-rule: nonzero; opacity: 1;" vector-effect="non-scaling-stroke"  cx="0" cy="0" rx="37.44" ry="28.799999999999997" />
+</g>
+<g transform="matrix(1 0 0 1 166.5 124.148671840735)" id="6fb87ba6-8bc6-454b-9f91-9b1b1e979e7a"  >
+<path style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: rgb(51,68,255); fill-rule: nonzero; opacity: 1;"  transform=" translate(-56, -53.648671840735)" d="M 22 19 C 30 0 70 100 90 90 Z" stroke-linecap="round" />
+</g>
+<g transform="matrix(1 0 0 1 60 194.226497308104)" id="23f9182e-9263-4d7d-abcb-81f8c7179633"  >
+<path style="stroke: rgb(27,59,69); stroke-width: 3; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: none; fill-rule: nonzero; opacity: 1;" vector-effect="non-scaling-stroke"  transform=" translate(-60, -194.226497308104)" d="M 10 200 C 30 180 90 190 110 200" stroke-linecap="round" />
+</g>
+<g transform="matrix(1 0 0 1 160 120)" id="64a83019-01ed-4aad-9e94-75d632ed30ad"  >
+	<image style="stroke: none; stroke-width: 0; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: rgb(0,0,0); fill-rule: nonzero; opacity: 1;"  xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAACKElEQVR4AeyXTSiEQRjH/15ZYVeRQuFga0kpufhKtEXJASkHcpVykaNyoZwdpRxJLk5SvnLwFScpiXwcFEq+djfarXe1akuTfbd55zWbmWdrmp19n2fm+f+e/+y2xkOtP6rzMKD5iwBobgCQA8gBmhOgK6C5AehLkK4AXQHNCdAV0NwA+v0KsA2nK8AS0W1NDtCt46xecgBLRLc1OUC3jrN6yQEsEd3WKXFAT2M16r19aCgYQmP+cMLRVtSPcXc71jJ8f9YXqQCWfDmoKxvA43kTjJd8pJnWx4fCudhxlWPK48eouxP3aR7HQVhX4PBxM6FepAftiThylWLS7Xe4Isj7N9jVVAPjI1tIwElGMVYzK4T2YJOlOeDxroo929Z60+W1lZcoSRoABNyJauD6/MIo4IpPFiwPQLJKUvRcHgBP0BGJPvPJkX3im0gD4C05jp8pNHd/ngnls8nSACzsXcL0vLPnc62bwzdoidxy5SQLlgYgVshg7mpssjWyzAjGQru2cq2SpAIYOX3D/vMsCiv3YOY9I2qYVrUhx/WO1vA1JgLb2HqdR2E0ZBlv56FUAPECV/ZPcXi1jIOnuW8gMSi/jY2HRUwH19ERuYinOj6nBIDjKgQ2JAAC8JRIJQco0UYBEeQAAXhKpJIDlGjjDxG8b8kBvMRUiycHqNZRXj3kAF5iqsWTA1TrKK8ecgAvMdXiyQGqdZRXDzmAl5hq8eSA/95R0fq/AAAA///710rqAAAABklEQVQDAOMN/UHaufgdAAAAAElFTkSuQmCC" x="-32" y="-32" width="64" height="64"></image>
+</g>
+</g>
+</svg>

@@ -1,0 +1,15 @@
+{
+  "date": "2026-09-26",
+  "passed": true,
+  "method": "Computer Use through Windows UI; actual packaged executable and OS save dialog",
+  "executable": "dist/DAKE_STADIO-win32-x64/DAKE_STADIO.exe",
+  "profile": "test-output/final-manual-profile",
+  "checks": [
+    "Japanese editor visibly renders and responds",
+    "sample button creates a mixed raster/vector document with eight layers",
+    "native Windows save dialog writes evidence/final-packaged-manual.dake (514095 bytes)",
+    "UI reports saved state and successful editable-project save",
+    "normal close removes application window and clears recovery.json"
+  ],
+  "limitations": "This final manual pass covers startup, sample creation, native save and clean exit. Detailed edit/export/reload checks are recorded separately in the automated test evidence."
+}

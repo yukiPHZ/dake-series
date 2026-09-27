@@ -1,0 +1,66 @@
+{
+  "checks": [
+    "business-card-bleed produces a real PDF",
+    "business-card-bleed is one page",
+    "business-card-bleed has physical page dimensions within 0.00001 point",
+    "business-card-bleed contains the raster artwork",
+    "business-card-bleed rejects incorrect image dimensions",
+    "a5-landscape produces a real PDF",
+    "a5-landscape is one page",
+    "a5-landscape has physical page dimensions within 0.00001 point",
+    "a5-landscape contains the raster artwork",
+    "a5-landscape rejects incorrect image dimensions",
+    "transparent-composite produces a real PDF",
+    "transparent-composite is one page",
+    "transparent-composite has physical page dimensions within 0.00001 point",
+    "transparent-composite contains the raster artwork",
+    "transparent-composite rejects incorrect image dimensions"
+  ],
+  "pdfs": [
+    {
+      "name": "business-card-bleed",
+      "width": 1146,
+      "height": 720,
+      "dpi": 300,
+      "mediaBox": [
+        0,
+        0,
+        275.04,
+        172.8
+      ],
+      "bytes": 7440,
+      "elapsedMs": 52
+    },
+    {
+      "name": "a5-landscape",
+      "width": 1748,
+      "height": 1240,
+      "dpi": 212,
+      "mediaBox": [
+        0,
+        0,
+        593.66037736,
+        421.13207547
+      ],
+      "bytes": 15903,
+      "elapsedMs": 82
+    },
+    {
+      "name": "transparent-composite",
+      "width": 800,
+      "height": 500,
+      "dpi": 144,
+      "transparent": true,
+      "mediaBox": [
+        0,
+        0,
+        400,
+        250
+      ],
+      "bytes": 4480,
+      "elapsedMs": 34
+    }
+  ],
+  "physicalPrinter": "not tested; no print job was submitted",
+  "passed": true
+}

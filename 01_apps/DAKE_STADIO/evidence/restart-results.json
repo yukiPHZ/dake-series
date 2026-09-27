@@ -1,0 +1,22 @@
+{
+  "passed": true,
+  "output": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\restart-1790469992873",
+  "processes": [
+    35296,
+    15640
+  ],
+  "checks": [
+    "first process saves editable project with raster and vectors",
+    "first process autosaves unsaved name and added layer",
+    "new process presents recovery UI for previous process data",
+    "recovery UI restores previous unsaved name and layer graph",
+    "recovered content still contains editable vector and embedded image",
+    "new process reopens saved file independently of old process",
+    "reopened vector remains editable and marks document dirty",
+    "post-restart edit saves as editable path to same project",
+    "post-restart save preserves previous project as backup",
+    "clean save removes obsolete recovery from earlier process",
+    "prepare and resume ran in distinct Electron processes"
+  ],
+  "interruption": "app.exit bypasses window close cleanup, simulating interruption after autosave"
+}

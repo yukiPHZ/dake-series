@@ -1,0 +1,44 @@
+{
+  "passed": true,
+  "renders": [
+    {
+      "name": "business-card-bleed",
+      "size": [
+        1146,
+        720
+      ],
+      "rmsRgb": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "passed": true
+    },
+    {
+      "name": "a5-landscape",
+      "size": [
+        1748,
+        1240
+      ],
+      "rmsRgb": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "passed": true
+    },
+    {
+      "name": "transparent-composite",
+      "size": [
+        800,
+        500
+      ],
+      "rmsRgb": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "passed": true
+    }
+  ]
+}

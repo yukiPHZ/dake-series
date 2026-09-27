@@ -1,0 +1,76 @@
+{
+  "generatedAt": "2026-09-26T23:58:35.400Z",
+  "sourceCommit": "23e54b51ddffbc7713c583748e3bd86f62b1fa4a",
+  "metadataFamilies": 1946,
+  "pinnedTreeEntries": 23736,
+  "treeTruncated": false,
+  "families": 1936,
+  "japaneseFamilies": 67,
+  "fontFiles": 3585,
+  "licenseCounts": {
+    "OFL-1.1": 1896,
+    "Apache-2.0": 35,
+    "UFL-1.0": 5
+  },
+  "skipped": [
+    {
+      "family": "Edu NSW ACT Cursive",
+      "reason": "No unique exact normalized directory match"
+    },
+    {
+      "family": "Edu NSW ACT Hand Pre",
+      "reason": "No unique exact normalized directory match"
+    },
+    {
+      "family": "Edu QLD Hand",
+      "reason": "No unique exact normalized directory match"
+    },
+    {
+      "family": "Edu SA Hand",
+      "reason": "No unique exact normalized directory match"
+    },
+    {
+      "family": "Edu VIC WA NT Hand",
+      "reason": "No unique exact normalized directory match"
+    },
+    {
+      "family": "Edu VIC WA NT Hand Pre",
+      "reason": "No unique exact normalized directory match"
+    },
+    {
+      "family": "Kumar One Outline",
+      "directory": "ofl/kumaroneoutline",
+      "reason": "No root font or license file"
+    },
+    {
+      "family": "M PLUS Rounded 1c",
+      "directory": "ofl/mplusrounded1c",
+      "reason": "No root font or license file"
+    },
+    {
+      "family": "Playwrite NZ Basic Guides",
+      "directory": "ofl/playwritenzbasicguides",
+      "reason": "No root font or license file"
+    },
+    {
+      "family": "Tinos",
+      "directory": "ofl/tinos",
+      "reason": "No root font or license file"
+    }
+  ],
+  "bytes": 1733354,
+  "sha256": "a85500435adb18ef4776d1e372d7c11ee71fa276d1d5e4afb5e85bd435a39ac9",
+  "checks": [
+    "Pinned complete official source tree",
+    "Each family has root font and license",
+    "All download paths come from tree blobs",
+    "Unique family names",
+    "At least 1000 families and 50 Japanese families",
+    "Noto Sans JP and BIZ UDPGothic included"
+  ],
+  "notes": [
+    "Metadata endpoint is not a documented public API; a validated snapshot is bundled and runtime search is offline.",
+    "Filename-inferred file style and static weight are hints; actual downloaded font metadata must be parsed for rendering.",
+    "Catalog generation does not download or bundle font binaries."
+  ]
+}

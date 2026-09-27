@@ -1,0 +1,49 @@
+{
+  "checks": [
+    "isolated preload enumerates installed Windows font faces",
+    "TTC face BIZ-UDGothic extracts to single SFNT",
+    "extracted SFNT checksum valid for BIZ-UDGothic",
+    "selected Windows face matches requested PostScript name BIZ-UDGothic",
+    "Japanese outlines exist for BIZ-UDGothic",
+    "TTC face Meiryo-Bold extracts to single SFNT",
+    "extracted SFNT checksum valid for Meiryo-Bold",
+    "selected Windows face matches requested PostScript name Meiryo-Bold",
+    "Japanese outlines exist for Meiryo-Bold",
+    "offline bundled Google catalog has Japanese families",
+    "Google font download includes full license and hash",
+    "second retrieval comes from verified local cache",
+    "downloaded full font supports Japanese paths"
+  ],
+  "local": [
+    {
+      "family": "BIZ UDGothic",
+      "postscriptName": "BIZ-UDGothic",
+      "weight": 400,
+      "fsType": 4,
+      "sha256": "c5632cf4e1419c2a032f9c896fcc4445e09a421c54c4f3362412ec80107128f9",
+      "bytes": 4720244
+    },
+    {
+      "family": "Meiryo",
+      "postscriptName": "Meiryo-Bold",
+      "weight": 700,
+      "fsType": 8,
+      "sha256": "c37ec3b9f4f6b7799696be6bb941ac56d1f6841aa401a4dfed5aa29d4995ed4b",
+      "bytes": 8931676
+    }
+  ],
+  "localCount": 301,
+  "catalogCount": 1936,
+  "google": {
+    "family": "Noto Sans JP",
+    "weight": 400,
+    "weightRange": "100 900",
+    "sha256": "c2f3b4d463500a2ddcd3849cded1fceeb9fd6d1c32e6cbecd568453ba50fc68f",
+    "sourceSha256": "c2f3b4d463500a2ddcd3849cded1fceeb9fd6d1c32e6cbecd568453ba50fc68f",
+    "fsType": 0,
+    "bytes": 9589900,
+    "fixture": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\font-probe-v2\\NotoSansJP.ttf",
+    "license": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\font-probe-v2\\NotoSansJP-OFL.txt"
+  },
+  "passed": true
+}

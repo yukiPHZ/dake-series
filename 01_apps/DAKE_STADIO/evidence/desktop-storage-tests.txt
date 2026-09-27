@@ -1,0 +1,25 @@
+▶ desktop IPC restricts write destinations, protects originals, and keeps local navigation and close guards
+  ✔ unknown sender and unapproved project paths cannot access privileged file operations (2.0239ms)
+  ✔ Save As establishes one authorized project and canceled saves create nothing (16.6291ms)
+  ✔ imported image cannot be overwritten by native export, including a hard-link alias (9.0566ms)
+  ✔ recovery uses the isolated local profile and explicit discard clears it (6.2976ms)
+  ✔ network, foreign local files, permissions, and popups are blocked (0.4998ms)
+  ✔ native close waits for renderer cleanup even for a clean document (0.1787ms)
+✔ desktop IPC restricts write destinations, protects originals, and keeps local navigation and close guards (46.983ms)
+✔ project round trip preserves embedded raster, vector path and Japanese metadata; backup retains previous successful version (19.1179ms)
+✔ failed backup leaves destination bytes untouched and removes staging files (12.195ms)
+✔ invalid dimensions, unknown versions, excessive nesting and remote image URLs are rejected before disk mutation (0.8452ms)
+✔ valid internal SVG references work and active or external SVG resources fail (0.8737ms)
+✔ export validates signatures and output mime; filename removes path traversal syntax (0.4176ms)
+✔ invalid project never replaces an existing valid file (5.4829ms)
+✔ truncated JSON and oversized files are rejected (3.2991ms)
+✔ recovery falls back to previous valid state after truncated latest write; corrupt originals remain for diagnosis (17.337ms)
+✔ explicit recovery discard removes both recovery generations and is idempotent (10.3965ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 16
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 149.6399

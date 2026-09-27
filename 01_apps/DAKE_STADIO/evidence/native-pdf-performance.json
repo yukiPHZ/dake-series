@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "width": 8000,
+  "height": 4000,
+  "elapsedMs": 2194,
+  "maxMainEventGapMs": 137,
+  "responsiveTicks": 129,
+  "pdfBytes": 10267721,
+  "output": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\pdf-performance-1790469024761",
+  "checks": [
+    "32-megapixel PDF completed",
+    "main event loop continued with maximum gap under 500ms"
+  ]
+}

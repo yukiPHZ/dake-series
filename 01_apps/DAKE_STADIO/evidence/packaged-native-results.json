@@ -1,0 +1,13 @@
+{
+  "distribution": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\dist\\DAKE_STADIO-win32-x64",
+  "output": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\packaged-native-1790470204552",
+  "checks": [
+    "native PDF worker executes from inside packaged app.asar",
+    "packaged PDF retains complete physical card size",
+    "packaged PDF work does not block main event loop for 500ms"
+  ],
+  "pdfBytes": 23981,
+  "elapsedMs": 52,
+  "maxMainGapMs": 16,
+  "passed": true
+}

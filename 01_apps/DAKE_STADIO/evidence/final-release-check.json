@@ -1,0 +1,24 @@
+{
+  "passed": true,
+  "version": "0.2.0",
+  "testedRuntimeMatchesFinalArchive": true,
+  "finalDocsExactlySynced": true,
+  "exampleIncluded": true,
+  "editableExamples": 4,
+  "originalBaselineUnchanged": true,
+  "originalFilesVerified": 138,
+  "zipBytes": 192299655,
+  "zipSha256": "e92da477276be1b993b4572f719083c4d413c090ddb9d807bffa5bdf89ad66a5",
+  "runtimeSha256": {
+    "executable": "fcd70e049d527dec96ac51b33f0193c5d3c909bacd3b476cb5e8b736baf50641",
+    "appAsar": "369d968c53af3dc9f5137df9302ed3b39f7683bb75015a532c09bf7d870201e2"
+  },
+  "docsSha256": {
+    "README.md": "3af71abfef73015d85aa0a2a43575f3083fcd119423fb8a371bc62bef17615bb",
+    "ORIGINAL.md": "e61e17d5494263247d4d0e5c485169f89f129e3c2a903d2ab18898b65aa7731e",
+    "TEST_REPORT.md": "7038736f87f05c1341fd469b0b499ac83cd5463090bb92803062f31650b0d8c1",
+    "release_body.md": "78e2e9bcf237eb05fa050a46c878ea8d05e39e13c61bb2c889960619e806a526"
+  },
+  "archiveFileCount": 95,
+  "manualPackagedPassed": true
+}

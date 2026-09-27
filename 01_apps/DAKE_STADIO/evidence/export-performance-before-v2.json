@@ -1,0 +1,106 @@
+{
+  "rows": [
+    {
+      "width": 2480,
+      "height": 3508,
+      "pixels": 8699840,
+      "kind": "structured",
+      "inputJPEGMiB": 5.6,
+      "outputPNGMiB": 25.5,
+      "currentToDataURL": {
+        "elapsedMs": 357,
+        "eventLoopTicks": 3,
+        "maxEventLoopGapMs": 358
+      },
+      "prototypeToBlob": {
+        "elapsedMs": 408,
+        "eventLoopTicks": 16,
+        "maxEventLoopGapMs": 107,
+        "renderMs": 0,
+        "encodeMs": 292,
+        "fileReadMs": 115,
+        "samePNG": false,
+        "bytes": 26785776,
+        "decodedPixelsEqual": true
+      }
+    },
+    {
+      "width": 2480,
+      "height": 3508,
+      "pixels": 8699840,
+      "kind": "high-entropy",
+      "inputJPEGMiB": 5.9,
+      "outputPNGMiB": 28.3,
+      "currentToDataURL": {
+        "elapsedMs": 441,
+        "eventLoopTicks": 3,
+        "maxEventLoopGapMs": 441
+      },
+      "prototypeToBlob": {
+        "elapsedMs": 387,
+        "eventLoopTicks": 14,
+        "maxEventLoopGapMs": 117,
+        "renderMs": 0,
+        "encodeMs": 259,
+        "fileReadMs": 127,
+        "samePNG": false,
+        "bytes": 29640919,
+        "decodedPixelsEqual": true
+      }
+    },
+    {
+      "width": 8000,
+      "height": 4000,
+      "pixels": 32000000,
+      "kind": "structured",
+      "inputJPEGMiB": 6.7,
+      "outputPNGMiB": 86.5,
+      "currentToDataURL": {
+        "elapsedMs": 1234,
+        "eventLoopTicks": 3,
+        "maxEventLoopGapMs": 1235
+      },
+      "prototypeToBlob": {
+        "elapsedMs": 3322,
+        "eventLoopTicks": 214,
+        "maxEventLoopGapMs": 360,
+        "renderMs": 1,
+        "encodeMs": 2917,
+        "fileReadMs": 404,
+        "samePNG": false,
+        "bytes": 90708596,
+        "decodedPixelsEqual": true
+      }
+    },
+    {
+      "width": 8000,
+      "height": 4000,
+      "pixels": 32000000,
+      "kind": "high-entropy",
+      "inputJPEGMiB": 21.5,
+      "outputPNGMiB": 104,
+      "currentToDataURL": {
+        "elapsedMs": 1602,
+        "eventLoopTicks": 3,
+        "maxEventLoopGapMs": 1603
+      },
+      "prototypeToBlob": {
+        "elapsedMs": 2862,
+        "eventLoopTicks": 204,
+        "maxEventLoopGapMs": 200,
+        "renderMs": 1,
+        "encodeMs": 2634,
+        "fileReadMs": 227,
+        "samePNG": false,
+        "bytes": 109005336,
+        "decodedPixelsEqual": true
+      }
+    }
+  ],
+  "measurement": {
+    "date": "2026-09-27T00:24:18.717Z",
+    "profile": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\export-probe-profile",
+    "scope": "Production source unchanged; detached toBlob prototype only",
+    "sampleCount": 1
+  }
+}

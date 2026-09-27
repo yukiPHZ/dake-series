@@ -1,0 +1,24 @@
+{
+  "date": "2026-09-27",
+  "version": "0.2.0 development integration before final freeze",
+  "method": "Windows Computer Use native pointer, accessibility and keyboard; no renderer state injection",
+  "profile": "test-output/manual-production-profile",
+  "artifact": "test-output/manual-production-profile/manual-review.dake",
+  "verified": [
+    "Welcome banner preset opens an editable document dialog and creates 1600x600 canvas",
+    "Editing state removes the welcome overlay and displays rulers and safe area",
+    "Text toolbar creates editable Japanese text; multiline content reflects immediately",
+    "Tracking 0.08em and line-height 1.6 controls visibly adjust text layout",
+    "Font library lists 301 installed Windows font faces",
+    "Google Fonts search locates Noto Sans JP; actual download applies immediately without restart",
+    "Native save dialog writes the .dake in the canonical repository and reports saved",
+    "Saved file embeds Noto Sans JP and the Japanese text remains editable"
+  ],
+  "corrections": [
+    "Default family changed from a CSS fallback list to Yu Gothic; old fallback lists remain loadable",
+    "Window dirty handler no longer overwrites the document name",
+    "Japanese filter is shown only for Google catalog because Windows API does not identify language coverage",
+    "Google download allows weight/style choice and prevents competing dialog actions during transfer"
+  ],
+  "limits": ["This record covers manual integration checks, not the final packaged build. Final build evidence is recorded separately."]
+}

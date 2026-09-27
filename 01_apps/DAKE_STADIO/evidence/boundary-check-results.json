@@ -1,0 +1,152 @@
+{
+  "output": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\boundaries-1790470042343",
+  "started": "2026-09-27T00:47:22.344Z",
+  "checks": [
+    {
+      "name": "new document command completes Boundary card",
+      "passed": true
+    },
+    {
+      "name": "new card metadata and dimensions are the initial single history state",
+      "passed": true,
+      "detail": {
+        "dpi": 300,
+        "unit": "mm",
+        "width": 1146,
+        "history": 1,
+        "undo": false
+      }
+    },
+    {
+      "name": "undo immediately after creation cannot change PDF physical size",
+      "passed": true
+    },
+    {
+      "name": "delayed save really wrote original project before response gate",
+      "passed": true
+    },
+    {
+      "name": "new document command completes Work after old save",
+      "passed": true
+    },
+    {
+      "name": "native save completes without exception",
+      "passed": true
+    },
+    {
+      "name": "old save response cannot attach its path or mark the new work saved",
+      "passed": true
+    },
+    {
+      "name": "native save completes without exception",
+      "passed": true
+    },
+    {
+      "name": "new work subsequently saves to its own path",
+      "passed": true
+    },
+    {
+      "name": "native save completes without exception",
+      "passed": true
+    },
+    {
+      "name": "edits during save remain dirty and save returns false",
+      "passed": true
+    },
+    {
+      "name": "ensureSaved cancels work replacement when further edits arrive during saving",
+      "passed": true
+    },
+    {
+      "name": "new document command completes Work after recovery discard",
+      "passed": true
+    },
+    {
+      "name": "native save completes without exception",
+      "passed": true
+    },
+    {
+      "name": "late recovery discard response cannot clear new document dirty state",
+      "passed": true
+    },
+    {
+      "name": "native save completes without exception",
+      "passed": true
+    },
+    {
+      "name": "edits during native file reading abort replacement safely",
+      "passed": true
+    },
+    {
+      "name": "font versions share family weight style but have different real binary hashes",
+      "passed": true
+    },
+    {
+      "name": "different embedded font version changes actual rendering",
+      "passed": true
+    },
+    {
+      "name": "undo restores earlier same-variant hash and actual FontFace",
+      "passed": true
+    },
+    {
+      "name": "undo restores exact old font pixels",
+      "passed": true
+    },
+    {
+      "name": "redo restores newer same-variant Face and pixels",
+      "passed": true
+    },
+    {
+      "name": "corrupt image after real old-font restoration preserves current project and state",
+      "passed": true
+    },
+    {
+      "name": "corrupt load restores prior active FontFace and exact current pixels",
+      "passed": true
+    },
+    {
+      "name": "font preparation runs inside engine busy guard",
+      "passed": true
+    },
+    {
+      "name": "editing undo and new work are rejected throughout font preparation",
+      "passed": true,
+      "detail": {
+        "add": true,
+        "undo": true,
+        "newWork": true,
+        "unchanged": true
+      }
+    },
+    {
+      "name": "released font preparation completes a single safe document swap",
+      "passed": true
+    },
+    {
+      "name": "actual native close is cancelled when edits arrive during recovery discard",
+      "passed": true
+    },
+    {
+      "name": "cancelled close keeps latest work open and dirty",
+      "passed": true
+    }
+  ],
+  "errors": [],
+  "fontFixtures": [
+    {
+      "family": "Boundary Font",
+      "sha256": "c2f3b4d463500a2ddcd3849cded1fceeb9fd6d1c32e6cbecd568453ba50fc68f",
+      "weight": 700,
+      "style": "normal"
+    },
+    {
+      "family": "Boundary Font",
+      "sha256": "0081cedabc4921982fcd061f845a005664ac7fb642af2dd34b4007bc63ccd235",
+      "weight": 700,
+      "style": "normal"
+    }
+  ],
+  "passed": true,
+  "finished": "2026-09-27T00:47:24.257Z"
+}

@@ -1,0 +1,30 @@
+{
+  "passed": true,
+  "checks": [
+    "final app, engine and vector worker sources reproduce build byte-for-byte",
+    "every bundled build desktop asset and UI_TEXT file matches workspace",
+    "static build resources match current source",
+    "app.asar contains only audited runtime files"
+  ],
+  "archive": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\dist\\DAKE_STADIO-win32-x64\\resources\\app.asar",
+  "appAsarSha256": "369d968c53af3dc9f5137df9302ed3b39f7683bb75015a532c09bf7d870201e2",
+  "files": {
+    "build/app.js": "7406ed63e171a8c064f10fbf295ee7176e4519dc3e3ae32cf9d77c6e361481f8",
+    "build/index.html": "76e327120b326ce36d251d027ee9923903461f80cfa29e8869660233ffbb6db4",
+    "build/raster-worker.js": "0413b53d335317207eb0117c1cf14a85ecd9eaa2a1890d623ca5298bd29b264d",
+    "build/style.css": "0b9ccc3facd83a19c68a005fe19dd123ef026cdad4a85ff6d77113fbf0d1fe71",
+    "build/vector-worker.js": "5eb537c50ec6723f960a9df40797f01bf6cd6cabecba729752344149b61fbf85",
+    "desktop/font-binary.cjs": "c0ef699c6329428390e82831961d3d47d07558828dc23feaff6564d121470fe6",
+    "desktop/fonts.cjs": "4e71e682bef834713080cfed758ae47154be7f7971d50529666732596afee47d",
+    "desktop/main.cjs": "2dcb66c0f1945f7c1b5f3254d66f7ae039107f902e30463162370911a596dfcd",
+    "desktop/preload.cjs": "875842ade6f66c184f23c86235d2594124032ddf2cc3e97c50542dee7c73ea05",
+    "desktop/print-artwork.cjs": "17a128652be6e3a933520c57295fbfb80cf0a74c212d64dee6fc19a97f7cd802",
+    "desktop/print-pdf-worker.cjs": "6f7b6e1fa8479e3765e00e3300b1d5de73db75043e487cd8af33ae2c70eea122",
+    "desktop/storage.cjs": "afa2e114d61205bed408ec927f178d2a8420c4476fad9da8e07d481329ff9e7e",
+    "assets/dake_icon.ico": "761adcba5e348027a705855cfa88cf19cd855cb2d3aeb0eff5282e544614a8d6",
+    "assets/google-fonts-catalog.json": "a85500435adb18ef4776d1e372d7c11ee71fa276d1d5e4afb5e85bd435a39ac9",
+    "assets/screenshot.png": "72e4b2f39c36dd8266cc2a69d8f1dbad84e84e5a83dca60501b6d44497494722",
+    "assets/THIRD_PARTY_NOTICES.txt": "698f1069cdaf467643ce18a44a936fc1796934cbcdc9f6c790753ff09fe739fe",
+    "src/ui-text.json": "5d35149b1785e9b9f5cfa187b9d606e84a82698317a750b8c4db96cc1e51997d"
+  }
+}

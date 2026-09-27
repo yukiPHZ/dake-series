@@ -1,0 +1,42 @@
+{
+  "executable": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\dist\\DAKE_STADIO-win32-x64\\DAKE_STADIO.exe",
+  "independentWorkingDirectory": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\packaged-smoke-1790470205900",
+  "checks": [
+    "executable loads page from packaged app.asar",
+    "packaged Japanese interface and native bridge initialize independently",
+    "packaged sample combines raster and editable vector layers",
+    "packaged raster worker actually processes local pixels",
+    "packaged native bridge writes recoverable local data",
+    "packaged engine exports correct-size PNG",
+    "portable distribution contains editable example and required licenses",
+    "packaged offline Google catalog includes Japanese families",
+    "packaged trusted preload discovers installed Windows fonts",
+    "packaged vector worker computes editable Boolean paths",
+    "portable banner dake example exists",
+    "portable banner png example exists",
+    "portable banner svg example exists",
+    "portable banner pdf example exists",
+    "portable flyer dake example exists",
+    "portable flyer png example exists",
+    "portable flyer svg example exists",
+    "portable flyer pdf example exists",
+    "portable logo dake example exists",
+    "portable logo png example exists",
+    "portable logo svg example exists",
+    "portable logo pdf example exists",
+    "portable card dake example exists",
+    "portable card png example exists",
+    "portable card svg example exists",
+    "portable card pdf example exists",
+    "packaged renderer has no uncaught exceptions",
+    "packaged application exits successfully"
+  ],
+  "errors": [],
+  "pageUrl": "file:///C:/Users/yukiz/devlop/DAKE_series/01_apps/DAKE_STADIO/dist/DAKE_STADIO-win32-x64/resources/app.asar/build/index.html",
+  "readyMs": 674,
+  "runtimeSha256": {
+    "executable": "fcd70e049d527dec96ac51b33f0193c5d3c909bacd3b476cb5e8b736baf50641",
+    "appAsar": "369d968c53af3dc9f5137df9302ed3b39f7683bb75015a532c09bf7d870201e2"
+  },
+  "passed": true
+}

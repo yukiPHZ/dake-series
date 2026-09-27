@@ -1,0 +1,81 @@
+{
+  "rows": [
+    {
+      "width": 2480,
+      "height": 3508,
+      "pixels": 8699840,
+      "kind": "high-entropy",
+      "inputJPEGMiB": 5.9,
+      "outputPNGMiB": 28.3,
+      "currentExport": {
+        "elapsedMs": 447,
+        "eventLoopTicks": 14,
+        "maxEventLoopGapMs": 117
+      },
+      "prototypeToBlob": {
+        "elapsedMs": 399,
+        "eventLoopTicks": 14,
+        "maxEventLoopGapMs": 120,
+        "renderMs": 0,
+        "encodeMs": 270,
+        "fileReadMs": 129,
+        "samePNG": true,
+        "bytes": 29640919,
+        "decodedPixelsEqual": true
+      }
+    },
+    {
+      "width": 8000,
+      "height": 4000,
+      "pixels": 32000000,
+      "kind": "high-entropy",
+      "inputJPEGMiB": 21.5,
+      "outputPNGMiB": 104,
+      "currentExport": {
+        "elapsedMs": 1528,
+        "eventLoopTicks": 48,
+        "maxEventLoopGapMs": 313
+      },
+      "prototypeToBlob": {
+        "elapsedMs": 2200,
+        "eventLoopTicks": 143,
+        "maxEventLoopGapMs": 190,
+        "renderMs": 0,
+        "encodeMs": 1977,
+        "fileReadMs": 223,
+        "samePNG": true,
+        "bytes": 109005336,
+        "decodedPixelsEqual": true
+      }
+    }
+  ],
+  "checks": [
+    {
+      "name": "viewport is restored before encoder yields",
+      "passed": true
+    },
+    {
+      "name": "parallel raster export is bounded",
+      "passed": true
+    },
+    {
+      "name": "asynchronous export owns immutable document pixels and dimensions",
+      "passed": true
+    },
+    {
+      "name": "encoding failure releases pending state and protects document",
+      "passed": true
+    },
+    {
+      "name": "export succeeds after an encoding failure",
+      "passed": true
+    }
+  ],
+  "passed": true,
+  "measurement": {
+    "date": "2026-09-27T00:28:58.962Z",
+    "profile": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\export-probe-profile",
+    "scope": "Production exportRaster uses toBlob+FileReader; independent viewport/pending/failure checks included",
+    "sampleCount": 1
+  }
+}

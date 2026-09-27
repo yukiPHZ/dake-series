@@ -1,0 +1,901 @@
+{
+  "passed": true,
+  "results": [
+    {
+      "name": "new document has clean history",
+      "passed": true
+    },
+    {
+      "name": "shape and history created",
+      "passed": true
+    },
+    {
+      "name": "shape undo",
+      "passed": true
+    },
+    {
+      "name": "shape redo preserves ID",
+      "passed": true
+    },
+    {
+      "name": "group two layers",
+      "passed": true
+    },
+    {
+      "name": "ungroup preserves layers",
+      "passed": true
+    },
+    {
+      "name": "group and ungroup preserve rendered pixels",
+      "passed": true
+    },
+    {
+      "name": "duplicate creates independent ID",
+      "passed": true
+    },
+    {
+      "name": "delete layer",
+      "passed": true
+    },
+    {
+      "name": "layer locks",
+      "passed": true
+    },
+    {
+      "name": "save reload preserves lock and transform",
+      "passed": true
+    },
+    {
+      "name": "invalid dimensions do not mutate current work",
+      "passed": true
+    },
+    {
+      "name": "failed image decode leaves current work intact",
+      "passed": true
+    },
+    {
+      "name": "remote project resources rejected",
+      "passed": true
+    },
+    {
+      "name": "remote SVG resources rejected",
+      "passed": true
+    },
+    {
+      "name": "unsupported SVG filter rejects before silent loss",
+      "passed": true
+    },
+    {
+      "name": "unsupported SVG mask rejects before silent loss",
+      "passed": true
+    },
+    {
+      "name": "unsupported SVG pattern rejects before silent loss",
+      "passed": true
+    },
+    {
+      "name": "unsupported SVG marker rejects before silent loss",
+      "passed": true
+    },
+    {
+      "name": "unsupported SVG textPath rejects before silent loss",
+      "passed": true
+    },
+    {
+      "name": "SVG imports editable path",
+      "passed": true
+    },
+    {
+      "name": "closed path first-node edit keeps other anchor fixed",
+      "passed": true
+    },
+    {
+      "name": "pen drag creates cubic handles",
+      "passed": true
+    },
+    {
+      "name": "brush changes actual embedded image pixels",
+      "passed": true
+    },
+    {
+      "name": "raster gesture is one undo step",
+      "passed": true
+    },
+    {
+      "name": "eraser changes source alpha",
+      "passed": true
+    },
+    {
+      "name": "undo restores erased raster pixels",
+      "passed": true
+    },
+    {
+      "name": "filtered stroke blocks overlapping export while worker runs",
+      "passed": true
+    },
+    {
+      "name": "filtered stroke commits changed pixels and filters in one undo step",
+      "passed": true
+    },
+    {
+      "name": "filtered stroke undo restores original pixels and filter chain",
+      "passed": true
+    },
+    {
+      "name": "failed filtered stroke rolls back source, visible pixels, filters and history",
+      "passed": true
+    },
+    {
+      "name": "worker chain output exactly matches Fabric CPU filter pixels",
+      "passed": true
+    },
+    {
+      "name": "worker-filtered project reload preserves exact rendered pixels",
+      "passed": true
+    },
+    {
+      "name": "editable adjustments survive project reload",
+      "passed": true
+    },
+    {
+      "name": "adjustment reset preserves original source pixels",
+      "passed": true
+    },
+    {
+      "name": "PNG export invariant under zoom",
+      "passed": true
+    },
+    {
+      "name": "PNG export exact document dimensions",
+      "passed": true
+    },
+    {
+      "name": "JPEG export has opaque background",
+      "passed": true
+    },
+    {
+      "name": "WebP export encodes WebP",
+      "passed": true
+    },
+    {
+      "name": "SVG export retains vector and embedded pixels without viewport or DOCTYPE",
+      "passed": true
+    },
+    {
+      "name": "rasterize produces editable image layer",
+      "passed": true
+    },
+    {
+      "name": "crop document bounds",
+      "passed": true
+    },
+    {
+      "name": "crop undo restores dimensions",
+      "passed": true
+    },
+    {
+      "name": "Electron native mouse events paint raster pixels",
+      "passed": true,
+      "pixel": [
+        0,
+        0,
+        255,
+        255
+      ]
+    },
+    {
+      "name": "Electron native mouse events erase raster alpha",
+      "passed": true,
+      "pixel": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "Electron native filtered brush stroke retains filters and one undo step",
+      "passed": true
+    },
+    {
+      "name": "Native pointer input while busy preserves selected raster layer",
+      "passed": true
+    },
+    {
+      "name": "Electron native drag events create cubic pen path",
+      "passed": true,
+      "path": [
+        [
+          "M",
+          19.86842105263157,
+          200.1315789473684
+        ],
+        [
+          "C",
+          40,
+          180,
+          89.73684210526318,
+          190.26315789473682,
+          109.86842105263158,
+          200.1315789473684
+        ]
+      ]
+    },
+    {
+      "name": "Electron native node drag edits path with one undo step",
+      "passed": true
+    },
+    {
+      "name": "v2 contains DPI units bleed safe and guides",
+      "passed": true
+    },
+    {
+      "name": "v2 metadata reopens exactly",
+      "passed": true
+    },
+    {
+      "name": "v1 projects load with compatible production defaults",
+      "passed": true
+    },
+    {
+      "name": "multiple layers align by actual bounds",
+      "passed": true
+    },
+    {
+      "name": "three layers distribute equal gaps",
+      "passed": true
+    },
+    {
+      "name": "layer rename and indexed reorder",
+      "passed": true
+    },
+    {
+      "name": "additive layer selection retains earlier selection",
+      "passed": true
+    },
+    {
+      "name": "guide snapping moves bounds and provides overlay lines",
+      "passed": true
+    },
+    {
+      "name": "boolean union commits editable paths in one undo",
+      "passed": true
+    },
+    {
+      "name": "boolean union has correct inside/outside geometry",
+      "passed": true,
+      "detail": {
+        "alphas": [
+          255,
+          255,
+          255
+        ],
+        "expected": [
+          255,
+          255,
+          255
+        ]
+      }
+    },
+    {
+      "name": "boolean union keeps pixels through reopen",
+      "passed": true
+    },
+    {
+      "name": "boolean subtract commits editable paths in one undo",
+      "passed": true
+    },
+    {
+      "name": "boolean subtract has correct inside/outside geometry",
+      "passed": true,
+      "detail": {
+        "alphas": [
+          255,
+          0,
+          0
+        ],
+        "expected": [
+          255,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "name": "boolean subtract keeps pixels through reopen",
+      "passed": true
+    },
+    {
+      "name": "boolean intersect commits editable paths in one undo",
+      "passed": true
+    },
+    {
+      "name": "boolean intersect has correct inside/outside geometry",
+      "passed": true,
+      "detail": {
+        "alphas": [
+          0,
+          255,
+          0
+        ],
+        "expected": [
+          0,
+          255,
+          0
+        ]
+      }
+    },
+    {
+      "name": "boolean intersect keeps pixels through reopen",
+      "passed": true
+    },
+    {
+      "name": "boolean divide commits editable paths in one undo",
+      "passed": true
+    },
+    {
+      "name": "boolean divide has correct inside/outside geometry",
+      "passed": true,
+      "detail": {
+        "alphas": [
+          255,
+          255,
+          0
+        ],
+        "expected": [
+          255,
+          255,
+          0
+        ]
+      }
+    },
+    {
+      "name": "boolean divide keeps pixels through reopen",
+      "passed": true
+    },
+    {
+      "name": "boolean compound commits editable paths in one undo",
+      "passed": true
+    },
+    {
+      "name": "boolean compound has correct inside/outside geometry",
+      "passed": true,
+      "detail": {
+        "alphas": [
+          255,
+          0,
+          255
+        ],
+        "expected": [
+          255,
+          0,
+          255
+        ]
+      }
+    },
+    {
+      "name": "boolean compound keeps pixels through reopen",
+      "passed": true
+    },
+    {
+      "name": "compound splits into independently editable contours",
+      "passed": true
+    },
+    {
+      "name": "curved boolean retains cubic Bezier segments",
+      "passed": true
+    },
+    {
+      "name": "empty boolean leaves all original objects intact",
+      "passed": true
+    },
+    {
+      "name": "non-destructive shape mask clips pixels without deleting photo",
+      "passed": true
+    },
+    {
+      "name": "mask retains original embedded image bytes",
+      "passed": true
+    },
+    {
+      "name": "SVG contains editable vector clipping geometry",
+      "passed": true
+    },
+    {
+      "name": "mask project reload preserves exact PNG pixels",
+      "passed": true
+    },
+    {
+      "name": "mask can be disabled and reveals original image",
+      "passed": true
+    },
+    {
+      "name": "disabled mask reopens and can be enabled without lost clip",
+      "passed": true
+    },
+    {
+      "name": "release restores original image and shape identifiers",
+      "passed": true
+    },
+    {
+      "name": "mask release is undoable",
+      "passed": true
+    },
+    {
+      "name": "mask release redo retains geometry",
+      "passed": true
+    },
+    {
+      "name": "rasterization respects mask while retaining pixel editing",
+      "passed": true
+    },
+    {
+      "name": "mask release carries current group transform into source objects",
+      "passed": true
+    },
+    {
+      "name": "node insertion splits cubic curve without changing shape",
+      "passed": true,
+      "detail": {
+        "delta": 0
+      }
+    },
+    {
+      "name": "smooth node creates continuous cubic handles",
+      "passed": true
+    },
+    {
+      "name": "corner removes adjacent handles",
+      "passed": true
+    },
+    {
+      "name": "node removal changes path topology",
+      "passed": true
+    },
+    {
+      "name": "closed contour can be opened",
+      "passed": true
+    },
+    {
+      "name": "open contour can be closed",
+      "passed": true
+    },
+    {
+      "name": "repeated first-node smoothing retains one joined closing seam",
+      "passed": true
+    },
+    {
+      "name": "node selection resets when leaving the path",
+      "passed": true
+    },
+    {
+      "name": "node topology survives save and reload",
+      "passed": true
+    },
+    {
+      "name": "effective image DPI reflects actual transformed pixel density",
+      "passed": true
+    },
+    {
+      "name": "small crop keeps production metadata inside new document bounds",
+      "passed": true
+    },
+    {
+      "name": "duplicated mask receives independent source shape identifier",
+      "passed": true
+    },
+    {
+      "name": "ungroup mask restores original clipping shape",
+      "passed": true
+    },
+    {
+      "name": "layer multiple selection respects locked objects",
+      "passed": true
+    },
+    {
+      "name": "vector worker rejects overlapping undo",
+      "passed": true
+    },
+    {
+      "name": "font worker keeps foreground responsive ArialMT 0",
+      "passed": true,
+      "detail": {
+        "durationMs": 22,
+        "maxEventLoopGapMs": 16
+      }
+    },
+    {
+      "name": "font ArialMT tracking 0 outlines into editable curves in one step",
+      "passed": true
+    },
+    {
+      "name": "font ArialMT tracking 0 retains glyph layout and weight",
+      "passed": true,
+      "detail": {
+        "iou": 0.9340009103322713,
+        "areaA": 6445,
+        "areaB": 6302,
+        "areaRatio": 0.9778122575640031
+      }
+    },
+    {
+      "name": "outline SVG has no font dependency ArialMT 0",
+      "passed": true
+    },
+    {
+      "name": "outline project reload preserves exact pixels ArialMT 0",
+      "passed": true
+    },
+    {
+      "name": "font worker keeps foreground responsive ArialMT 80",
+      "passed": true,
+      "detail": {
+        "durationMs": 32,
+        "maxEventLoopGapMs": 16
+      }
+    },
+    {
+      "name": "font ArialMT tracking 80 outlines into editable curves in one step",
+      "passed": true
+    },
+    {
+      "name": "font ArialMT tracking 80 retains glyph layout and weight",
+      "passed": true,
+      "detail": {
+        "iou": 0.9484813084112149,
+        "areaA": 8406,
+        "areaB": 8273,
+        "areaRatio": 0.984177968118011
+      }
+    },
+    {
+      "name": "outline SVG has no font dependency ArialMT 80",
+      "passed": true
+    },
+    {
+      "name": "outline project reload preserves exact pixels ArialMT 80",
+      "passed": true
+    },
+    {
+      "name": "invalid font preserves editable text ArialMT",
+      "passed": true
+    },
+    {
+      "name": "font worker keeps foreground responsive Arial-BoldMT 0",
+      "passed": true,
+      "detail": {
+        "durationMs": 12,
+        "maxEventLoopGapMs": 17
+      }
+    },
+    {
+      "name": "font Arial-BoldMT tracking 0 outlines into editable curves in one step",
+      "passed": true
+    },
+    {
+      "name": "font Arial-BoldMT tracking 0 retains glyph layout and weight",
+      "passed": true,
+      "detail": {
+        "iou": 0.9105924978687127,
+        "areaA": 8982,
+        "areaB": 8947,
+        "areaRatio": 0.9961033177466043
+      }
+    },
+    {
+      "name": "outline SVG has no font dependency Arial-BoldMT 0",
+      "passed": true
+    },
+    {
+      "name": "outline project reload preserves exact pixels Arial-BoldMT 0",
+      "passed": true
+    },
+    {
+      "name": "font worker keeps foreground responsive Arial-BoldMT 80",
+      "passed": true,
+      "detail": {
+        "durationMs": 28,
+        "maxEventLoopGapMs": 17
+      }
+    },
+    {
+      "name": "font Arial-BoldMT tracking 80 outlines into editable curves in one step",
+      "passed": true
+    },
+    {
+      "name": "font Arial-BoldMT tracking 80 retains glyph layout and weight",
+      "passed": true,
+      "detail": {
+        "iou": 0.931302374301676,
+        "areaA": 11073,
+        "areaB": 11052,
+        "areaRatio": 0.9981034949878081
+      }
+    },
+    {
+      "name": "outline SVG has no font dependency Arial-BoldMT 80",
+      "passed": true
+    },
+    {
+      "name": "outline project reload preserves exact pixels Arial-BoldMT 80",
+      "passed": true
+    },
+    {
+      "name": "invalid font preserves editable text Arial-BoldMT",
+      "passed": true
+    },
+    {
+      "name": "font worker keeps foreground responsive BIZ-UDGothic 0",
+      "passed": true,
+      "detail": {
+        "durationMs": 31,
+        "maxEventLoopGapMs": 17
+      }
+    },
+    {
+      "name": "font BIZ-UDGothic tracking 0 outlines into editable curves in one step",
+      "passed": true
+    },
+    {
+      "name": "font BIZ-UDGothic tracking 0 retains glyph layout and weight",
+      "passed": true,
+      "detail": {
+        "iou": 0.9049084249084249,
+        "areaA": 6593,
+        "areaB": 6408,
+        "areaRatio": 0.9719399362960716
+      }
+    },
+    {
+      "name": "outline SVG has no font dependency BIZ-UDGothic 0",
+      "passed": true
+    },
+    {
+      "name": "outline project reload preserves exact pixels BIZ-UDGothic 0",
+      "passed": true
+    },
+    {
+      "name": "font worker keeps foreground responsive BIZ-UDGothic 80",
+      "passed": true,
+      "detail": {
+        "durationMs": 40,
+        "maxEventLoopGapMs": 17
+      }
+    },
+    {
+      "name": "font BIZ-UDGothic tracking 80 outlines into editable curves in one step",
+      "passed": true
+    },
+    {
+      "name": "font BIZ-UDGothic tracking 80 retains glyph layout and weight",
+      "passed": true,
+      "detail": {
+        "iou": 0.9137647058823529,
+        "areaA": 8257,
+        "areaB": 8010,
+        "areaRatio": 0.9700859876468451
+      }
+    },
+    {
+      "name": "outline SVG has no font dependency BIZ-UDGothic 80",
+      "passed": true
+    },
+    {
+      "name": "outline project reload preserves exact pixels BIZ-UDGothic 80",
+      "passed": true
+    },
+    {
+      "name": "invalid font preserves editable text BIZ-UDGothic",
+      "passed": true
+    },
+    {
+      "name": "font worker keeps foreground responsive BIZ-UDGothic-Bold 0",
+      "passed": true,
+      "detail": {
+        "durationMs": 32,
+        "maxEventLoopGapMs": 17
+      }
+    },
+    {
+      "name": "font BIZ-UDGothic-Bold tracking 0 outlines into editable curves in one step",
+      "passed": true
+    },
+    {
+      "name": "font BIZ-UDGothic-Bold tracking 0 retains glyph layout and weight",
+      "passed": true,
+      "detail": {
+        "iou": 0.9309285389167046,
+        "areaA": 8564,
+        "areaB": 8405,
+        "areaRatio": 0.9814339093881363
+      }
+    },
+    {
+      "name": "outline SVG has no font dependency BIZ-UDGothic-Bold 0",
+      "passed": true
+    },
+    {
+      "name": "outline project reload preserves exact pixels BIZ-UDGothic-Bold 0",
+      "passed": true
+    },
+    {
+      "name": "font worker keeps foreground responsive BIZ-UDGothic-Bold 80",
+      "passed": true,
+      "detail": {
+        "durationMs": 36,
+        "maxEventLoopGapMs": 17
+      }
+    },
+    {
+      "name": "font BIZ-UDGothic-Bold tracking 80 outlines into editable curves in one step",
+      "passed": true
+    },
+    {
+      "name": "font BIZ-UDGothic-Bold tracking 80 retains glyph layout and weight",
+      "passed": true,
+      "detail": {
+        "iou": 0.9314274676453544,
+        "areaA": 10049,
+        "areaB": 9949,
+        "areaRatio": 0.9900487610707533
+      }
+    },
+    {
+      "name": "outline SVG has no font dependency BIZ-UDGothic-Bold 80",
+      "passed": true
+    },
+    {
+      "name": "outline project reload preserves exact pixels BIZ-UDGothic-Bold 80",
+      "passed": true
+    },
+    {
+      "name": "invalid font preserves editable text BIZ-UDGothic-Bold",
+      "passed": true
+    },
+    {
+      "name": "font worker keeps foreground responsive NotoSansJP-400 0",
+      "passed": true,
+      "detail": {
+        "durationMs": 101,
+        "maxEventLoopGapMs": 17
+      }
+    },
+    {
+      "name": "font NotoSansJP-400 tracking 0 outlines into editable curves in one step",
+      "passed": true
+    },
+    {
+      "name": "font NotoSansJP-400 tracking 0 retains glyph layout and weight",
+      "passed": true,
+      "detail": {
+        "iou": 0.9029992684711046,
+        "areaA": 6594,
+        "areaB": 6413,
+        "areaRatio": 0.9725508037609949
+      }
+    },
+    {
+      "name": "outline SVG has no font dependency NotoSansJP-400 0",
+      "passed": true
+    },
+    {
+      "name": "outline project reload preserves exact pixels NotoSansJP-400 0",
+      "passed": true
+    },
+    {
+      "name": "font worker keeps foreground responsive NotoSansJP-400 80",
+      "passed": true,
+      "detail": {
+        "durationMs": 83,
+        "maxEventLoopGapMs": 17
+      }
+    },
+    {
+      "name": "font NotoSansJP-400 tracking 80 outlines into editable curves in one step",
+      "passed": true
+    },
+    {
+      "name": "font NotoSansJP-400 tracking 80 retains glyph layout and weight",
+      "passed": true,
+      "detail": {
+        "iou": 0.9189536377437814,
+        "areaA": 8267,
+        "areaB": 8165,
+        "areaRatio": 0.9876617878311359
+      }
+    },
+    {
+      "name": "outline SVG has no font dependency NotoSansJP-400 80",
+      "passed": true
+    },
+    {
+      "name": "outline project reload preserves exact pixels NotoSansJP-400 80",
+      "passed": true
+    },
+    {
+      "name": "invalid font preserves editable text NotoSansJP-400",
+      "passed": true
+    },
+    {
+      "name": "font worker keeps foreground responsive NotoSansJP-700 0",
+      "passed": true,
+      "detail": {
+        "durationMs": 59,
+        "maxEventLoopGapMs": 17
+      }
+    },
+    {
+      "name": "font NotoSansJP-700 tracking 0 outlines into editable curves in one step",
+      "passed": true
+    },
+    {
+      "name": "font NotoSansJP-700 tracking 0 retains glyph layout and weight",
+      "passed": true,
+      "detail": {
+        "iou": 0.9430219613399453,
+        "areaA": 9730,
+        "areaB": 9469,
+        "areaRatio": 0.9731757451181912
+      }
+    },
+    {
+      "name": "outline SVG has no font dependency NotoSansJP-700 0",
+      "passed": true
+    },
+    {
+      "name": "outline project reload preserves exact pixels NotoSansJP-700 0",
+      "passed": true
+    },
+    {
+      "name": "font worker keeps foreground responsive NotoSansJP-700 80",
+      "passed": true,
+      "detail": {
+        "durationMs": 74,
+        "maxEventLoopGapMs": 17
+      }
+    },
+    {
+      "name": "font NotoSansJP-700 tracking 80 outlines into editable curves in one step",
+      "passed": true
+    },
+    {
+      "name": "font NotoSansJP-700 tracking 80 retains glyph layout and weight",
+      "passed": true,
+      "detail": {
+        "iou": 0.9562186517044972,
+        "areaA": 11608,
+        "areaB": 11403,
+        "areaRatio": 0.9823397656788422
+      }
+    },
+    {
+      "name": "outline SVG has no font dependency NotoSansJP-700 80",
+      "passed": true
+    },
+    {
+      "name": "outline project reload preserves exact pixels NotoSansJP-700 80",
+      "passed": true
+    },
+    {
+      "name": "invalid font preserves editable text NotoSansJP-700",
+      "passed": true
+    }
+  ],
+  "durationMs": 6092,
+  "performance": {
+    "document": "2048x1536",
+    "rasterGestures": 6,
+    "gestureTimesMs": [
+      15,
+      19,
+      15,
+      15,
+      15,
+      14
+    ],
+    "undoMs": 3,
+    "exportMs": 2015,
+    "maxFrameGapMs": 1007,
+    "totalMs": 8055
+  }
+}

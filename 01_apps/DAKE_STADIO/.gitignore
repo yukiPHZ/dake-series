@@ -1,0 +1,25 @@
+node_modules/
+build/
+dist/
+test-output/
+artifacts/
+*.log
+
+# Production development artifacts
+*.spec
+*_config.json
+__pycache__/
+*.pyc
+*.exe
+artifacts/
+
+# Regenerated test bundles and local probe data
+/evidence/*.bundle.js
+/evidence/vector-worker.js
+/evidence/raster-worker.js
+/evidence/engine-check.html
+/evidence/engine-check-latest.txt
+/evidence/outline-debug.json
+/evidence/outline-*.png
+/evidence/local-font-probe.json
+/evidence/font-catalog-sources/

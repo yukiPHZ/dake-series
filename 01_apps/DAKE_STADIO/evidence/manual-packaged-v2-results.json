@@ -1,0 +1,37 @@
+{
+  "passed": true,
+  "date": "2026-09-27T00:58:13.770Z",
+  "version": "0.2.0",
+  "executable": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\dist\\DAKE_STADIO-win32-x64\\DAKE_STADIO.exe",
+  "appAsarSha256": "369d968c53af3dc9f5137df9302ed3b39f7683bb75015a532c09bf7d870201e2",
+  "method": "Computer Use @oai/sky through real Windows UI; no replacement of native file dialogs or editor API",
+  "checks": [
+    "Packaged initial Japanese welcome and native menu observed",
+    "Native open dialog loaded bundled card.dake",
+    "Name layer selected and Japanese text changed from 緑野 花 to 緑野 花子",
+    "Ctrl+Shift+S real native dialog saved a separate .dake in canonical test-output",
+    "PNG export UI correctly disables JPEG/WebP-only quality slider",
+    "Real native export dialog wrote 1146x720 PNG; exported image visually inspected",
+    "Saved .dake contains edited text, mm/300dpi metadata and embedded Noto Sans JP bytes with license",
+    "Original bundled card.dake SHA256 unchanged",
+    "Alt+F4 normal close verified by empty matching window inventory",
+    "Same packaged EXE relaunched and saved .dake reopened through native dialog; edited Japanese text, geometry and guides visibly restored"
+  ],
+  "files": {
+    "project": {
+      "path": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\manual-packaged-0.2\\card-review.dake",
+      "sha256": "df8143c9c0a8ac8d0fadf377ad1baa6b0177d0773583fb63268e565d0eb10e66"
+    },
+    "png": {
+      "path": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\test-output\\manual-packaged-0.2\\card-review.png",
+      "width": 1146,
+      "height": 720,
+      "sha256": "54b606feb8a29146f22b1ff29411119e6a45f7a0fabc156eebef5aa3f081eab9"
+    },
+    "original": {
+      "path": "C:\\Users\\yukiz\\devlop\\DAKE_series\\01_apps\\DAKE_STADIO\\dist\\DAKE_STADIO-win32-x64\\examples\\card.dake",
+      "sha256": "dabc8cf36e516940826cb71c7905058bf79435cd209f55e3395e12dc4030c596"
+    }
+  },
+  "scope": "Same Windows PC only; not a physical-print or other-PC validation. Reopened clean artwork left visible for review."
+}

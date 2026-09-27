@@ -1,0 +1,17 @@
+✔ project round trip preserves embedded raster, vector path and Japanese metadata; backup retains previous successful version (26.6233ms)
+✔ failed backup leaves destination bytes untouched and removes staging files (11.1032ms)
+✔ invalid dimensions, unknown versions, excessive nesting and remote image URLs are rejected before disk mutation (0.8509ms)
+✔ valid internal SVG references work and active or external SVG resources fail (0.8108ms)
+✔ export validates signatures and output mime; filename removes path traversal syntax (0.4023ms)
+✔ invalid project never replaces an existing valid file (4.6317ms)
+✔ truncated JSON and oversized files are rejected (2.4379ms)
+✔ recovery falls back to previous valid state after truncated latest write; corrupt originals remain for diagnosis (16.3808ms)
+✔ explicit recovery discard removes both recovery generations and is idempotent (8.9145ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 136.3389
