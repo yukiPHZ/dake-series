@@ -7,6 +7,7 @@ import json
 import re
 from pathlib import Path
 
+import main
 from PIL import Image
 
 
@@ -63,10 +64,12 @@ def test_readme_meta_matches_original_and_has_formal_release_flags() -> None:
     assert meta["status"] == "available"
     assert meta["release_url"] == (
         "https://github.com/yukiPHZ/dake-series/releases/tag/"
-        "DAKE_PDF_OverviewRename_v1.0.1"
+        "DAKE_PDF_OverviewRename_v1.0.2"
     )
     assert meta["show_in_launcher"] is True
     assert meta["show_on_site"] is True
+    assert main.APP_VERSION == meta["version"]
+    assert main.WINDOW_TITLE == f"{main.APP_NAME} v{main.APP_VERSION}"
 
 
 def test_release_body_matches_readme_derived_view() -> None:
@@ -87,7 +90,7 @@ def test_booth_views_set_price_and_github_release_url() -> None:
     assert release
     assert release.group(1).strip() == (
         "https://github.com/yukiPHZ/dake-series/releases/tag/"
-        "DAKE_PDF_OverviewRename_v1.0.1"
+        "DAKE_PDF_OverviewRename_v1.0.2"
     )
     booth_url = re.search(r"(?ms)^# URL\s*\n(.*?)(?=^# |\Z)", canonical)
     assert booth_url

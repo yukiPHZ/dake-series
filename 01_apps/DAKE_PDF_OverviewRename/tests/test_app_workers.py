@@ -9,7 +9,15 @@ from pathlib import Path
 
 import main
 import pytest
-from main import LatestPreviewWorker, RenderPool, RenderRequest, scan_pdf_folder
+from PIL import Image
+from main import (
+    LatestPreviewWorker,
+    RenderPool,
+    RenderRequest,
+    format_file_size,
+    scan_pdf_folder,
+)
+from pypdf import PdfWriter
 from rename_core import FileSnapshot
 
 
@@ -26,6 +34,94 @@ def test_scan_is_sorted_non_recursive_and_pdf_only(tmp_path: Path) -> None:
     for name in ("b.PDF", "A.pdf", "c.pdf"):
         (tmp_path / name).write_bytes(name.encode())
     assert [item.path.name for item in scan_pdf_folder(tmp_path)] == ["A.pdf", "b.PDF", "c.pdf"]
+
+
+def test_scan_capture_failure_is_reported_instead_of_silently_omitted(
+    monkeypatch, tmp_path: Path
+) -> None:
+    for name in ("001.pdf", "002.pdf", "003.pdf"):
+        (tmp_path / name).write_bytes(b"fixture")
+    original_capture = FileSnapshot.capture
+
+    def capture(path: Path):
+        if path.name == "002.pdf":
+            raise OSError("simulated stat failure")
+        return original_capture(path)
+
+    monkeypatch.setattr(main.FileSnapshot, "capture", capture)
+
+    with pytest.raises(OSError, match="simulated stat failure"):
+        scan_pdf_folder(tmp_path)
+
+
+@pytest.mark.parametrize(
+    ("size_bytes", "expected"),
+    [
+        (0, "0 B"),
+        (1023, "1023 B"),
+        (1024, "1 KB"),
+        (286 * 1024, "286 KB"),
+        (1024**2, "1.0 MB"),
+        (round(3.8 * 1024**2), "3.8 MB"),
+        (1024**3, "1.0 GB"),
+    ],
+)
+def test_format_file_size_uses_stable_binary_units(size_bytes: int, expected: str) -> None:
+    assert format_file_size(size_bytes) == expected
+
+
+def _write_image_pdf(path: Path, page_count: int = 1) -> None:
+    pages = [Image.new("RGB", (80, 120), (245 - index, 245, 245)) for index in range(page_count)]
+    pages[0].save(path, "PDF", save_all=True, append_images=pages[1:], resolution=72.0)
+
+
+def test_corrupt_encrypted_and_zero_page_pdfs_do_not_stop_later_results(tmp_path: Path) -> None:
+    total = 32
+    for index in range(1, total + 1):
+        _write_image_pdf(tmp_path / f"scan_{index:04d}.pdf", 3 if index == 1 else 1)
+
+    (tmp_path / "scan_0024.pdf").write_bytes(b"")
+    (tmp_path / "scan_0025.pdf").write_bytes(b"not a PDF")
+    zero_page = PdfWriter()
+    with (tmp_path / "scan_0026.pdf").open("wb") as stream:
+        zero_page.write(stream)
+    encrypted = PdfWriter()
+    encrypted.add_blank_page(width=72, height=72)
+    encrypted.encrypt("synthetic-password")
+    with (tmp_path / "scan_0027.pdf").open("wb") as stream:
+        encrypted.write(stream)
+
+    snapshots = scan_pdf_folder(tmp_path)
+    expected_names = {f"scan_{index:04d}.pdf" for index in range(1, total + 1)}
+    assert {snapshot.path.name for snapshot in snapshots} == expected_names
+    assert {snapshot.path.name: snapshot.size for snapshot in snapshots} == {
+        path.name: path.stat().st_size for path in tmp_path.glob("*.pdf")
+    }
+
+    pool = RenderPool(worker_count=3)
+    try:
+        pool.replace(
+            1,
+            [
+                RenderRequest(1, "thumbnail", index, snapshot, (100, 140))
+                for index, snapshot in enumerate(snapshots)
+            ],
+        )
+        results = [pool.results.get(timeout=10) for _ in range(total)]
+    finally:
+        pool.shutdown()
+
+    by_name = {result.request.snapshot.path.name: result for result in results}
+    assert set(by_name) == expected_names
+    assert {name for name, result in by_name.items() if result.error is not None} == {
+        "scan_0024.pdf",
+        "scan_0025.pdf",
+        "scan_0026.pdf",
+        "scan_0027.pdf",
+    }
+    assert by_name["scan_0001.pdf"].page_count == 3
+    assert by_name["scan_0026.pdf"].page_count is None
+    assert all(by_name[f"scan_{index:04d}.pdf"].error is None for index in range(28, 33))
 
 
 def test_render_pool_replaces_not_started_old_jobs(monkeypatch, tmp_path: Path) -> None:

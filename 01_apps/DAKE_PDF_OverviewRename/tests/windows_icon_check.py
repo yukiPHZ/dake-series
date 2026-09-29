@@ -10,7 +10,7 @@ from ctypes import wintypes
 from pathlib import Path
 
 
-WINDOW_TITLE = "DakePDF俯瞰名前変更"
+WINDOW_TITLE = "DakePDF俯瞰名前変更 v1.0.2"
 WM_GETICON = 0x007F
 ICON_SMALL = 0
 ICON_BIG = 1

@@ -13,7 +13,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示、実�
 - short_title: `PDF俯瞰名前変更`
 - category: `PDF`
 - status: `available`
-- version: `1.0.1`
+- version: `1.0.2`
 - app_type: `market`
 - completion_goal: `formal_release`
 - price: `500円`
@@ -133,12 +133,14 @@ PDFをサムネイルで俯瞰する
 各カードには最低限、次を表示します。
 
 - 1ページ目サムネイル
-- ページ数
+- PDFのページ数と実ファイル容量（例: `24ページ ｜ 3.8 MB`）
 - 元ファイル名
 - 新ファイル名入力欄
 - 編集できない `.pdf`
 
 長いファイル名でカード幅を広げません。入力欄は横スクロールを許可します。
+
+容量は実ファイルのバイト数から、B / KB / MB / GBの1024基準で整形します。BとKBは整数、MBとGBは小数1桁で表示します。ページ数取得前は `ページ数確認中…`、取得できない場合は `ページ数不明` とし、いずれの場合も取得済みの容量は表示します。ページ数取得のために全ページをレンダリングせず、1ページ目サムネイルと同じPDF open結果を利用します。
 
 変更待ちカードだけ背景または枠を薄青にし、未変更カードは静かな白背景とします。
 
@@ -149,10 +151,10 @@ PDFをサムネイルで俯瞰する
 例:
 
 ```text
-48件 ｜ サムネイル 18 / 48 ｜ 3件の変更待ち
+PDF 48件 ｜ サムネイル処理 32/48（失敗2）｜ 変更待ち3件
 ```
 
-入力開始によってサムネイル進捗が消えないようにします。処理中、完了、エラーは明確に分けます。
+PDF件数はscanで検出・snapshot取得できたカード総数、サムネイル処理数は成功と失敗を合わせた完了数、失敗数はサムネイルを生成できなかったカード数とします。失敗カードも一覧・名前入力・ページ数/容量表示を可能な範囲で維持します。入力開始によってサムネイル進捗が消えないようにします。処理中、完了、エラーは明確に分けます。
 
 名前変更とUndoの成功時は、通常の件数・サムネイル進捗とは別の非モーダル表示領域へ、`THEME["success"]` を使った太字の `✓ 完了` メッセージを表示します。サムネイル進捗更新では消さず、次の編集、フォルダ選択、リフレッシュ、再読み込み、Undo開始または次の名前変更開始で消します。
 
@@ -425,7 +427,9 @@ PDFレンダリングライブラリの採用・配布時は、現行ライセ�
 
 ### データ件数
 
-Codex環境では、機密情報を含まない合成PDFで1件、48件、100件、300件を確認します。
+Codex環境では、機密情報を含まない合成PDFで0件、1件、23件、24件、25件、26件、27件、32件、47件、48件、49件、100件、300件を確認します。期待ファイル集合、scan結果、カード集合、配置済みカード、処理結果のファイル対応を比較し、27件目以降と末尾カードまで到達できることを確認します。
+
+正常PDFだけでなく、複数ページ、画像主体、日本語・空白・長いファイル名、大文字拡張子、暗号化、破損、空ファイル、0ページ相当、走査後の削除・変更を含めます。異常PDFを24〜27番目前後へ置き、後続の正常PDFまで処理されることを確認します。
 
 菊田の実フォルダ48件による最終確認は、人間の実機受入試験として別に行います。実フォルダへアクセスできない環境で「実データ確認済み」と報告しません。
 
@@ -465,11 +469,11 @@ PDFを開かず、見ながら名前を変える。
   "launcher_description": "PDFを開かず、サムネイルを見ながら名前を変更します。",
   "site_title": "DakePDF俯瞰名前変更",
   "site_description": "フォルダ内のPDFをサムネイルで俯瞰しながら、PDFごとに名前を変更できるWindows向けアプリです。",
-  "update_summary": "v1.0.1。再読み込み、特大表示、プレビューzoom・pan、完了フィードバックを追加。",
+  "update_summary": "v1.0.2。全PDFの末尾到達回帰を強化し、ページ数・容量とサムネイル失敗数を表示。",
   "folder_name": "DAKE_PDF_OverviewRename",
   "exe_name": "DakePDF_OverviewRename.exe",
-  "version": "1.0.1",
-  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.1",
+  "version": "1.0.2",
+  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.2",
   "app_type": "market",
   "completion_goal": "formal_release",
   "screenshot_path": "assets/screenshot.webp",
@@ -493,7 +497,7 @@ Windows
 - 商品画像: assets/booth_thumbnail.jpg
 - 補助画像: assets/screenshot.jpg
 - 作品ファイル: booth_ready/DakePDF_OverviewRename.zip
-- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.1
+- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.2
 - BOOTH URL: https://peakheadz.booth.pm/items/8798555
 
 ## Store表示用情報
@@ -519,7 +523,7 @@ Windows
 
 GitHub Release、BOOTH、dakeapp.com、Storeを正式配布先とし、DAKE正式出荷ラインに従います。
 
-- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.1
+- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.2
 - BOOTH URL: https://peakheadz.booth.pm/items/8798555
 - BOOTH配布zip: booth_ready/DakePDF_OverviewRename.zip
 - Store URL: https://store.dakeapp.com/product/?id=dake_pdf_overview_rename
@@ -559,9 +563,10 @@ build、dist、spec、設定ファイル、個人データ、ソース一式を�
 - 公開画像: 一時作成した `C:\Users\Public\Documents\DAKE_synthetic_release_20260902_48` の無機密合成PDF 48件だけを使い、実アプリ画面から `assets/screenshot.webp` / `assets/screenshot.jpg` / `assets/booth_thumbnail.jpg` を作成。一時フォルダはキャプチャ後に削除済み
 - 第三者ライセンス: ビルド環境の pypdfium2 5.13.0 / PDFium 153.0.7999.0（origin: pdfium-binaries）のwheelに記録されたLicense-File全19件を原文のまま `third_party_licenses/pypdfium2-5.13.0/` と配布物へ収録。コピー元とのSHA-256集合一致を確認
 - 派生ビュー: `README.md`、`DAKE_META`、`release_body.md`、`booth_product.txt`、`booth_ready/` を本正本から整備。価格、GitHub Release URL、BOOTH URLを正式出荷値へ統一
-- 現行公開版: `version: 1.0.1`、`price: 500円`、`status: available`。GitHub ReleaseとBOOTH既存商品に反映済み
+- 作業開始時の公開版: `version: 1.0.1`、`price: 500円`、`status: available`。GitHub Release、BOOTH、dakeapp.com、Storeへ反映済み
+- 今回出荷版: `version: 1.0.2`。固定26件上限は現行コードで再現せず、境界件数・異常PDF・末尾到達の回帰を強化し、ページ数・容量・サムネイル失敗数表示を整備する
 - 公開対象: `show_in_launcher: true`、`show_on_site: true`
-- Phase 3正式出荷: v1.0.0時点の実績。v1.0.1のdakeapp.com / Store反映はIssue #31で別途確認する
+- v1.0.1正式出荷: PR #25/#33とIssue #27/#31で、Release、既存BOOTH商品、dakeapp.com、Store、Stripe、Cloudflare本番反映まで確認済み
 - GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.1（v1.0.1、34,140,032バイトの配布zipを添付。SHA-256: 2b84ba6cdb14f33e5b3ecb0aa0558c24a3fa9b430a9cd3d30c1eabb3de1b7541）
 - BOOTH: https://peakheadz.booth.pm/items/8798555（500円、購入可能、商品画像2点、配布zip設定を確認）
 - Stripe: Product `prod_VBbAdnHXBZVPjN`、Price `price_1UBDyVHrsJubFuDOfPQGhhSM`、Payment Link `plink_1UBE1sHrsJubFuDOhzt7u8BQ` を本番モードで作成。公開Checkoutで商品名、500円、購入ボタン、メール導線を確認し、実購入は未実施
@@ -569,10 +574,11 @@ build、dist、spec、設定ファイル、個人データ、ソース一式を�
 - Store: https://store.dakeapp.com/product/?id=dake_pdf_overview_rename（500円、`Stripe対応`、Stripe購入導線、BOOTH補助導線、商品画像を本番表示で確認）
 - Cloudflare Pages: dakeapp-site / dake-store-site ともmainマージ後の本番デプロイ成功、および上記カスタムドメインの公開表示を確認
 - v1.0.1更新: 同一フォルダを再スキャンする `再読み込み`、初回・追加batchのカード配置修正、非モーダルのrename/Undo成功表示、表示サイズ `特大`、大プレビューのホイールzoom・倍率表示・pan・高解像度Latest Jobを追加。既存のStripe Product / Price / Payment Linkは変更していない
+- v1.0.2更新: カードへページ数と実ファイル容量を常時表示し、サムネイル処理済み数と失敗数を区別。scan時のsnapshot取得失敗を黙って欠落させず、0/1/23/24/25/26/27/32/47/48/49/100/300件と24〜27番目付近の異常PDFを回帰対象にする。ウインドウタイトルへバージョンを表示する
 
 ## Codex作業時の注意
 
-- 作業ブランチ: `codex/dake-pdf-overview-rename-formal-release`
+- 作業ブランチ: `codex/dake-pdf-overview-rename-v1.0.2`
 - 対象: `01_apps/DAKE_PDF_OverviewRename/`
 - 旧ブランチ `feature/dake-pdf-overview-rename` とDraft PR #11のコードは暫定参考であり、採用済み実装ではありません。
 - 旧コードを自動でcherry-pickしません。

@@ -392,6 +392,60 @@ def test_real_tk_reload_48_cards_reflects_add_delete_and_external_rename(tmp_pat
         root.destroy()
 
 
+def test_real_tk_300_card_mapping_scrollregion_and_last_card_reachability(tmp_path: Path) -> None:
+    root = _create_tk_root()
+    root.geometry("900x620+2500+100")
+    app = OverviewRenameApp(root)
+    app.scanner.request = Mock()
+    app._reprioritize_unrendered = Mock()
+    expected_names: list[str] = []
+    for index in range(1, 301):
+        name = f"scan_{index:04d}.pdf"
+        expected_names.append(name)
+        (tmp_path / name).write_bytes(b"%PDF-1.4\n" + bytes(index % 251 for _ in range(index)))
+
+    try:
+        app._start_load(tmp_path)
+        token, folder = app.scanner.request.call_args.args
+        snapshots = main.scan_pdf_folder(folder)
+        assert [snapshot.path.name for snapshot in snapshots] == expected_names
+        app._accept_scan(token, folder, snapshots, None)
+        deadline = main.time.monotonic() + 10
+        while len(app.cards) < 300 and main.time.monotonic() < deadline:
+            root.update()
+        root.update_idletasks()
+
+        assert [card.snapshot.path.name for card in app.cards] == expected_names
+        assert len({card.snapshot.path for card in app.cards}) == 300
+        assert all(card.frame.winfo_manager() == "grid" for card in app.cards)
+        assert app._laid_out_count == 300
+        assert app.cards[25].page_label.cget("text") == (
+            f"ページ数確認中… ｜ {app.cards[25].snapshot.size} B"
+        )
+
+        scrollregion = app.canvas.bbox("all")
+        assert scrollregion is not None
+        last = app.cards[-1].frame
+        last_bottom = last.winfo_y() + last.winfo_height()
+        assert last_bottom <= scrollregion[3]
+        app.canvas.yview_moveto(1.0)
+        root.update()
+        viewport_top = app.canvas.canvasy(0)
+        viewport_bottom = viewport_top + app.canvas.winfo_height()
+        assert last.winfo_y() <= viewport_bottom
+        assert last_bottom >= viewport_top
+    finally:
+        app.closing = True
+        if app._poll_after is not None:
+            root.after_cancel(app._poll_after)
+        if app._layout_after is not None:
+            root.after_cancel(app._layout_after)
+        app.scanner.shutdown()
+        app.render_pool.shutdown()
+        app.preview_worker.shutdown()
+        root.destroy()
+
+
 def _layout_test_app() -> OverviewRenameApp:
     app = OverviewRenameApp.__new__(OverviewRenameApp)
     app._layout_after = None
@@ -415,6 +469,26 @@ def test_empty_layout_then_32_cards_grids_every_frame() -> None:
 
     assert app._laid_out_count == 32
     assert all(card.frame.grid.call_count == 1 for card in app.cards)
+
+
+@pytest.mark.parametrize("count", [0, 1, 23, 24, 25, 26, 27, 32, 47, 48, 49, 100, 300])
+def test_every_boundary_card_is_laid_out_exactly_once(count: int) -> None:
+    app = _layout_test_app()
+    app._layout_cards()
+    expected_cards: list[SimpleNamespace] = []
+
+    for start in range(0, count, main.CARD_BATCH_SIZE):
+        batch = [
+            SimpleNamespace(identifier=index, frame=Mock())
+            for index in range(start, min(start + main.CARD_BATCH_SIZE, count))
+        ]
+        expected_cards.extend(batch)
+        app.cards.extend(batch)
+        app._layout_cards()
+
+    assert [card.identifier for card in app.cards] == list(range(count))
+    assert app._laid_out_count == count
+    assert all(card.frame.grid.call_count == 1 for card in expected_cards)
 
 
 def test_layout_adds_second_batch_when_columns_are_unchanged() -> None:
@@ -508,6 +582,7 @@ def test_thumbnail_progress_does_not_clear_success_feedback() -> None:
     app = OverviewRenameApp.__new__(OverviewRenameApp)
     app.cards = [SimpleNamespace(pending=False, entry=Mock())]
     app.rendered_count = 1
+    app.thumbnail_failures = 0
     app.busy = False
     app.folder = Path("folder")
     app.undo_record = None
@@ -522,6 +597,75 @@ def test_thumbnail_progress_does_not_clear_success_feedback() -> None:
     app._sync_status()
 
     assert app.success_var.get() == "keep success"
+
+
+def test_status_distinguishes_detected_processed_failed_and_pending() -> None:
+    app = OverviewRenameApp.__new__(OverviewRenameApp)
+    app.cards = [
+        SimpleNamespace(pending=False, entry=Mock()),
+        SimpleNamespace(pending=True, entry=Mock()),
+        SimpleNamespace(pending=True, entry=Mock()),
+    ]
+    app.rendered_count = 2
+    app.thumbnail_failures = 1
+    app.busy = False
+    app.folder = Path("folder")
+    app.undo_record = None
+    app.status_var = FakeVariable("")
+    app.apply_button = Mock()
+    app.undo_button = Mock()
+    app.refresh_button = Mock()
+    app.reload_button = Mock()
+    app.select_button = Mock()
+
+    app._sync_status()
+
+    assert app.status_var.get() == (
+        "PDF 3件 ｜ サムネイル処理 2/3（失敗1）｜ 変更待ち2件"
+    )
+
+
+@pytest.mark.parametrize(
+    ("error", "page_count", "expected_metadata", "expected_failures"),
+    [
+        (None, 24, "24ページ ｜ 3.8 MB", 0),
+        ("broken", None, "ページ数不明 ｜ 3.8 MB", 1),
+        ("render failed", 24, "24ページ ｜ 3.8 MB", 1),
+    ],
+)
+def test_thumbnail_result_keeps_file_size_and_best_known_page_count(
+    error: str | None,
+    page_count: int | None,
+    expected_metadata: str,
+    expected_failures: int,
+) -> None:
+    snapshot = SimpleNamespace(path=Path("sample.pdf"), size=round(3.8 * 1024**2))
+    card = SimpleNamespace(
+        snapshot=snapshot,
+        rendered=False,
+        thumbnail_failed=False,
+        image_label=Mock(),
+        page_label=Mock(),
+        base_image=None,
+    )
+    app = OverviewRenameApp.__new__(OverviewRenameApp)
+    app.generation = 3
+    app.cards = [card]
+    app.rendered_count = 0
+    app.thumbnail_failures = 0
+    app._apply_card_image = Mock()
+    app._sync_status = Mock()
+    request = main.RenderRequest(3, "thumbnail", 0, snapshot, (100, 100))
+    image = None if error else object()
+
+    app._accept_thumbnail(main.RenderResult(request, image, page_count, error))
+
+    assert card.rendered is True
+    assert card.thumbnail_failed is bool(error)
+    assert app.rendered_count == 1
+    assert app.thumbnail_failures == expected_failures
+    card.page_label.configure.assert_called_with(text=expected_metadata)
+    app._sync_status.assert_called_once_with()
 
 
 def test_next_name_edit_clears_success_feedback() -> None:

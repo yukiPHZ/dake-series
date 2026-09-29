@@ -7,6 +7,8 @@ PDFを開いて、閉じて、名前を変える。その往復をなくしま�
 ## できること
 
 - 選択フォルダ直下のPDFをサムネイルカードで一覧表示
+- 各カードにPDFのページ数と実ファイル容量を表示
+- 検出件数、サムネイル処理済み数・失敗数、変更待ち件数を区別して表示
 - PDFごとに異なる新しいファイル名を入力
 - 変更分だけを衝突させずに一括反映
 - 直前に成功した一括変更を1回だけUndo
@@ -29,6 +31,8 @@ PDF本文の編集、OCR、AI自動命名、サブフォルダの再帰処理は
 `再読み込み` は現在選択中の同じフォルダを再スキャンします。未反映の入力がある場合は先に確認し、承認した場合だけカード、入力、Undo履歴、大プレビューを破棄して一覧を作り直します。表示サイズと選択フォルダは維持します。
 
 サムネイルを押すと大プレビューが開きます。初期表示はウインドウに収まる100%で、ホイールにより50〜300%で拡大縮小し、拡大後は左ドラッグで移動できます。
+
+カードの補助情報は `24ページ ｜ 3.8 MB` のように表示します。読み込み中は `ページ数確認中…`、取得できないPDFは `ページ数不明` と表示しますが、取得済みのファイル容量とカード自体は残ります。
 
 ## 安全仕様
 
@@ -63,7 +67,7 @@ Windows配布版で使う pypdfium2 5.13.0 / PDFium 153.0.7999.0（pdfium-binari
 
 ## 正式版情報
 
-現行公開版はバージョン1.0.1、販売価格500円です。[GitHub Release](https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.1)から正式配布zipをダウンロードできます。[BOOTH](https://peakheadz.booth.pm/items/8798555)の既存商品も同版へ更新しています。dakeapp.com と Store の反映は別途確認します。
+このブランチの出荷候補はバージョン1.0.2、販売価格500円です。正式出荷後は[GitHub Release](https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.2)から配布zipを提供し、[BOOTH](https://peakheadz.booth.pm/items/8798555)は既存商品を維持します。公開完了まではv1.0.1が現行公開版です。
 
 ## DAKE_META
 
@@ -75,11 +79,11 @@ Windows配布版で使う pypdfium2 5.13.0 / PDFium 153.0.7999.0（pdfium-binari
   "launcher_description": "PDFを開かず、サムネイルを見ながら名前を変更します。",
   "site_title": "DakePDF俯瞰名前変更",
   "site_description": "フォルダ内のPDFをサムネイルで俯瞰しながら、PDFごとに名前を変更できるWindows向けアプリです。",
-  "update_summary": "v1.0.1。再読み込み、特大表示、プレビューzoom・pan、完了フィードバックを追加。",
+  "update_summary": "v1.0.2。全PDFの末尾到達回帰を強化し、ページ数・容量とサムネイル失敗数を表示。",
   "folder_name": "DAKE_PDF_OverviewRename",
   "exe_name": "DakePDF_OverviewRename.exe",
-  "version": "1.0.1",
-  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.1",
+  "version": "1.0.2",
+  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.2",
   "app_type": "market",
   "completion_goal": "formal_release",
   "screenshot_path": "assets/screenshot.webp",
@@ -95,4 +99,4 @@ Windows配布版で使う pypdfium2 5.13.0 / PDFium 153.0.7999.0（pdfium-binari
 - PDFごとに入力した名前を変更分だけ安全に一括反映
 - 衝突事前検証、ロールバック、直前の一括変更のUndoに対応
 - 固定workerとPDFium排他制御で一覧操作の応答性を維持
-- 再読み込み、特大表示、プレビューzoom・pan、非モーダル完了表示を追加
+- 再読み込み、特大表示、プレビューzoom・pan、ページ数・容量・失敗数表示に対応

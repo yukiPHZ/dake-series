@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import ctypes
 import queue
+import stat
 import sys
 import threading
 import time
@@ -27,7 +28,8 @@ from rename_core import (
 
 
 APP_NAME = "DakePDF俯瞰名前変更"
-WINDOW_TITLE = "DakePDF俯瞰名前変更"
+APP_VERSION = "1.0.2"
+WINDOW_TITLE = f"{APP_NAME} v{APP_VERSION}"
 COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
 APP_USER_MODEL_ID = "Shimarisu.DakePDFOverviewRename"
 
@@ -45,14 +47,15 @@ UI_TEXT = {
     "size_xlarge": "特大",
     "undo": "変更を元に戻す",
     "apply": "名前変更を反映 {count}",
-    "page_count": "{count}ページ",
-    "page_unknown": "ページ数 -",
+    "metadata_loading": "ページ数確認中… ｜ {size}",
+    "metadata_ready": "{count}ページ ｜ {size}",
+    "metadata_unknown": "ページ数不明 ｜ {size}",
     "thumbnail_loading": "プレビュー読み込み中",
     "thumbnail_error": "プレビューできません",
     "empty_title": "PDFがありません",
     "empty_hint": "フォルダ直下のPDFを表示します。",
-    "status_empty": "0件 ｜ サムネイル 0 / 0 ｜ 0件の変更待ち",
-    "status_summary": "{total}件 ｜ サムネイル {ready} / {total} ｜ {pending}件の変更待ち",
+    "status_empty": "PDF 0件 ｜ サムネイル処理 0/0（失敗0）｜ 変更待ち0件",
+    "status_summary": "PDF {total}件 ｜ サムネイル処理 {processed}/{total}（失敗{failed}）｜ 変更待ち{pending}件",
     "status_scanning": "PDFを確認しています…",
     "status_cards": "{total}件のカードを準備しています…",
     "status_renaming": "名前を変更しています…",
@@ -214,56 +217,78 @@ def load_preview_dependencies():
 
 
 def scan_pdf_folder(folder: Path) -> list[FileSnapshot]:
-    paths = sorted(
-        (
-            path
-            for path in folder.iterdir()
-            if path.is_file() and path.suffix.casefold() == ".pdf"
-        ),
-        key=lambda path: (path.name.casefold(), path.name),
-    )
-    snapshots: list[FileSnapshot] = []
-    for path in paths:
-        try:
-            snapshots.append(FileSnapshot.capture(path))
-        except OSError:
+    paths: list[Path] = []
+    for path in folder.iterdir():
+        if path.suffix.casefold() != ".pdf":
             continue
-    return snapshots
+        if stat.S_ISREG(path.stat().st_mode):
+            paths.append(path)
+    paths.sort(key=lambda path: (path.name.casefold(), path.name))
+    # Do not silently turn a stat/read race into an apparently complete list.
+    # A failed capture aborts this scan so the UI can report the folder error and
+    # the user can retry, instead of presenting fewer cards than discovered PDFs.
+    return [FileSnapshot.capture(path) for path in paths]
+
+
+def format_file_size(size_bytes: int) -> str:
+    if size_bytes < 1024:
+        return f"{size_bytes} B"
+    if size_bytes < 1024**2:
+        return f"{round(size_bytes / 1024)} KB"
+    if size_bytes < 1024**3:
+        return f"{size_bytes / 1024**2:.1f} MB"
+    return f"{size_bytes / 1024**3:.1f} GB"
+
+
+class PdfPreviewError(RuntimeError):
+    def __init__(self, cause: BaseException, page_count: int | None = None):
+        self.cause = cause
+        self.page_count = page_count
+        super().__init__(str(cause))
 
 
 def render_first_page(path: Path, box: tuple[int, int]):
     pdfium, pil_modules = load_preview_dependencies()
     Image, _ = pil_modules
-    with _PDFIUM_LOCK:
-        document = pdfium.PdfDocument(str(path))
-        page = None
-        bitmap = None
-        try:
-            page_count = len(document)
-            if page_count < 1:
-                raise ValueError("zero pages")
-            page = document[0]
-            width, height = page.get_size()
-            scale = max(0.25, min(box[0] / max(width, 1), box[1] / max(height, 1)))
-            bitmap = page.render(scale=scale)
-            image = bitmap.to_pil().convert("RGB").copy()
-        finally:
-            if bitmap is not None:
-                try:
-                    bitmap.close()
-                except Exception:
-                    pass
-            if page is not None:
-                try:
-                    page.close()
-                except Exception:
-                    pass
+    page_count: int | None = None
+    try:
+        with _PDFIUM_LOCK:
+            document = None
+            page = None
+            bitmap = None
             try:
-                document.close()
-            except Exception:
-                pass
-    image.thumbnail(box, Image.Resampling.LANCZOS)
-    return image, page_count
+                document = pdfium.PdfDocument(str(path))
+                page_count = len(document)
+                if page_count < 1:
+                    raise ValueError("zero pages")
+                page = document[0]
+                width, height = page.get_size()
+                scale = max(0.25, min(box[0] / max(width, 1), box[1] / max(height, 1)))
+                bitmap = page.render(scale=scale)
+                image = bitmap.to_pil().convert("RGB").copy()
+            finally:
+                if bitmap is not None:
+                    try:
+                        bitmap.close()
+                    except Exception:
+                        pass
+                if page is not None:
+                    try:
+                        page.close()
+                    except Exception:
+                        pass
+                if document is not None:
+                    try:
+                        document.close()
+                    except Exception:
+                        pass
+        image.thumbnail(box, Image.Resampling.LANCZOS)
+        return image, page_count
+    except PdfPreviewError:
+        raise
+    except Exception as exc:
+        known_page_count = page_count if page_count is not None and page_count > 0 else None
+        raise PdfPreviewError(exc, known_page_count) from exc
 
 
 @dataclass(frozen=True)
@@ -347,7 +372,7 @@ class RenderPool:
                 image, page_count = render_first_page(request.snapshot.path, request.box)
                 result = RenderResult(request, image, page_count, None)
             except Exception as exc:
-                result = RenderResult(request, None, None, str(exc))
+                result = RenderResult(request, None, getattr(exc, "page_count", None), str(exc))
             finally:
                 with self._condition:
                     count = self._active_folders.get(folder, 1) - 1
@@ -417,7 +442,7 @@ class LatestPreviewWorker:
                 image, page_count = render_first_page(request.snapshot.path, request.box)
                 result = RenderResult(request, image, page_count, None)
             except Exception as exc:
-                result = RenderResult(request, None, None, str(exc))
+                result = RenderResult(request, None, getattr(exc, "page_count", None), str(exc))
             finally:
                 with self._condition:
                     self._active_folder = None
@@ -489,6 +514,7 @@ class CardState:
     base_image: object | None = None
     photo: object | None = None
     rendered: bool = False
+    thumbnail_failed: bool = False
 
     @property
     def pending(self) -> bool:
@@ -513,6 +539,7 @@ class OverviewRenameApp:
         self.busy = False
         self.closing = False
         self.rendered_count = 0
+        self.thumbnail_failures = 0
         self._layout_after: str | None = None
         self._poll_after: str | None = None
         self._current_columns = 0
@@ -773,6 +800,7 @@ class OverviewRenameApp:
             child.destroy()
         self.cards.clear()
         self.rendered_count = 0
+        self.thumbnail_failures = 0
         self._current_columns = 0
         self._laid_out_count = 0
         self._update_scrollregion()
@@ -870,7 +898,15 @@ class OverviewRenameApp:
             font=(self.font, 9), width=max(1, image_width // 9), height=max(1, image_height // 18), cursor="hand2",
         )
         image_label.pack(fill="x")
-        page_label = tk.Label(body, text=UI_TEXT["page_unknown"], bg=THEME["card"], fg=THEME["muted"], font=(self.font, 8), anchor="w")
+        file_size = format_file_size(snapshot.size)
+        page_label = tk.Label(
+            body,
+            text=UI_TEXT["metadata_loading"].format(size=file_size),
+            bg=THEME["card"],
+            fg=THEME["muted"],
+            font=(self.font, 8),
+            anchor="w",
+        )
         page_label.pack(fill="x", pady=(8, 2))
         name_label = tk.Label(body, text=snapshot.path.name, bg=THEME["card"], fg=THEME["text"], font=(self.font, 9, "bold"), anchor="w")
         name_label.pack(fill="x", pady=(0, 5))
@@ -925,7 +961,14 @@ class OverviewRenameApp:
         card.entry.master.configure(bg=background)
 
     def _sync_status(self) -> None:
-        self.status_var.set(UI_TEXT["status_summary"].format(total=len(self.cards), ready=self.rendered_count, pending=sum(card.pending for card in self.cards)))
+        self.status_var.set(
+            UI_TEXT["status_summary"].format(
+                total=len(self.cards),
+                processed=self.rendered_count,
+                failed=self.thumbnail_failures,
+                pending=sum(card.pending for card in self.cards),
+            )
+        )
         self._sync_controls()
 
     def _set_success(self, message: str) -> None:
@@ -991,11 +1034,21 @@ class OverviewRenameApp:
             return
         card.rendered = True
         self.rendered_count += 1
+        file_size = format_file_size(card.snapshot.size)
         if result.error is not None or result.image is None:
+            card.thumbnail_failed = True
+            self.thumbnail_failures += 1
             card.image_label.configure(text=UI_TEXT["thumbnail_error"], image="", fg=THEME["error"])
+            if result.page_count is None:
+                metadata = UI_TEXT["metadata_unknown"].format(size=file_size)
+            else:
+                metadata = UI_TEXT["metadata_ready"].format(count=result.page_count, size=file_size)
+            card.page_label.configure(text=metadata)
         else:
             card.base_image = result.image
-            card.page_label.configure(text=UI_TEXT["page_count"].format(count=result.page_count))
+            card.page_label.configure(
+                text=UI_TEXT["metadata_ready"].format(count=result.page_count, size=file_size)
+            )
             self._apply_card_image(card)
         self._sync_status()
 
