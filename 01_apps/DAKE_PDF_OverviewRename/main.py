@@ -30,8 +30,7 @@ from rename_core import (
 
 APP_NAME = "DakePDF俯瞰名前変更"
 APP_VERSION = "1.0.2"
-CANDIDATE_ID = "rc2-viewport"
-WINDOW_TITLE = f"{APP_NAME} v{APP_VERSION} [{CANDIDATE_ID}]"
+WINDOW_TITLE = f"{APP_NAME} v{APP_VERSION}"
 COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
 APP_USER_MODEL_ID = "Shimarisu.DakePDFOverviewRename"
 

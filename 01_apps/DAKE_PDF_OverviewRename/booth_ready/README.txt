@@ -1,6 +1,6 @@
 DakePDF俯瞰名前変更
 バージョン 1.0.2
-未公開修正候補 rc2-viewport / 400件Human Review再確認待ち
+合成PDF800件でWindows実機Human Review PASS（2026-09-30）
 
 PDFを開いて、閉じて、名前を変える。その往復をなくします。
 

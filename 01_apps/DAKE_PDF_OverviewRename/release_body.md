@@ -4,4 +4,4 @@
 - 固定worker・PDFium排他制御と可視範囲の部品・画像更新で一覧操作の応答性を維持
 - 再読み込み、特大表示、プレビューzoom・pan、ページ数・容量・失敗数表示に対応
 
-未公開候補 rc2-viewport。400件Human Review FAIL後の修正であり、利用者再確認まで正式出荷HOLD。
+合成PDF800件でWindows実機Human Review PASS。初回表示、末尾到達、連続サイズ切替、名前入力保持、rename/Undo、再読み込みを確認。

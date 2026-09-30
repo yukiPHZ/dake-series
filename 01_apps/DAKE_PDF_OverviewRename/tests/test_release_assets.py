@@ -69,7 +69,7 @@ def test_readme_meta_matches_original_and_has_formal_release_flags() -> None:
     assert meta["show_in_launcher"] is True
     assert meta["show_on_site"] is True
     assert main.APP_VERSION == meta["version"]
-    assert main.WINDOW_TITLE == f"{main.APP_NAME} v{main.APP_VERSION} [{main.CANDIDATE_ID}]"
+    assert main.WINDOW_TITLE == f"{main.APP_NAME} v{main.APP_VERSION}"
 
 
 def test_release_body_matches_readme_derived_view() -> None:

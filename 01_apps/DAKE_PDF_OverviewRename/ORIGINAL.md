@@ -469,7 +469,7 @@ PDFを開かず、見ながら名前を変える。
   "launcher_description": "PDFを開かず、サムネイルを見ながら名前を変更します。",
   "site_title": "DakePDF俯瞰名前変更",
   "site_description": "フォルダ内のPDFをサムネイルで俯瞰しながら、PDFごとに名前を変更できるWindows向けアプリです。",
-  "update_summary": "v1.0.2候補。ページ数・容量・失敗数表示と、大量PDFの可視範囲表示・サイズ変更を改善。",
+  "update_summary": "v1.0.2。ページ数・容量・失敗数表示と、大量PDFの可視範囲表示・サイズ変更を改善。",
   "folder_name": "DAKE_PDF_OverviewRename",
   "exe_name": "DakePDF_OverviewRename.exe",
   "version": "1.0.2",
@@ -578,9 +578,17 @@ build、dist、spec、設定ファイル、個人データ、ソース一式を�
 
 ## Codex作業時の注意
 
-### v1.0.2 rc2-viewport（未公開・Human Review FAIL後の修正候補）
+### v1.0.2 Human Review PASS（800件・2026-09-30）
 
-- 前回RC `31a31f3` は実機400件で空白表示・サイズ変更不良が発生しHuman Review FAIL。旧84 tests PASSを取り消さないが、実画面の正常表示を保証していなかった。正式出荷HOLDは利用者の400件再試験合格まで維持する。PR #47はDraft、Issue #46は未完了。
+利用者がWindows実機のrc2-viewport（source caaa213fa70c0141aada4c9bf9ca073c2e780d51）を合成PDF800件で確認し、Human Review PASSと報告した。
+初回順次表示、800件末尾到達、小→特大と連続サイズ切替、追加スクロールなしの表示復元、スクロール中の空白化なし、UIフリーズなし、ページ数・容量、名前入力保持、末尾付近rename/Undo、reload後全件維持を含む。
+これは400件を超える実機受入結果であり、Codexの自動試験や全DPI・IME・タスクバーアイコンの確認済みを意味しない。
+この受入によりHuman Review待ちのHOLDを解除し、利用者指示の正式出荷工程を進める。出荷全工程完了前に正式出荷完了としない。
+正式版は候補タイトル接尾辞だけを除き、受入済みの処理・表示・rename/Undoロジックを変更しない。
+
+### v1.0.2 rc2-viewport修正履歴
+
+- 前回RC `31a31f3` は実機400件で空白表示・サイズ変更不良が発生しHuman Review FAIL。旧84 tests PASSを取り消さないが、実画面の正常表示を保証していなかった。その後のrc2-viewportは上記800件の実機再試験でPASS。Issue #46は全出荷工程の完了まで未完了として扱う。
 - 論理的な400件の一覧と、小さい表示Frameを分離する。Canvas scrollregionは全件の論理長、表示Frameはviewport＋先読み分に制限し、全件分の巨大なnative Frameを作らない。
 - サイズ変更は見ていたファイルIDと画面内相対位置を基準に復元する。再scan・再render・先頭へ強制移動しない。表示とPhotoImage適用はUIスレッド上で8ms予算の分割処理とし、予約は各1件へ集約、最新サイズを優先する。
 - 全件の入力StringVar・変更待ち・snapshot・ページ数はモデル側に保持する。フォーカス中の入力部品は別PDFへ再利用せず保持し、カーソル・選択・横スクロール位置も復元する。日本語IME変換中の実機確認は別途Human Reviewで行う。
