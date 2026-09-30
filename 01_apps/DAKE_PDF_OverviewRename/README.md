@@ -67,6 +67,8 @@ Windows配布版で使う pypdfium2 5.13.0 / PDFium 153.0.7999.0（pdfium-binari
 
 ## 正式版情報
 
+現在の候補識別子は `rc2-viewport` です。前回RCは実機400件の表示・サイズ変更でHuman Review FAILとなり、可視範囲だけの表示部品・画像適用へ改修しました。入力と全PDFデータは保持し、サイズ変更だけでPDFを再読み込みしません。ユーザーの400件実操作再確認まで正式出荷HOLD、PR #47はDraftです。
+
 このブランチの出荷候補はバージョン1.0.2、販売価格500円です。正式出荷後は[GitHub Release](https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.2)から配布zipを提供し、[BOOTH](https://peakheadz.booth.pm/items/8798555)は既存商品を維持します。公開完了まではv1.0.1が現行公開版です。
 
 ## DAKE_META
@@ -79,7 +81,7 @@ Windows配布版で使う pypdfium2 5.13.0 / PDFium 153.0.7999.0（pdfium-binari
   "launcher_description": "PDFを開かず、サムネイルを見ながら名前を変更します。",
   "site_title": "DakePDF俯瞰名前変更",
   "site_description": "フォルダ内のPDFをサムネイルで俯瞰しながら、PDFごとに名前を変更できるWindows向けアプリです。",
-  "update_summary": "v1.0.2。全PDFの末尾到達回帰を強化し、ページ数・容量とサムネイル失敗数を表示。",
+  "update_summary": "v1.0.2候補。ページ数・容量・失敗数表示と、大量PDFの可視範囲表示・サイズ変更を改善。",
   "folder_name": "DAKE_PDF_OverviewRename",
   "exe_name": "DakePDF_OverviewRename.exe",
   "version": "1.0.2",
@@ -98,5 +100,7 @@ Windows配布版で使う pypdfium2 5.13.0 / PDFium 153.0.7999.0（pdfium-binari
 - PDFの1ページ目サムネイルをフォルダ単位で俯瞰表示
 - PDFごとに入力した名前を変更分だけ安全に一括反映
 - 衝突事前検証、ロールバック、直前の一括変更のUndoに対応
-- 固定workerとPDFium排他制御で一覧操作の応答性を維持
+- 固定worker・PDFium排他制御と可視範囲の部品・画像更新で一覧操作の応答性を維持
 - 再読み込み、特大表示、プレビューzoom・pan、ページ数・容量・失敗数表示に対応
+
+未公開候補 rc2-viewport。400件Human Review FAIL後の修正であり、利用者再確認まで正式出荷HOLD。

@@ -1,0 +1,307 @@
+[
+  {
+    "accept_400_seconds": 23.226723500003573,
+    "memory_initial_mb": 39.0859375,
+    "memory_loaded_mb": 455.8515625
+  },
+  {
+    "size": "small",
+    "handler_ms": 2592.62,
+    "settle_ms": 2595.42,
+    "max_event_gap_ms": 2592.77,
+    "image_updates": 400,
+    "image_total_ms": 898.92,
+    "tk_photo_ms": 39.03,
+    "memory_mb": 408.36,
+    "columns": 9,
+    "frame_requested_height": 15885,
+    "frame_actual_height": 24244,
+    "scrollregion": "0 0 1862 24244",
+    "embedded_y": [
+      0.0,
+      0.0
+    ],
+    "views": 400,
+    "photos": 400
+  },
+  {
+    "size": "xlarge",
+    "handler_ms": 3800.56,
+    "settle_ms": 3834.17,
+    "max_event_gap_ms": 3804.04,
+    "image_updates": 400,
+    "image_total_ms": 778.69,
+    "tk_photo_ms": 216.63,
+    "memory_mb": 826.27,
+    "columns": 4,
+    "frame_requested_height": 60300,
+    "frame_actual_height": 60300,
+    "scrollregion": "0 0 1862 60300",
+    "embedded_y": [
+      0.0,
+      0.0
+    ],
+    "views": 400,
+    "photos": 400
+  },
+  {
+    "size": "normal",
+    "handler_ms": 2930.95,
+    "settle_ms": 2931.02,
+    "max_event_gap_ms": 2930.97,
+    "image_updates": 400,
+    "image_total_ms": 1081.47,
+    "tk_photo_ms": 62.41,
+    "memory_mb": 466.11,
+    "columns": 7,
+    "frame_requested_height": 24244,
+    "frame_actual_height": 60300,
+    "scrollregion": "0 0 1862 60300",
+    "embedded_y": [
+      0.0,
+      0.0
+    ],
+    "views": 400,
+    "photos": 400
+  },
+  {
+    "size": "large",
+    "handler_ms": 4352.67,
+    "settle_ms": 4386.21,
+    "max_event_gap_ms": 4356.25,
+    "image_updates": 400,
+    "image_total_ms": 1274.29,
+    "tk_photo_ms": 89.01,
+    "memory_mb": 604.29,
+    "columns": 5,
+    "frame_requested_height": 39840,
+    "frame_actual_height": 39840,
+    "scrollregion": "0 0 1862 39840",
+    "embedded_y": [
+      0.0,
+      0.0
+    ],
+    "views": 400,
+    "photos": 400
+  },
+  {
+    "size": "small",
+    "handler_ms": 2714.07,
+    "settle_ms": 2714.19,
+    "max_event_gap_ms": 2714.09,
+    "image_updates": 400,
+    "image_total_ms": 947.14,
+    "tk_photo_ms": 42.67,
+    "memory_mb": 396.16,
+    "columns": 9,
+    "frame_requested_height": 15885,
+    "frame_actual_height": 39840,
+    "scrollregion": "0 0 1862 39840",
+    "embedded_y": [
+      0.0,
+      0.0
+    ],
+    "views": 400,
+    "photos": 400
+  },
+  {
+    "size": "small",
+    "handler_ms": 2157.53,
+    "settle_ms": 2190.32,
+    "max_event_gap_ms": 2160.68,
+    "image_updates": 400,
+    "image_total_ms": 896.93,
+    "tk_photo_ms": 41.22,
+    "memory_mb": 407.82,
+    "columns": 9,
+    "frame_requested_height": 15885,
+    "frame_actual_height": 15885,
+    "scrollregion": "0 0 1862 15885",
+    "embedded_y": [
+      0.0,
+      0.0
+    ],
+    "views": 400,
+    "photos": 400
+  },
+  {
+    "size": "xlarge",
+    "handler_ms": 4125.44,
+    "settle_ms": 4171.49,
+    "max_event_gap_ms": 4128.18,
+    "image_updates": 400,
+    "image_total_ms": 786.33,
+    "tk_photo_ms": 218.66,
+    "memory_mb": 816.59,
+    "columns": 4,
+    "frame_requested_height": 60300,
+    "frame_actual_height": 60300,
+    "scrollregion": "0 0 1862 60300",
+    "embedded_y": [
+      0.0,
+      0.0
+    ],
+    "views": 400,
+    "photos": 400
+  },
+  {
+    "size": "normal",
+    "handler_ms": 2971.1,
+    "settle_ms": 2971.21,
+    "max_event_gap_ms": 2971.12,
+    "image_updates": 400,
+    "image_total_ms": 1125.25,
+    "tk_photo_ms": 57.59,
+    "memory_mb": 462.89,
+    "columns": 7,
+    "frame_requested_height": 24244,
+    "frame_actual_height": 60300,
+    "scrollregion": "0 0 1862 60300",
+    "embedded_y": [
+      0.0,
+      0.0
+    ],
+    "views": 400,
+    "photos": 400
+  },
+  {
+    "size": "large",
+    "handler_ms": 4614.02,
+    "settle_ms": 4659.2,
+    "max_event_gap_ms": 4620.02,
+    "image_updates": 400,
+    "image_total_ms": 1420.45,
+    "tk_photo_ms": 108.69,
+    "memory_mb": 607.01,
+    "columns": 5,
+    "frame_requested_height": 39840,
+    "frame_actual_height": 39840,
+    "scrollregion": "0 0 1862 39840",
+    "embedded_y": [
+      0.0,
+      0.0
+    ],
+    "views": 400,
+    "photos": 400
+  },
+  {
+    "size": "small",
+    "handler_ms": 2719.79,
+    "settle_ms": 2719.87,
+    "max_event_gap_ms": 2719.84,
+    "image_updates": 400,
+    "image_total_ms": 961.41,
+    "tk_photo_ms": 43.77,
+    "memory_mb": 402.36,
+    "columns": 9,
+    "frame_requested_height": 15885,
+    "frame_actual_height": 39840,
+    "scrollregion": "0 0 1862 39840",
+    "embedded_y": [
+      0.0,
+      0.0
+    ],
+    "views": 400,
+    "photos": 400
+  },
+  {
+    "size": "small",
+    "handler_ms": 2062.68,
+    "settle_ms": 2098.29,
+    "max_event_gap_ms": 2066.48,
+    "image_updates": 400,
+    "image_total_ms": 854.26,
+    "tk_photo_ms": 36.54,
+    "memory_mb": 410.16,
+    "columns": 9,
+    "frame_requested_height": 15885,
+    "frame_actual_height": 15885,
+    "scrollregion": "0 0 1862 15885",
+    "embedded_y": [
+      0.0,
+      0.0
+    ],
+    "views": 400,
+    "photos": 400
+  },
+  {
+    "size": "xlarge",
+    "handler_ms": 4260.05,
+    "settle_ms": 4324.73,
+    "max_event_gap_ms": 4264.23,
+    "image_updates": 400,
+    "image_total_ms": 802.35,
+    "tk_photo_ms": 221.65,
+    "memory_mb": 822.53,
+    "columns": 4,
+    "frame_requested_height": 60300,
+    "frame_actual_height": 60300,
+    "scrollregion": "0 0 1862 60300",
+    "embedded_y": [
+      0.0,
+      0.0
+    ],
+    "views": 400,
+    "photos": 400
+  },
+  {
+    "size": "normal",
+    "handler_ms": 3002.02,
+    "settle_ms": 3002.09,
+    "max_event_gap_ms": 3002.04,
+    "image_updates": 400,
+    "image_total_ms": 1101.05,
+    "tk_photo_ms": 64.65,
+    "memory_mb": 460.98,
+    "columns": 7,
+    "frame_requested_height": 24244,
+    "frame_actual_height": 60300,
+    "scrollregion": "0 0 1862 60300",
+    "embedded_y": [
+      0.0,
+      0.0
+    ],
+    "views": 400,
+    "photos": 400
+  },
+  {
+    "size": "large",
+    "handler_ms": 4906.65,
+    "settle_ms": 4955.47,
+    "max_event_gap_ms": 4912.94,
+    "image_updates": 400,
+    "image_total_ms": 1409.37,
+    "tk_photo_ms": 104.58,
+    "memory_mb": 610.08,
+    "columns": 5,
+    "frame_requested_height": 39840,
+    "frame_actual_height": 39840,
+    "scrollregion": "0 0 1862 39840",
+    "embedded_y": [
+      0.0,
+      0.0
+    ],
+    "views": 400,
+    "photos": 400
+  },
+  {
+    "size": "small",
+    "handler_ms": 3061.02,
+    "settle_ms": 3061.12,
+    "max_event_gap_ms": 3061.09,
+    "image_updates": 400,
+    "image_total_ms": 1272.23,
+    "tk_photo_ms": 62.27,
+    "memory_mb": 402.16,
+    "columns": 9,
+    "frame_requested_height": 15885,
+    "frame_actual_height": 39840,
+    "scrollregion": "0 0 1862 39840",
+    "embedded_y": [
+      0.0,
+      0.0
+    ],
+    "views": 400,
+    "photos": 400
+  }
+]
