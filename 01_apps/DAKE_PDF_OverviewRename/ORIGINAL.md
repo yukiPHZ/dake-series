@@ -13,7 +13,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示、実�
 - short_title: `PDF俯瞰名前変更`
 - category: `PDF`
 - status: `available`
-- version: `1.0.1`
+- version: `1.0.2`
 - app_type: `market`
 - completion_goal: `formal_release`
 - price: `500円`
@@ -133,12 +133,14 @@ PDFをサムネイルで俯瞰する
 各カードには最低限、次を表示します。
 
 - 1ページ目サムネイル
-- ページ数
+- PDFのページ数と実ファイル容量（例: `24ページ ｜ 3.8 MB`）
 - 元ファイル名
 - 新ファイル名入力欄
 - 編集できない `.pdf`
 
 長いファイル名でカード幅を広げません。入力欄は横スクロールを許可します。
+
+容量は実ファイルのバイト数から、B / KB / MB / GBの1024基準で整形します。BとKBは整数、MBとGBは小数1桁で表示します。ページ数取得前は `ページ数確認中…`、取得できない場合は `ページ数不明` とし、いずれの場合も取得済みの容量は表示します。ページ数取得のために全ページをレンダリングせず、1ページ目サムネイルと同じPDF open結果を利用します。
 
 変更待ちカードだけ背景または枠を薄青にし、未変更カードは静かな白背景とします。
 
@@ -149,10 +151,10 @@ PDFをサムネイルで俯瞰する
 例:
 
 ```text
-48件 ｜ サムネイル 18 / 48 ｜ 3件の変更待ち
+PDF 48件 ｜ サムネイル処理 32/48（失敗2）｜ 変更待ち3件
 ```
 
-入力開始によってサムネイル進捗が消えないようにします。処理中、完了、エラーは明確に分けます。
+PDF件数はscanで検出・snapshot取得できたカード総数、サムネイル処理数は成功と失敗を合わせた完了数、失敗数はサムネイルを生成できなかったカード数とします。失敗カードも一覧・名前入力・ページ数/容量表示を可能な範囲で維持します。入力開始によってサムネイル進捗が消えないようにします。処理中、完了、エラーは明確に分けます。
 
 名前変更とUndoの成功時は、通常の件数・サムネイル進捗とは別の非モーダル表示領域へ、`THEME["success"]` を使った太字の `✓ 完了` メッセージを表示します。サムネイル進捗更新では消さず、次の編集、フォルダ選択、リフレッシュ、再読み込み、Undo開始または次の名前変更開始で消します。
 
@@ -186,7 +188,7 @@ DAKE共通アイコン `02_assets/dake_icon.ico` を使用します。
 - 初期順序はファイル名の昇順です。
 - PDFカード枠とファイル名を先に表示し、全サムネイル完成を待ちません。
 - 見えている範囲を優先してサムネイルを生成します。
-- 起動直後のCanvas resizeがカード0件の状態で完了していても、初回フォルダ読み込みで追加した全カードを必ずgrid配置します。列数が同じでも未配置の追加batchを配置し、visible-first優先順位を計算する前にframe位置を確定します。
+- 起動直後のCanvas resizeがカード0件の状態で完了していても、追加した全PDFを論理一覧へ登録します。列数が同じ追加batchも論理長へ反映し、visible-firstは確定した論理座標で計算します。v1.0.2修正候補では全件gridではなく、可視範囲と上下1行の表示部品を再利用します。
 - 1ファイルのプレビュー失敗で一覧全体を失敗にしません。
 - 暗号化PDF、破損PDF、0ページPDFなどは、そのカードだけ `プレビューできません` とし、可能なら名前入力は維持します。
 - 表示サイズを切り替えても、入力中の名前、変更待ち状態、スクロール位置を不用意に失いません。
@@ -309,7 +311,7 @@ UIは止めるな
 合理的なv1基準:
 
 - 48件: 実利用の中心。画面・入力・反映まで快適であること。
-- 100件: 通常利用の上限目安。UIが固まらず作業できること。
+- 100件・400件: UIが固まらず末尾まで作業できること。件数制限は設けない。400件の小／標準／大／特大、先頭／中間／末尾、読み込み中／完了後、幅900／1180／1920、倍率100／125／150%相当を回帰対象とする。
 - 300件: ストレス試験。時間がかかっても暴走・無限増加・操作不能を起こさないこと。
 - 500件対応はv1の出荷条件にしません。
 
@@ -425,7 +427,9 @@ PDFレンダリングライブラリの採用・配布時は、現行ライセ�
 
 ### データ件数
 
-Codex環境では、機密情報を含まない合成PDFで1件、48件、100件、300件を確認します。
+Codex環境では、機密情報を含まない合成PDFで0件、1件、23件、24件、25件、26件、27件、32件、47件、48件、49件、100件、300件を確認します。期待ファイル集合、scan結果、カード集合、配置済みカード、処理結果のファイル対応を比較し、27件目以降と末尾カードまで到達できることを確認します。
+
+正常PDFだけでなく、複数ページ、画像主体、日本語・空白・長いファイル名、大文字拡張子、暗号化、破損、空ファイル、0ページ相当、走査後の削除・変更を含めます。異常PDFを24〜27番目前後へ置き、後続の正常PDFまで処理されることを確認します。
 
 菊田の実フォルダ48件による最終確認は、人間の実機受入試験として別に行います。実フォルダへアクセスできない環境で「実データ確認済み」と報告しません。
 
@@ -465,11 +469,11 @@ PDFを開かず、見ながら名前を変える。
   "launcher_description": "PDFを開かず、サムネイルを見ながら名前を変更します。",
   "site_title": "DakePDF俯瞰名前変更",
   "site_description": "フォルダ内のPDFをサムネイルで俯瞰しながら、PDFごとに名前を変更できるWindows向けアプリです。",
-  "update_summary": "v1.0.1。再読み込み、特大表示、プレビューzoom・pan、完了フィードバックを追加。",
+  "update_summary": "v1.0.2。ページ数・容量・失敗数表示と、大量PDFの可視範囲表示・サイズ変更を改善。",
   "folder_name": "DAKE_PDF_OverviewRename",
   "exe_name": "DakePDF_OverviewRename.exe",
-  "version": "1.0.1",
-  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.1",
+  "version": "1.0.2",
+  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.2",
   "app_type": "market",
   "completion_goal": "formal_release",
   "screenshot_path": "assets/screenshot.webp",
@@ -493,7 +497,7 @@ Windows
 - 商品画像: assets/booth_thumbnail.jpg
 - 補助画像: assets/screenshot.jpg
 - 作品ファイル: booth_ready/DakePDF_OverviewRename.zip
-- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.1
+- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.2
 - BOOTH URL: https://peakheadz.booth.pm/items/8798555
 
 ## Store表示用情報
@@ -519,7 +523,7 @@ Windows
 
 GitHub Release、BOOTH、dakeapp.com、Storeを正式配布先とし、DAKE正式出荷ラインに従います。
 
-- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.1
+- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.2
 - BOOTH URL: https://peakheadz.booth.pm/items/8798555
 - BOOTH配布zip: booth_ready/DakePDF_OverviewRename.zip
 - Store URL: https://store.dakeapp.com/product/?id=dake_pdf_overview_rename
@@ -559,9 +563,10 @@ build、dist、spec、設定ファイル、個人データ、ソース一式を�
 - 公開画像: 一時作成した `C:\Users\Public\Documents\DAKE_synthetic_release_20260902_48` の無機密合成PDF 48件だけを使い、実アプリ画面から `assets/screenshot.webp` / `assets/screenshot.jpg` / `assets/booth_thumbnail.jpg` を作成。一時フォルダはキャプチャ後に削除済み
 - 第三者ライセンス: ビルド環境の pypdfium2 5.13.0 / PDFium 153.0.7999.0（origin: pdfium-binaries）のwheelに記録されたLicense-File全19件を原文のまま `third_party_licenses/pypdfium2-5.13.0/` と配布物へ収録。コピー元とのSHA-256集合一致を確認
 - 派生ビュー: `README.md`、`DAKE_META`、`release_body.md`、`booth_product.txt`、`booth_ready/` を本正本から整備。価格、GitHub Release URL、BOOTH URLを正式出荷値へ統一
-- 現行公開版: `version: 1.0.1`、`price: 500円`、`status: available`。GitHub ReleaseとBOOTH既存商品に反映済み
+- 作業開始時の公開版: `version: 1.0.1`、`price: 500円`、`status: available`。GitHub Release、BOOTH、dakeapp.com、Storeへ反映済み
+- 今回出荷版: `version: 1.0.2`。固定26件上限は現行コードで再現せず、境界件数・異常PDF・末尾到達の回帰を強化し、ページ数・容量・サムネイル失敗数表示を整備する
 - 公開対象: `show_in_launcher: true`、`show_on_site: true`
-- Phase 3正式出荷: v1.0.0時点の実績。v1.0.1のdakeapp.com / Store反映はIssue #31で別途確認する
+- v1.0.1正式出荷: PR #25/#33とIssue #27/#31で、Release、既存BOOTH商品、dakeapp.com、Store、Stripe、Cloudflare本番反映まで確認済み
 - GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_OverviewRename_v1.0.1（v1.0.1、34,140,032バイトの配布zipを添付。SHA-256: 2b84ba6cdb14f33e5b3ecb0aa0558c24a3fa9b430a9cd3d30c1eabb3de1b7541）
 - BOOTH: https://peakheadz.booth.pm/items/8798555（500円、購入可能、商品画像2点、配布zip設定を確認）
 - Stripe: Product `prod_VBbAdnHXBZVPjN`、Price `price_1UBDyVHrsJubFuDOfPQGhhSM`、Payment Link `plink_1UBE1sHrsJubFuDOhzt7u8BQ` を本番モードで作成。公開Checkoutで商品名、500円、購入ボタン、メール導線を確認し、実購入は未実施
@@ -569,10 +574,29 @@ build、dist、spec、設定ファイル、個人データ、ソース一式を�
 - Store: https://store.dakeapp.com/product/?id=dake_pdf_overview_rename（500円、`Stripe対応`、Stripe購入導線、BOOTH補助導線、商品画像を本番表示で確認）
 - Cloudflare Pages: dakeapp-site / dake-store-site ともmainマージ後の本番デプロイ成功、および上記カスタムドメインの公開表示を確認
 - v1.0.1更新: 同一フォルダを再スキャンする `再読み込み`、初回・追加batchのカード配置修正、非モーダルのrename/Undo成功表示、表示サイズ `特大`、大プレビューのホイールzoom・倍率表示・pan・高解像度Latest Jobを追加。既存のStripe Product / Price / Payment Linkは変更していない
+- v1.0.2更新: カードへページ数と実ファイル容量を常時表示し、サムネイル処理済み数と失敗数を区別。scan時のsnapshot取得失敗を黙って欠落させず、0/1/23/24/25/26/27/32/47/48/49/100/300件と24〜27番目付近の異常PDFを回帰対象にする。ウインドウタイトルへバージョンを表示する
 
 ## Codex作業時の注意
 
-- 作業ブランチ: `codex/dake-pdf-overview-rename-formal-release`
+### v1.0.2 Human Review PASS（800件・2026-09-30）
+
+利用者がWindows実機のrc2-viewport（source caaa213fa70c0141aada4c9bf9ca073c2e780d51）を合成PDF800件で確認し、Human Review PASSと報告した。
+初回順次表示、800件末尾到達、小→特大と連続サイズ切替、追加スクロールなしの表示復元、スクロール中の空白化なし、UIフリーズなし、ページ数・容量、名前入力保持、末尾付近rename/Undo、reload後全件維持を含む。
+これは400件を超える実機受入結果であり、Codexの自動試験や全DPI・IME・タスクバーアイコンの確認済みを意味しない。
+この受入によりHuman Review待ちのHOLDを解除し、利用者指示の正式出荷工程を進める。出荷全工程完了前に正式出荷完了としない。
+正式版は候補タイトル接尾辞だけを除き、受入済みの処理・表示・rename/Undoロジックを変更しない。
+
+### v1.0.2 rc2-viewport修正履歴
+
+- 前回RC `31a31f3` は実機400件で空白表示・サイズ変更不良が発生しHuman Review FAIL。旧84 tests PASSを取り消さないが、実画面の正常表示を保証していなかった。その後のrc2-viewportは上記800件の実機再試験でPASS。Issue #46は全出荷工程の完了まで未完了として扱う。
+- 論理的な400件の一覧と、小さい表示Frameを分離する。Canvas scrollregionは全件の論理長、表示Frameはviewport＋先読み分に制限し、全件分の巨大なnative Frameを作らない。
+- サイズ変更は見ていたファイルIDと画面内相対位置を基準に復元する。再scan・再render・先頭へ強制移動しない。表示とPhotoImage適用はUIスレッド上で8ms予算の分割処理とし、予約は各1件へ集約、最新サイズを優先する。
+- 全件の入力StringVar・変更待ち・snapshot・ページ数はモデル側に保持する。フォーカス中の入力部品は別PDFへ再利用せず保持し、カーソル・選択・横スクロール位置も復元する。日本語IME変換中の実機確認は別途Human Reviewで行う。
+- 基準画像は各PDFにつき最大350×455 RGBの可逆圧縮データ1個。workerで圧縮し、PDF再openなしで表示サイズへ変換する。全サイズの派生キャッシュは持たず、PhotoImageは可視＋先読み部品分のみ。画面外で解放、clear／世代更新で基準画像と変数traceも解放する。400件の基準画素の非圧縮上限は約183MiB（圧縮後は内容依存）。
+- サムネイル処理数は生成済み（失敗を含む）件数であり、現在画面への画像適用完了の証拠にはしない。サムネイル結果ごとの全カード入力欄更新を廃止し、変更待ち集合でstatusを更新する。
+- 詳細な原因・計測・未確認事項は `tools/reports/dake_pdf_overview_rename_v102_viewport.md`。UI文言はUI_TEXT／既存定数、rename_core・PDFium mutex・preview Latest Jobは維持。
+
+- 作業ブランチ: `codex/dake-pdf-overview-rename-v1.0.2`
 - 対象: `01_apps/DAKE_PDF_OverviewRename/`
 - 旧ブランチ `feature/dake-pdf-overview-rename` とDraft PR #11のコードは暫定参考であり、採用済み実装ではありません。
 - 旧コードを自動でcherry-pickしません。

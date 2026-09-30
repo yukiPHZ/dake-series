@@ -110,16 +110,16 @@ Codexは、正式成果物・最新の通常作業状態・出荷用ローカル
 
 ### 一時worktree / 一時作業コピー
 
-競合回避、並行作業、隔離検証などのために、一時worktreeや一時コピーを別ディレクトリへ作成することは許可する。
+競合回避、隔離検証が必要な場合は `C:\Users\yukiz\devlop\_worktrees\` 配下を使う。利用者指定の開発ルート外へ、無断で作業場所・恒久的な成果物置き場を増やさない。OS・ツール内部の一時ディレクトリはこれと区別する。
 
 ただし、それらは**一時作業場所であり正式な保存先ではない**。
 
 例:
 
-- `C:\Users\yukiz\Documents\New project\...`
-- `_codex_work\...`
-- `_codex_worktrees\...`
-- その他の検証専用ディレクトリ
+- ソース分離: `C:\Users\yukiz\devlop\_worktrees\...`
+- Human Review用データ・証跡: `C:\Users\yukiz\devlop\_review\...`
+
+Human Review用exeは通常repoの対象アプリ `dist` へ固定配置し、ユーザーに別worktreeを探させない。DakePDF俯瞰名前変更は `C:\Users\yukiz\devlop\DAKE_series\01_apps\DAKE_PDF_OverviewRename\dist\DakePDF_OverviewRename.exe` とする。既存版を退避し、実行中のexeを上書きせず、候補ZIP展開exeとSHA-256を照合する。隣接する `build-info.txt` に未公開候補、source commit、build日時、exe/ZIP SHA-256、実ビルドパスを記録する。成果物配置はmain反映ではなく、通常repoへソースを無断コピーしない。
 
 ### 完了時の必須片付け
 
@@ -131,7 +131,7 @@ Codexは、正式成果物・最新の通常作業状態・出荷用ローカル
 4. 正式成果物が必要な場合、`C:\Users\yukiz\devlop` 配下の正式repo / 正式成果物置き場へ同期済み
 5. 同期後のファイル内容・SHA-256等を必要に応じて再確認
 6. 一時worktreeに未commit・未pushの必要変更がないことを確認
-7. 一時worktree / 一時コピーを削除
+7. 一時worktree / 一時コピーを削除（未merge・Human Review待ちなど必要な作業場所は理由を記録して保持）
 8. Git worktreeを使用した場合は `git worktree remove` と `git worktree prune` を適切に実施
 9. 一時build / dist / ZIP / venv / synthetic fixture等も、今後必要なものを除き削除
 

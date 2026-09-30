@@ -3,11 +3,13 @@ from __future__ import annotations
 
 import ctypes
 import queue
+import stat
 import sys
 import threading
 import time
 import tkinter as tk
 import webbrowser
+import zlib
 from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
@@ -27,7 +29,8 @@ from rename_core import (
 
 
 APP_NAME = "DakePDF俯瞰名前変更"
-WINDOW_TITLE = "DakePDF俯瞰名前変更"
+APP_VERSION = "1.0.2"
+WINDOW_TITLE = f"{APP_NAME} v{APP_VERSION}"
 COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
 APP_USER_MODEL_ID = "Shimarisu.DakePDFOverviewRename"
 
@@ -45,14 +48,15 @@ UI_TEXT = {
     "size_xlarge": "特大",
     "undo": "変更を元に戻す",
     "apply": "名前変更を反映 {count}",
-    "page_count": "{count}ページ",
-    "page_unknown": "ページ数 -",
+    "metadata_loading": "ページ数確認中… ｜ {size}",
+    "metadata_ready": "{count}ページ ｜ {size}",
+    "metadata_unknown": "ページ数不明 ｜ {size}",
     "thumbnail_loading": "プレビュー読み込み中",
     "thumbnail_error": "プレビューできません",
     "empty_title": "PDFがありません",
     "empty_hint": "フォルダ直下のPDFを表示します。",
-    "status_empty": "0件 ｜ サムネイル 0 / 0 ｜ 0件の変更待ち",
-    "status_summary": "{total}件 ｜ サムネイル {ready} / {total} ｜ {pending}件の変更待ち",
+    "status_empty": "PDF 0件 ｜ サムネイル処理 0/0（失敗0）｜ 変更待ち0件",
+    "status_summary": "PDF {total}件 ｜ サムネイル処理 {processed}/{total}（失敗{failed}）｜ 変更待ち{pending}件",
     "status_scanning": "PDFを確認しています…",
     "status_cards": "{total}件のカードを準備しています…",
     "status_renaming": "名前を変更しています…",
@@ -130,6 +134,7 @@ FONT_CANDIDATES = ("BIZ UDPGothic", "Yu Gothic UI", "Meiryo")
 WINDOW_SIZE = "1180x780"
 WINDOW_MIN_SIZE = (900, 620)
 CARD_BATCH_SIZE = 24
+VIEW_BUDGET_SECONDS = 0.008
 POLL_MS = 45
 THUMB_WORKERS = 3
 THUMB_RENDER_BOX = (350, 455)
@@ -214,56 +219,98 @@ def load_preview_dependencies():
 
 
 def scan_pdf_folder(folder: Path) -> list[FileSnapshot]:
-    paths = sorted(
-        (
-            path
-            for path in folder.iterdir()
-            if path.is_file() and path.suffix.casefold() == ".pdf"
-        ),
-        key=lambda path: (path.name.casefold(), path.name),
-    )
-    snapshots: list[FileSnapshot] = []
-    for path in paths:
-        try:
-            snapshots.append(FileSnapshot.capture(path))
-        except OSError:
+    paths: list[Path] = []
+    for path in folder.iterdir():
+        if path.suffix.casefold() != ".pdf":
             continue
-    return snapshots
+        if stat.S_ISREG(path.stat().st_mode):
+            paths.append(path)
+    paths.sort(key=lambda path: (path.name.casefold(), path.name))
+    # Do not silently turn a stat/read race into an apparently complete list.
+    # A failed capture aborts this scan so the UI can report the folder error and
+    # the user can retry, instead of presenting fewer cards than discovered PDFs.
+    return [FileSnapshot.capture(path) for path in paths]
+
+
+def format_file_size(size_bytes: int) -> str:
+    if size_bytes < 1024:
+        return f"{size_bytes} B"
+    if size_bytes < 1024**2:
+        return f"{round(size_bytes / 1024)} KB"
+    if size_bytes < 1024**3:
+        return f"{size_bytes / 1024**2:.1f} MB"
+    return f"{size_bytes / 1024**3:.1f} GB"
+
+
+class PdfPreviewError(RuntimeError):
+    def __init__(self, cause: BaseException, page_count: int | None = None):
+        self.cause = cause
+        self.page_count = page_count
+        super().__init__(str(cause))
+
+
+@dataclass(frozen=True)
+class ThumbnailSource:
+    """One lossless, maximum-resolution source per PDF; no per-size cache.
+
+    Encoded in the rendering worker, decoded only for visible PhotoImages.
+    Storage is bounded by 350*455*3 bytes plus zlib overhead per document.
+    The generation owns these bytes and drops them on reload/refresh/close.
+    """
+    size: tuple[int, int]
+    pixels: bytes
+
+    @classmethod
+    def encode(cls, image):
+        return cls(image.size, zlib.compress(image.tobytes(), level=1))
+
+    def copy(self):
+        _, (Image, _) = load_preview_dependencies()
+        return Image.frombytes("RGB", self.size, zlib.decompress(self.pixels))
 
 
 def render_first_page(path: Path, box: tuple[int, int]):
     pdfium, pil_modules = load_preview_dependencies()
     Image, _ = pil_modules
-    with _PDFIUM_LOCK:
-        document = pdfium.PdfDocument(str(path))
-        page = None
-        bitmap = None
-        try:
-            page_count = len(document)
-            if page_count < 1:
-                raise ValueError("zero pages")
-            page = document[0]
-            width, height = page.get_size()
-            scale = max(0.25, min(box[0] / max(width, 1), box[1] / max(height, 1)))
-            bitmap = page.render(scale=scale)
-            image = bitmap.to_pil().convert("RGB").copy()
-        finally:
-            if bitmap is not None:
-                try:
-                    bitmap.close()
-                except Exception:
-                    pass
-            if page is not None:
-                try:
-                    page.close()
-                except Exception:
-                    pass
+    page_count: int | None = None
+    try:
+        with _PDFIUM_LOCK:
+            document = None
+            page = None
+            bitmap = None
             try:
-                document.close()
-            except Exception:
-                pass
-    image.thumbnail(box, Image.Resampling.LANCZOS)
-    return image, page_count
+                document = pdfium.PdfDocument(str(path))
+                page_count = len(document)
+                if page_count < 1:
+                    raise ValueError("zero pages")
+                page = document[0]
+                width, height = page.get_size()
+                scale = max(0.25, min(box[0] / max(width, 1), box[1] / max(height, 1)))
+                bitmap = page.render(scale=scale)
+                image = bitmap.to_pil().convert("RGB").copy()
+            finally:
+                if bitmap is not None:
+                    try:
+                        bitmap.close()
+                    except Exception:
+                        pass
+                if page is not None:
+                    try:
+                        page.close()
+                    except Exception:
+                        pass
+                if document is not None:
+                    try:
+                        document.close()
+                    except Exception:
+                        pass
+        image.thumbnail(box, Image.Resampling.LANCZOS)
+        return image, page_count
+    except PdfPreviewError:
+        raise
+    except Exception as exc:
+        known_page_count = page_count if page_count is not None and page_count > 0 else None
+        raise PdfPreviewError(exc, known_page_count) from exc
 
 
 @dataclass(frozen=True)
@@ -345,9 +392,11 @@ class RenderPool:
                 self._active_folders[folder] = self._active_folders.get(folder, 0) + 1
             try:
                 image, page_count = render_first_page(request.snapshot.path, request.box)
+                if hasattr(image, "tobytes"):
+                    image = ThumbnailSource.encode(image)
                 result = RenderResult(request, image, page_count, None)
             except Exception as exc:
-                result = RenderResult(request, None, None, str(exc))
+                result = RenderResult(request, None, getattr(exc, "page_count", None), str(exc))
             finally:
                 with self._condition:
                     count = self._active_folders.get(folder, 1) - 1
@@ -417,7 +466,7 @@ class LatestPreviewWorker:
                 image, page_count = render_first_page(request.snapshot.path, request.box)
                 result = RenderResult(request, image, page_count, None)
             except Exception as exc:
-                result = RenderResult(request, None, None, str(exc))
+                result = RenderResult(request, None, getattr(exc, "page_count", None), str(exc))
             finally:
                 with self._condition:
                     self._active_folder = None
@@ -478,17 +527,24 @@ class CardState:
     snapshot: FileSnapshot
     original_name: str
     variable: tk.StringVar
-    frame: tk.Frame
-    body: tk.Frame
-    image_label: tk.Label
-    page_label: tk.Label
-    name_label: tk.Label
-    entry: tk.Entry
-    suffix_label: tk.Label
-    hint_label: tk.Label
+    frame: tk.Frame | None = None
+    body: tk.Frame | None = None
+    image_label: tk.Label | None = None
+    page_label: tk.Label | None = None
+    name_label: tk.Label | None = None
+    entry: tk.Entry | None = None
+    suffix_label: tk.Label | None = None
+    hint_label: tk.Label | None = None
     base_image: object | None = None
     photo: object | None = None
     rendered: bool = False
+    thumbnail_failed: bool = False
+    page_count: int | None = None
+    photo_size: str | None = None
+    cursor: int = 0
+    selection: tuple[int, int] | None = None
+    entry_xview: float = 0.0
+    trace_token: str | None = None
 
     @property
     def pending(self) -> bool:
@@ -513,10 +569,20 @@ class OverviewRenameApp:
         self.busy = False
         self.closing = False
         self.rendered_count = 0
+        self.thumbnail_failures = 0
         self._layout_after: str | None = None
         self._poll_after: str | None = None
         self._current_columns = 0
         self._laid_out_count = 0
+        self._row_height = 1
+        self._logical_height = 1
+        self._view_after: str | None = None
+        self._image_after: str | None = None
+        self._mounted: dict[int, CardState] = {}
+        self._pending_ids: set[int] = set()
+        self._image_queue: deque[int] = deque()
+        self._view_pool: list[tuple] = []
+        self._layout_size = "normal"
         self._preview_window: tk.Toplevel | None = None
         self._preview_label: tk.Label | None = None
         self._preview_canvas: tk.Canvas | None = None
@@ -610,13 +676,12 @@ class OverviewRenameApp:
         viewport = tk.Frame(shell, bg=THEME["background"])
         viewport.pack(fill="both", expand=True, padx=(24, 17))
         self.canvas = tk.Canvas(viewport, bg=THEME["background"], highlightthickness=0)
-        scrollbar = tk.Scrollbar(viewport, orient="vertical", command=self._on_scrollbar)
-        self.canvas.configure(yscrollcommand=scrollbar.set)
+        self.scrollbar = tk.Scrollbar(viewport, orient="vertical", command=self._on_scrollbar)
+        self.canvas.configure(yscrollcommand=self._on_yview, yscrollincrement=30)
         self.canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
+        self.scrollbar.pack(side="right", fill="y")
         self.cards_frame = tk.Frame(self.canvas, bg=THEME["background"])
         self.cards_window = self.canvas.create_window((0, 0), window=self.cards_frame, anchor="nw")
-        self.cards_frame.bind("<Configure>", self._update_scrollregion)
         self.canvas.bind("<Configure>", self._on_canvas_resize)
         self.root.bind("<MouseWheel>", self._route_mousewheel, add="+")
 
@@ -733,49 +798,142 @@ class OverviewRenameApp:
 
     def _on_mousewheel(self, event) -> str:
         self.canvas.yview_scroll(-1 if event.delta > 0 else 1, "units")
-        self.root.after_idle(self._reprioritize_unrendered)
+        self._schedule_view()
         return "break"
 
     def _on_scrollbar(self, *arguments) -> None:
         self.canvas.yview(*arguments)
-        self.root.after_idle(self._reprioritize_unrendered)
+        self._schedule_view()
+
+    def _on_yview(self, first, last) -> None:
+        self.scrollbar.set(first, last)
+        position = (first, last)
+        if position != getattr(self, "_last_yview", None):
+            self._last_yview = position
+            self._schedule_view()
+
+    def _schedule_view(self) -> None:
+        if not self.closing and self._view_after is None:
+            self._view_after = self.root.after(1, self._refresh_view)
 
     def _update_scrollregion(self, _event=None) -> None:
-        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        self.canvas.configure(scrollregion=(0, 0, max(1, self.canvas.winfo_width()), self._logical_height))
 
     def _on_canvas_resize(self, event) -> None:
-        self.canvas.itemconfigure(self.cards_window, width=event.width)
         if self._layout_after is not None:
             self.root.after_cancel(self._layout_after)
-        self._layout_after = self.root.after(120, self._layout_cards)
+        self._layout_after = self.root.after(60, self._layout_cards)
+
+    def _view_anchor(self) -> tuple[int, float]:
+        top = max(0, self.canvas.canvasy(0))
+        columns = max(1, self._current_columns)
+        row = int(top // max(1, self._row_height))
+        return min(row * columns, max(0, len(self.cards) - 1)), (row * self._row_height - top) / max(1, self.canvas.winfo_height())
 
     def _layout_cards(self) -> None:
         self._layout_after = None
+        anchor, relative_y = self._view_anchor()
         width = max(self.canvas.winfo_width(), WINDOW_MIN_SIZE[0] - 60)
         card_width = SIZE_CONFIG[self.size_var.get()][0]
         columns = max(1, width // (card_width + 14))
-        columns_changed = columns != self._current_columns
-        start = 0 if columns_changed else min(self._laid_out_count, len(self.cards))
-        if not columns_changed and start >= len(self.cards):
-            self._update_scrollregion()
-            return
         self._current_columns = columns
-        for index in range(start, len(self.cards)):
-            card = self.cards[index]
-            card.frame.grid(row=index // columns, column=index % columns, padx=7, pady=7, sticky="n")
+        self._layout_size = self.size_var.get()
+        self._row_height = SIZE_CONFIG[self._layout_size][2] + 148
+        self._logical_height = max(1, ((len(self.cards) + columns - 1) // columns) * self._row_height)
         self._laid_out_count = len(self.cards)
-        for column in range(columns):
-            self.cards_frame.grid_columnconfigure(column, weight=1)
         self._update_scrollregion()
+        target = anchor // columns * self._row_height - relative_y * self.canvas.winfo_height()
+        self.canvas.yview_moveto(max(0, target) / self._logical_height)
+        self._schedule_view()
+
+    def _refresh_view(self) -> None:
+        self._view_after = None
+        if self.closing or not self.cards:
+            return
+        columns = max(1, self._current_columns)
+        top = max(0, self.canvas.canvasy(0))
+        height = max(1, self.canvas.winfo_height())
+        first_row = max(0, int(top // self._row_height) - 1)
+        last_row = int((top + height) // self._row_height) + 1
+        desired = set(range(first_row * columns, min(len(self.cards), (last_row + 1) * columns)))
+        focus = self.root.focus_get()
+        # Never rebind or destroy the focused entry (including an IME composition).
+        for identifier, card in list(self._mounted.items()):
+            if identifier not in desired and card.entry is not focus:
+                self._unmount_card(card)
+        origin = first_row * self._row_height
+        self.canvas.coords(self.cards_window, 0, origin)
+        self.canvas.itemconfigure(self.cards_window, width=self.canvas.winfo_width(), height=height + 3 * self._row_height)
+        width, _, image_height = SIZE_CONFIG[self.size_var.get()]
+        cell_width = max(1, self.canvas.winfo_width()) / columns
+        deadline = time.perf_counter() + VIEW_BUDGET_SECONDS
+        ordered = sorted(desired, key=lambda i: (not (top <= (i // columns + 1) * self._row_height and i // columns * self._row_height <= top + height), i))
+        incomplete = False
+        for identifier in ordered:
+            card = self.cards[identifier]
+            if card.frame is None:
+                if time.perf_counter() >= deadline:
+                    incomplete = True
+                    continue
+                self._mount_card(card)
+            card.body.configure(width=width, height=image_height + 132)
+            card.hint_label.configure(wraplength=max(width - 24, 80))
+            card.frame.place(x=int((identifier % columns + .5) * cell_width - width / 2), y=identifier // columns * self._row_height - origin + 7, width=width + 2, height=image_height + 134)
+        for identifier, card in self._mounted.items():
+            if identifier not in desired:
+                card.frame.place(x=0, y=-2*self._row_height, width=width+2, height=image_height+134)
+        # Discard spare views after the viewport shrinks. No per-size image cache.
+        while self._view_pool:
+            self._view_pool.pop()[0].destroy()
+        self._image_queue = deque(i for i in ordered if i in self._mounted and self.cards[i].base_image is not None and self.cards[i].photo_size != self.size_var.get())
+        if self._image_queue and self._image_after is None:
+            self._image_after = self.root.after(1, self._drain_images)
+        if incomplete:
+            self._schedule_view()
+        self._reprioritize_unrendered()
+
+    def _drain_images(self) -> None:
+        self._image_after = None
+        deadline = time.perf_counter() + VIEW_BUDGET_SECONDS
+        while self._image_queue and time.perf_counter() < deadline:
+            identifier = self._image_queue.popleft()
+            card = self._mounted.get(identifier)
+            if card is not None:
+                self._apply_card_image(card)
+        if self._image_queue and not self.closing:
+            self._image_after = self.root.after(1, self._drain_images)
 
     def _clear_cards(self) -> None:
+        for name in ("_view_after", "_image_after", "_layout_after"):
+            callback = getattr(self, name)
+            if callback is not None:
+                self.root.after_cancel(callback)
+                setattr(self, name, None)
+        for card in self._mounted.values():
+            card.entry.current_card = None
+            card.image_label.current_card = None
+        self._mounted.clear()
+        self._view_pool.clear()
+        self._image_queue.clear()
+        self._pending_ids.clear()
+        for card in self.cards:
+            if getattr(card, "trace_token", None) is not None:
+                card.variable.trace_remove("write", card.trace_token)
+                card.trace_token = None
+            card.base_image = None
+            card.photo = None
         for child in self.cards_frame.winfo_children():
             child.destroy()
         self.cards.clear()
         self.rendered_count = 0
+        self.thumbnail_failures = 0
         self._current_columns = 0
         self._laid_out_count = 0
+        self._logical_height = 1
         self._update_scrollregion()
+        self.canvas.yview_moveto(0)
+        self.canvas.coords(self.cards_window, 0, 0)
+        self.canvas.itemconfigure(self.cards_window, width=self.canvas.winfo_width(), height=max(1, self.canvas.winfo_height()))
 
     def has_pending(self) -> bool:
         return any(card.pending for card in self.cards)
@@ -852,7 +1010,6 @@ class OverviewRenameApp:
         for snapshot in snapshots[start:end]:
             self._create_card(snapshot)
         self._layout_cards()
-        self.root.update_idletasks()
         if end < len(snapshots):
             self.root.after(1, self._create_cards_batch, snapshots, end, token)
         else:
@@ -860,6 +1017,67 @@ class OverviewRenameApp:
 
     def _create_card(self, snapshot: FileSnapshot) -> None:
         identifier = len(self.cards)
+        variable = tk.StringVar(value=snapshot.path.stem)
+        card = CardState(identifier, snapshot, snapshot.path.name, variable)
+        card.trace_token = variable.trace_add("write", lambda *_args, current=card: self._on_name_changed(current))
+        self.cards.append(card)
+
+    def _mount_card(self, card: CardState) -> None:
+        names = ("frame", "body", "image_label", "page_label", "name_label", "entry", "suffix_label", "hint_label")
+        if self._view_pool:
+            for name, widget in zip(names, self._view_pool.pop()):
+                setattr(card, name, widget)
+            card.entry.configure(textvariable=card.variable, state="disabled" if self.busy else "normal")
+            card.name_label.configure(text=card.original_name)
+        else:
+            self._build_card_view(card)
+        card.name_label.configure(text=card.original_name)
+        card.entry.configure(state="disabled" if self.busy else "normal")
+        self._mounted[card.identifier] = card
+        card.image_label.configure(image="", text=UI_TEXT["thumbnail_error" if card.thumbnail_failed else "thumbnail_loading"], width=1, height=1, fg=THEME["error" if card.thumbnail_failed else "muted"])
+        card.image_label.current_card = card
+        card.entry.current_card = card
+        card.entry.icursor(card.cursor)
+        card.entry.selection_clear()
+        if card.selection is not None:
+            card.entry.selection_range(*card.selection)
+        card.entry.xview_moveto(card.entry_xview)
+        card.page_label.configure(text=self._metadata(card))
+        card.hint_label.configure(text=UI_TEXT["pdf_suffix_hint"] if card.variable.get().casefold().endswith(".pdf") else "")
+        self._style_card(card)
+
+    def _unmount_card(self, card: CardState) -> None:
+        card.cursor = card.entry.index("insert")
+        card.selection = (card.entry.index("sel.first"), card.entry.index("sel.last")) if card.entry.selection_present() else None
+        card.entry_xview = card.entry.xview()[0]
+        card.frame.place_forget()
+        card.image_label.configure(image="")
+        card.entry.configure(textvariable="")
+        names = ("frame", "body", "image_label", "page_label", "name_label", "entry", "suffix_label", "hint_label")
+        self._view_pool.append(tuple(getattr(card, name) for name in names))
+        card.image_label.current_card = None
+        card.entry.current_card = None
+        for name in names:
+            setattr(card, name, None)
+        card.photo = None
+        card.photo_size = None
+        self._mounted.pop(card.identifier)
+
+    def _focus_adjacent(self, card: CardState, direction: int) -> str:
+        identifier = max(0, min(len(self.cards)-1, card.identifier+direction))
+        self.canvas.yview_moveto((identifier // max(1, self._current_columns) * self._row_height) / self._logical_height)
+        if self.cards[identifier].frame is None:
+            self._mount_card(self.cards[identifier])
+        self.cards[identifier].entry.focus_set()
+        self._schedule_view()
+        return "break"
+
+    def _metadata(self, card: CardState) -> str:
+        key = "metadata_ready" if card.page_count is not None else ("metadata_unknown" if card.rendered else "metadata_loading")
+        return UI_TEXT[key].format(count=card.page_count, size=format_file_size(card.snapshot.size))
+
+    def _build_card_view(self, card: CardState) -> None:
+        snapshot = card.snapshot
         width, image_width, image_height = SIZE_CONFIG[self.size_var.get()]
         frame = tk.Frame(self.cards_frame, bg=THEME["border"], padx=1, pady=1)
         body = tk.Frame(frame, bg=THEME["card"], width=width, height=image_height + 132, padx=10, pady=10)
@@ -870,15 +1088,28 @@ class OverviewRenameApp:
             font=(self.font, 9), width=max(1, image_width // 9), height=max(1, image_height // 18), cursor="hand2",
         )
         image_label.pack(fill="x")
-        page_label = tk.Label(body, text=UI_TEXT["page_unknown"], bg=THEME["card"], fg=THEME["muted"], font=(self.font, 8), anchor="w")
+        file_size = format_file_size(snapshot.size)
+        page_label = tk.Label(
+            body,
+            text=UI_TEXT["metadata_loading"].format(size=file_size),
+            bg=THEME["card"],
+            fg=THEME["muted"],
+            font=(self.font, 8),
+            anchor="w",
+        )
         page_label.pack(fill="x", pady=(8, 2))
         name_label = tk.Label(body, text=snapshot.path.name, bg=THEME["card"], fg=THEME["text"], font=(self.font, 9, "bold"), anchor="w")
         name_label.pack(fill="x", pady=(0, 5))
         edit_row = tk.Frame(body, bg=THEME["card"])
         edit_row.pack(fill="x")
-        variable = tk.StringVar(value=snapshot.path.stem)
+        variable = card.variable
         entry = tk.Entry(edit_row, textvariable=variable, font=(self.font, 9), relief="solid", bd=1, highlightthickness=1, highlightbackground=THEME["border"], highlightcolor=THEME["accent"])
         entry.pack(side="left", fill="x", expand=True)
+        # Bind once per view. Rebinding on reuse would retain old Tcl callbacks.
+        image_label.bind("<Button-1>", lambda _event, view=image_label: self.show_preview(view.current_card))
+        entry.bind("<FocusOut>", lambda _event: self._schedule_view())
+        entry.bind("<Tab>", lambda _event, view=entry: self._focus_adjacent(view.current_card, 1))
+        entry.bind("<Shift-Tab>", lambda _event, view=entry: self._focus_adjacent(view.current_card, -1))
         suffix_label = tk.Label(edit_row, text=".pdf", bg=THEME["card"], fg=THEME["muted"], font=(self.font, 9), padx=3)
         suffix_label.pack(side="left")
         hint_label = tk.Label(
@@ -886,10 +1117,25 @@ class OverviewRenameApp:
             anchor="w", justify="left", wraplength=max(width - 24, 80),
         )
         hint_label.pack(fill="x", pady=(3, 0))
-        card = CardState(identifier, snapshot, snapshot.path.name, variable, frame, body, image_label, page_label, name_label, entry, suffix_label, hint_label)
-        variable.trace_add("write", lambda *_args, current=card: self._on_name_changed(current))
-        image_label.bind("<Button-1>", lambda _event, current=card: self.show_preview(current))
-        self.cards.append(card)
+        for name, widget in zip(("frame", "body", "image_label", "page_label", "name_label", "entry", "suffix_label", "hint_label"), (frame, body, image_label, page_label, name_label, entry, suffix_label, hint_label)):
+            setattr(card, name, widget)
+        # Fixed pixel image slot prevents text/image unit changes from resizing rows.
+        image_label.pack_forget()
+        image_label.place(x=10, y=10, width=image_width, height=image_height)
+        page_label.pack_forget()
+        name_label.pack_forget()
+        edit_row.pack_forget()
+        hint_label.pack_forget()
+        body.bind("<Configure>", lambda _event, b=body, im=image_label, pg=page_label, nm=name_label, ed=edit_row, ht=hint_label: self._position_card_contents(b, im, pg, nm, ed, ht))
+
+    def _position_card_contents(self, body, image_label, page_label, name_label, edit_row, hint_label) -> None:
+        width, image_width, image_height = SIZE_CONFIG[self.size_var.get()]
+        line = max(20, int(float(self.root.tk.call("tk", "scaling"))*14))
+        image_label.place(x=10, y=10, width=image_width, height=image_height)
+        page_label.place(x=10, y=image_height+16, width=width-20, height=line)
+        name_label.place(x=10, y=image_height+16+line, width=width-20, height=line)
+        edit_row.place(x=10, y=image_height+18+2*line, width=width-20, height=line+3)
+        hint_label.place(x=10, y=image_height+23+3*line, width=width-20, height=line)
 
     def _finish_card_creation(self) -> None:
         if not self.cards:
@@ -897,9 +1143,9 @@ class OverviewRenameApp:
             self._sync_status()
             return
         self._layout_cards()
-        self.root.update_idletasks()
         self._reprioritize_unrendered()
         self._sync_status()
+        self._sync_controls()
 
     def _show_empty(self) -> None:
         holder = tk.Frame(self.cards_frame, bg=THEME["background"], pady=80)
@@ -909,12 +1155,20 @@ class OverviewRenameApp:
 
     def _on_name_changed(self, card: CardState) -> None:
         self._clear_success()
+        if card.pending:
+            self._pending_ids.add(card.identifier)
+        else:
+            self._pending_ids.discard(card.identifier)
         entered_pdf = card.variable.get().casefold().endswith(".pdf")
-        card.hint_label.configure(text=UI_TEXT["pdf_suffix_hint"] if entered_pdf else "")
+        if card.hint_label is not None:
+            card.hint_label.configure(text=UI_TEXT["pdf_suffix_hint"] if entered_pdf else "")
         self._style_card(card)
         self._sync_status()
+        self._sync_controls()
 
     def _style_card(self, card: CardState) -> None:
+        if card.frame is None:
+            return
         pending = card.pending
         border = THEME["pending_border"] if pending else THEME["border"]
         background = THEME["pending"] if pending else THEME["card"]
@@ -925,8 +1179,14 @@ class OverviewRenameApp:
         card.entry.master.configure(bg=background)
 
     def _sync_status(self) -> None:
-        self.status_var.set(UI_TEXT["status_summary"].format(total=len(self.cards), ready=self.rendered_count, pending=sum(card.pending for card in self.cards)))
-        self._sync_controls()
+        self.status_var.set(
+            UI_TEXT["status_summary"].format(
+                total=len(self.cards),
+                processed=self.rendered_count,
+                failed=self.thumbnail_failures,
+                pending=len(self._pending_ids),
+            )
+        )
 
     def _set_success(self, message: str) -> None:
         self.success_var.set(message)
@@ -944,35 +1204,25 @@ class OverviewRenameApp:
             root.after_idle(self._responsive_status)
 
     def _sync_controls(self) -> None:
-        pending = sum(card.pending for card in self.cards)
+        pending = len(self._pending_ids)
         self.apply_button.configure(text=UI_TEXT["apply"].format(count=pending), state="normal" if pending and not self.busy else "disabled")
         self.undo_button.configure(state="normal" if self.undo_record is not None and not self.busy else "disabled")
         self.refresh_button.configure(state="normal" if self.folder is not None and not self.busy else "disabled")
         self.reload_button.configure(state="normal" if self.folder is not None and not self.busy else "disabled")
         self.select_button.configure(state="disabled" if self.busy else "normal")
-        for card in self.cards:
+        for card in self._mounted.values():
             card.entry.configure(state="disabled" if self.busy else "normal")
 
     def change_size(self) -> None:
         if not self.cards:
             return
-        scroll = self.canvas.yview()[0]
-        width, image_width, image_height = SIZE_CONFIG[self.size_var.get()]
-        for card in self.cards:
-            card.body.configure(width=width, height=image_height + 132)
-            card.hint_label.configure(wraplength=max(width - 24, 80))
-            card.image_label.configure(width=max(1, image_width // 9), height=max(1, image_height // 18))
-            if card.base_image is not None:
-                self._apply_card_image(card)
-        self._current_columns = 0
-        self._laid_out_count = 0
+        if self._layout_after is not None:
+            self.root.after_cancel(self._layout_after)
+        self._image_queue.clear()
         self._layout_cards()
-        self.root.update_idletasks()
-        self.canvas.yview_moveto(scroll)
-        self.root.after_idle(self._reprioritize_unrendered)
 
     def _apply_card_image(self, card: CardState) -> None:
-        if card.base_image is None:
+        if card.base_image is None or card.frame is None:
             return
         _, pil_modules = load_preview_dependencies()
         Image, ImageTk = pil_modules
@@ -980,6 +1230,7 @@ class OverviewRenameApp:
         image = card.base_image.copy()
         image.thumbnail((image_width, image_height), Image.Resampling.LANCZOS)
         card.photo = ImageTk.PhotoImage(image)
+        card.photo_size = self.size_var.get()
         card.image_label.configure(image=card.photo, text="", width=image_width, height=image_height)
 
     def _accept_thumbnail(self, result: RenderResult) -> None:
@@ -990,13 +1241,25 @@ class OverviewRenameApp:
         if card.snapshot.path != request.snapshot.path or card.rendered:
             return
         card.rendered = True
+        card.page_count = result.page_count
         self.rendered_count += 1
+        file_size = format_file_size(card.snapshot.size)
         if result.error is not None or result.image is None:
-            card.image_label.configure(text=UI_TEXT["thumbnail_error"], image="", fg=THEME["error"])
+            card.thumbnail_failed = True
+            self.thumbnail_failures += 1
+            if card.image_label is not None:
+                card.image_label.configure(text=UI_TEXT["thumbnail_error"], image="", fg=THEME["error"])
+            if result.page_count is None:
+                metadata = UI_TEXT["metadata_unknown"].format(size=file_size)
+            else:
+                metadata = UI_TEXT["metadata_ready"].format(count=result.page_count, size=file_size)
+            if card.page_label is not None:
+                card.page_label.configure(text=metadata)
         else:
             card.base_image = result.image
-            card.page_label.configure(text=UI_TEXT["page_count"].format(count=result.page_count))
-            self._apply_card_image(card)
+            if card.page_label is not None:
+                card.page_label.configure(text=self._metadata(card))
+            self._schedule_view()
         self._sync_status()
 
     def show_preview(self, card: CardState) -> None:
@@ -1297,6 +1560,7 @@ class OverviewRenameApp:
             return
         if not plan.entries:
             self._sync_status()
+            self._sync_controls()
             return
         if not messagebox.askyesno(UI_TEXT["confirm_title"], UI_TEXT["confirm_message"].format(count=len(plan.entries)), parent=self.root):
             return
@@ -1357,6 +1621,7 @@ class OverviewRenameApp:
                 message = UI_TEXT["error_rename"].format(detail=str(exc))
             messagebox.showerror(UI_TEXT["error_title"], message, parent=self.root)
             self._sync_status()
+            self._sync_controls()
             return
         if kind == "rename":
             record = value
@@ -1371,7 +1636,8 @@ class OverviewRenameApp:
                 card.snapshot = snapshot
                 card.original_name = snapshot.path.name
                 card.variable.set(snapshot.path.stem)
-                card.name_label.configure(text=snapshot.path.name)
+                if card.name_label is not None:
+                    card.name_label.configure(text=snapshot.path.name)
                 self._style_card(card)
             success_message = UI_TEXT["success_rename"].format(count=len(record.entries))
         else:
@@ -1386,12 +1652,14 @@ class OverviewRenameApp:
                 card.snapshot = snapshot
                 card.original_name = snapshot.path.name
                 card.variable.set(snapshot.path.stem)
-                card.name_label.configure(text=snapshot.path.name)
+                if card.name_label is not None:
+                    card.name_label.configure(text=snapshot.path.name)
                 self._style_card(card)
             self.undo_record = None
             success_message = UI_TEXT["success_undo"].format(count=len(plan.entries))
         self._reschedule_unrendered()
         self._sync_status()
+        self._sync_controls()
         self._set_success(success_message)
 
     def _reschedule_unrendered(self) -> None:
@@ -1405,7 +1673,7 @@ class OverviewRenameApp:
         pending = [card for card in self.cards if not card.rendered]
         pending.sort(
             key=lambda card: (
-                not (card.frame.winfo_y() + card.frame.winfo_height() >= top and card.frame.winfo_y() <= bottom),
+                not ((card.identifier // max(1, self._current_columns) + 1) * self._row_height >= top and card.identifier // max(1, self._current_columns) * self._row_height <= bottom),
                 card.identifier,
             )
         )
@@ -1418,6 +1686,7 @@ class OverviewRenameApp:
     def _poll_results(self) -> None:
         if self.closing:
             return
+        deadline = time.perf_counter() + VIEW_BUDGET_SECONDS
         for _ in range(32):
             try:
                 token, folder, snapshots, error = self.scanner.results.get_nowait()
@@ -1425,6 +1694,8 @@ class OverviewRenameApp:
                 break
             self._accept_scan(token, folder, snapshots, error)
         for _ in range(32):
+            if time.perf_counter() >= deadline:
+                break
             try:
                 result = self.render_pool.results.get_nowait()
             except queue.Empty:
@@ -1450,6 +1721,9 @@ class OverviewRenameApp:
         if not self._confirm_discard():
             return
         self.closing = True
+        for callback in (self._view_after, self._image_after):
+            if callback is not None:
+                self.root.after_cancel(callback)
         if self._poll_after is not None:
             try:
                 self.root.after_cancel(self._poll_after)
@@ -1464,6 +1738,7 @@ class OverviewRenameApp:
         self.scanner.shutdown()
         self.render_pool.shutdown()
         self.preview_worker.shutdown()
+        self._clear_cards()
         self.root.destroy()
 
 

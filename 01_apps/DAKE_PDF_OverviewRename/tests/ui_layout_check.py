@@ -71,7 +71,7 @@ def check(scale_factor: float, width: int) -> dict[str, object]:
 
 
 def main() -> None:
-    results = [check(scale, width) for scale in (1.0, 1.25, 1.5) for width in (1180, 900)]
+    results = [check(scale, width) for scale in (1.0, 1.25, 1.5) for width in (1180, 900, 1920)]
     print(json.dumps(results, ensure_ascii=False, indent=2))
     assert all(
         result["toolbar_fits"]

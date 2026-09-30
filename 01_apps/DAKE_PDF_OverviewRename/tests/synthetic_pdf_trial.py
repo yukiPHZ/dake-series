@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import ctypes
 import hashlib
 import json
 import queue
@@ -25,6 +26,40 @@ from rename_core import FileSnapshot, RenameRequest, rename_batch, undo_rename
 
 def digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def working_set_bytes() -> int | None:
+    if not sys.platform.startswith("win"):
+        return None
+
+    class ProcessMemoryCounters(ctypes.Structure):
+        _fields_ = [
+            ("cb", ctypes.c_ulong),
+            ("PageFaultCount", ctypes.c_ulong),
+            ("PeakWorkingSetSize", ctypes.c_size_t),
+            ("WorkingSetSize", ctypes.c_size_t),
+            ("QuotaPeakPagedPoolUsage", ctypes.c_size_t),
+            ("QuotaPagedPoolUsage", ctypes.c_size_t),
+            ("QuotaPeakNonPagedPoolUsage", ctypes.c_size_t),
+            ("QuotaNonPagedPoolUsage", ctypes.c_size_t),
+            ("PagefileUsage", ctypes.c_size_t),
+            ("PeakPagefileUsage", ctypes.c_size_t),
+        ]
+
+    counters = ProcessMemoryCounters()
+    counters.cb = ctypes.sizeof(counters)
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    psapi = ctypes.WinDLL("psapi", use_last_error=True)
+    kernel32.GetCurrentProcess.restype = ctypes.c_void_p
+    psapi.GetProcessMemoryInfo.argtypes = [
+        ctypes.c_void_p,
+        ctypes.POINTER(ProcessMemoryCounters),
+        ctypes.c_ulong,
+    ]
+    psapi.GetProcessMemoryInfo.restype = ctypes.c_int
+    process = kernel32.GetCurrentProcess()
+    ok = psapi.GetProcessMemoryInfo(process, ctypes.byref(counters), counters.cb)
+    return int(counters.WorkingSetSize) if ok else None
 
 
 def make_synthetic_pdf(path: Path, index: int, total: int) -> None:
@@ -49,9 +84,14 @@ def run_trial(root: Path, count: int) -> dict[str, object]:
     snapshots = scan_pdf_folder(folder)
     scan_seconds = time.perf_counter() - started
     assert len(snapshots) == count
+    expected_names = {f"scan_{index:04d}.pdf" for index in range(1, count + 1)}
+    scanned_names = {snapshot.path.name for snapshot in snapshots}
+    assert scanned_names == expected_names
     before_hashes = {snapshot.path.name: digest(snapshot.path) for snapshot in snapshots}
 
     pool = RenderPool(worker_count=3)
+    memory_before_render = working_set_bytes()
+    peak_working_set = memory_before_render
     generation = count
     requests = [
         RenderRequest(generation, "thumbnail", index, snapshot, THUMB_RENDER_BOX)
@@ -68,6 +108,9 @@ def run_trial(root: Path, count: int) -> dict[str, object]:
         except queue.Empty:
             continue
         rendered += 1
+        current_memory = working_set_bytes()
+        if current_memory is not None:
+            peak_working_set = max(peak_working_set or 0, current_memory)
         if result.error is not None or result.image is None or result.page_count != 1:
             failures.append(result.request.snapshot.path.name)
     render_seconds = time.perf_counter() - started
@@ -80,24 +123,27 @@ def run_trial(root: Path, count: int) -> dict[str, object]:
     assert not failures
     assert worker_threads_stopped
 
-    requests_for_rename = [
-        RenameRequest(snapshot, f"document_{index:04d}")
-        for index, snapshot in enumerate(snapshots, start=1)
-    ]
-    started = time.perf_counter()
-    _plan, undo = rename_batch(requests_for_rename)
-    rename_seconds = time.perf_counter() - started
-    renamed_paths = sorted(folder.glob("*.pdf"))
-    assert len(renamed_paths) == count
-    after_hashes = {
-        f"scan_{index:04d}.pdf": digest(folder / f"document_{index:04d}.pdf")
-        for index in range(1, count + 1)
-    }
-    assert after_hashes == before_hashes
+    rename_seconds = 0.0
+    undo_seconds = 0.0
+    if snapshots:
+        requests_for_rename = [
+            RenameRequest(snapshot, f"document_{index:04d}")
+            for index, snapshot in enumerate(snapshots, start=1)
+        ]
+        started = time.perf_counter()
+        _plan, undo = rename_batch(requests_for_rename)
+        rename_seconds = time.perf_counter() - started
+        renamed_paths = sorted(folder.glob("*.pdf"))
+        assert len(renamed_paths) == count
+        after_hashes = {
+            f"scan_{index:04d}.pdf": digest(folder / f"document_{index:04d}.pdf")
+            for index in range(1, count + 1)
+        }
+        assert after_hashes == before_hashes
 
-    started = time.perf_counter()
-    undo_rename(undo)
-    undo_seconds = time.perf_counter() - started
+        started = time.perf_counter()
+        undo_rename(undo)
+        undo_seconds = time.perf_counter() - started
     restored = sorted(folder.glob("*.pdf"))
     assert len(restored) == count
     assert {path.name: digest(path) for path in restored} == before_hashes
@@ -110,11 +156,23 @@ def run_trial(root: Path, count: int) -> dict[str, object]:
         "render_seconds": round(render_seconds, 3),
         "rendered": rendered,
         "render_failures": len(failures),
+        "path_sets_match": scanned_names == expected_names,
         "rename_seconds": round(rename_seconds, 3),
         "undo_seconds": round(undo_seconds, 3),
         "content_hashes_preserved": True,
         "temporary_files_remaining": 0,
         "worker_threads_stopped": worker_threads_stopped,
+        "memory_before_render_mb": (
+            round(memory_before_render / 1024**2, 1) if memory_before_render is not None else None
+        ),
+        "peak_working_set_mb": (
+            round(peak_working_set / 1024**2, 1) if peak_working_set is not None else None
+        ),
+        "render_working_set_delta_mb": (
+            round((peak_working_set - memory_before_render) / 1024**2, 1)
+            if peak_working_set is not None and memory_before_render is not None
+            else None
+        ),
     }
 
 

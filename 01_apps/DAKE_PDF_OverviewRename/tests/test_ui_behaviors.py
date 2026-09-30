@@ -8,6 +8,7 @@ from unittest.mock import Mock
 
 import main
 import pytest
+from viewport_helpers import settle_view, assert_visible_view
 from PIL import Image
 from main import OverviewRenameApp, UI_TEXT
 from rename_core import FileSnapshot, RenameEntry, RenamePlan, UndoEntry, UndoRecord
@@ -31,6 +32,7 @@ def test_root_scoped_wheel_routes_all_main_list_surfaces() -> None:
     app.root = SimpleNamespace(after_idle=Mock())
     app.canvas = canvas
     app._reprioritize_unrendered = Mock()
+    app._schedule_view = Mock()
 
     for surface in ("canvas", "thumbnail", "name_label", "entry"):
         widget = SimpleNamespace(winfo_toplevel=lambda: app.root, surface=surface)
@@ -39,7 +41,7 @@ def test_root_scoped_wheel_routes_all_main_list_surfaces() -> None:
 
     assert canvas.yview_scroll.call_count == 4
     canvas.yview_scroll.assert_called_with(1, "units")
-    assert app.root.after_idle.call_count == 4
+    assert app._schedule_view.call_count == 4
 
 
 def test_root_scoped_wheel_ignores_preview_toplevel() -> None:
@@ -58,22 +60,15 @@ def test_real_tk_wheel_binding_and_refresh_integration(monkeypatch, tmp_path: Pa
     root = _create_tk_root()
     root.geometry("900x620+2500+100")
     app = OverviewRenameApp(root)
-    first_surfaces: tuple[tk.Widget, tk.Widget, tk.Widget] | None = None
-    for index in range(48):
-        card = tk.Frame(app.cards_frame)
-        card.pack(fill="x", pady=2)
-        thumbnail = tk.Label(card, text=f"thumbnail {index}", height=2)
-        thumbnail.pack(fill="x")
-        name_label = tk.Label(card, text=f"source_{index:04d}.pdf")
-        name_label.pack(fill="x")
-        entry = tk.Entry(card)
-        entry.insert(0, f"source_{index:04d}")
-        entry.pack(fill="x")
-        if first_surfaces is None:
-            first_surfaces = (thumbnail, name_label, entry)
-    root.update_idletasks()
-    root.update()
-    app._update_scrollregion()
+    fixture = tmp_path / "sample.pdf"
+    fixture.write_bytes(b"synthetic")
+    app._reprioritize_unrendered = Mock()
+    for _ in range(48):
+        app._create_card(FileSnapshot.capture(fixture))
+    app._layout_cards()
+    settle_view(root, app)
+    first = app.cards[0]
+    first_surfaces = (first.image_label, first.name_label, first.entry)
 
     try:
         assert first_surfaces is not None
@@ -96,9 +91,9 @@ def test_real_tk_wheel_binding_and_refresh_integration(monkeypatch, tmp_path: Pa
         preview.destroy()
 
         selected_folder = tmp_path.resolve()
-        pending_card = SimpleNamespace(pending=True)
         app.folder = selected_folder
-        app.cards = [pending_card]
+        pending_card = app.cards[0]
+        pending_card.variable.set("pending edit")
         app.undo_record = object()
         app.path_var.set(str(selected_folder))
         app.status_var.set("loaded")
@@ -115,7 +110,7 @@ def test_real_tk_wheel_binding_and_refresh_integration(monkeypatch, tmp_path: Pa
 
         app.refresh()
         assert app.folder == selected_folder
-        assert app.cards == [pending_card]
+        assert len(app.cards) == 48 and app.cards[0] is pending_card
         assert app.undo_record is not None
         assert app._preview_window is not None
 
@@ -202,6 +197,8 @@ def test_refresh_resets_folder_jobs_cards_preview_and_undo(tmp_path: Path) -> No
 
 def test_reload_control_is_disabled_without_folder_and_enabled_with_folder(tmp_path: Path) -> None:
     app = OverviewRenameApp.__new__(OverviewRenameApp)
+    app._pending_ids = set()
+    app._mounted = {}
     app.cards = []
     app.busy = False
     app.folder = None
@@ -392,12 +389,67 @@ def test_real_tk_reload_48_cards_reflects_add_delete_and_external_rename(tmp_pat
         root.destroy()
 
 
+def test_real_tk_300_card_mapping_scrollregion_and_last_card_reachability(tmp_path: Path) -> None:
+    root = _create_tk_root()
+    root.geometry("900x620+2500+100")
+    app = OverviewRenameApp(root)
+    app.scanner.request = Mock()
+    app._reprioritize_unrendered = Mock()
+    expected_names: list[str] = []
+    for index in range(1, 301):
+        name = f"scan_{index:04d}.pdf"
+        expected_names.append(name)
+        (tmp_path / name).write_bytes(b"%PDF-1.4\n" + bytes(index % 251 for _ in range(index)))
+
+    try:
+        app._start_load(tmp_path)
+        token, folder = app.scanner.request.call_args.args
+        snapshots = main.scan_pdf_folder(folder)
+        assert [snapshot.path.name for snapshot in snapshots] == expected_names
+        app._accept_scan(token, folder, snapshots, None)
+        deadline = main.time.monotonic() + 10
+        while len(app.cards) < 300 and main.time.monotonic() < deadline:
+            root.update()
+        root.update_idletasks()
+
+        assert [card.snapshot.path.name for card in app.cards] == expected_names
+        assert len({card.snapshot.path for card in app.cards}) == 300
+        settle_view(root, app)
+        assert_visible_view(app)
+        assert app._laid_out_count == 300
+        assert app._metadata(app.cards[25]) == (
+            f"ページ数確認中… ｜ {app.cards[25].snapshot.size} B"
+        )
+
+        assert app._logical_height > app.canvas.winfo_height()
+        app.canvas.yview_moveto(1.0)
+        settle_view(root, app)
+        last = app.cards[-1].frame
+        last_bottom = app.canvas.coords(app.cards_window)[1] + last.winfo_y() + last.winfo_height()
+        viewport_top = app.canvas.canvasy(0)
+        viewport_bottom = viewport_top + app.canvas.winfo_height()
+        assert app.canvas.coords(app.cards_window)[1] + last.winfo_y() <= viewport_bottom
+        assert last_bottom >= viewport_top
+    finally:
+        app.closing = True
+        if app._poll_after is not None:
+            root.after_cancel(app._poll_after)
+        if app._layout_after is not None:
+            root.after_cancel(app._layout_after)
+        app.scanner.shutdown()
+        app.render_pool.shutdown()
+        app.preview_worker.shutdown()
+        root.destroy()
+
+
 def _layout_test_app() -> OverviewRenameApp:
     app = OverviewRenameApp.__new__(OverviewRenameApp)
     app._layout_after = None
     app._current_columns = 0
     app._laid_out_count = 0
-    app.canvas = SimpleNamespace(winfo_width=lambda: 900)
+    app._row_height = 1
+    app.canvas = SimpleNamespace(winfo_width=lambda: 900, winfo_height=lambda: 600, canvasy=lambda _: 0, yview_moveto=Mock())
+    app._schedule_view = Mock()
     app.size_var = FakeVariable("normal")
     app.cards = []
     app.cards_frame = SimpleNamespace(grid_columnconfigure=Mock())
@@ -414,7 +466,29 @@ def test_empty_layout_then_32_cards_grids_every_frame() -> None:
     app._layout_cards()
 
     assert app._laid_out_count == 32
-    assert all(card.frame.grid.call_count == 1 for card in app.cards)
+    assert app._logical_height == ((32 + app._current_columns-1)//app._current_columns)*app._row_height
+    app._schedule_view.assert_called()
+
+
+@pytest.mark.parametrize("count", [0, 1, 23, 24, 25, 26, 27, 32, 47, 48, 49, 100, 300, 400, 1000])
+def test_every_boundary_card_is_laid_out_exactly_once(count: int) -> None:
+    app = _layout_test_app()
+    app._layout_cards()
+    expected_cards: list[SimpleNamespace] = []
+
+    for start in range(0, count, main.CARD_BATCH_SIZE):
+        batch = [
+            SimpleNamespace(identifier=index, frame=Mock())
+            for index in range(start, min(start + main.CARD_BATCH_SIZE, count))
+        ]
+        expected_cards.extend(batch)
+        app.cards.extend(batch)
+        app._layout_cards()
+
+    assert [card.identifier for card in app.cards] == list(range(count))
+    assert app._laid_out_count == count
+    assert app._logical_height == max(1, ((count + app._current_columns-1)//app._current_columns)*app._row_height)
+    assert all(card.frame.grid.call_count == 0 for card in expected_cards)
 
 
 def test_layout_adds_second_batch_when_columns_are_unchanged() -> None:
@@ -428,8 +502,8 @@ def test_layout_adds_second_batch_when_columns_are_unchanged() -> None:
     app._layout_cards()
 
     assert app._laid_out_count == 32
-    assert all(card.frame.grid.call_count == 1 for card in first_batch)
-    assert all(card.frame.grid.call_count == 1 for card in second_batch)
+    assert app._logical_height == ((32 + app._current_columns-1)//app._current_columns)*app._row_height
+    assert app.cards == first_batch + second_batch
 
 
 def test_xlarge_uses_sufficient_base_resolution() -> None:
@@ -450,6 +524,7 @@ def _success_test_app() -> OverviewRenameApp:
     app._responsive_status = Mock()
     app._reschedule_unrendered = Mock()
     app._sync_status = Mock()
+    app._sync_controls = Mock()
     app._style_card = Mock()
     return app
 
@@ -506,8 +581,10 @@ def test_undo_success_uses_same_feedback_channel(tmp_path: Path) -> None:
 
 def test_thumbnail_progress_does_not_clear_success_feedback() -> None:
     app = OverviewRenameApp.__new__(OverviewRenameApp)
+    app._pending_ids = set()
     app.cards = [SimpleNamespace(pending=False, entry=Mock())]
     app.rendered_count = 1
+    app.thumbnail_failures = 0
     app.busy = False
     app.folder = Path("folder")
     app.undo_record = None
@@ -524,8 +601,81 @@ def test_thumbnail_progress_does_not_clear_success_feedback() -> None:
     assert app.success_var.get() == "keep success"
 
 
+def test_status_distinguishes_detected_processed_failed_and_pending() -> None:
+    app = OverviewRenameApp.__new__(OverviewRenameApp)
+    app._pending_ids = {1, 2}
+    app.cards = [
+        SimpleNamespace(pending=False, entry=Mock()),
+        SimpleNamespace(pending=True, entry=Mock()),
+        SimpleNamespace(pending=True, entry=Mock()),
+    ]
+    app.rendered_count = 2
+    app.thumbnail_failures = 1
+    app.busy = False
+    app.folder = Path("folder")
+    app.undo_record = None
+    app.status_var = FakeVariable("")
+    app.apply_button = Mock()
+    app.undo_button = Mock()
+    app.refresh_button = Mock()
+    app.reload_button = Mock()
+    app.select_button = Mock()
+
+    app._sync_status()
+
+    assert app.status_var.get() == (
+        "PDF 3件 ｜ サムネイル処理 2/3（失敗1）｜ 変更待ち2件"
+    )
+
+
+@pytest.mark.parametrize(
+    ("error", "page_count", "expected_metadata", "expected_failures"),
+    [
+        (None, 24, "24ページ ｜ 3.8 MB", 0),
+        ("broken", None, "ページ数不明 ｜ 3.8 MB", 1),
+        ("render failed", 24, "24ページ ｜ 3.8 MB", 1),
+    ],
+)
+def test_thumbnail_result_keeps_file_size_and_best_known_page_count(
+    error: str | None,
+    page_count: int | None,
+    expected_metadata: str,
+    expected_failures: int,
+) -> None:
+    snapshot = SimpleNamespace(path=Path("sample.pdf"), size=round(3.8 * 1024**2))
+    card = SimpleNamespace(
+        snapshot=snapshot,
+        rendered=False,
+        thumbnail_failed=False,
+        image_label=Mock(),
+        page_label=Mock(),
+        base_image=None,
+    )
+    app = OverviewRenameApp.__new__(OverviewRenameApp)
+    app.generation = 3
+    app.cards = [card]
+    app.rendered_count = 0
+    app.thumbnail_failures = 0
+    app._apply_card_image = Mock()
+    app._schedule_view = Mock()
+    app._sync_status = Mock()
+    request = main.RenderRequest(3, "thumbnail", 0, snapshot, (100, 100))
+    image = None if error else object()
+
+    app._accept_thumbnail(main.RenderResult(request, image, page_count, error))
+
+    assert card.rendered is True
+    assert card.thumbnail_failed is bool(error)
+    assert app.rendered_count == 1
+    assert app.thumbnail_failures == expected_failures
+    card.page_label.configure.assert_called_with(text=expected_metadata)
+    app._sync_status.assert_called_once_with()
+
+
 def test_next_name_edit_clears_success_feedback() -> None:
     app = OverviewRenameApp.__new__(OverviewRenameApp)
+    app._pending_ids = set()
+    app._sync_controls = Mock()
     app.success_var = FakeVariable("completed")
     app._status_stacked = False
     app.root = SimpleNamespace(after_idle=Mock())
@@ -533,7 +683,7 @@ def test_next_name_edit_clears_success_feedback() -> None:
     app._responsive_status = Mock()
     app._style_card = Mock()
     app._sync_status = Mock()
-    card = SimpleNamespace(variable=FakeVariable("next name"), hint_label=Mock())
+    card = SimpleNamespace(identifier=0, pending=True, variable=FakeVariable("next name"), hint_label=Mock())
 
     app._on_name_changed(card)
 
@@ -570,7 +720,7 @@ def test_real_tk_first_load_progressive_layout_reload_and_xlarge(tmp_path: Path)
         if 0 < app.rendered_count < 48:
             progressive_states.append(
                 any(card.photo is not None for card in app.cards)
-                and all(card.frame.winfo_manager() == "grid" for card in app.cards)
+                and any(card.frame is not None and card.frame.winfo_ismapped() for card in app.cards)
             )
 
     app._accept_thumbnail = track_thumbnail
@@ -582,7 +732,8 @@ def test_real_tk_first_load_progressive_layout_reload_and_xlarge(tmp_path: Path)
         root.update_idletasks()
         assert app.rendered_count == 48
         assert len(app.cards) == 48
-        assert all(card.frame.winfo_manager() == "grid" for card in app.cards)
+        settle_view(root, app)
+        assert_visible_view(app)
         return any(progressive_states)
 
     try:
@@ -609,7 +760,8 @@ def test_real_tk_first_load_progressive_layout_reload_and_xlarge(tmp_path: Path)
         assert first_card.variable.get() == "pending_name"
         assert first_card.pending
         assert app.undo_record is undo_marker
-        assert all(card.frame.winfo_manager() == "grid" for card in app.cards)
+        settle_view(root, app)
+        assert_visible_view(app)
         assert all(call.args[1] == [] for call in app.render_pool.replace.call_args_list)
         assert app.size_buttons["xlarge"].cget("text") == UI_TEXT["size_xlarge"]
 
@@ -619,7 +771,8 @@ def test_real_tk_first_load_progressive_layout_reload_and_xlarge(tmp_path: Path)
         assert first_card.variable.get() == "pending_name"
         assert first_card.pending
         assert app.undo_record is undo_marker
-        assert all(card.frame.winfo_manager() == "grid" for card in app.cards)
+        settle_view(root, app)
+        assert_visible_view(app)
     finally:
         app.closing = True
         if app._poll_after is not None:

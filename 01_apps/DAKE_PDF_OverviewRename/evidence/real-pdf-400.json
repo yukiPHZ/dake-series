@@ -1,0 +1,116 @@
+{
+  "first_visible": {
+    "seconds": 0.7545211000033305,
+    "processed": 50
+  },
+  "complete_seconds": 4.820378200005507,
+  "load_max_gap_ms": 87.26530000421917,
+  "load_peak_mb": 86.203125,
+  "switches": [
+    {
+      "size": "small",
+      "settle_ms": 382.10629999957746,
+      "max_event_gap_ms": 114.80960000335472,
+      "memory_mb": 77.91796875,
+      "views": 31
+    },
+    {
+      "size": "xlarge",
+      "settle_ms": 213.05839999695309,
+      "max_event_gap_ms": 66.83119999797782,
+      "memory_mb": 91.73046875,
+      "views": 16
+    },
+    {
+      "size": "normal",
+      "settle_ms": 281.10990000277525,
+      "max_event_gap_ms": 64.64350000169361,
+      "memory_mb": 79.62109375,
+      "views": 22
+    },
+    {
+      "size": "large",
+      "settle_ms": 243.07479999697534,
+      "max_event_gap_ms": 80.89949999703094,
+      "memory_mb": 87.91015625,
+      "views": 20
+    },
+    {
+      "size": "small",
+      "settle_ms": 392.51710000098683,
+      "max_event_gap_ms": 82.22050000040326,
+      "memory_mb": 78.0625,
+      "views": 31
+    },
+    {
+      "size": "small",
+      "settle_ms": 16.647399999783374,
+      "max_event_gap_ms": 16.049000005295966,
+      "memory_mb": 78.0625,
+      "views": 31
+    },
+    {
+      "size": "xlarge",
+      "settle_ms": 224.42559999763034,
+      "max_event_gap_ms": 70.00530000368599,
+      "memory_mb": 93.453125,
+      "views": 16
+    },
+    {
+      "size": "normal",
+      "settle_ms": 301.0991999981343,
+      "max_event_gap_ms": 72.30379999964498,
+      "memory_mb": 80.4375,
+      "views": 22
+    },
+    {
+      "size": "large",
+      "settle_ms": 265.74860000255285,
+      "max_event_gap_ms": 83.48149999801535,
+      "memory_mb": 88.33203125,
+      "views": 20
+    },
+    {
+      "size": "small",
+      "settle_ms": 400.3045999997994,
+      "max_event_gap_ms": 79.97590000013588,
+      "memory_mb": 78.859375,
+      "views": 31
+    },
+    {
+      "size": "small",
+      "settle_ms": 11.470500001451,
+      "max_event_gap_ms": 11.13239999540383,
+      "memory_mb": 78.87109375,
+      "views": 31
+    },
+    {
+      "size": "xlarge",
+      "settle_ms": 203.72900000074878,
+      "max_event_gap_ms": 62.74459999985993,
+      "memory_mb": 92.36328125,
+      "views": 16
+    },
+    {
+      "size": "normal",
+      "settle_ms": 282.59539999999106,
+      "max_event_gap_ms": 67.98559999879217,
+      "memory_mb": 79.3984375,
+      "views": 22
+    },
+    {
+      "size": "large",
+      "settle_ms": 283.49400000297464,
+      "max_event_gap_ms": 85.64079999632668,
+      "memory_mb": 88.9375,
+      "views": 20
+    },
+    {
+      "size": "small",
+      "settle_ms": 392.19500000035623,
+      "max_event_gap_ms": 76.05889999831561,
+      "memory_mb": 78.609375,
+      "views": 31
+    }
+  ]
+}
