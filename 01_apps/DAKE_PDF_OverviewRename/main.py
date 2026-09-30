@@ -910,6 +910,9 @@ class OverviewRenameApp:
             if callback is not None:
                 self.root.after_cancel(callback)
                 setattr(self, name, None)
+        for card in self._mounted.values():
+            card.entry.current_card = None
+            card.image_label.current_card = None
         self._mounted.clear()
         self._view_pool.clear()
         self._image_queue.clear()
@@ -1033,10 +1036,8 @@ class OverviewRenameApp:
         card.entry.configure(state="disabled" if self.busy else "normal")
         self._mounted[card.identifier] = card
         card.image_label.configure(image="", text=UI_TEXT["thumbnail_error" if card.thumbnail_failed else "thumbnail_loading"], width=1, height=1, fg=THEME["error" if card.thumbnail_failed else "muted"])
-        card.image_label.bind("<Button-1>", lambda _event, current=card: self.show_preview(current))
-        card.entry.bind("<FocusOut>", lambda _event: self._schedule_view())
-        card.entry.bind("<Tab>", lambda _event, current=card: self._focus_adjacent(current, 1))
-        card.entry.bind("<Shift-Tab>", lambda _event, current=card: self._focus_adjacent(current, -1))
+        card.image_label.current_card = card
+        card.entry.current_card = card
         card.entry.icursor(card.cursor)
         card.entry.selection_clear()
         if card.selection is not None:
@@ -1055,6 +1056,8 @@ class OverviewRenameApp:
         card.entry.configure(textvariable="")
         names = ("frame", "body", "image_label", "page_label", "name_label", "entry", "suffix_label", "hint_label")
         self._view_pool.append(tuple(getattr(card, name) for name in names))
+        card.image_label.current_card = None
+        card.entry.current_card = None
         for name in names:
             setattr(card, name, None)
         card.photo = None
@@ -1103,6 +1106,11 @@ class OverviewRenameApp:
         variable = card.variable
         entry = tk.Entry(edit_row, textvariable=variable, font=(self.font, 9), relief="solid", bd=1, highlightthickness=1, highlightbackground=THEME["border"], highlightcolor=THEME["accent"])
         entry.pack(side="left", fill="x", expand=True)
+        # Bind once per view. Rebinding on reuse would retain old Tcl callbacks.
+        image_label.bind("<Button-1>", lambda _event, view=image_label: self.show_preview(view.current_card))
+        entry.bind("<FocusOut>", lambda _event: self._schedule_view())
+        entry.bind("<Tab>", lambda _event, view=entry: self._focus_adjacent(view.current_card, 1))
+        entry.bind("<Shift-Tab>", lambda _event, view=entry: self._focus_adjacent(view.current_card, -1))
         suffix_label = tk.Label(edit_row, text=".pdf", bg=THEME["card"], fg=THEME["muted"], font=(self.font, 9), padx=3)
         suffix_label.pack(side="left")
         hint_label = tk.Label(

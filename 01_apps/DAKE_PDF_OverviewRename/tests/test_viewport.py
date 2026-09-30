@@ -212,3 +212,26 @@ def test_lossless_thumbnail_storage_and_resize_does_not_reopen_pdf():
     source = main.ThumbnailSource.encode(image)
     assert len(source.pixels) < 350*455*3
     assert source.copy().tobytes() == image.tobytes()
+
+
+def test_reused_view_binds_once_without_retaining_previous_card(tmp_path):
+    root = tk_root()
+    app = main.OverviewRenameApp(root)
+    path = tmp_path / "sample.pdf"
+    path.write_bytes(b"synthetic")
+    try:
+        for _ in range(2):
+            app._create_card(FileSnapshot.capture(path))
+        app._mount_card(app.cards[0])
+        entry = app.cards[0].entry
+        image = app.cards[0].image_label
+        commands = (len(entry._tclCommands),len(image._tclCommands))
+        for i in range(100):
+            old, new = app.cards[i%2], app.cards[(i+1)%2]
+            app._unmount_card(old)
+            assert entry.current_card is image.current_card is None
+            app._mount_card(new)
+            assert entry.current_card is image.current_card is new
+            assert commands == (len(entry._tclCommands),len(image._tclCommands))
+    finally:
+        app.on_close()

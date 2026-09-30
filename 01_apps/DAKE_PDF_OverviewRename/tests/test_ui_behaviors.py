@@ -60,24 +60,15 @@ def test_real_tk_wheel_binding_and_refresh_integration(monkeypatch, tmp_path: Pa
     root = _create_tk_root()
     root.geometry("900x620+2500+100")
     app = OverviewRenameApp(root)
-    first_surfaces: tuple[tk.Widget, tk.Widget, tk.Widget] | None = None
-    for index in range(48):
-        card = tk.Frame(app.cards_frame)
-        card.pack(fill="x", pady=2)
-        thumbnail = tk.Label(card, text=f"thumbnail {index}", height=2)
-        thumbnail.pack(fill="x")
-        name_label = tk.Label(card, text=f"source_{index:04d}.pdf")
-        name_label.pack(fill="x")
-        entry = tk.Entry(card)
-        entry.insert(0, f"source_{index:04d}")
-        entry.pack(fill="x")
-        if first_surfaces is None:
-            first_surfaces = (thumbnail, name_label, entry)
-    root.update_idletasks()
-    root.update()
-    app._update_scrollregion()
-    app._logical_height = 5000
-    app._update_scrollregion()
+    fixture = tmp_path / "sample.pdf"
+    fixture.write_bytes(b"synthetic")
+    app._reprioritize_unrendered = Mock()
+    for _ in range(48):
+        app._create_card(FileSnapshot.capture(fixture))
+    app._layout_cards()
+    settle_view(root, app)
+    first = app.cards[0]
+    first_surfaces = (first.image_label, first.name_label, first.entry)
 
     try:
         assert first_surfaces is not None
@@ -100,9 +91,9 @@ def test_real_tk_wheel_binding_and_refresh_integration(monkeypatch, tmp_path: Pa
         preview.destroy()
 
         selected_folder = tmp_path.resolve()
-        pending_card = SimpleNamespace(pending=True)
         app.folder = selected_folder
-        app.cards = [pending_card]
+        pending_card = app.cards[0]
+        pending_card.variable.set("pending edit")
         app.undo_record = object()
         app.path_var.set(str(selected_folder))
         app.status_var.set("loaded")
@@ -119,7 +110,7 @@ def test_real_tk_wheel_binding_and_refresh_integration(monkeypatch, tmp_path: Pa
 
         app.refresh()
         assert app.folder == selected_folder
-        assert app.cards == [pending_card]
+        assert len(app.cards) == 48 and app.cards[0] is pending_card
         assert app.undo_record is not None
         assert app._preview_window is not None
 

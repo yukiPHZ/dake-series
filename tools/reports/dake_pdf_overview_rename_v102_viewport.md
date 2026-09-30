@@ -30,7 +30,8 @@ PDFium mutexとpreview Latest Jobの責務・全件thumbnail処理は維持す�
 
 ## 検証
 
-- pytest: **98 passed / 115.73秒**（前回84件を維持・仮想化に合わせ観測点を更新）。
+- pytest最終: **99 passed / 114.43秒**（前回84件を維持・仮想化に合わせ観測点を更新）。
+- 最終点検で再利用時のTcl callback蓄積も防止。bindは部品ごとに1回、現在モデル参照のみ差し替え、100回再利用してcallback数一定を検証。旧wheel試験の架空Frame/手動scrollregionはConfigureとの競合で1回失敗したため、実モデル・実表示部品を使うwheel/refresh試験へ修正し全件再実行した。
 - 400件×4サイズ×先頭/中間/末尾×読み込み前後×900/1180/1920幅×100/125/150%相当 = 216組み合わせ。
   ファイルID、Tk画像の実ピクセル色、可視矩形の交差、入力状態、メタ情報、末尾399を検証。全grid検査だけではない。
 - 400件実合成PDF: 完了前表示、読み込み途中のサイズ/別フォルダ切替、ページ数・容量を独立期待値と照合、
@@ -74,3 +75,4 @@ worktreeをGit管理のまま devlop/_worktrees/dake-series-overview-v1.0.2 へ�
 確認用exeは通常repoの対象アプリdistへ固定配置し、旧公開1.0.1を退避、ZIP展開exeとhash照合する。
 build-info.txtへsource commit、build日時、exe/ZIP hash、実ビルド場所を記録する。
 この未merge worktreeと400件fixtureは再確認のため保持する。移動容量は削減に数えない。
+旧Documents側のoverview-rename cloneは別アプリLookHereの未commit変更を持ち、overview-reload-v1.0.1はそのGit管理に紐づくため今回削除しない。他案件フォルダも触らない。
