@@ -5,19 +5,20 @@ DakePDF圧縮
 500円
 
 # 商品紹介文
-PDFを追加してファイルサイズを軽くします。
+PDFを追加して、画質を保ちながらしっかり軽くします。
 
-・PDF圧縮アプリ
-・v2のしっかり圧縮
-・別名保存・自動連番対応
-・SHIMARISU連携CLI対応
-・Windows向けexe
+・PDFの内容に応じて圧縮方法を自動選択
+・圧縮後の品質確認を強化
+・写真・スキャン・図面系PDFへの対応を改善
+・PDF追加時・圧縮中の操作応答性を改善
+・圧縮結果を分かりやすく表示
 
 実務の流れを、
 少し静かにするための道具です。
 
 # タグ
 PDF
+画像
 Windows
 実務
 ツール
@@ -35,7 +36,7 @@ assets/screenshot.jpg
 booth_ready/DakePDF_Compress.zip
 
 # GitHub Release
-https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Compress_v1.0.0
+https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Compress_v1.1.0
 
 # 注意事項
 Windows向けアプリです。

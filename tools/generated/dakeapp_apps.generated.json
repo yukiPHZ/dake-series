@@ -2,7 +2,7 @@
   "schema": "dakeapp.apps.v1",
   "do_not_edit": true,
   "source_policy": "ORIGINAL.md is the source of truth. README.md and DAKE_META are derived views. Generated JSON must not be edited manually.",
-  "generated_at": "2026-09-30T12:06:48+09:00",
+  "generated_at": "2026-09-30T19:46:05+09:00",
   "apps": [
     {
       "slug": "advanced-timer",
@@ -466,7 +466,7 @@
       "folder_name": "DAKE_PDF_Compress",
       "display_name": "DakePDF圧縮",
       "detail_url": "https://dakeapp.com/apps/pdf-compress/",
-      "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Compress_v1.0.0",
+      "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Compress_v1.1.0",
       "screenshot_path": "../../assets/images/apps/pdf-compress/screenshot-01.webp",
       "demo_video_path": "release_artifacts/demo.mp4",
       "demo_video_url": "",

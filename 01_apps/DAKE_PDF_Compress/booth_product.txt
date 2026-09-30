@@ -1,38 +1,48 @@
-商品名
+# 商品名
 DakePDF圧縮
 
-概要
-PDFを1つ追加し、ファイルサイズを軽くした別名PDFとして保存できるWindows向けアプリです。
+# 価格案
+500円
 
-できること
-- PDF圧縮アプリ
-- v2のしっかり圧縮
-- 別名保存・自動連番対応
-- SHIMARISU連携CLI対応
-- Windows向けexe
+# 商品紹介文
+PDFを追加して、画質を保ちながらしっかり軽くします。
 
-使い方
-1. ZIPを解凍します。
-2. DakePDF_Compress.exe を起動します。
-3. 画面の案内に従って処理します。
+・PDFの内容に応じて圧縮方法を自動選択
+・圧縮後の品質確認を強化
+・写真・スキャン・図面系PDFへの対応を改善
+・PDF追加時・圧縮中の操作応答性を改善
+・圧縮結果を分かりやすく表示
 
-注意事項
-- Windows向けアプリです。
-- 大切なファイルは事前にバックアップしてください。
-- 環境によってはWindowsの保護画面が表示される場合があります。
+実務の流れを、
+少し静かにするための道具です。
 
-対象
-日々の実務を少し早く、少し静かに進めたい方向けです。
+# タグ
+PDF
+画像
+Windows
+実務
+ツール
+仕事効率化
+軽量
+シンプル
 
-配布物
-- DakePDF_Compress.exe
-- README.txt
-- 注意事項.txt
+# BOOTH商品画像
+assets/booth_thumbnail.jpg
 
-免責
-本ソフトウェアの利用によって発生した損害について、作者は責任を負いません。
+# 補助画像
+assets/screenshot.jpg
 
-コピーライト
-© 2026 PEAKHEADZ / Vibe-Coded by Yukihiko Kikuta
+# 作品ファイル
+booth_ready/DakePDF_Compress.zip
 
-BOOTH URL: https://peakheadz.booth.pm/items/8448178
+# GitHub Release
+https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Compress_v1.1.0
+
+# 注意事項
+Windows向けアプリです。
+ご利用は自己責任でお願いいたします。
+大切なファイルは事前にバックアップを推奨します。
+本ソフトウェアの無断転載・再配布を禁止します。
+
+# URL
+https://peakheadz.booth.pm/items/8448178

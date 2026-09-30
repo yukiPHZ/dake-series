@@ -1,6 +1,6 @@
-# DakePDF圧縮
+# DakePDF圧縮 v1.1.0
 
-PDFを1つ追加して、ファイルサイズを軽くするDAKEのWindowsデスクトップアプリです。
+PDFを追加するだけで、画質を保ちながら内容に合った方法で軽くするDAKEのWindowsデスクトップアプリです。
 
 ## 使い方
 
@@ -48,7 +48,7 @@ DakePDF_Compress.exe --from-shimarisu --inputs "A.pdf" "B.pdf"
 - 追加すると「PDFを確認中...」、準備ができると「圧縮できます」と表示します。
 - 処理中は現在の作業を表示し、完了するとサイズの変化と削減率が分かります。
 - 元PDFは変更せず、同じフォルダへ別名保存します。十分に軽いPDFは保存しない場合があります。
-- 今回の改善は正式出荷前です。人手確認後に公開します。
+- Adaptive Compression版はHuman Gateを通過した正式版v1.1.0です。
 
 ## ビルド方法
 
@@ -102,13 +102,16 @@ build.bat
   "app_key": "dake_pdf_compress",
   "display_name": "DakePDF圧縮",
   "launcher_title": "PDF圧縮",
-  "launcher_description": "PDFを追加してファイルサイズを軽くします。",
+  "launcher_description": "PDFを追加して、画質を保ちながらしっかり軽くします。",
   "site_title": "DakePDF圧縮",
-  "site_description": "PDFを1つ追加し、ファイルサイズを軽くした別名PDFとして保存できるWindows向けアプリです。",
-  "update_summary": "READMEメタ情報とRelease本文を整備。スクリーンショットをassets/screenshot.webpに作成。",
+  "site_description": "PDFを追加するだけで、画質を保ちながら内容に合った方法で軽くした別名PDFを保存できるWindows向けアプリです。",
+  "update_summary": "v1.1.0。PDFごとに圧縮方法を自動選択し、品質確認と操作応答性を改善。",
   "folder_name": "DAKE_PDF_Compress",
   "exe_name": "DakePDF_Compress.exe",
-  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Compress_v1.0.0",
+  "version": "1.1.0",
+  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Compress_v1.1.0",
+  "app_type": "market",
+  "completion_goal": "formal_release",
   "screenshot_path": "assets/screenshot.webp",
   "status": "available",
   "show_in_launcher": true,
@@ -121,8 +124,9 @@ build.bat
 
 ## RELEASE_BODY
 
-- PDF圧縮アプリ
-- 内容に合わせた自動圧縮
-- 別名保存・自動連番対応
-- SHIMARISU連携CLI対応
-- Windows向けexe
+- PDFの内容に応じて圧縮方法を自動選択
+- 圧縮後の品質確認を強化
+- 写真・スキャン・図面系PDFへの対応を改善
+- PDF追加時・圧縮中の操作応答性を改善
+- 圧縮結果を分かりやすく表示
+- SHIMARISU連携CLI互換を維持

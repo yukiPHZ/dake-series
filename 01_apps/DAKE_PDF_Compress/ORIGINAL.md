@@ -13,10 +13,18 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - short_title: PDF圧縮
 - category: PDF / 圧縮
 - status: available
-- version: 1.0.0
+- version: 1.1.0
+- app_type: market
+- completion_goal: formal_release
 - price: 500円
-- distribution: GitHub ReleaseとBOOTHで配布する。SHIMARISU連携CLI対象。
+- distribution: GitHub Release / BOOTH / dakeapp.com / Store。SHIMARISU連携CLI対象。
 - target_platform: Windows
+- folder_name: DAKE_PDF_Compress
+- exe_name: DakePDF_Compress.exe
+- booth_url: https://peakheadz.booth.pm/items/8448178
+- store_url: https://store.dakeapp.com/product/?id=dake_pdf_compress
+- stripe_payment_link: https://buy.stripe.com/aFa6oHeIh3ZZ6Kse250gw02
+- payment_status: stripe_ready
 
 ## 目的
 
@@ -51,15 +59,15 @@ PDFを追加して、元PDFを上書きせずにファイルサイズを軽く�
 
 ## 公開用説明の元情報
 
-PDFを1つ追加し、ファイルサイズを軽くした別名PDFとして保存できるWindows向けアプリです。
+PDFを追加するだけで、画質を保ちながら内容に合った方法で軽くした別名PDFを保存できるWindows向けアプリです。
 
-PDFを追加してファイルサイズを軽くします。
+PDFを追加して、画質を保ちながらしっかり軽くします。
 
 実務の流れを、少し静かにするための道具です。
 
 ## README生成用情報
 
-- 概要: PDFを1つ追加し、ファイルサイズを軽くした別名PDFとして保存できるWindows向けアプリです。
+- 概要: PDFを追加するだけで、画質を保ちながら内容に合った方法で軽くした別名PDFを保存できるWindows向けアプリです。
 - 使い方: PDFをドラッグ＆ドロップする。
 - 必要なもの: Windows環境。
 - 注意: 元PDFは上書きしない。
@@ -76,13 +84,16 @@ PDFを追加してファイルサイズを軽くします。
   "app_key": "dake_pdf_compress",
   "display_name": "DakePDF圧縮",
   "launcher_title": "PDF圧縮",
-  "launcher_description": "PDFを追加してファイルサイズを軽くします。",
+  "launcher_description": "PDFを追加して、画質を保ちながらしっかり軽くします。",
   "site_title": "DakePDF圧縮",
-  "site_description": "PDFを1つ追加し、ファイルサイズを軽くした別名PDFとして保存できるWindows向けアプリです。",
-  "update_summary": "READMEメタ情報とRelease本文を整備。スクリーンショットをassets/screenshot.webpに作成。",
+  "site_description": "PDFを追加するだけで、画質を保ちながら内容に合った方法で軽くした別名PDFを保存できるWindows向けアプリです。",
+  "update_summary": "v1.1.0。PDFごとに圧縮方法を自動選択し、品質確認と操作応答性を改善。",
   "folder_name": "DAKE_PDF_Compress",
   "exe_name": "DakePDF_Compress.exe",
-  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Compress_v1.0.0",
+  "version": "1.1.0",
+  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Compress_v1.1.0",
+  "app_type": "market",
+  "completion_goal": "formal_release",
   "screenshot_path": "assets/screenshot.webp",
   "status": "available",
   "show_in_launcher": true,
@@ -92,22 +103,23 @@ PDFを追加してファイルサイズを軽くします。
 
 ## release_body生成用情報
 
-- PDF圧縮アプリ
-- PDFの性質に応じた自動圧縮（Adaptive Compression）
-- 別名保存・自動連番対応
-- SHIMARISU連携CLI対応
-- Windows向けexe
+- PDFの内容に応じて圧縮方法を自動選択
+- 圧縮後の品質確認を強化
+- 写真・スキャン・図面系PDFへの対応を改善
+- PDF追加時・圧縮中の操作応答性を改善
+- 圧縮結果を分かりやすく表示
+- SHIMARISU連携CLI互換を維持
 
 ## booth_product生成用情報
 
 - 商品名: DakePDF圧縮
 - 価格案: 500円
-- 商品紹介文: PDFを追加してファイルサイズを軽くします。
+- 商品紹介文: PDFを追加して、画質を保ちながらしっかり軽くします。
 - 補足紹介文:
-  - PDF圧縮アプリ
-  - PDFの性質に応じた自動圧縮（Adaptive Compression）
-  - 別名保存・自動連番対応
-  - SHIMARISU連携CLI対応
+  - PDFに合わせて圧縮方法を自動選択
+  - 細かい設定なしで使える
+  - 元PDFを上書きせず別名保存
+  - 圧縮後サイズと削減率を表示
   - Windows向けexe
   - 実務の流れを、少し静かにするための道具です。
 - タグ:
@@ -121,37 +133,39 @@ PDFを追加してファイルサイズを軽くします。
 - 商品画像: assets/booth_thumbnail.jpg
 - 補助画像: assets/screenshot.jpg
 - 作品ファイル: booth_ready/DakePDF_Compress.zip
-- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Compress_v1.0.0
+- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Compress_v1.1.0
 - BOOTH URL: https://peakheadz.booth.pm/items/8448178
 
 ## Store表示用情報
 
 - 商品名: DakePDF圧縮
-- キャッチ: PDFを追加してファイルサイズを軽くします。
+- キャッチ: PDFを追加して、画質を保ちながらしっかり軽くします。
 - キャッチ補足: 実務の流れを、少し静かにするための道具です。
-- 説明: PDFを1つ追加し、ファイルサイズを軽くした別名PDFとして保存できるWindows向けアプリです。
+- 説明: PDFを追加するだけで、画質を保ちながら内容に合った方法で軽くした別名PDFを保存できるWindows向けアプリです。
 - 価格: 500円
 - 画像: assets/booth_thumbnail.jpg / assets/screenshot.webp
-- ダウンロード導線: 未確定
-- サポート方針: 既存ファイルに記載なし
+- ダウンロード導線: GitHub Release / BOOTH
+- Store URL: https://store.dakeapp.com/product/?id=dake_pdf_compress
+- サポート方針: READMEと同梱注意事項に従う
 - Stripe Payment Link: https://buy.stripe.com/aFa6oHeIh3ZZ6Kse250gw02
 - Store販売状態: stripe_ready
 
-Storeは未構築のため、Store専用の商品正本は作りません。
+Storeは本ファイルから生成される `store_products.generated.json` を販売ビューとして使用し、Store側では商品情報を手編集しない。
 
 ## 価格・販売方針
 
 - BOOTH価格案: 500円
 - BOOTH URL: https://peakheadz.booth.pm/items/8448178
-- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Compress_v1.0.0
-- Store販売: 未確定
+- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Compress_v1.1.0
+- Store URL: https://store.dakeapp.com/product/?id=dake_pdf_compress
+- Store販売: stripe_ready
 
 ## 配布・ダウンロード方針
 
 - GitHub Releaseで `DakePDF_Compress.exe` を配布する。
 - BOOTHでは `booth_ready/DakePDF_Compress.zip` を作品ファイルとして使う。
 - dakeapp.com掲載対象です。
-- Store配布導線は未確定です。
+- Storeでは既存Stripe Payment LinkとBOOTH導線を表示する。
 
 ## 免責・注意事項
 
@@ -175,7 +189,7 @@ BOOTH ready内の注意事項、または既存READMEの注意事項を元にし
 - assets/screenshot.webp: assets/screenshot.webp
 - assets/screenshot.jpg: assets/screenshot.jpg
 - assets/booth_thumbnail.jpg: assets/booth_thumbnail.jpg
-- Store用画像: 未確定。既存画像を元に派生する想定。
+- Store用画像: assets/booth_thumbnail.jpg / assets/screenshot.webp
 
 ## 今後の改善予定
 
@@ -185,10 +199,9 @@ BOOTH ready内の注意事項、または既存READMEの注意事項を元にし
 
 ## Codex作業時の注意
 
-- 今回の開発範囲: Adaptive Compression、GUI操作品質、依存固定、build、ベンチマーク、回帰、commit/push。
-- 対象外: SHIMARISU、共通core、販売assets、booth_ready。他アプリの差分を巻き込まない。人手確認用distは再ビルドする。
-- 外部公開しない: 未確定のStore URLや未確認の販売導線を確定情報として書かない。
-- 自動操作しない: BOOTH更新、GitHub Release更新、Store構築、Stripe実装はこのPhaseでは行わない。
+- v1.1.0正式出荷では、Adaptive Compression、GUI操作品質、依存固定、回帰済み実装を正式機能として扱う。
+- SHIMARISU側コードと共通coreは変更しない。他アプリの差分を巻き込まない。
+- Stripe Payment Linkは既存URLを維持し、秘密情報をrepoへ保存しない。
 
 ## 派生物一覧
 
@@ -198,9 +211,9 @@ BOOTH ready内の注意事項、または既存READMEの注意事項を元にし
 - booth_product.txt: BOOTH登録用ビュー。アプリ直下は 既存、`booth_ready/` は 既存。
 - booth_ready/README.txt: 配布zip同梱用ビュー。既存。
 - booth_ready/注意事項.txt: 配布zip同梱用ビュー。既存。
-- Store: 未構築。将来 `ORIGINAL.md` 由来の情報から生成する。
+- Store: `ORIGINAL.md` 由来の `store_products.generated.json` を使用する既存販売ビュー。
 
-## Adaptive Compression / 操作品質（2026-09-12実装・正式出荷前）
+## Adaptive Compression / 操作品質（v1.1.0正式仕様）
 
 - 操作は「PDFを追加 → 圧縮して保存」のみ。DPI・品質・モード選択UIを設けない。
 - ページ数、画像数と頁内被覆率、テキスト量、画像色種、元容量と容量/頁を解析する。サンプル解析は最大12頁。全頁高解像度レンダリングをしない。
@@ -219,10 +232,17 @@ BOOTH ready内の注意事項、または既存READMEの注意事項を元にし
 - SHIMARISU契約維持: --from-shimarisu --inputs、成功exit0/stdout=出力パス（UTF-8、複数時1行1件）、失敗exit1/stderr=短いエラー、Tracebackなし。
 - 初期860x740/min760x720、BIZ UDPGothic優先、共通フッター・アイコンとPyInstaller onefileを維持する。
 - ベンチマーク概要: テキスト・写真・二値・カラー文書・細線・圧縮済・60頁・100頁を試験。合成風景は約94.9%削減、文書系fixtureは多くを画素差ゼロのAで採用。圧縮済は出力しない。元PDFのハッシュを全件確認。
-- 大幅削減は未圧縮/重複画像を含むfixtureでの結果。実務品質・iLovePDFに対する競争力の最終判断は人手Gate。外部送信や自動比較はしない。
+- 大幅削減は未圧縮/重複画像を含むfixtureでの結果。外部送信や自動比較はしない。
 - 実測値、閾値、旧ロジック比較、試験範囲と制限は [開発用検証記録](dev/ADAPTIVE_BENCHMARK.md) に保存する。
 - Human Gateで確認したfill-only drawingの`width=None`は正常値として扱い、有限の数値かつ0より大きく0.6未満の線だけを細線保護対象にする。解析失敗時はGUI文言を短く保ち、stage・page index・candidate・例外型・例外メッセージを開発ログへ残す。
 
 ## バージョンの整理
 
-正本versionと既存Release tagは1.0.0。過去の「v2」は圧縮ロジック更新の説明で、正式SemVerの2.0.0ではなかった。今回の実装は未出荷であり、タグやGitHub Releaseを追加・更新しない。互換CLIを維持した機能改善として、人手Gate後の正式出荷は1.1.0を提案する。
+既存v1.0.0 Releaseは維持する。過去の「v2」は圧縮ロジック更新の説明で、正式SemVerの2.0.0ではない。Adaptive Compression版はHuman Gateを通過し、互換CLIを維持した正式版v1.1.0として出荷する。tagは `DAKE_PDF_Compress_v1.1.0`。
+
+## Human Gate ACCEPT（2026-09-30）
+
+- 実Explorerからの追加、写真中心10頁PDF、大容量640頁PDF、図面・細線、GUI、CLIを確認してPASS。
+- 出力PDFの再オープン、頁数一致、文字・寸法・代表頁の視覚検証を確認。
+- fill-only drawingの`width=None`を正常ケースとして扱う修正と回帰試験を確認。
+- Adaptive Compression基盤 `c9e0a37f29436fbfbfc1d06e8fbbf685e07b25d8`、再現バグ修正 `ddf5d14eddbc1faedeefbb8e41e7ad6518b43786` を正式版へ含める。
