@@ -399,3 +399,23 @@ This candidate does not authorize an external release before ChatGPT review.
   entries. Repository and onedir copies match that installed wheel by name and SHA-256.
   Eight hashes differ from OverviewRename's same-version copy, so those were not reused.
   See `tools/reports/issue44_splitselect_pdfium_migration.md` for audit details.
+
+## 2026-10-03 PDFium onefile distribution review (unpublished)
+
+EXE単体のコピー・移動を優先し、clean Python 3.12.4環境から正式build.batを
+`--onefile --noconsole`へ戻して検証した。main.py / pdf_backend.py / 依存版は変更していない。
+
+- 最終EXEを空フォルダとDesktopへ単体コピー: 起動・PDFium描画・F5 PASS。
+  両フォルダの内容はEXEのみ。隣接DLL/_internal/ライセンスフォルダなし。
+- 起動各10回: onefile中央値1.349418秒・p90 1.413612秒、同環境onedir中央値
+  0.264353秒・p90 0.283924秒。過去onedir 0.253秒/0.283秒より遅いが、
+  onefile中央値は従来1.5秒目標以内。単体移動UXとのトレードオフとして採用。
+- 最終単体EXEの3/30/100/300ページ表示、クリック、範囲入力、merged/single保存、
+  完了ダイアログ、Explorer、Ctrl+O、300→F5→3ページ、通常終了 PASS。
+- 元PDF SHA-256不変、F5後rename/move、専用コピーdelete PASS。
+- app全11テスト、ZIPツール5テスト PASS。ライセンス19件はwheel・EXE・ZIPで一致。
+- 物理DnD、物理packaged Shift、厳密な生成途中F5、DPI等は未確認を維持。
+- ローカルレビューZIPのみ生成。既存booth_ready差し替え・外部公開・push・mergeなし。
+
+全個別値・最終EXE/ZIP SHA-256・検証の区別・残項目は
+`docs/PDFIUM_ONEFILE_DISTRIBUTION_REPORT.md` を参照。

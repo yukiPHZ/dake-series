@@ -35,7 +35,21 @@ def runtime_files(exe_path: Path) -> list[tuple[Path, str]]:
     if not exe_path.is_file():
         raise FileNotFoundError(exe_path)
     if not is_onedir(exe_path):
-        return [(exe_path, exe_path.name)]
+        payload = [(exe_path, exe_path.name)]
+        # Ship readable notices beside a portable EXE without collecting unrelated dist files.
+        notice = exe_path.parent / "THIRD_PARTY_NOTICES.txt"
+        licenses = exe_path.parent / "third_party_licenses"
+        if notice.is_symlink() or licenses.is_symlink():
+            raise ValueError(f"License payload contains a symlink: {exe_path.parent}")
+        if notice.is_file():
+            payload.append((notice, notice.name))
+        if licenses.is_dir():
+            entries = sorted(licenses.rglob("*"))
+            if any(path.is_symlink() for path in entries):
+                raise ValueError(f"License payload contains a symlink: {licenses}")
+            payload.extend((path, path.relative_to(exe_path.parent).as_posix())
+                           for path in entries if path.is_file())
+        return payload
     root = exe_path.parent
     files = sorted(path for path in root.rglob("*") if path.is_file())
     if any(path.is_symlink() for path in root.rglob("*")):

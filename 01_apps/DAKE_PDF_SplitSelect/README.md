@@ -70,9 +70,12 @@ build.bat
 
 検証済みPython 3.12環境を使い、依存は `requirements.txt` の固定バージョンでビルドします。
 必要なら `PYTHON_EXE` 環境変数にPython実行ファイルのフルパスを設定してください。
-生成物は `dist\DakePDF_Split_Select\DakePDF_Split_Select.exe` です（onedir）。
-実行時には同じフォルダの `_internal` が必要です。exeだけを取り出さずフォルダ全体で扱います。
-PDFiumの第三者ライセンス文書もonedirフォルダ全体に同梱します。`THIRD_PARTY_NOTICES.txt` を参照してください。
+生成物は `dist\DakePDF_Split_Select.exe` です（onefile / noconsole）。
+EXE単体を別フォルダやDesktopへコピー・移動しても起動できます。隣接する `_internal` やDLLは不要です。
+実行時にはPyInstallerが必要なランタイムを一時フォルダへ展開します。
+正式配布ZIPには `THIRD_PARTY_NOTICES.txt` と `third_party_licenses/` 全件を同梱します。
+ライセンス文書はEXEにも埋め込みますが、隣接フォルダの有無は実行条件にしません。再配布時はZIPの文書も含めてください。
+onefileの起動実測と単体コピー回帰は `docs/PDFIUM_ONEFILE_DISTRIBUTION_REPORT.md` を参照してください。
 v1.0.1ではPDFiumでサムネイルを描画します。既存のPPM表示、ページ選択、保存、CLI操作は維持しています。
 
 ## 回帰検証
@@ -117,7 +120,7 @@ Windows上で実際のTkウィンドウを使い、一時生成PDFで検証し�
 ## RELEASE_BODY
 
 - v1.0.1: サムネイル描画をPDFiumへ移行。表示・選択・保存・CLIの操作は従来どおりです。
-- ZIPを解凍し、DakePDF_Split_Selectフォルダ内のexeを起動してください。_internalと第三者ライセンス文書も同梱しています。
+- ZIPを解凍し、DakePDF_Split_Select.exeを起動してください。EXE単体のコピー・移動に対応します。第三者ライセンス文書もZIPに同梱しています。
 - PDFページ選択保存アプリ
 - サムネイル選択に対応
 - 範囲入力にも対応

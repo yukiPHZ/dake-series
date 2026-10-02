@@ -146,7 +146,7 @@ PDFの必要ページだけをサムネイルや範囲入力で選び、1つのP
 ## release_body生成用情報
 
 - v1.0.1: サムネイル描画をPDFiumへ移行。表示・選択・保存・CLIの操作は従来どおりです。
-- ZIPを解凍し、DakePDF_Split_Selectフォルダ内のexeを起動する。_internalと第三者ライセンス文書も同梱する。
+- ZIPを解凍し、DakePDF_Split_Select.exeを起動する。EXE単体のコピー・移動に対応する。第三者ライセンス文書はZIPにも同梱する。
 - PDFページ選択保存アプリ
 - サムネイル選択に対応
 - 範囲入力にも対応
@@ -232,10 +232,10 @@ https://peakheadz.com
 
 ## 同梱ファイル方針
 
-- exe: DakePDF_Split_Select/DakePDF_Split_Select.exe（onedirのフォルダ構成を維持）
+- exe: DakePDF_Split_Select.exe（onefile。単体コピー・移動に対応）
 - README.txt: あり
 - 注意事項.txt: あり
-- PDFium第三者ライセンス: onedir内のTHIRD_PARTY_NOTICES.txtとthird_party_licenses一式を同梱
+- PDFium第三者ライセンス: ZIP直下のTHIRD_PARTY_NOTICES.txtとthird_party_licenses一式を同梱。EXEにも埋め込み、隣接文書を実行条件にしない
 - 入れないもの: ソースコード、build、dist、spec、個人設定ファイル、APIキー、個人情報
 
 ## スクリーンショット・画像方針
@@ -262,7 +262,11 @@ https://peakheadz.com
 - 起動直後はUI表示を最優先する。pypdfium2は固定レンダーワーカー内、pypdfは保存・CLI時に遅延読み込みする。PyMuPDF / fitz / PyMuPDFb と Pillow は製品依存に含めない。
 - TkinterDnDは安定性を優先し、既存のドロップ入力を維持する。
 - packaged版の起動速度を実測する。現行相当onefileとonedirを各10回以上測り、個別値・中央値・p90・最速・最遅を記録する。
-- SelectはPyInstaller onedirを正式候補として検証し、起動・PDF入力・DnD・表示・保存・リフレッシュが正常なら採用する。共通buildルールのonefile推奨に対する本アプリの例外とする。
+- PDFium移行後は、EXE単体をコピー・移動しても起動できる配布UXを優先する。PyInstaller `--onefile --noconsole` をclean環境で検証し、起動速度と回帰結果から正式方式を判断する。
+- onefile候補は空の別フォルダとDesktopへEXE単体だけコピーして検証する。隣接する `_internal`、Python/PDFium DLL、ライセンスフォルダを実行条件にしない。実行時の一時展開はPyInstallerに任せる。
+- 正式ZIPには `THIRD_PARTY_NOTICES.txt` とwheel由来の第三者ライセンス全件を同梱する。配布物のライセンス同梱と、実行時の隣接ファイル依存は分離する。
+- PDFium版onefileを10回計測し、既存onedirの中央値0.253秒・p90 0.283秒と比較する。個別値と測定条件を記録し、過去値を新計測値として扱わない。
+- onefileの実用性と単体コピー回帰を確認できた場合は、正式ビルドをonefileへ戻す。今回の候補・ZIP・仕様変更はChatGPTレビューまで外部公開しない。
 - スプラッシュやアニメーションで待ち時間をごまかさない。依存更新は目的とせず、確認した実バージョンを検証後に固定する。
 
 ## リフレッシュ正式定義
