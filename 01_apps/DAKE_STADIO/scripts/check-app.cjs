@@ -48,6 +48,10 @@ async function flow(){
   check('image adjustment UI changes persistent filter',await js(`__studio.engine.selected.filters.length>0`));
   await js(`__studio.engine.updateSelected({left:750,top:500,scaleX:.2,scaleY:.2});`);
   await js(`document.querySelector('[data-tool="rect"]').click()`);await delay(40);
+  const drawRect=await js(`(()=>{const r=document.querySelector('.canvas-host').getBoundingClientRect();return{x:r.left+150,y:r.top+180}})()`);
+  win.webContents.sendInputEvent({type:'mouseDown',...drawRect,button:'left',clickCount:1});
+  win.webContents.sendInputEvent({type:'mouseMove',x:drawRect.x+130,y:drawRect.y+90,modifiers:['leftButtonDown']});
+  win.webContents.sendInputEvent({type:'mouseUp',x:drawRect.x+130,y:drawRect.y+90,button:'left',clickCount:1});await delay(80);
   await js(`document.getElementById('prop-width').value=210;document.getElementById('prop-width').dispatchEvent(new Event('change'));`);await delay(40);
   check('numeric transform UI applies size',await js('Math.abs(__studio.engine.selected.getScaledWidth()-210)<.1'));
   await click('duplicate');check('duplicate UI adds editable layer',await js('__studio.engine.layers.length===11'));

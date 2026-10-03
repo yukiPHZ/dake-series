@@ -39,6 +39,23 @@ async function getLocalFont(id) {
   return ipcRenderer.invoke('stadio:prepareLocalFont', { descriptor: fontDescriptor(font), bytes: await blob.arrayBuffer() });
 }
 contextBridge.exposeInMainWorld('stadio', Object.freeze({
+  getPendingRecoveries:()=>ipcRenderer.invoke('stadio:getPendingRecoveries'),
+  readPendingRecovery:id=>ipcRenderer.invoke('stadio:readPendingRecovery',id),
+  discardPendingRecovery:id=>ipcRenderer.invoke('stadio:discardPendingRecovery',id),
+  prepareExport: request=>ipcRenderer.invoke('stadio:prepareExport',request),
+  savePreparedExport: token=>ipcRenderer.invoke('stadio:savePreparedExport',token),
+  releasePreparedExport: token=>ipcRenderer.invoke('stadio:releasePreparedExport',token),
+  importComponent: mode=>ipcRenderer.invoke('stadio:importComponent',mode),
+  refreshComponent: token=>ipcRenderer.invoke('stadio:refreshComponent',token),
+  autosaveWorkspace: data=>ipcRenderer.invoke('stadio:autosaveWorkspace',data),
+  getWorkspaceRecovery: ()=>ipcRenderer.invoke('stadio:getWorkspaceRecovery'),
+  discardWorkspaceRecovery: ()=>ipcRenderer.invoke('stadio:discardWorkspaceRecovery'),
+  getOpenRequests: () => ipcRenderer.invoke('stadio:getOpenRequests'),
+  readOpenRequest: id => ipcRenderer.invoke('stadio:readOpenRequest', id),
+  ackOpenRequest: id => ipcRenderer.invoke('stadio:ackOpenRequest', id),
+  onOpenRequest: listener => subscribe('stadio:openRequest', listener),
+  listCachedFonts: () => ipcRenderer.invoke('stadio:listCachedFonts'),
+  getCachedFont: key => ipcRenderer.invoke('stadio:getCachedFont', key),
   openProject: () => ipcRenderer.invoke('stadio:openProject'),
   saveProject: (request) => ipcRenderer.invoke('stadio:saveProject', request),
   importFiles: () => ipcRenderer.invoke('stadio:importFiles'),

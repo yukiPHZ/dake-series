@@ -68,7 +68,7 @@ async function position(values) {
 }
 async function color(value) { await change('style-fill', value); await change('style-width', 0); }
 async function rename(id, name) {
-  await js(`document.querySelector('[data-layer="'+${json(id)}+'"]').dispatchEvent(new MouseEvent('dblclick',{bubbles:true}))`);
+  await js(`__studio.engine.select(${json(id)});document.dispatchEvent(new KeyboardEvent('keydown',{key:'F2',bubbles:true}))`);
   await waitUntil(`!!document.getElementById('rename-value')`); await change('rename-value', name); await click('#dialog-apply');
   check('layer rename persists through panel dialog', await js(`__studio.engine.layers.find(o=>o.id===${json(id)})?.name===${json(name)}`));
 }
@@ -94,7 +94,7 @@ async function drop(file, x, y) {
   check('real file drop passes through Chromium File and native path boundary', true, path.basename(file));
   return selectedId();
 }
-async function shape(kind, name, box, fill) { await click(`[data-tool="${kind}"]`); await position(box); await color(fill); const id = await selectedId(); await rename(id, name); return id; }
+async function shape(kind, name, box, fill) { await click(`[data-tool="${kind}"]`); const a=await scenePoint(100,100),b=await scenePoint(220,180);await mouse('mousePressed',a);await mouse('mouseMoved',b,{buttons:1});await mouse('mouseReleased',b);await idle(); await position(box); await color(fill); const id = await selectedId(); await rename(id, name); return id; }
 async function chooseGoogleFont(family = 'Noto Sans JP', weight = 400) {
   await click('#choose-font'); await click('#font-google'); await waitUntil(`document.querySelectorAll('.font-row').length>0`, 20000);
   await change('font-search', family); await change('font-download-weight', weight); await change('font-download-style', 'normal');
@@ -189,7 +189,7 @@ async function makeFlyer() {
   await text('日程', '2026年10月24日（土）・25日（日）\n10:00–18:00　/　入場無料', { x: 264, y: 2800 }, 66, '#254837');
   await text('会場', '緑のギャラリー\n架空市みどり町1-2-3', { x: 265, y: 3190 }, 50, '#536e62');
   await guides(20, 30);
-  await click('#layout-settings'); await change('snap-grid', true); await change('grid-size', 5); await click('#dialog-apply');
+  await click('#layout-settings'); await js('void __studio.production.documentSettings()'); await change('snap-grid', true); await change('grid-size', 5); await click('#dialog-apply');
   check('layout dialog persists print unit dpi and snap settings', await js(`__studio.engine.meta.unit==='mm'&&__studio.engine.meta.dpi===300&&__studio.engine.meta.snap.grid`));
   await baseline('flyer');
 }

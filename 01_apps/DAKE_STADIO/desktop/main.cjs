@@ -7,11 +7,15 @@ const path = require('node:path');
 const { pathToFileURL, fileURLToPath } = require('node:url');
 const UI_TEXT = require('../src/ui-text.json').desktop;
 const storage = require('./storage.cjs');
+const {createComponentService}=require('./components.cjs');
+const workspaceStorage=require('./workspace-storage.cjs');
+const {createRecoveryManager}=require('./recovery-manager.cjs');
 const { createFontService } = require('./fonts.cjs');
 const print = require('./print-artwork.cjs');
 
 app.setName(UI_TEXT.appName);
 if (process.env.STADIO_USER_DATA) app.setPath('userData', path.resolve(process.env.STADIO_USER_DATA));
+else if (fsSync.existsSync(path.join(path.dirname(process.execPath), '.stadio-portable'))) app.setPath('userData', path.join(path.dirname(process.execPath), 'user-data'));
 else app.setPath('userData', path.join(app.getPath('appData'), UI_TEXT.appName));
 fsSync.mkdirSync(app.getPath('userData'), { recursive: true });
 app.commandLine.appendSwitch('disable-component-update');
@@ -30,6 +34,16 @@ let dirty = false;
 let closeAllowed = false;
 let rendererGone = false;
 let writeQueue = Promise.resolve();
+let nextOpenId = 0;
+const openRequests = [];
+function queueOpen(argv, cwd = process.cwd()) {
+  for (const arg of argv) if (typeof arg === 'string' && !arg.startsWith('-') && /\.dake$/i.test(arg)) {
+    const filePath = path.resolve(cwd, arg);
+    if (!openRequests.some(r => r.path === filePath)) openRequests.push({id: ++nextOpenId, path: filePath});
+  }
+  window?.webContents.send('stadio:openRequest');
+}
+queueOpen(process.argv.slice(1));
 const fontService = createFontService({ userData: app.getPath('userData'), catalogPath: path.join(appRoot, 'assets', 'google-fonts-catalog.json'), progress: payload => window?.webContents.send('stadio:fontProgress', payload) });
 
 function enqueueWrite(task) {
@@ -99,6 +113,17 @@ async function readImports(filePaths, allowProject = false) {
   return files;
 }
 function registerHandlers() {
+  handle('getOpenRequests', () => openRequests.map(r => ({id:r.id, name:path.basename(r.path)})));
+  handle('readOpenRequest', async id => {
+    const request = openRequests.find(r => r.id === id);
+    if (!request) throw localizedError('errorPath');
+    const data = await storage.readProject(request.path);
+    writableProjects.add(await canonicalKey(request.path));
+    return {path:request.path, data};
+  });
+  handle('ackOpenRequest', id => { const index=openRequests.findIndex(r=>r.id===id); if(index>=0)openRequests.splice(index,1); });
+  handle('listCachedFonts', () => fontService.listCached());
+  handle('getCachedFont', key => fontService.getCached(key));
   handle('listGoogleFonts', () => fontService.list());
   handle('downloadGoogleFont', request => fontService.download(request));
   handle('cancelFontDownload', id => fontService.cancel(id));
@@ -135,10 +160,12 @@ function registerHandlers() {
       await protectSource(filePath);
       writableProjects.add(await canonicalKey(filePath));
     } else if (!writableProjects.has(await canonicalKey(filePath))) throw localizedError('errorPath');
-    await protectSource(filePath);
+    // Only a separately opened normal document grants this explicit overwrite. Component import never grants it.
+    if(!writableProjects.has(await canonicalKey(filePath)))await protectSource(filePath);
     // A backup path can also have been imported, and must receive equal protection.
     await protectSource(`${filePath}.bak`);
-    await storage.writeProject(filePath, request.data);
+    if (request.version && request.path && !request.saveAs) filePath = await storage.writeNumberedProject(filePath, request.data);
+    else await storage.writeProject(filePath, request.data);
     writableProjects.add(await canonicalKey(filePath));
     return { path: filePath };
   }));
@@ -170,8 +197,44 @@ function registerHandlers() {
     return { path: selected.filePath };
   }));
 
+  const componentService=createComponentService({readProject:storage.readProject,rememberSource});
+  handle('importComponent',async(mode)=>{
+    if(!['embedded','linked'].includes(mode))throw new Error(UI_TEXT.errorProject);
+    const result=await dialog.showOpenDialog(window,{title:UI_TEXT.componentImport,properties:['openFile'],filters:[{name:UI_TEXT.filterProject,extensions:['dake']}]});
+    if(result.canceled||!result.filePaths.length)return null;
+    return componentService.importFile(result.filePaths[0],mode);
+  });
+  handle('refreshComponent',token=>componentService.refresh(token));
+  const workspaceRecoveryPath=path.join(app.getPath('userData'),'workspace-recovery.json');
+  const recoveryManager=createRecoveryManager({directory:app.getPath('userData'),storage,workspaceStorage});
+  handle('getPendingRecoveries',()=>enqueueWrite(()=>recoveryManager.listPending()));
+  handle('readPendingRecovery',id=>enqueueWrite(()=>recoveryManager.readPending(id)));
+  handle('discardPendingRecovery',id=>enqueueWrite(()=>recoveryManager.discardPending(id)));
+  handle('autosaveWorkspace',data=>enqueueWrite(()=>recoveryManager.writeWorkspace(data)));
+  handle('getWorkspaceRecovery',()=>enqueueWrite(()=>workspaceStorage.read(workspaceRecoveryPath)));
+  handle('discardWorkspaceRecovery',()=>enqueueWrite(()=>workspaceStorage.discard(workspaceRecoveryPath)));
+
+  const preparedExports=new Map();
+  handle('prepareExport',async request=>{
+    if(!request||!['png','jpeg','webp','svg','pdf'].includes(request.format))throw new Error(UI_TEXT.errorExport);
+    const bytes=request.format==='pdf'?await print.toPDF(request):storage.encodeExport(request.format,request.data);
+    if(bytes.length>storage.MAX_BYTES)throw new Error(UI_TEXT.errorLarge);
+    preparedExports.clear();const token=require('node:crypto').randomUUID();preparedExports.set(token,{bytes,format:request.format,name:storage.safeName(request.name)});
+    return {token,bytes:bytes.length,format:request.format};
+  });
+  handle('savePreparedExport',token=>enqueueWrite(async()=>{
+    const value=preparedExports.get(token);if(!value)throw new Error(UI_TEXT.errorExport);
+    const extension=value.format==='jpeg'?'jpg':value.format;
+    const selected=await dialog.showSaveDialog(window,{title:UI_TEXT.dialogExport,defaultPath:value.name+'.'+extension,filters:[{name:value.format.toUpperCase(),extensions:[extension]}]});
+    if(selected.canceled||!selected.filePath)return null;
+    if(path.extname(selected.filePath).toLowerCase()!=='.'+extension)throw new Error(UI_TEXT.errorExport);
+    await protectSource(selected.filePath);await storage.atomicWrite(selected.filePath,value.bytes);
+    preparedExports.delete(token);return {path:selected.filePath,bytes:value.bytes.length};
+  }));
+  handle('releasePreparedExport',token=>preparedExports.delete(token));
+
   handle('autosave', (data) => enqueueWrite(async () => {
-    await storage.writeRecovery(recoveryPath, data);
+    await recoveryManager.writeLegacy(data);
     return true;
   }));
 
@@ -204,6 +267,7 @@ function createMenu() {
       action(UI_TEXT.menuDocumentSettings, undefined, 'documentSettings'),
       action(UI_TEXT.menuSave, 'CmdOrCtrl+S', 'save'),
       action(UI_TEXT.menuSaveAs, 'CmdOrCtrl+Shift+S', 'saveAs'),
+      action(UI_TEXT.menuSaveVersion, 'CmdOrCtrl+Alt+S', 'saveVersion'),
       { type: 'separator' },
       action(UI_TEXT.menuImport, 'CmdOrCtrl+I', 'import'),
       action(UI_TEXT.menuExport, 'CmdOrCtrl+Shift+E', 'export'),
@@ -264,7 +328,7 @@ function createWindow() {
 
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
-  app.on('second-instance', () => { if (window) { if (window.isMinimized()) window.restore(); window.focus(); } });
+  app.on('second-instance', (_event, argv, cwd) => { queueOpen(argv, cwd); if (window) { if (window.isMinimized()) window.restore(); window.focus(); } });
   app.whenReady().then(() => {
     session.defaultSession.setPermissionRequestHandler((contents, permission, callback) => callback(permission === 'local-fonts' && contents === window?.webContents && contents.getURL() === indexUrl));
     session.defaultSession.setPermissionCheckHandler((contents, permission) => permission === 'local-fonts' && contents === window?.webContents && contents.getURL() === indexUrl);

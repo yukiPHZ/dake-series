@@ -35,7 +35,7 @@ async function run() {
     await js(`__studio.engine.renameDocument('再起動前に保存した作品')`);
     await click('save'); await waitUntil('!__studio.dirty');
     check('first process saves editable project with raster and vectors', JSON.parse(fs.readFileSync(projectPath, 'utf8')).canvas.objects.length === 8);
-    await js(`__studio.engine.renameDocument('自動復旧で戻る作品');document.querySelector('[data-tool="rect"]').click()`);
+    await js(`__studio.engine.renameDocument('自動復旧で戻る作品');void __studio.engine.addShape('rect')`);
     await waitUntil('__studio.dirty && __studio.engine.layers.length === 9');
     await delay(2300);
     const recovery = JSON.parse(fs.readFileSync(path.join(process.env.STADIO_USER_DATA, 'recovery.json'), 'utf8'));

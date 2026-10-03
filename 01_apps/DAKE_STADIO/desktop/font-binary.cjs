@@ -47,6 +47,37 @@ function checksum(bytes) {
   }
   return sum;
 }
+
+function unicodeCoverage(bytes, record) {
+  if (!record || record.length < 4) return [];
+  const start = record.offset, count = bytes.readUInt16BE(start + 2), points = new Set(); let examined = 0;
+  if (count > 256 || 4 + count * 8 > record.length) invalid();
+  for (let i = 0; i < count; i++) {
+    const at = start + 4 + i * 8, platform = bytes.readUInt16BE(at), encoding = bytes.readUInt16BE(at + 2);
+    if (platform !== 0 && !(platform === 3 && [1,10].includes(encoding))) continue;
+    const sub = start + bytes.readUInt32BE(at + 4); checkRange(bytes, sub, 2);
+    if (sub < start || sub >= start + record.length) invalid();
+    const format = bytes.readUInt16BE(sub);
+    if (format === 12) {
+      checkRange(bytes, sub, 16); const size = bytes.readUInt32BE(sub + 4), groups = bytes.readUInt32BE(sub + 12);
+      if (groups > 200000 || size < 16 + groups * 12 || sub + size > start + record.length) invalid();
+      for (let j = 0; j < groups; j++) { const g=sub+16+j*12, first=bytes.readUInt32BE(g), last=bytes.readUInt32BE(g+4), glyph=bytes.readUInt32BE(g+8);
+        if (first>last || last>0x10ffff) invalid(); if ((examined += last-first+1) > 2200000) invalid(); for (let cp=first+(glyph===0?1:0);cp<=last;cp++) points.add(cp);
+      }
+    } else if (format === 4) {
+      checkRange(bytes, sub, 14); const size=bytes.readUInt16BE(sub+2), segments=bytes.readUInt16BE(sub+6)/2;
+      if (!Number.isInteger(segments)||segments>32767||size<16+segments*8||sub+size>start+record.length) invalid();
+      const ends=sub+14,starts=ends+segments*2+2,deltas=starts+segments*2,offsets=deltas+segments*2;
+      for (let j=0;j<segments;j++) { const first=bytes.readUInt16BE(starts+j*2),last=bytes.readUInt16BE(ends+j*2),delta=bytes.readInt16BE(deltas+j*2),offset=bytes.readUInt16BE(offsets+j*2); if(first>last||(examined+=last-first+1)>2200000)invalid();
+        for(let cp=first;cp<=last&&cp!==0xffff;cp++){let glyph;if(offset){const loc=offsets+j*2+offset+2*(cp-first);if(loc+2>sub+size)invalid();glyph=bytes.readUInt16BE(loc);if(glyph)glyph=(glyph+delta)&65535;}else glyph=(cp+delta)&65535;if(glyph)points.add(cp);}
+      }
+    }
+  }
+  const sorted=[...points].sort((a,b)=>a-b), ranges=[];
+  for(const cp of sorted){const previous=ranges[ranges.length-1];if(previous&&cp===previous[1]+1)previous[1]=cp;else ranges.push([cp,cp]);}
+  return ranges;
+}
+
 function inspectFont(bytes, tableSet) {
   const os2 = tableSet.records.get('OS/2'), head = tableSet.records.get('head'), fvar = tableSet.records.get('fvar');
   const axes = {};
@@ -59,6 +90,7 @@ function inspectFont(bytes, tableSet) {
     }
   }
   return {
+    coverage: unicodeCoverage(bytes, tableSet.records.get('cmap')),
     axes, style: (os2 && os2.length >= 64 ? bytes.readUInt16BE(os2.offset + 62) & 1 : head && head.length >= 46 ? bytes.readUInt16BE(head.offset + 44) & 2 : false) ? 'italic' : 'normal',
     postscriptNames: nameValues(bytes, tableSet.records.get('name'), 6),
     fsType: os2 && os2.length >= 10 ? bytes.readUInt16BE(os2.offset + 8) : 0,

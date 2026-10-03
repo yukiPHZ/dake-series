@@ -1,9 +1,12 @@
+const {validateFontIdentity}=require('./font-identity.cjs');
 'use strict';
 
 const fs = require('node:fs/promises');
 const { constants } = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const {validateImageEditing}=require('./image-validation.cjs');
+const {validateComponents}=require('./components.cjs');
 const UI_TEXT = require('../src/ui-text.json').desktop;
 const MAX_BYTES = 128 * 1024 * 1024;
 const RASTER_DATA = /^data:image\/(?:png|jpeg|webp|gif|bmp);base64,[A-Za-z0-9+/\r\n]*={0,2}$/;
@@ -41,20 +44,22 @@ function validateExtras(data) {
   if (embeddedSize > 96 * 1024 * 1024) fail('errorLarge', 'TOO_LARGE');
 }
 
-function validateProject(data) {
-  if (!data || typeof data !== 'object' || Array.isArray(data) || data.format !== 'dake-stadio' || ![1, 2].includes(data.version) || !data.canvas || !Array.isArray(data.canvas.objects)) fail('errorProject', 'INVALID_PROJECT');
+function validateProject(data, {skipComponents=false} = {}) {
+  if (!data || typeof data !== 'object' || Array.isArray(data) || data.format !== 'dake-stadio' || ![1, 2, 3].includes(data.version) || !data.canvas || !Array.isArray(data.canvas.objects)) fail('errorProject', 'INVALID_PROJECT');
   if (!Number.isInteger(data.width) || !Number.isInteger(data.height) || data.width < 1 || data.height < 1 || data.width > 8192 || data.height > 8192 || data.width * data.height > 32000000) fail('errorProject', 'INVALID_SIZE');
   if (data.canvas.objects.length > 2000) fail('errorProject', 'TOO_MANY_OBJECTS');
   validateExtras(data);
+  if(!skipComponents){validateComponents(data,child=>validateProject(child,{skipComponents:true}));validateFontIdentity(data);}
   let entries = 0;
   function visit(value, depth, inFonts = false) {
     if (depth > 80 || ++entries > 500000) fail('errorProject', 'COMPLEX_PROJECT');
     if (typeof value === 'number' && !Number.isFinite(value)) fail('errorProject', 'INVALID_NUMBER');
     if (!value || typeof value !== 'object') return;
+    if(String(value.type).toLowerCase()==='image')validateImageEditing(value);
     for (const [key, child] of Object.entries(value)) {
       if (key === '__proto__' || key === 'constructor' || key === 'prototype') fail('errorUnsafe', 'UNSAFE_PROJECT');
       if (!(inFonts && key === 'source' && ['local', 'google'].includes(child)) && RESOURCE_KEYS.has(key.toLowerCase()) && typeof child === 'string' && child && !RASTER_DATA.test(child) && !/^#[\w:.-]+$/.test(child)) fail('errorUnsafe', 'EXTERNAL_RESOURCE');
-      visit(child, depth + 1, inFonts || (value === data && key === 'fonts'));
+      visit(child, depth + 1, inFonts || key === 'fonts');
     }
   }
   visit(data, 0);
@@ -134,6 +139,23 @@ async function writeProject(filePath, data) {
   await atomicWrite(filePath, JSON.stringify(data), { backup: true });
 }
 
+// Publish a complete synced version with an exclusive hard link; never replace an existing version.
+async function writeNumberedProject(filePath, data) {
+  validateProject(data);
+  const parsed=path.parse(filePath), match=parsed.name.match(/^(.*)_v(\d+)$/i);
+  const stem=match?match[1]:parsed.name;
+  let version=match?Number(match[2])+1:1;
+  const temporary=path.join(parsed.dir, '.'+stem+'.version-'+require('node:crypto').randomUUID()+'.tmp');
+  await atomicWrite(temporary, JSON.stringify(data));
+  try {
+    for(;version<1000000;version++) {
+      const target=path.join(parsed.dir,stem+'_v'+String(version).padStart(3,'0')+'.dake');
+      try{await fs.link(temporary,target);return target;}catch(error){if(error.code!=='EEXIST')throw error;}
+    }
+    throw new Error('VERSION_LIMIT');
+  } finally {await fs.unlink(temporary).catch(()=>{});}
+}
+
 async function writeRecovery(filePath, data) {
   validateProject(data);
   await atomicWrite(filePath, JSON.stringify({ timestamp: new Date().toISOString(), data }), { backup: true });
@@ -186,4 +208,4 @@ function safeName(value) {
   return /^(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\.|$)/i.test(name) ? `_${name}` : name;
 }
 
-module.exports = { MAX_BYTES, RASTER_DATA, validateProject, validateSvg, readLimited, readProject, atomicWrite, writeProject, readRecovery, writeRecovery, discardRecovery, encodeExport, safeName };
+module.exports = { writeNumberedProject, MAX_BYTES, RASTER_DATA, validateProject, validateSvg, readLimited, readProject, atomicWrite, writeProject, readRecovery, writeRecovery, discardRecovery, encodeExport, safeName };

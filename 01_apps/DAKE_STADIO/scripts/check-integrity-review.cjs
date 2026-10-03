@@ -1,0 +1,30 @@
+'use strict';
+const path=require('node:path'),fs=require('node:fs'),assert=require('node:assert/strict');
+const root=path.resolve(__dirname,'..');require('./local-test-env.cjs')();const {app,BrowserWindow,dialog}=require('electron');
+const output=path.join(root,'test-output','integrity-review-'+Date.now());fs.mkdirSync(output,{recursive:true});process.env.STADIO_USER_DATA=path.join(output,'profile');
+let saveTarget=path.join(output,'source.dake'),openTarget;dialog.showSaveDialog=async()=>({canceled:false,filePath:saveTarget});dialog.showOpenDialog=async()=>({canceled:!openTarget,filePaths:openTarget?[openTarget]:[]});
+require('../desktop/main.cjs');
+let win;const report={output,pid:process.pid,checks:[],errors:[]},delay=ms=>new Promise(r=>setTimeout(r,ms)),js=s=>win.webContents.executeJavaScript(s,true);
+async function wait(s){for(let n=0;n<400;n++){if(await js(s))return;await delay(25);}throw Error('wait '+s);}
+const check=(name,value,detail)=>report.checks.push({name,passed:!!value,detail});
+(async()=>{
+ await app.whenReady();win=BrowserWindow.getAllWindows()[0];await wait('!!window.__studio?.workspace');
+ await js('(async()=>{await __studio.workspace.newDocument({width:300,height:160,background:"transparent",name:"Source"});__studio.engine.addText("Original");window.sourceTab=__studio.workspace.active.id;await __studio.save(true);window.sourceData=__studio.engine.serialize();return true;})()');
+ openTarget=saveTarget;
+ await js('(async()=>{await __studio.workspace.newDocument({width:600,height:400,background:"#fff",name:"Parent"});await __studio.workspace.place("embedded");window.parentTab=__studio.workspace.active.id;return true;})()');
+ await js('(async()=>{await __studio.workspace.activate(window.sourceTab);__studio.engine.select(__studio.engine.layers[0].id);__studio.engine.updateSelected({text:"Explicit source edit"});return true;})()');
+ check('normal source tab remains explicitly writable after component placement',await js('__studio.save(false)'));
+ check('normal source save writes selected source only',JSON.parse(fs.readFileSync(saveTarget,'utf8')).canvas.objects[0].text==='Explicit source edit');
+ await js('(async()=>{await __studio.workspace.activate(window.parentTab);__studio.engine.select(__studio.engine.layers[0].id);await __studio.workspace.editComponent();__studio.engine.select(__studio.engine.layers[0].id);__studio.engine.updateSelected({text:"Embedded only"});await __studio.workspace.finishChild(true);return true;})()');
+ check('component edit cannot silently overwrite original source',JSON.parse(fs.readFileSync(saveTarget,'utf8')).canvas.objects[0].text==='Explicit source edit');
+ const forged=path.join(output,'import-only.dake');fs.writeFileSync(forged,JSON.stringify(await js('window.sourceData')));openTarget=forged;
+ await js('__studio.workspace.place("embedded")');
+ check('component import alone does not grant native save path capability',await js('(async()=>{try{await window.stadio.saveProject({path:'+JSON.stringify(forged)+',data:window.sourceData});return false;}catch(e){return true;}})()'));
+ openTarget=path.join(output,'source.dake');
+ await js('(async()=>{await __studio.workspace.activate(window.sourceTab);__studio.engine.select(__studio.engine.layers[0].id);__studio.engine.updateSelected({text:"UNSAVED SOURCE"});await __studio.workspace.activate(window.parentTab);window.tabsBeforeReopen=__studio.workspace.sessions.length;await __studio.open();return true;})()');
+ check('opening an existing path focuses its dirty tab without overwriting it',await js('__studio.workspace.sessions.length===window.tabsBeforeReopen&&__studio.workspace.active.id===window.sourceTab&&__studio.engine.layers[0].text==="UNSAVED SOURCE"&&__studio.dirty'));
+ await js('window.beforeRecovery=__studio.workspace.recovery();true');
+ await js('(async()=>{await __studio.workspace.newDocument({width:500,height:400,background:"#fff",name:"Work begun after recovery banner"});__studio.engine.addText("DO NOT LOSE");window.newWorkId=__studio.workspace.active.id;await __studio.workspace.restoreRecovery(window.beforeRecovery);return true;})()');
+ check('restoring an older workspace preserves current unsaved work',await js('__studio.workspace.sessions.some(s=>s.id===window.newWorkId&&s.data.canvas.objects.some(o=>o.text==="DO NOT LOSE"))'));
+ report.passed=report.checks.every(c=>c.passed);fs.writeFileSync(path.join(output,'results.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));app.exit(report.passed?0:1);
+})().catch(error=>{report.error=error.stack;fs.writeFileSync(path.join(output,'results.json'),JSON.stringify(report,null,2));console.error(error);app.exit(1);});

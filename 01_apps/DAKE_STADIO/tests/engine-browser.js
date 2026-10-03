@@ -265,7 +265,7 @@ window.runFoundationChecks=async()=>{
     reset();e.updateDocumentSettings({dpi:300,unit:'mm',bleed:5,safe:8,snap:{grid:true,gridSize:10}});
     e.addGuide('x',80);e.addGuide('y',70);
     const meta=structuredClone(e.meta),data=e.serialize();
-    check(data.version===2&&data.meta.dpi===300&&data.meta.guides.vertical[0]===80,'v2 contains DPI units bleed safe and guides');
+    check(data.version===3&&data.meta.dpi===300&&data.meta.guides.vertical[0]===80,'v3 retains legacy DPI units bleed safe and guides');
     await e.loadDocument(data);check(JSON.stringify(meta)===JSON.stringify(e.meta),'v2 metadata reopens exactly');
     const v1={...data,version:1};delete v1.meta;delete v1.fonts;await e.loadDocument(v1);
     check(e.meta.dpi===96&&e.meta.unit==='px','v1 projects load with compatible production defaults');

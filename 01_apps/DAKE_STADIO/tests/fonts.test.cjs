@@ -42,3 +42,32 @@ test('v2 project stores metadata and licensed Google bytes, rejects local bytes,
 });
 
 test('oversize catalog fonts are rejected before network or document mutation',async t=>{const {service,urls}=await setup(t,{large:true});await assert.rejects(service.download({family:'Fixture'}));assert.equal(urls.length,0);assert.deepEqual(await service.cachedMetadata(),[])});
+test('cached font library lists validated variants, reuses offline, and excludes corrupt entries',async t=>{
+ const {service,output}=await setup(t);await service.download({family:'Fixture'});
+ https.get=()=>{throw new Error('Network forbidden')};
+ const library=await service.listCached();assert.equal(library.length,1);assert.equal(library[0].data,undefined);
+ const face=await service.getCached(library[0].cacheKey);assert.ok(face.data);assert.ok(face.license);
+ await assert.rejects(service.getCached('../secret'));
+ await fs.writeFile(path.join(output,'fonts','blobs',face.sha256+'.sfnt'),'corrupt');
+ assert.deepEqual(await service.listCached(),[]);await assert.rejects(service.getCached(library[0].cacheKey));
+});
+
+
+test('Unicode coverage reads cmap 12 and omits missing glyph zero',()=>{
+ const bytes=Buffer.alloc(72);bytes.writeUInt32BE(0x10000);bytes.writeUInt16BE(1,4);bytes.write('cmap',12);bytes.writeUInt32BE(28,20);bytes.writeUInt32BE(44,24);
+ bytes.writeUInt16BE(1,30);bytes.writeUInt16BE(3,32);bytes.writeUInt16BE(10,34);bytes.writeUInt32BE(12,36);
+ bytes.writeUInt16BE(12,40);bytes.writeUInt32BE(32,44);bytes.writeUInt32BE(1,52);bytes.writeUInt32BE(65,56);bytes.writeUInt32BE(67,60);bytes.writeUInt32BE(0,64);
+ assert.deepEqual(extractFont(bytes).coverage,[[66,67]]);
+ bytes.writeUInt32BE(0x110000,60);assert.throws(()=>extractFont(bytes));
+});
+
+test('cached legacy descriptor receives real cmap coverage without altering original metadata',async t=>{
+ const {service,output}=await setup(t);await service.download({family:'Fixture'});const entries=await fs.readdir(path.join(output,'fonts','descriptors'));const file=path.join(output,'fonts','descriptors',entries[0]);const metadata=JSON.parse(await fs.readFile(file,'utf8'));delete metadata.coverage;await fs.writeFile(file,JSON.stringify(metadata));
+ const result=await service.getCached(entries[0].slice(0,-5));assert.deepEqual(result.coverage,[]);assert.equal(JSON.parse(await fs.readFile(file,'utf8')).coverage,undefined);
+});
+
+test('native offline mode permits verified cache but never attempts acquisition',async t=>{
+ const {service,output,urls}=await setup(t);await service.download({family:'Fixture'});const offline=createFontService({userData:output,catalogPath:path.join(output,'catalog.json'),offline:true});
+ https.get=()=>{throw new Error('Offline mode must never call HTTP')};
+ assert.equal((await offline.download({family:'Fixture'})).cached,true);await assert.rejects(offline.download({family:'Fixture',weight:900}));assert.equal(urls.length,2);
+});

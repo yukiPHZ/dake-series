@@ -111,3 +111,13 @@ test('explicit recovery discard removes both recovery generations and is idempot
   assert.equal(await storage.readRecovery(destination), null);
   await storage.discardRecovery(destination);
 });
+test('numbered versions publish complete files without collisions or overwrites', async()=>{
+ const directory=await fs.mkdtemp(path.join(testTemporary,'versions-')),base=path.join(directory,'制作.dake');
+ await storage.writeProject(base,sample('base'));
+ const first=await storage.writeNumberedProject(base,sample('first'));
+ assert.equal(path.basename(first),'制作_v001.dake');
+ const versions=await Promise.all([storage.writeNumberedProject(first,sample('second')),storage.writeNumberedProject(first,sample('third'))]);
+ assert.equal(new Set(versions).size,2);assert.equal((await storage.readProject(first)).name,'first');assert.equal((await storage.readProject(base)).name,'base');
+ assert.deepEqual((await fs.readdir(directory)).filter(f=>f.endsWith('.tmp')),[]);
+ await assert.rejects(storage.writeNumberedProject(base,{broken:true}));assert.equal((await storage.readProject(base)).name,'base');
+});

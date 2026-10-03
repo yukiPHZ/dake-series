@@ -6,7 +6,7 @@ const { encodeExport } = require('./storage.cjs');
 const UI_TEXT = require('../src/ui-text.json').desktop;
 function dimensions(request) {
   const width = Number(request?.width), height = Number(request?.height), dpi = Number(request?.dpi || 96);
-  if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1 || width > 8192 || height > 8192 || width * height > 32000000 || !Number.isFinite(dpi) || dpi < 30 || dpi > 2400) throw new Error(UI_TEXT.errorPrintSize);
+  if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1 || width > 16384 || height > 16384 || width * height > 64000000 || !Number.isFinite(dpi) || dpi < 30 || dpi > 9600) throw new Error(UI_TEXT.errorPrintSize);
   const widthMm = width / dpi * 25.4, heightMm = height / dpi * 25.4;
   if (widthMm < .36 || heightMm < .36 || widthMm > 2000 || heightMm > 2000) throw new Error(UI_TEXT.errorPrintSize);
   const png = encodeExport('png', request.data);

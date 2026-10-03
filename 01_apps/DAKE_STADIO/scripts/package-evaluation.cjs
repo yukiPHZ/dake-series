@@ -1,0 +1,26 @@
+'use strict';
+const fs=require('node:fs/promises'),path=require('node:path'),crypto=require('node:crypto'),{spawnSync}=require('node:child_process');
+(async()=>{
+ const {root,temp,electronCache}=require('./local-test-env.cjs')(),metadata=require('../package.json'),stamp=new Date().toISOString().replace(/[:.]/g,'-');
+ const stage=path.join(root,'artifacts','evaluation-input-'+stamp),outputRoot=path.join(root,'dist','evaluation-'+stamp);
+ const inside=p=>{const rel=path.relative(root,path.resolve(p));if(!rel||rel.startsWith('..')||path.isAbsolute(rel))throw Error('Outside project');};inside(stage);inside(outputRoot);
+ await fs.mkdir(stage,{recursive:true});await fs.mkdir(outputRoot,{recursive:true});
+ for(const name of ['build','desktop','assets'])await fs.cp(path.join(root,name),path.join(stage,name),{recursive:true});
+ await fs.mkdir(path.join(stage,'src'));await fs.copyFile(path.join(root,'src','ui-text.json'),path.join(stage,'src','ui-text.json'));
+ await fs.writeFile(path.join(stage,'package.json'),JSON.stringify({name:metadata.name,productName:'DAKE STADIO',version:metadata.version,main:'desktop/main.cjs',private:true,description:metadata.description,author:metadata.author},null,2));
+ const inputs={};async function hashTree(folder,rel=''){for(const entry of await fs.readdir(folder,{withFileTypes:true})){const name=path.join(rel,entry.name),p=path.join(folder,entry.name);if(entry.isDirectory())await hashTree(p,name);else inputs[name.replaceAll('\\','/')]=crypto.createHash('sha256').update(await fs.readFile(p)).digest('hex');}}await hashTree(stage);
+ const {packager}=await import('@electron/packager');const outputs=await packager({tmpdir:path.join(temp,'evaluation-packager'),download:{cacheRoot:electronCache},dir:stage,out:outputRoot,name:'DAKE_STADIO',executableName:'DAKE_STADIO',platform:'win32',arch:'x64',electronVersion:metadata.devDependencies.electron,appVersion:metadata.version,buildVersion:'0.4.0.1',appCopyright:'Copyright (c) 2026 Yukihiko Kikuta',icon:path.join(root,'assets','dake_icon.ico'),asar:true,prune:false,overwrite:false,win32metadata:{CompanyName:'DAKE',FileDescription:'DAKE STADIO Evaluation',ProductName:'DAKE STADIO',InternalName:'DAKE_STADIO'}});
+ const output=path.join(outputRoot,'DAKE_STADIO-'+metadata.version+'-win32-x64');inside(outputs[0]);inside(output);await fs.rename(outputs[0],output);
+ for(const name of ['README.md','ORIGINAL.md','TECHNICAL_RECOVERY.md','TEST_REPORT.md','release_body.md'])await fs.copyFile(path.join(root,name),path.join(output,name));
+ await fs.copyFile(path.join(root,'assets','THIRD_PARTY_NOTICES.txt'),path.join(output,'THIRD_PARTY_NOTICES.txt'));
+ await fs.mkdir(path.join(output,'examples'));await fs.copyFile(path.join(root,'evidence','sample-artwork.dake'),path.join(output,'examples','はじめの作品.dake'));
+ const hash=async p=>crypto.createHash('sha256').update(await fs.readFile(p)).digest('hex');
+ const build={version:metadata.version,builtAt:new Date().toISOString(),electron:metadata.devDependencies.electron,sourceInputs:inputs,exeSha256:await hash(path.join(output,'DAKE_STADIO.exe')),asarSha256:await hash(path.join(output,'resources','app.asar'))};await fs.writeFile(path.join(output,'BUILD_ID.json'),JSON.stringify(build,null,2));
+ const zip=path.join(outputRoot,'DAKE_STADIO-'+metadata.version+'-win32-x64.zip');inside(zip);
+ const compressed=spawnSync('powershell.exe',['-NoLogo','-NoProfile','-NonInteractive','-Command','Compress-Archive -LiteralPath $env:STADIO_PACKAGE_SOURCE -DestinationPath $env:STADIO_PACKAGE_ZIP -CompressionLevel Optimal'],{env:{...process.env,STADIO_PACKAGE_SOURCE:output,STADIO_PACKAGE_ZIP:zip},encoding:'utf8',windowsHide:true});if(compressed.status!==0)throw Error(compressed.stderr);
+ const zipSha256=await hash(zip);await fs.writeFile(zip+'.sha256',zipSha256+'  '+path.basename(zip)+'\n');
+ const extract=path.join(root,'test-output','evaluation-extracted-'+stamp);inside(extract);
+ const extraction=spawnSync('powershell.exe',['-NoLogo','-NoProfile','-NonInteractive','-Command','Expand-Archive -LiteralPath $env:STADIO_PACKAGE_ZIP -DestinationPath $env:STADIO_PACKAGE_EXTRACT'],{env:{...process.env,STADIO_PACKAGE_ZIP:zip,STADIO_PACKAGE_EXTRACT:extract},encoding:'utf8',windowsHide:true});if(extraction.status!==0)throw Error(extraction.stderr);
+ const executable=path.join(extract,path.basename(output),'DAKE_STADIO.exe');const asar=path.join(path.dirname(executable),'resources','app.asar');if(await hash(executable)!==build.exeSha256||await hash(asar)!==build.asarSha256)throw Error('Extracted executable differs');
+ const result={version:metadata.version,output,zip,zipSha256,executable,asarSha256:build.asarSha256,exeSha256:build.exeSha256};await fs.writeFile(path.join(root,'evidence','evaluation-build.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2));
+})().catch(e=>{console.error(e);process.exitCode=1;});

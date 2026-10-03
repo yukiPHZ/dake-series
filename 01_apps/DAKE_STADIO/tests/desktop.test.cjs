@@ -31,6 +31,8 @@ test('desktop IPC restricts write destinations, protects originals, and keeps lo
     setDocumentEdited() {}
     loadURL(url) { assert.equal(url, indexUrl); }
     show() {}
+    isMinimized(){return false;}
+    focus(){}
     close() { this.closeCalled = true; }
   }
   const app = new EventEmitter();
@@ -89,6 +91,16 @@ test('desktop IPC restricts write destinations, protects originals, and keeps lo
     queuedSave.push({ canceled: false, filePath: exportPath });
     assert.equal((await call('exportFile', { format: 'png', data: raster, name: '画像' })).path, exportPath);
     assert.deepEqual(await fs.readFile(exportPath), sourceBytes);
+  });
+
+  await t.test('second-instance requests are tokenized, validated, acknowledged and grant only their project path',async()=>{
+    const destination=path.join(temporary,'起動作品.dake');await fs.writeFile(destination,JSON.stringify(data));
+    app.emit('second-instance',{},['app.exe',destination,'--ignore.dake'],temporary);
+    const requests=await call('getOpenRequests');assert.equal(requests.length,1);assert.equal(requests[0].name,'起動作品.dake');
+    await assert.rejects(call('readOpenRequest',999));
+    const loaded=await call('readOpenRequest',requests[0].id);assert.equal(loaded.data.name,data.name);
+    const version=await call('saveProject',{path:destination,data,version:true});assert.match(version.path,/_v001\.dake$/);
+    await call('ackOpenRequest',requests[0].id);assert.deepEqual(await call('getOpenRequests'),[]);
   });
 
   await t.test('recovery uses the isolated local profile and explicit discard clears it', async () => {

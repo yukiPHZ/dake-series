@@ -1,9 +1,12 @@
+import {validateFontIdentity} from '../desktop/font-identity.cjs';
 import {
   Canvas, StaticCanvas, FabricObject, FabricImage, Rect, Ellipse, Triangle, Line,
   Path, Textbox, Group, ActiveSelection, Point, controlsUtils, util, filters, config,
   loadSVGFromString, Canvas2dFilterBackend, setFilterBackend,
 } from 'fabric';
 import UI_TEXT from './ui-text.json';
+import {installImaging, validateImageEditing, IMAGE_EDIT_PROPERTIES} from './engine-imaging.js';
+import {installComponents, validateComponents, COMPONENT_PROPERTIES} from './engine-components.js';
 import {installFoundation, normalizeMeta, validateV2Extras, FOUNDATION_PROPERTIES} from './engine-foundation.js';
 
 // Rendering stays on this machine. The CPU backend is the serialization
@@ -11,7 +14,7 @@ import {installFoundation, normalizeMeta, validateV2Extras, FOUNDATION_PROPERTIE
 setFilterBackend(new Canvas2dFilterBackend());
 // Retain production vector placement through repeated save/load cycles.
 config.NUM_FRACTION_DIGITS = 12;
-const CUSTOM = ['id', 'name', 'locked', 'dakeRaster', 'adjustments', 'objectCaching', ...FOUNDATION_PROPERTIES];
+const CUSTOM = ['id', 'name', 'locked', 'dakeRaster', 'adjustments', 'objectCaching', ...FOUNDATION_PROPERTIES, ...COMPONENT_PROPERTIES, ...IMAGE_EDIT_PROPERTIES];
 FabricObject.customProperties = CUSTOM;
 const MAX_AREA = 32_000_000;
 const MAX_SIDE = 8192;
@@ -45,8 +48,8 @@ export function validateDimensions(width, height) {
 }
 
 // Reject remote resources before Fabric has any opportunity to resolve them.
-export function validateDocument(data) {
-  if (!data || data.format !== 'dake-stadio' || ![1, 2].includes(data.version) ||
+export function validateDocument(data, {skipComponents=false} = {}) {
+  if (!data || data.format !== 'dake-stadio' || ![1, 2, 3].includes(data.version) ||
       !data.canvas || !Array.isArray(data.canvas.objects) || typeof data.name !== 'string' ||
       typeof data.background !== 'string') throw new Error('INVALID_DOCUMENT');
   validateDimensions(data.width, data.height);
@@ -59,6 +62,7 @@ export function validateDocument(data) {
     if (!value || typeof value !== 'object') return;
     if (Array.isArray(value) && value.length > 100_000) throw new Error('INVALID_DOCUMENT');
     for (const [key, item] of Object.entries(value)) {
+      if (key === 'dakeComponent') continue;
       if (['__proto__', 'prototype', 'constructor'].includes(key)) throw new Error('INVALID_DOCUMENT');
       if (typeof item === 'number' && (!Number.isFinite(item) || Math.abs(item) > 1e8)) throw new Error('INVALID_DOCUMENT');
       if (['src', 'source', 'href', 'xlink:href'].includes(key) && typeof item === 'string' && !IMAGE_DATA.test(item)) {
@@ -72,6 +76,7 @@ export function validateDocument(data) {
     if (depth > 20) throw new Error('INVALID_DOCUMENT');
     for (const object of items) {
       if (++count > MAX_OBJECTS || !object || !TYPES.has(String(object.type).toLowerCase())) throw new Error('INVALID_DOCUMENT');
+      if(String(object.type).toLowerCase()==='image')validateImageEditing(object);
       if (object.excludeFromExport) throw new Error('INVALID_DOCUMENT');
       if (object.path && (!Array.isArray(object.path) || object.path.length > 40_000)) throw new Error('INVALID_DOCUMENT');
       if (object.filters && (!Array.isArray(object.filters) || object.filters.length > 4 || object.filters.some((filter) => !FILTER_TYPES.has(filter?.type)))) throw new Error('INVALID_DOCUMENT');
@@ -89,6 +94,7 @@ export function validateDocument(data) {
   };
   walk(data.canvas);
   objects(data.canvas.objects);
+  if(!skipComponents){validateComponents(data,child=>validateDocument(child,{skipComponents:true}));validateFontIdentity(data);}
   return data;
 }
 
@@ -156,6 +162,7 @@ export class StudioEngine {
     this.canvas.on('selection:updated', () => this._selectionChanged());
     this.canvas.on('selection:cleared', () => this._selectionChanged());
     this.canvas.on('object:modified', () => this.commit('transform'));
+    this.canvas.on('text:changed', () => this._emit('text-preview'));
     this.canvas.on('text:editing:exited', () => this.commit('text'));
     this.canvas.on('mouse:down:before', () => {
       // Fabric clears selection when hit testing is disabled. Preserve the
@@ -303,6 +310,7 @@ export class StudioEngine {
           const image = object.getElement();
           validateDimensions(image.naturalWidth || image.width, image.naturalHeight || image.height);
           if (raw.filters?.length) await this._applyWorkerFilters(object, raw.filters);
+          await this.restoreImageEditing?.(object,raw);
         }
         if (object instanceof Group) {
           if (object.getObjects().length !== (raw.objects?.length || 0)) throw new Error('INVALID_DOCUMENT');
@@ -419,9 +427,12 @@ export class StudioEngine {
   }
   addText(text = '') {
     this._guard(); this.setTool('select');
+    const choice=this.fontSelection;
+    if(choice){const descriptor=structuredClone(choice);if(descriptor.source==='local')delete descriptor.data;this.fonts=this.fonts.filter(f=>f.id!==descriptor.id);this.fonts.push(descriptor);}
     return this._add(new Textbox(String(text), {
       left: this.width * 0.2, top: this.height * 0.35, width: this.width * 0.6,
-      originX: 'left', originY: 'top', fontFamily: 'Yu Gothic',
+      originX: 'left', originY: 'top', fontFamily: choice?.family || 'Yu Gothic',
+      fontWeight: choice?.weight || 400, fontStyle: choice?.style || 'normal',
       fontSize: Math.max(20, Math.round(this.width / 20)), fill: this.style.fill,
       stroke: this.style.stroke, strokeWidth: this.style.strokeWidth, lineHeight: 1.25,
     }), 'text');
@@ -501,6 +512,8 @@ export class StudioEngine {
       const objects = this.canvas.getActiveObjects();
       this.canvas.discardActiveObject();
       const copies = await Promise.all(objects.map((object) => object.clone(CUSTOM)));
+      const restoreCopy=async object=>{if(object instanceof FabricImage)await this.restoreImageEditing?.(object,object);if(object instanceof Group)for(const child of object.getObjects())await restoreCopy(child);};
+      for(const object of copies)await restoreCopy(object);
       const reidentify = (object) => {
         object.id = uid(); object.locked = false;
         if(object.dakeMask?.source){object.dakeMask=structuredClone(object.dakeMask);object.dakeMask.source.id=uid();}
@@ -649,7 +662,7 @@ export class StudioEngine {
     }
     if (event.e.button !== undefined && event.e.button !== 0) return;
     const point = this._point(event);
-    if (this.activeTool === 'hand' || event.e.altKey) {
+    if (this.activeTool === 'hand') {
       this._drag = { kind: 'hand', x: event.e.clientX, y: event.e.clientY }; return;
     }
     if (this.activeTool === 'pen') {
@@ -889,6 +902,17 @@ export class StudioEngine {
       this.canvas.setActiveObject(image); this.commit('rasterize'); return image;
     });
   }
+  resizeDocument(width,height,{scaleArtwork=false,anchor='center'}={}) {
+    this._guard();width=Number(width);height=Number(height);validateDimensions(width,height);
+    const sx=width/this.width,sy=height/this.height;
+    if(scaleArtwork&&Math.abs(sx-sy)>.002)throw new Error('RESIZE_ASPECT');
+    const dx=anchor==='center'?(width-this.width)/2:0,dy=anchor==='center'?(height-this.height)/2:0;
+    this.canvas.discardActiveObject();
+    for(const object of this.layers){object.set(scaleArtwork?{left:object.left*sx,top:object.top*sy,scaleX:object.scaleX*sx,scaleY:object.scaleY*sy}:{left:object.left+dx,top:object.top+dy});object.setCoords();}
+    const limit=Math.max(0,(Math.min(width,height)-1)/2),bleed=Math.min(this.meta.bleed*(scaleArtwork?sx:1),limit),safe=Math.min(this.meta.safe*(scaleArtwork?sx:1),Math.max(0,limit-bleed));
+    this.meta=normalizeMeta({...this.meta,bleed,safe,guides:{vertical:this.meta.guides.vertical.map(x=>scaleArtwork?x*sx:x+dx).filter(x=>x>=0&&x<=width),horizontal:this.meta.guides.horizontal.map(y=>scaleArtwork?y*sy:y+dy).filter(y=>y>=0&&y<=height)}},width,height);
+    this.width=width;this.height=height;this._setArtboard();this.commit('resize-document');
+  }
   cropDocument({ left, top, width, height }) {
     this._guard();
     left = Math.round(clamp(left, 0, this.width - 1)); top = Math.round(clamp(top, 0, this.height - 1));
@@ -901,7 +925,7 @@ export class StudioEngine {
     this.width = width; this.height = height; this._setArtboard(); this.commit('crop'); this.onStatus('cropDone');
   }
 
-  async exportRaster(format = 'png', scale = 1, quality = 0.94) {
+  async exportRaster(format = 'png', scale = 1, quality = 0.94, {transparent=null} = {}) {
     this._guard(); this._pointerUp(); this._guard();
     if(this._exportPending)throw new Error('BUSY');
     if (!['png', 'jpeg', 'jpg', 'webp'].includes(format)) throw new Error('INVALID_IMAGE');
@@ -910,13 +934,16 @@ export class StudioEngine {
     const viewport = this.canvas.viewportTransform.slice();
     const type = format === 'jpg' ? 'jpeg' : format;
     let buffer;
+    const savedBackground=this.canvas.backgroundColor;
     try {
+      if(transparent===true)this.canvas.backgroundColor='';
       this.canvas.viewportTransform = identity();
       buffer = this.canvas.toCanvasElement(scale, { width: this.width, height: this.height, left: 0, top: 0, filter: (object) => !object.excludeFromExport });
-      if (type === 'jpeg') {
+      if (type === 'jpeg' || transparent===false) {
         const context = buffer.getContext('2d'); context.globalCompositeOperation = 'destination-over'; context.fillStyle = '#ffffff'; context.fillRect(0, 0, buffer.width, buffer.height);
       }
     } finally {
+      this.canvas.backgroundColor=savedBackground;
       this.canvas.setViewportTransform(viewport); this.canvas.requestRenderAll();
     }
     // Encoding uses a detached immutable canvas. Restore the editing viewport
@@ -954,3 +981,5 @@ export class StudioEngine {
 }
 
 installFoundation(StudioEngine);
+installImaging(StudioEngine);
+installComponents(StudioEngine);

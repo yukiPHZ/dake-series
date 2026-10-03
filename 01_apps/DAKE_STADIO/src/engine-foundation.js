@@ -20,7 +20,7 @@ export function normalizeMeta(input={},width=1200,height=800) {
   for(const key of ['enabled','objects','artboard','guides','grid'])snap[key]=!!snap[key];
   snap.gridSize=finite(snap.gridSize,16);
   if(snap.gridSize<1||snap.gridSize>4096)throw new Error('INVALID_LAYOUT');
-  return {dpi,unit,bleed,safe,guides,snap};
+  return {dpi,unit,bleed,safe,guides,snap,guideLocked:!!input.guideLocked};
 }
 export function validateV2Extras(data){
   normalizeMeta(data.meta||{},data.width,data.height);

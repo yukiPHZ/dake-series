@@ -1,6 +1,6 @@
 {
   "name": "dake-stadio",
-  "version": "0.2.0",
+  "version": "0.4.0-eval.1",
   "private": true,
   "description": "DAKE STADIO - integrated local image and vector creation",
   "author": "Yukihiko Kikuta",
@@ -15,7 +15,11 @@
     "package": "npm run build && node scripts/package.cjs",
     "test:native": "node scripts/run-native-unit.cjs",
     "test:production": "node scripts/run-production-check.cjs",
-    "test:pdf": "node scripts/run-native-pdf.cjs"
+    "test:pdf": "node scripts/run-native-pdf.cjs",
+    "package:evaluation": "npm run build && node scripts/package-evaluation.cjs",
+    "test:fonts-ui": "node scripts/check-font-reliability.cjs",
+    "test:output-ui": "node scripts/check-output-color.cjs",
+    "test:imaging": "node scripts/check-imaging.cjs"
   },
   "engines": {
     "node": ">=22.12.0"
