@@ -1,6 +1,6 @@
 DakePDF分割Select - Third-Party Notices
 
-Windows onedir候補は、PDFのサムネイル表示に次を使用します。
+Windows onefile版は、PDFのサムネイル表示に次を使用します。
 
 - pypdfium2 5.13.0
 - PDFium 153.0.7999.0
@@ -10,6 +10,8 @@ dist-info/METADATA に記載された License-File 全19件を、内容を変更
 third_party_licenses/pypdfium2-5.13.0/ に収録しています。
 BUILD_LICENSES は wheel 内の data/windows_x64/BUILD_LICENSES から配置しました。
 実wheelとのファイル名・SHA-256集合一致を検証してから配布候補を作成します。
+正式配布ZIPには本書とライセンス文書一式を同梱します。EXEにも文書を収録し、
+EXE単体をコピーした場合の起動に隣接するライセンスフォルダは必要ありません。
 
 収録内容:
 

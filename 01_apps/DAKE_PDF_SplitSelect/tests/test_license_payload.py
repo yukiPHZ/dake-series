@@ -8,7 +8,8 @@ import unittest
 
 
 APP_DIR = Path(__file__).resolve().parents[1]
-DIST_DIR = APP_DIR / "dist" / "DakePDF_Split_Select"
+ONEFILE_EXE = APP_DIR / "dist" / "DakePDF_Split_Select.exe"
+DIST_DIR = ONEFILE_EXE.parent if ONEFILE_EXE.is_file() else APP_DIR / "dist" / "DakePDF_Split_Select"
 LICENSE_DIR = Path("third_party_licenses") / "pypdfium2-5.13.0"
 FORBIDDEN = re.compile(r"fitz|pymupdf|mupdfcpp|_mupdf|pillow|^pil$", re.IGNORECASE)
 
@@ -40,7 +41,27 @@ class LicensePayloadTests(unittest.TestCase):
             self.assertEqual(sha256(root / "THIRD_PARTY_NOTICES.txt"),
                              sha256(APP_DIR / "THIRD_PARTY_NOTICES.txt"))
 
-    def test_no_legacy_renderer_in_source_or_onedir(self):
+    def test_onefile_embeds_runtime_and_licenses(self):
+        if not ONEFILE_EXE.is_file():
+            self.skipTest("onefile candidate not built")
+        from PyInstaller.archive.readers import CArchiveReader
+
+        archive = CArchiveReader(str(ONEFILE_EXE))
+        names = set(archive.toc)
+        self.assertEqual(len([name for name in names if Path(name).name.lower() == "pdfium.dll"]), 1)
+        self.assertIn("python312.dll", names)
+        self.assertTrue(any("tkdnd" in name.lower() and name.endswith(".dll") for name in names))
+        self.assertFalse([name for name in names if FORBIDDEN.search(Path(name).name)])
+        for source in (APP_DIR / LICENSE_DIR).rglob("*"):
+            if source.is_file():
+                member = str(source.relative_to(APP_DIR))
+                self.assertEqual(archive.extract(member), source.read_bytes(), member)
+        self.assertEqual(archive.extract("THIRD_PARTY_NOTICES.txt"),
+                         (APP_DIR / "THIRD_PARTY_NOTICES.txt").read_bytes())
+        self.assertEqual(archive.extract("dake_icon.ico"),
+                         (APP_DIR.parents[1] / "02_assets" / "dake_icon.ico").read_bytes())
+
+    def test_no_legacy_renderer_in_source_or_distribution(self):
         for name in ("main.py", "pdf_backend.py", "tests/test_lifecycle.py", "tests/test_packaged_cli.py"):
             text = (APP_DIR / name).read_text(encoding="utf-8")
             self.assertNotRegex(text, r"\bimport\s+fitz\b")
@@ -52,7 +73,8 @@ class LicensePayloadTests(unittest.TestCase):
             return
         files = [p for p in DIST_DIR.rglob("*") if p.is_file()]
         self.assertFalse([p for p in files if FORBIDDEN.search(p.name)])
-        self.assertEqual(len([p for p in files if p.name.lower() == "pdfium.dll"]), 1)
+        if not ONEFILE_EXE.is_file():
+            self.assertEqual(len([p for p in files if p.name.lower() == "pdfium.dll"]), 1)
 
 
 if __name__ == "__main__":

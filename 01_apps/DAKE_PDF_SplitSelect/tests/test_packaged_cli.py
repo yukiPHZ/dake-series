@@ -1,4 +1,4 @@
-"""Exercise an unpublished onedir or extracted onedir with disposable PDFs."""
+"""Exercise a onefile or onedir candidate with disposable PDFs."""
 
 import hashlib
 import os
@@ -13,14 +13,14 @@ from test_lifecycle import write_fixture
 
 
 APP_DIR = Path(__file__).resolve().parents[1]
-DEFAULT_EXE = APP_DIR / "dist" / "DakePDF_Split_Select" / "DakePDF_Split_Select.exe"
+DEFAULT_EXE = APP_DIR / "dist" / "DakePDF_Split_Select.exe"
 
 
 class PackagedCliTests(unittest.TestCase):
     def test_nine_cli_cases(self):
         exe = Path(os.environ.get("DAKE_SPLITSELECT_EXE", str(DEFAULT_EXE)))
         if not exe.is_file():
-            self.skipTest(f"onedir candidate not built: {exe}")
+            self.skipTest(f"packaged candidate not built: {exe}")
         with tempfile.TemporaryDirectory(prefix="dake-splitselect-package-") as directory:
             root = Path(directory)
             source = root / "input.pdf"
