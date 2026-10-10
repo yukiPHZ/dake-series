@@ -330,3 +330,47 @@ PDFを全ページ1枚ずつに自動分割します。
 
 ...
 ```
+
+## 知的財産記録（PEAKHEADZ IP Registry v1.0）
+
+本欄は作者の権利申告と確認作業の状態を記録するもので、権利帰属・商標登録・第三者素材の利用許諾・販売適法性を証明しない。横断ルールは `peakheadz-project-index/rules/IP_REGISTRY_SPEC.md`。既存の製品仕様、ライセンス通知、販売情報はその所管正本を維持する。
+
+<!-- PEAKHEADZ_IP_REGISTRY_V1_START -->
+```json
+{
+  "ip_registry_v1": {
+    "asset_id": "PHZ-IP-DAKE-PDF-SPLITONE",
+    "asset_type": "software_app",
+    "rights_holder_claim": {
+      "name": "Yukihiko Kikuta",
+      "basis": "creator_self_declaration",
+      "verification": "not_legally_verified"
+    },
+    "rights_scope": "claimed_original_contributions_only",
+    "creation_evidence": {
+      "git_history_review": "not_reviewed",
+      "source_material_review": "not_reviewed",
+      "references": []
+    },
+    "licensing": {
+      "project_license_review": "not_reviewed",
+      "third_party_notice_paths": [
+        "01_apps/DAKE_PDF_SplitOne/THIRD_PARTY_NOTICES.txt"
+      ],
+      "third_party_compliance_review": "not_reviewed"
+    },
+    "ai_materials": {
+      "provenance_review": "not_reviewed"
+    },
+    "trademark": {
+      "search_status": "not_searched"
+    },
+    "commercialization": {
+      "rights_clearance": "not_reviewed"
+    },
+    "rights_transfer_contract_review": "not_reviewed",
+    "reviewed_at": null
+  }
+}
+```
+<!-- PEAKHEADZ_IP_REGISTRY_V1_END -->
