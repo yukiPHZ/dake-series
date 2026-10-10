@@ -272,3 +272,45 @@ Windows
 - booth_ready/注意事項.txt: あり
 - assets/screenshot.webp: あり
 - assets/booth_thumbnail.jpg: あり
+
+## 知的財産記録（PEAKHEADZ IP Registry v1.0）
+
+本欄は作者の権利申告と確認状況の記録であり、権利帰属・商標登録・第三者素材の利用許諾・販売適法性を証明しない。仕様・ライセンスの正本は従来の所管ファイルを保持する。横断形式は peakheadz-project-index/rules/IP_REGISTRY_SPEC.md。
+
+<!-- PEAKHEADZ_IP_REGISTRY_V1_START -->
+```json
+{
+  "ip_registry_v1": {
+    "asset_id": "PHZ-IP-DAKE-PDF-MERGE",
+    "asset_type": "software_app",
+    "rights_holder_claim": {
+      "name": "Yukihiko Kikuta",
+      "basis": "creator_self_declaration",
+      "verification": "not_legally_verified"
+    },
+    "rights_scope": "claimed_original_contributions_only",
+    "creation_evidence": {
+      "git_history_review": "not_reviewed",
+      "source_material_review": "not_reviewed",
+      "references": []
+    },
+    "licensing": {
+      "project_license_review": "not_reviewed",
+      "third_party_notice_paths": [],
+      "third_party_compliance_review": "not_reviewed"
+    },
+    "ai_materials": {
+      "provenance_review": "not_reviewed"
+    },
+    "trademark": {
+      "search_status": "not_searched"
+    },
+    "commercialization": {
+      "rights_clearance": "not_reviewed"
+    },
+    "rights_transfer_contract_review": "not_reviewed",
+    "reviewed_at": null
+  }
+}
+```
+<!-- PEAKHEADZ_IP_REGISTRY_V1_END -->
