@@ -13,7 +13,8 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示、実�
 - short_title: `PDF俯瞰名前変更`
 - category: `PDF`
 - status: `available`
-- version: `1.0.2`
+- version: `1.0.3-rc1`（未公開候補）
+- published_version: `1.0.2`（正式配布・DAKE_META・BOOTHはHuman Review PASSまで維持）
 - app_type: `market`
 - completion_goal: `formal_release`
 - price: `500円`
@@ -25,6 +26,18 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示、実�
 - store_url: https://store.dakeapp.com/product/?id=dake_pdf_overview_rename
 - stripe_payment_link: https://buy.stripe.com/28E28r8jTfIHc4M6zD0gw0R
 - payment_status: stripe_ready
+
+## v1.0.3 開発候補（正式出荷HOLD）
+
+正式v1.0.2を基点に、(1) Windows Explorerのフォルダ1件のDnD読み込み、(2) カードごとの「不要」チェックで一覧順に `不要.pdf`、`不要1.pdf`…を割り当てる一括リネーム、(3) Tab/Shift+Tabで次/前の編集可能な名前欄と、開いている大プレビューを連動させる。チェックだけではPDFを削除・移動・改変しない。手動入力と同一の安全なリネームバッチ・Undoを使う。
+
+DnDはフォルダ直下のみを読み込み、複数フォルダ・ファイル単体を拒否する。未反映変更がある場合は既存の破棄確認を行い、キャンセル時には元の状態を保つ。DnD利用不能時も「フォルダを選ぶ」を使用できる。TkDNDをPyInstaller onefileへ同梱する。
+
+「不要」割当は表示順で、既存ファイル名・手動変更先・他のチェック済みファイル名を大文字小文字を無視して予約する。チェック前の入力をPDF固有の状態として保持し、解除時に戻す。画面外のカードも状態を保持するが、表示部品や画像は可視範囲だけに維持する。実行直前は既存の `rename_core` による再検証とロールバックを使う。
+
+Tab/Shift+Tabはチェック済みの編集不可欄を飛ばし、画面外の次の欄も表示してフォーカスする。プレビューが開いている場合のみその内容を1ページ目・100% fitへ切り替え、ウインドウをliftせず入力フォーカスを奪わない。Latest Jobで旧結果を拒否する。プレビューを閉じているときは自動で開かない。
+
+400/800件の仮想表示、サイズ切替、名前入力、rename/Undo、PDFium排他、ページ数・容量、再読み込みを回帰対象とする。v1.0.3の公開・価格・配布先の変更はHuman Review合格後の別工程とし、現在の公開派生ビュー（READMEのDAKE_META、release_body、booth_product、Store）はv1.0.2を指し続ける。
 ## 目的
 
 フォルダ内のPDFを1件ずつ開かなくても、1ページ目のサムネイルを俯瞰しながら、その場でPDFごとのファイル名を変更できるようにする。

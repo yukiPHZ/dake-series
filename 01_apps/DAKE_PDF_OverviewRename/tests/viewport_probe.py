@@ -19,10 +19,13 @@ from viewport_helpers import settle_view, assert_visible_view
 def run():
     parser = argparse.ArgumentParser()
     parser.add_argument("--baseline", action="store_true")
+    parser.add_argument("--baseline-commit", type=str)
+    parser.add_argument("--count", type=int, default=400)
     parser.add_argument("--out", type=Path)
     args = parser.parse_args()
-    if args.baseline:
-        source = subprocess.check_output(["git", "show", "31a31f3513d12e6c0bb7b94be01e6a4323f61c73:01_apps/DAKE_PDF_OverviewRename/main.py"])
+    if args.baseline or args.baseline_commit:
+        revision = args.baseline_commit or "31a31f3513d12e6c0bb7b94be01e6a4323f61c73"
+        source = subprocess.check_output(["git", "show", f"{revision}:01_apps/DAKE_PDF_OverviewRename/main.py"])
         exec(compile(source, "baseline-main.py", "exec"), main.__dict__)
     root = tk.Tk()
     app = main.OverviewRenameApp(root)
@@ -40,7 +43,7 @@ def run():
         last_tick = now
         root.after(10, tick)
     tick()
-    for _ in range(400):
+    for _ in range(args.count):
         app._create_card(snapshot)
     image = Image.new("RGB", main.THUMB_RENDER_BOX, "white")
     app._layout_cards()
@@ -66,11 +69,11 @@ def run():
         request = main.RenderRequest(app.generation, "thumbnail", card.identifier, snapshot, main.THUMB_RENDER_BOX)
         app._accept_thumbnail(main.RenderResult(request, image.copy(), 1, None))
     root.update()
-    rows = [{"accept_400_seconds": time.perf_counter() - started, "memory_initial_mb":memory_initial/1024**2, "memory_loaded_mb":working_set_bytes()/1024**2}]
+    rows = [{"count": args.count, "accept_seconds": time.perf_counter() - started, "memory_initial_mb":memory_initial/1024**2, "memory_loaded_mb":working_set_bytes()/1024**2}]
     for size in ("small", "xlarge", "normal", "large", "small")*3:
         app.canvas.yview_moveto(1)
         root.update()
-        if not args.baseline:
+        if not args.baseline or args.baseline_commit:
             settle_view(root, app)
         app.size_var.set(size)
         applies.clear()
@@ -81,7 +84,7 @@ def run():
         app.change_size()
         handler = time.perf_counter() - started
         root.update()
-        if not args.baseline:
+        if not args.baseline or args.baseline_commit:
             settle_view(root, app)
             assert_visible_view(app, True)
         rows.append(dict(size=size, handler_ms=round(handler*1000, 2), settle_ms=round((time.perf_counter()-started)*1000, 2), max_event_gap_ms=round(max(gaps or [0])*1000,2), image_updates=len(applies), image_total_ms=round(sum(applies)*1000,2), tk_photo_ms=round(sum(tk_image_times)*1000,2), memory_mb=round(working_set_bytes()/1024**2,2), columns=app._current_columns, frame_requested_height=app.cards_frame.winfo_reqheight(), frame_actual_height=app.cards_frame.winfo_height(), scrollregion=app.canvas.cget("scrollregion"), embedded_y=app.canvas.coords(app.cards_window), views=sum(c.frame is not None for c in app.cards), photos=sum(c.photo is not None for c in app.cards)))
