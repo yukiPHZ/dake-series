@@ -65,6 +65,10 @@ build.bat
 
 Windows配布版で使う pypdfium2 5.13.0 / PDFium 153.0.7999.0（pdfium-binaries）のwheelに記録されたライセンス文書を、`third_party_licenses/pypdfium2-5.13.0/` に収録しています。配布zipには `THIRD_PARTY_NOTICES.txt` とこのフォルダを含めます。
 
+## v1.0.3 RC1（未公開・Human Review待ち）
+
+正式v1.0.2から、フォルダのドラッグ＆ドロップ読み込み、「不要」チェックによる一覧順の自動連番リネーム、名前入力欄のTab/Shift+Tab移動と開いている大プレビューの連動を追加しています。画面外も含む入力状態を保持し、変更の反映とUndoは従来の安全な一括処理を使います。候補exeは実機確認用であり、GitHub Release・BOOTH・dakeapp.com・Storeの正式配布物は引き続きv1.0.2です。
+
 ## 正式版情報
 
 v1.0.2では可視範囲だけの表示部品・画像適用へ改修しました。入力と全PDFデータは保持し、サイズ変更だけでPDFを再読み込みしません。2026-09-30、利用者のWindows実機で合成PDF800件の順次表示・末尾到達・連続サイズ切替・入力保持・rename/Undo・再読み込みを確認し、Human Review PASSとなりました。

@@ -29,8 +29,8 @@ from rename_core import (
 
 
 APP_NAME = "DakePDF俯瞰名前変更"
-APP_VERSION = "1.0.2"
-WINDOW_TITLE = f"{APP_NAME} v{APP_VERSION}"
+APP_VERSION = "1.0.3"
+WINDOW_TITLE = f"{APP_NAME} v{APP_VERSION} RC1"
 COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
 APP_USER_MODEL_ID = "Shimarisu.DakePDFOverviewRename"
 
@@ -38,9 +38,11 @@ UI_TEXT = {
     "main_title": "PDFを見ながら名前を変える",
     "main_description": "フォルダ内のPDFをサムネイルで一覧表示し、その場で名前を変更します。",
     "select_folder": "フォルダを選ぶ",
+    "drop_invalid": "フォルダを1つだけドロップしてください。PDFファイル単体は受け付けません。",
+    "unneeded": "不要",
     "refresh": "リフレッシュ",
     "reload": "再読み込み",
-    "folder_unselected": "フォルダ未選択",
+    "folder_unselected": "フォルダ未選択（フォルダをドロップ可）",
     "view_size": "表示サイズ",
     "size_small": "小",
     "size_normal": "標準",
@@ -54,7 +56,7 @@ UI_TEXT = {
     "thumbnail_loading": "プレビュー読み込み中",
     "thumbnail_error": "プレビューできません",
     "empty_title": "PDFがありません",
-    "empty_hint": "フォルダ直下のPDFを表示します。",
+    "empty_hint": "フォルダ直下のPDFを表示します。フォルダのドロップにも対応します。",
     "status_empty": "PDF 0件 ｜ サムネイル処理 0/0（失敗0）｜ 変更待ち0件",
     "status_summary": "PDF {total}件 ｜ サムネイル処理 {processed}/{total}（失敗{failed}）｜ 変更待ち{pending}件",
     "status_scanning": "PDFを確認しています…",
@@ -535,6 +537,10 @@ class CardState:
     entry: tk.Entry | None = None
     suffix_label: tk.Label | None = None
     hint_label: tk.Label | None = None
+    unneeded_button: tk.Checkbutton | None = None
+    unneeded_var: tk.BooleanVar | None = None
+    unneeded: bool = False
+    manual_value: str | None = None
     base_image: object | None = None
     photo: object | None = None
     rendered: bool = False
@@ -549,6 +555,32 @@ class CardState:
     @property
     def pending(self) -> bool:
         return normalize_requested_stem(self.variable.get()) != Path(self.original_name).stem
+
+
+def allocate_unneeded_names(cards: list[CardState], disk_names: set[str]) -> dict[int, str]:
+    """Reserve actual and manually requested names, then allocate in display order."""
+    occupied = {name.casefold() for name in disk_names}
+    for card in cards:
+        requested = f"{normalize_requested_stem(card.variable.get())}.pdf"
+        if card.unneeded or requested != card.original_name:
+            occupied.discard(card.original_name.casefold())
+    for card in cards:
+        if not card.unneeded:
+            occupied.add(f"{normalize_requested_stem(card.variable.get())}.pdf".casefold())
+    assigned: dict[int, str] = {}
+    next_number = 0
+    for card in cards:
+        if not card.unneeded:
+            continue
+        while True:
+            stem = "不要" if next_number == 0 else f"不要{next_number}"
+            next_number += 1
+            folded = f"{stem}.pdf".casefold()
+            if folded not in occupied:
+                occupied.add(folded)
+                assigned[card.identifier] = stem
+                break
+    return assigned
 
 
 class OverviewRenameApp:
@@ -582,6 +614,9 @@ class OverviewRenameApp:
         self._pending_ids: set[int] = set()
         self._image_queue: deque[int] = deque()
         self._view_pool: list[tuple] = []
+        self._changing_unneeded = False
+        self._unneeded_after: str | None = None
+        self._dnd_enabled = False
         self._layout_size = "normal"
         self._preview_window: tk.Toplevel | None = None
         self._preview_label: tk.Label | None = None
@@ -684,6 +719,7 @@ class OverviewRenameApp:
         self.cards_window = self.canvas.create_window((0, 0), window=self.cards_frame, anchor="nw")
         self.canvas.bind("<Configure>", self._on_canvas_resize)
         self.root.bind("<MouseWheel>", self._route_mousewheel, add="+")
+        self._setup_drop_targets()
 
         self.footer = tk.Frame(shell, bg=THEME["card"], padx=24, pady=10, highlightthickness=1, highlightbackground=THEME["border"])
         self.footer.pack(fill="x", side="bottom")
@@ -713,6 +749,50 @@ class OverviewRenameApp:
         label.bind("<Enter>", lambda _event: label.configure(fg=THEME["accent"]))
         label.bind("<Leave>", lambda _event: label.configure(fg=THEME["muted"]))
         return label
+
+    def _register_drop_widget(self, widget) -> None:
+        if not self._dnd_enabled:
+            return
+        from tkinterdnd2 import DND_FILES
+
+        widget.drop_target_register(DND_FILES)
+        widget.dnd_bind("<<Drop>>", self._on_folder_drop)
+        widget.dnd_bind("<<DragEnter>>", self._on_drag_enter)
+        widget.dnd_bind("<<DragLeave>>", self._on_drag_leave)
+
+    def _setup_drop_targets(self) -> None:
+        self._dnd_enabled = hasattr(self.root, "TkdndVersion")
+        if not self._dnd_enabled:
+            return
+        for widget in (self.root, self.canvas, self.cards_frame):
+            self._register_drop_widget(widget)
+
+    def _on_drag_enter(self, _event) -> str:
+        self.canvas.configure(highlightthickness=2, highlightbackground=THEME["accent"])
+        return "copy"
+
+    def _on_drag_leave(self, _event) -> None:
+        self.canvas.configure(highlightthickness=0)
+
+    def _on_folder_drop(self, event) -> str:
+        self._on_drag_leave(event)
+        try:
+            paths = self.root.tk.splitlist(event.data)
+        except tk.TclError:
+            paths = ()
+        self._load_dropped_paths(paths)
+        return "copy"
+
+    def _load_dropped_paths(self, paths) -> bool:
+        if self.busy:
+            return False
+        if len(paths) != 1 or not Path(paths[0]).is_dir():
+            messagebox.showinfo(UI_TEXT["error_title"], UI_TEXT["drop_invalid"], parent=self.root)
+            return False
+        if not self._confirm_discard():
+            return False
+        self._start_load(Path(paths[0]))
+        return True
 
     def _responsive_layout(self, event=None) -> None:
         if event is not None and event.widget is not self.root:
@@ -904,7 +984,7 @@ class OverviewRenameApp:
             self._image_after = self.root.after(1, self._drain_images)
 
     def _clear_cards(self) -> None:
-        for name in ("_view_after", "_image_after", "_layout_after"):
+        for name in ("_view_after", "_image_after", "_layout_after", "_unneeded_after"):
             callback = getattr(self, name)
             if callback is not None:
                 self.root.after_cancel(callback)
@@ -912,6 +992,7 @@ class OverviewRenameApp:
         for card in self._mounted.values():
             card.entry.current_card = None
             card.image_label.current_card = None
+            card.unneeded_button.current_card = None
         self._mounted.clear()
         self._view_pool.clear()
         self._image_queue.clear()
@@ -936,7 +1017,7 @@ class OverviewRenameApp:
         self.canvas.itemconfigure(self.cards_window, width=self.canvas.winfo_width(), height=max(1, self.canvas.winfo_height()))
 
     def has_pending(self) -> bool:
-        return any(card.pending for card in self.cards)
+        return any(card.pending or card.unneeded for card in self.cards)
 
     def _confirm_discard(self) -> bool:
         if not self.has_pending():
@@ -980,6 +1061,8 @@ class OverviewRenameApp:
 
     def _start_load(self, folder: Path) -> None:
         self._clear_success()
+        if self._preview_window is not None:
+            self._close_preview()
         self.scan_token += 1
         self.generation += 1
         self.preview_generation += 1
@@ -1023,16 +1106,22 @@ class OverviewRenameApp:
         self.cards.append(card)
 
     def _mount_card(self, card: CardState) -> None:
-        names = ("frame", "body", "image_label", "page_label", "name_label", "entry", "suffix_label", "hint_label")
+        names = ("frame", "body", "image_label", "page_label", "name_label", "entry", "suffix_label", "hint_label", "unneeded_button")
         if self._view_pool:
             for name, widget in zip(names, self._view_pool.pop()):
                 setattr(card, name, widget)
-            card.entry.configure(textvariable=card.variable, state="disabled" if self.busy else "normal")
+            card.entry.configure(textvariable=card.variable, state="disabled" if self.busy or card.unneeded else "normal")
             card.name_label.configure(text=card.original_name)
         else:
             self._build_card_view(card)
         card.name_label.configure(text=card.original_name)
-        card.entry.configure(state="disabled" if self.busy else "normal")
+        if card.unneeded_var is None:
+            card.unneeded_var = tk.BooleanVar(master=self.root, value=card.unneeded)
+        else:
+            card.unneeded_var.set(card.unneeded)
+        card.unneeded_button.configure(variable=card.unneeded_var, state="disabled" if self.busy else "normal")
+        card.unneeded_button.current_card = card
+        card.entry.configure(state="disabled" if self.busy or card.unneeded else "normal")
         self._mounted[card.identifier] = card
         card.image_label.configure(image="", text=UI_TEXT["thumbnail_error" if card.thumbnail_failed else "thumbnail_loading"], width=1, height=1, fg=THEME["error" if card.thumbnail_failed else "muted"])
         card.image_label.current_card = card
@@ -1053,10 +1142,11 @@ class OverviewRenameApp:
         card.frame.place_forget()
         card.image_label.configure(image="")
         card.entry.configure(textvariable="")
-        names = ("frame", "body", "image_label", "page_label", "name_label", "entry", "suffix_label", "hint_label")
+        names = ("frame", "body", "image_label", "page_label", "name_label", "entry", "suffix_label", "hint_label", "unneeded_button")
         self._view_pool.append(tuple(getattr(card, name) for name in names))
         card.image_label.current_card = None
         card.entry.current_card = None
+        card.unneeded_button.current_card = None
         for name in names:
             setattr(card, name, None)
         card.photo = None
@@ -1064,13 +1154,72 @@ class OverviewRenameApp:
         self._mounted.pop(card.identifier)
 
     def _focus_adjacent(self, card: CardState, direction: int) -> str:
-        identifier = max(0, min(len(self.cards)-1, card.identifier+direction))
-        self.canvas.yview_moveto((identifier // max(1, self._current_columns) * self._row_height) / self._logical_height)
-        if self.cards[identifier].frame is None:
-            self._mount_card(self.cards[identifier])
-        self.cards[identifier].entry.focus_set()
-        self._schedule_view()
+        identifier = card.identifier + direction
+        while 0 <= identifier < len(self.cards) and self.cards[identifier].unneeded:
+            identifier += direction
+        if not 0 <= identifier < len(self.cards):
+            return "break"
+        target = self.cards[identifier]
+        self.canvas.yview_moveto((identifier // max(1, self._current_columns) * self._row_height) / max(1, self._logical_height))
+        self._refresh_view()
+        if target.frame is None:
+            self._mount_card(target)
+            self._refresh_view()  # The newly mounted entry must be placed before focus_set.
+        target.entry.focus_set()
+        self._preview_for_focused_entry(target)
         return "break"
+
+    def _schedule_unneeded_names(self) -> None:
+        callback = getattr(self, "_unneeded_after", None)
+        if callback is not None:
+            self.root.after_cancel(callback)
+        self._unneeded_after = self.root.after(60, self._reassign_unneeded_names)
+
+    def _toggle_unneeded(self, card: CardState | None) -> None:
+        if card is None or self.busy:
+            return
+        selected = bool(card.unneeded_var.get())
+        if selected == card.unneeded:
+            return
+        self._clear_success()
+        if selected:
+            card.manual_value = card.variable.get()
+            card.unneeded = True
+            self._pending_ids.add(card.identifier)
+        else:
+            card.unneeded = False
+            self._changing_unneeded = True
+            try:
+                card.variable.set(card.manual_value if card.manual_value is not None else card.snapshot.path.stem)
+            finally:
+                self._changing_unneeded = False
+            card.manual_value = None
+            if not card.pending:
+                self._pending_ids.discard(card.identifier)
+        self._reassign_unneeded_names()
+
+    def _reassign_unneeded_names(self) -> None:
+        callback = self._unneeded_after
+        self._unneeded_after = None
+        if callback is not None:
+            self.root.after_cancel(callback)
+        if self.folder is None or not self.cards:
+            return
+        try:
+            disk_names = {entry.name for entry in self.folder.iterdir()}
+        except OSError as exc:
+            messagebox.showerror(UI_TEXT["error_title"], UI_TEXT["error_scan"].format(detail=exc), parent=self.root)
+            return
+        assigned = allocate_unneeded_names(self.cards, disk_names)
+        self._changing_unneeded = True
+        try:
+            for card in self.cards:
+                if card.unneeded and card.variable.get() != assigned[card.identifier]:
+                    card.variable.set(assigned[card.identifier])
+        finally:
+            self._changing_unneeded = False
+        self._sync_status()
+        self._sync_controls()
 
     def _metadata(self, card: CardState) -> str:
         key = "metadata_ready" if card.page_count is not None else ("metadata_unknown" if card.rendered else "metadata_loading")
@@ -1108,6 +1257,7 @@ class OverviewRenameApp:
         # Bind once per view. Rebinding on reuse would retain old Tcl callbacks.
         image_label.bind("<Button-1>", lambda _event, view=image_label: self.show_preview(view.current_card))
         entry.bind("<FocusOut>", lambda _event: self._schedule_view())
+        entry.bind("<FocusIn>", lambda _event, view=entry: self._preview_for_focused_entry(view.current_card))
         entry.bind("<Tab>", lambda _event, view=entry: self._focus_adjacent(view.current_card, 1))
         entry.bind("<Shift-Tab>", lambda _event, view=entry: self._focus_adjacent(view.current_card, -1))
         suffix_label = tk.Label(edit_row, text=".pdf", bg=THEME["card"], fg=THEME["muted"], font=(self.font, 9), padx=3)
@@ -1117,8 +1267,19 @@ class OverviewRenameApp:
             anchor="w", justify="left", wraplength=max(width - 24, 80),
         )
         hint_label.pack(fill="x", pady=(3, 0))
-        for name, widget in zip(("frame", "body", "image_label", "page_label", "name_label", "entry", "suffix_label", "hint_label"), (frame, body, image_label, page_label, name_label, entry, suffix_label, hint_label)):
+        unneeded_button = tk.Checkbutton(
+            body, text=UI_TEXT["unneeded"], bg=THEME["card"], fg=THEME["text"],
+            activebackground=THEME["card"], selectcolor=THEME["card"],
+            font=(self.font, 9), padx=0, pady=0, takefocus=0,
+        )
+        unneeded_button.configure(command=lambda view=unneeded_button: self._toggle_unneeded(view.current_card))
+        unneeded_button.bind("<Tab>", lambda _event, view=unneeded_button: self._focus_adjacent(view.current_card, 1))
+        unneeded_button.bind("<Shift-Tab>", lambda _event, view=unneeded_button: self._focus_adjacent(view.current_card, -1))
+        for name, widget in zip(("frame", "body", "image_label", "page_label", "name_label", "entry", "suffix_label", "hint_label", "unneeded_button"), (frame, body, image_label, page_label, name_label, entry, suffix_label, hint_label, unneeded_button)):
             setattr(card, name, widget)
+        if self._dnd_enabled:
+            for widget in (frame, body, image_label, page_label, name_label, edit_row, entry, suffix_label, hint_label, unneeded_button):
+                self._register_drop_widget(widget)
         # Fixed pixel image slot prevents text/image unit changes from resizing rows.
         image_label.pack_forget()
         image_label.place(x=10, y=10, width=image_width, height=image_height)
@@ -1126,16 +1287,19 @@ class OverviewRenameApp:
         name_label.pack_forget()
         edit_row.pack_forget()
         hint_label.pack_forget()
-        body.bind("<Configure>", lambda _event, b=body, im=image_label, pg=page_label, nm=name_label, ed=edit_row, ht=hint_label: self._position_card_contents(b, im, pg, nm, ed, ht))
+        unneeded_button.pack_forget()
+        body.bind("<Configure>", lambda _event, b=body, im=image_label, pg=page_label, nm=name_label, ed=edit_row, ht=hint_label, un=unneeded_button: self._position_card_contents(b, im, pg, nm, ed, ht, un))
 
-    def _position_card_contents(self, body, image_label, page_label, name_label, edit_row, hint_label) -> None:
+    def _position_card_contents(self, body, image_label, page_label, name_label, edit_row, hint_label, unneeded_button) -> None:
         width, image_width, image_height = SIZE_CONFIG[self.size_var.get()]
         line = max(20, int(float(self.root.tk.call("tk", "scaling"))*14))
         image_label.place(x=10, y=10, width=image_width, height=image_height)
         page_label.place(x=10, y=image_height+16, width=width-20, height=line)
         name_label.place(x=10, y=image_height+16+line, width=width-20, height=line)
         edit_row.place(x=10, y=image_height+18+2*line, width=width-20, height=line+3)
-        hint_label.place(x=10, y=image_height+23+3*line, width=width-20, height=line)
+        unneeded_width = max(54, unneeded_button.winfo_reqwidth())
+        hint_label.place(x=10, y=image_height+23+3*line, width=max(1, width-24-unneeded_width), height=line)
+        unneeded_button.place(x=width-10-unneeded_width, y=image_height+23+3*line, width=unneeded_width, height=line)
 
     def _finish_card_creation(self) -> None:
         if not self.cards:
@@ -1154,8 +1318,10 @@ class OverviewRenameApp:
         tk.Label(holder, text=UI_TEXT["empty_hint"], bg=THEME["background"], fg=THEME["muted"], font=(self.font, 10)).pack(pady=8)
 
     def _on_name_changed(self, card: CardState) -> None:
-        self._clear_success()
-        if card.pending:
+        changing_unneeded = getattr(self, "_changing_unneeded", False)
+        if not changing_unneeded:
+            self._clear_success()
+        if card.pending or card.unneeded:
             self._pending_ids.add(card.identifier)
         else:
             self._pending_ids.discard(card.identifier)
@@ -1163,19 +1329,23 @@ class OverviewRenameApp:
         if card.hint_label is not None:
             card.hint_label.configure(text=UI_TEXT["pdf_suffix_hint"] if entered_pdf else "")
         self._style_card(card)
-        self._sync_status()
-        self._sync_controls()
+        if not changing_unneeded:
+            self._sync_status()
+            self._sync_controls()
+            if any(getattr(item, "unneeded", False) for item in getattr(self, "cards", ())):
+                self._schedule_unneeded_names()
 
     def _style_card(self, card: CardState) -> None:
         if card.frame is None:
             return
-        pending = card.pending
+        pending = card.pending or card.unneeded
         border = THEME["pending_border"] if pending else THEME["border"]
         background = THEME["pending"] if pending else THEME["card"]
         card.frame.configure(bg=border)
         card.body.configure(bg=background)
-        for widget in (card.page_label, card.name_label, card.suffix_label, card.hint_label):
-            widget.configure(bg=background)
+        for widget in (card.page_label, card.name_label, card.suffix_label, card.hint_label, card.unneeded_button):
+            if widget is not None:
+                widget.configure(bg=background)
         card.entry.master.configure(bg=background)
 
     def _sync_status(self) -> None:
@@ -1211,7 +1381,8 @@ class OverviewRenameApp:
         self.reload_button.configure(state="normal" if self.folder is not None and not self.busy else "disabled")
         self.select_button.configure(state="disabled" if self.busy else "normal")
         for card in self._mounted.values():
-            card.entry.configure(state="disabled" if self.busy else "normal")
+            card.entry.configure(state="disabled" if self.busy or card.unneeded else "normal")
+            card.unneeded_button.configure(state="disabled" if self.busy else "normal")
 
     def change_size(self) -> None:
         if not self.cards:
@@ -1262,7 +1433,18 @@ class OverviewRenameApp:
             self._schedule_view()
         self._sync_status()
 
-    def show_preview(self, card: CardState) -> None:
+    def _preview_for_focused_entry(self, card: CardState | None) -> None:
+        if card is None or self._preview_window is None or not self._preview_window.winfo_exists():
+            return
+        if self._preview_snapshot != card.snapshot:
+            self._set_preview_target(card, activate=False)
+
+    def show_preview(self, card: CardState | None) -> None:
+        if card is None or self.busy:
+            return
+        self._set_preview_target(card, activate=True)
+
+    def _set_preview_target(self, card: CardState, *, activate: bool) -> None:
         if self.busy:
             return
         self._cancel_preview_callbacks()
@@ -1294,8 +1476,9 @@ class OverviewRenameApp:
             self._preview_window.bind("<MouseWheel>", self._on_preview_wheel, add="+")
             self._preview_window.bind("<Escape>", lambda _event: self._close_preview())
             self._preview_window.protocol("WM_DELETE_WINDOW", self._close_preview)
-        self._preview_window.deiconify()
-        self._preview_window.lift()
+        if activate:
+            self._preview_window.deiconify()
+            self._preview_window.lift()
         self._preview_snapshot = card.snapshot
         self._preview_zoom = 1.0
         self._preview_user_zoomed = False
@@ -1550,6 +1733,8 @@ class OverviewRenameApp:
     def apply(self) -> None:
         if self.busy or self.folder is None:
             return
+        if any(card.unneeded for card in self.cards):
+            self._reassign_unneeded_names()
         requests = [RenameRequest(card.snapshot, card.variable.get()) for card in self.cards]
         try:
             from rename_core import build_rename_plan
@@ -1629,7 +1814,12 @@ class OverviewRenameApp:
             assert isinstance(record, UndoRecord) and isinstance(plan, RenamePlan)
             self.undo_record = record
             renamed = {entry.original_path: entry.renamed_snapshot for entry in record.entries}
+            self._changing_unneeded = True
             for card in self.cards:
+                card.unneeded = False
+                card.manual_value = None
+                if getattr(card, "unneeded_var", None) is not None:
+                    card.unneeded_var.set(False)
                 snapshot = renamed.get(card.snapshot.path)
                 if snapshot is None:
                     continue
@@ -1639,6 +1829,8 @@ class OverviewRenameApp:
                 if card.name_label is not None:
                     card.name_label.configure(text=snapshot.path.name)
                 self._style_card(card)
+            self._changing_unneeded = False
+            self._pending_ids = {card.identifier for card in self.cards if card.pending or card.unneeded}
             success_message = UI_TEXT["success_rename"].format(count=len(record.entries))
         else:
             plan = value
@@ -1744,7 +1936,11 @@ class OverviewRenameApp:
 
 def main() -> None:
     set_windows_app_id()
-    root = tk.Tk()
+    try:
+        from tkinterdnd2 import TkinterDnD
+        root = TkinterDnD.Tk()
+    except (ImportError, RuntimeError, tk.TclError):
+        root = tk.Tk()
     OverviewRenameApp(root)
     root.mainloop()
 
