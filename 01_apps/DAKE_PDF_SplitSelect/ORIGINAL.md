@@ -13,7 +13,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - short_title: PDF分割Select
 - category: PDF
 - status: available
-- version: 1.0.1
+- version: 1.0.2
 - price: 500円
 - distribution: GitHub Release / BOOTH / dakeapp.com / Store
 - target_platform: Windows
@@ -127,10 +127,10 @@ PDFの必要ページだけをサムネイルや範囲入力で選び、1つのP
   "launcher_description": "PDFから必要ページだけを選んで保存します。",
   "site_title": "DakePDF分割Select",
   "site_description": "PDFの必要ページだけをサムネイルや範囲入力で選び、1つのPDFとして保存できるWindows向けアプリです。",
-  "update_summary": "v1.0.1: サムネイル描画をPDFiumへ移行し、起動・ページ選択・保存の操作を維持。",
+  "update_summary": "v1.0.2: onefile化によりEXE単体のコピー・移動・起動に対応。PDFium描画と選択・保存操作は維持。",
   "folder_name": "DAKE_PDF_SplitSelect",
   "exe_name": "DakePDF_Split_Select.exe",
-  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitSelect_v1.0.1",
+  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitSelect_v1.0.2",
   "screenshot_path": "assets/screenshot.webp",
   "status": "available",
   "show_in_launcher": true,
@@ -145,7 +145,7 @@ PDFの必要ページだけをサムネイルや範囲入力で選び、1つのP
 
 ## release_body生成用情報
 
-- v1.0.1: サムネイル描画をPDFiumへ移行。表示・選択・保存・CLIの操作は従来どおりです。
+- v1.0.2: onefile化によりEXE単体のコピー・移動・起動に対応。PDFium描画と選択・保存・CLIの操作は維持しています。
 - ZIPを解凍し、DakePDF_Split_Select.exeを起動する。EXE単体のコピー・移動に対応する。第三者ライセンス文書はZIPにも同梱する。
 - PDFページ選択保存アプリ
 - サムネイル選択に対応
@@ -156,7 +156,7 @@ PDFの必要ページだけをサムネイルや範囲入力で選び、1つのP
 
 - 商品名: DakePDF分割Select
 - 価格案: 500円
-- 更新内容: v1.0.1ではサムネイル描画をPDFiumへ移行。選択・保存の操作は従来どおりです。
+- 更新内容: v1.0.2ではonefileへ変更し、EXE単体で利用できます。PDFium描画・選択・保存操作は維持しています。
 - 商品紹介文: PDFから必要ページだけを選んで保存します。
 
 ・PDFページ選択保存アプリ
@@ -177,14 +177,14 @@ PDFの必要ページだけをサムネイルや範囲入力で選び、1つのP
 - 商品画像: assets/booth_thumbnail.jpg
 - 補助画像: assets/screenshot.jpg
 - 作品ファイル: booth_ready/DakePDF_Split_Select.zip
-- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitSelect_v1.0.1
+- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitSelect_v1.0.2
 - BOOTH URL: https://peakheadz.booth.pm/items/8448213
 
 ## Store表示用情報
 
 - 商品名: DakePDF分割Select
 - キャッチ: PDFの必要ページだけをサムネイルや範囲入力で選び、1つのPDFとして保存できるWindows向けアプリです。
-- 説明: PDFから必要ページだけを選んで保存します。
+- 説明: PDFから必要ページだけを選んで保存します。v1.0.2はonefile方式で、ZIP解凍後はEXE単体をコピー・移動して利用できます。
 
 ・PDFページ選択保存アプリ
 ・サムネイル選択に対応
@@ -209,7 +209,7 @@ PDFの必要ページだけをサムネイルや範囲入力で選び、1つのP
 
 ## 配布・ダウンロード方針
 
-- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitSelect_v1.0.1
+- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitSelect_v1.0.2
 - BOOTH: https://peakheadz.booth.pm/items/8448213
 - dakeapp.com: show_on_site=true
 - Launcher: show_in_launcher=true

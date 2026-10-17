@@ -2,7 +2,7 @@
   "schema": "dakeapp.apps.v1",
   "do_not_edit": true,
   "source_policy": "ORIGINAL.md is the source of truth. README.md and DAKE_META are derived views. Generated JSON must not be edited manually.",
-  "generated_at": "2026-09-30T19:46:05+09:00",
+  "generated_at": "2026-10-18T07:41:25+09:00",
   "apps": [
     {
       "slug": "advanced-timer",
@@ -675,7 +675,7 @@
       "folder_name": "DAKE_PDF_SplitSelect",
       "display_name": "DakePDF分割Select",
       "detail_url": "https://dakeapp.com/apps/pdf-split-select/",
-      "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitSelect_v1.0.1",
+      "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitSelect_v1.0.2",
       "screenshot_path": "../../assets/images/apps/pdf-split-select/screenshot-01.webp",
       "demo_video_path": "release_artifacts/demo.mp4",
       "demo_video_url": "",

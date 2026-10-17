@@ -7,13 +7,11 @@ DakePDF分割Select
 # 商品紹介文
 PDFから必要ページだけを選んで保存します。
 
+・v1.0.2: onefile化によりEXE単体のコピー・移動・起動に対応。PDFium描画と選択・保存・CLIの操作は維持しています。
+・ZIPを解凍し、DakePDF_Split_Select.exeを起動してください。EXE単体のコピー・移動に対応します。第三者ライセンス文書もZIPに同梱しています。
 ・PDFページ選択保存アプリ
 ・サムネイル選択に対応
 ・範囲入力にも対応
-・Windows向けexe
-
-v1.0.1ではサムネイル描画をPDFiumへ移行しました。
-ページ選択と保存の操作は従来どおりです。
 
 実務の流れを、
 少し静かにするための道具です。
@@ -35,6 +33,15 @@ assets/screenshot.jpg
 
 # 作品ファイル
 booth_ready/DakePDF_Split_Select.zip
+
+# GitHub Release
+https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitSelect_v1.0.2
+
+# 注意事項
+Windows向けアプリです。
+ご利用は自己責任でお願いいたします。
+大切なファイルは事前にバックアップを推奨します。
+本ソフトウェアの無断転載・再配布を禁止します。
 
 # URL
 https://peakheadz.booth.pm/items/8448213
