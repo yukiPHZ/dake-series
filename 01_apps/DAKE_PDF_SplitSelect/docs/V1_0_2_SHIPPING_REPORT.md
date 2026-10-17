@@ -71,6 +71,6 @@ Formal EXE/ZIP and machine-readable test/startup results retained under `C:\User
 
 - Formal EXE/ZIP, extracted payload, GUI evidence, CLI/test logs, startup JSON, legacy audit and live HTTP results retained in devlop. Previous review benchmark, notices, report data and ZIP copied there and SHA-256 verified before deletion.
 - Temporary Documents worktree removed normally after clean and remote commit checks; its original branch/commit remains pushed and merged. `git worktree prune` completed.
-- Old Documents evidence and old Desktop test folder removed. Final Desktop test folder is retained while its own test EXE is open; native input helper reports an active request even after connection reset. User asked to close that test window normally; no unrelated process was killed.
+- Old Documents evidence and old Desktop test folder removed. After the user normally closed the final Desktop test EXE, process absence and formal artifact hashes were rechecked, then `DakePDF_SplitSelect_v102_Final_Test` was removed. All requested SplitSelect temporary worktree/evidence/Desktop folders are now absent. No unrelated process was killed.
 - Canonical branch main has no tracked pending changes apart from this final record. Unrelated untracked `01_apps/DAKE_Folder_OverviewRename/` and `01_apps/DAKE_PDF_Insert/` retained; do not call the entire repository clean or delete these directories.
 - STADIO safety branch/raw backup unchanged and retained for development resumption. Human Review limitations above remain disclosed, not retroactively PASS.
