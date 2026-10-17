@@ -55,4 +55,22 @@ Historical PDFium onedir median0.253/p90 0.283 s; accepted candidate onefile med
 ## Publication and finalization
 
 Formal EXE/ZIP and machine-readable test/startup results retained under `C:\Users\yukiz\devlop\DAKE_release_evidence\splitselect-v1.0.2-20261018`.
-GitHub Release, BOOTH, site/Store, Cloudflare, final CLI audit, cleanup and final Git state are recorded below after their actual verification. Do not interpret this section as completed publication.
+### Verified publication
+
+- Release source main: `66929fd2ad0324390bea2c74465f56a840f62c3c`; tag `DAKE_PDF_SplitSelect_v1.0.2`. Published ZIP digest matches `e280cfe2...44d8280`. v1.0.1 unchanged.
+- Existing BOOTH product `https://peakheadz.booth.pm/items/8448213` updated, price500 unchanged, public v1.0.2/EXE-only description visible. Active downloadable ID **9919255**; old9754428 unchecked, older9055823 remains unchecked; historical uploads not deleted.
+- BOOTH-provided ZIP downloaded to Downloads and verified against the complete formal SHA-256; retained as `BOOTH_download_verified.zip`. Browser download-event notification timed out, but the actual saved ZIP hash/size matched independently.
+- dakeapp-site main: `e6a23e491e97bca9208f1aa09fe1f85542e0c7d1`. Existing remote Support changes retained via non-forced rebase. Product page `https://dakeapp.com/apps/pdf-split-select/` returns200 and links v1.0.2.
+- Store main: `bc5d672775d8a34799948852d4fe7533b17314e7`. `https://store.dakeapp.com/product/?id=DAKE_PDF_SplitSelect` renders v1.0.2,500yen, EXE-only description, existing Stripe and BOOTH buttons.
+- Live generated product data: version1.0.2 / price500 / `stripe_ready`; existing `https://buy.stripe.com/3cI00j6bL8gf8SAcY10gw0A` and BOOTH URL unchanged. No Stripe object or new product created.
+- Cloudflare Pages check-runs: both completed/success. Deployment IDs: dakeapp `63bfae57-f6b7-450b-aa8d-48770b630eaa`; Store `1c8a294d-5dfb-4b24-8636-c2a2fa904994`. Both production URLs HTTP200 / server=cloudflare.
+- Final Desktop EXE CLI: all nine cases PASS (16.840s); success0/error1, output/non-overwrite/source hash invariant.
+- Final PyMuPDF/fitz/Pillow audit: source imports0, requirements0, Analysis0, outer EXE archive plus embedded PYZ module names0; ZIP has no legacy payload and embeds the audited identical EXE. Wheel/license suite PASS.
+
+### Cleanup / final state
+
+- Formal EXE/ZIP, extracted payload, GUI evidence, CLI/test logs, startup JSON, legacy audit and live HTTP results retained in devlop. Previous review benchmark, notices, report data and ZIP copied there and SHA-256 verified before deletion.
+- Temporary Documents worktree removed normally after clean and remote commit checks; its original branch/commit remains pushed and merged. `git worktree prune` completed.
+- Old Documents evidence and old Desktop test folder removed. Final Desktop test folder is retained while its own test EXE is open; native input helper reports an active request even after connection reset. User asked to close that test window normally; no unrelated process was killed.
+- Canonical branch main has no tracked pending changes apart from this final record. Unrelated untracked `01_apps/DAKE_Folder_OverviewRename/` and `01_apps/DAKE_PDF_Insert/` retained; do not call the entire repository clean or delete these directories.
+- STADIO safety branch/raw backup unchanged and retained for development resumption. Human Review limitations above remain disclosed, not retroactively PASS.
