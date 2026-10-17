@@ -11,6 +11,7 @@ from unittest.mock import Mock
 
 import main
 import pytest
+from PIL import Image
 from rename_core import FileSnapshot, RenameRequest, RenameTransactionError, build_rename_plan, rename_batch, undo_rename
 from viewport_helpers import settle_view
 
@@ -138,6 +139,51 @@ def test_drop_rejects_multiple_and_files_without_mutating_folder(tmp_path: Path)
         app._start_load.assert_called_once_with(one)
     finally:
         main.messagebox.showinfo = original
+
+
+@pytest.mark.parametrize("count", [1, 26, 100, 400, 800])
+def test_dropped_folder_scans_exact_pdf_set_and_reaches_last_card(tmp_path: Path, count: int) -> None:
+    template = tmp_path / "template.pdf"
+    Image.new("RGB", (48, 64), "white").save(template, "PDF", resolution=72.0)
+    payload = template.read_bytes()
+    folder = tmp_path / "日本語 (資料) folder"
+    folder.mkdir()
+    expected = {f"synthetic_{i:04d}.pdf" for i in range(1, count + 1)}
+    for name in expected:
+        (folder / name).write_bytes(payload)
+    (folder / "not-a-pdf.txt").write_text("ignored", encoding="utf-8")
+    nested = folder / "nested"
+    nested.mkdir()
+    (nested / "ignored.pdf").write_bytes(payload)
+
+    root = tk_root()
+    root.geometry("900x650+2000+100")
+    app = main.OverviewRenameApp(root)
+    app._reprioritize_unrendered = Mock()  # This test isolates DnD, scan, and card mapping.
+    try:
+        assert app._load_dropped_paths([str(folder)])
+        deadline = time.monotonic() + 12
+        while len(app.cards) < count and time.monotonic() < deadline:
+            root.update()
+            time.sleep(.003)
+        assert len(app.cards) == count
+        assert {card.snapshot.path.name for card in app.cards} == expected
+        assert len({card.snapshot.path for card in app.cards}) == count
+        assert app.folder == folder.resolve()
+        app._on_scrollbar("moveto", 1)
+        settle_view(root, app)
+        last = app.cards[-1]
+        assert last.snapshot.path.name == sorted(expected)[-1]
+        assert last.frame is not None and last.frame.winfo_ismapped()
+        assert last.entry.cget("textvariable") == str(last.variable)
+    finally:
+        app.closing = True
+        if app._poll_after is not None:
+            root.after_cancel(app._poll_after)
+        app.scanner.shutdown()
+        app.render_pool.shutdown()
+        app.preview_worker.shutdown()
+        root.destroy()
 
 
 def test_native_tkdnd_load_and_tcl_path_parsing() -> None:
