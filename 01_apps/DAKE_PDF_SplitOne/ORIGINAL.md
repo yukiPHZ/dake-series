@@ -95,8 +95,8 @@ PDFを全ページ1枚ずつに自動分割します。
 - UI表示を最優先する
 - GUI通常起動では、GUI起動前に `pypdf` をimportしない
 - `pypdf` はPDF投入後のworker、またはCLI実行時まで遅延読み込みする
-- packaged版を実測し、onefileとonedirを比較する
-- 起動・DnD・CLI・分割が正常なら、onedirを正式候補とする
+- 次回改修・再ビルド・再出荷では `../../00_core/DAKE_COMMON_SPEC.md` のWindows単独exe規則を継承し、onefileの起動・DnD・CLI・分割を検証する
+- 起動高速化は単独exeのまま行う。onedirを今後の正式候補にせず、単独動作を満たせなければ出荷を保留して原因・代案を報告する
 - スプラッシュなど、見かけだけで起動速度をごまかす仕組みは使わない
 
 ## リフレッシュ / 中止
@@ -213,7 +213,7 @@ PDFを1ファイル追加すると、全ページを1枚ずつのPDFへ自動分
 - 商品画像: assets/booth_thumbnail.jpg
 - 補助画像: assets/screenshot.jpg
 - 作品ファイル: booth_ready/DakePDF_Split_One.zip
-- 第三者ライセンス: THIRD_PARTY_NOTICES.txt と third_party_licenses/ を同梱。onedir runtime内のライセンス文書も保持する
+- 第三者ライセンス: THIRD_PARTY_NOTICES.txt と third_party_licenses/ を配布義務に従って同梱するが、実行時の隣接依存にしない。過去のonedir runtime内のライセンス文書は既存配布物の履歴として保持する
 - GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_SplitOne_v1.0.1
 - BOOTH URL: https://peakheadz.booth.pm/items/8448207
 
@@ -293,7 +293,11 @@ https://peakheadz.com
 - 実装優先順位: 起動、cancel / generation、安全な一時出力、非破壊確定。サムネイル、fitz、LRU cacheなどSplitSelect固有構造は導入しない
 - 外部公開しない: 個人情報、APIキー、未公開メモ
 - 自動操作しない: BOOTH公開、Store決済、GitHub Release更新
-- 正式出荷基盤: onefile / onedir共通出荷ツールを使用し、runtime folder一式を同じ検証済みZIPでReleaseとBOOTHへ渡す
+- 正式出荷基盤: 次回は単独exe動作を検証した同じZIPをReleaseとBOOTHへ渡す。出荷ツールのonedir対応は過去互換であり、新規出荷の許可条件ではない
+
+### 2026-10-18 共通規則への移行状態
+
+過去のonedir採用・出荷・計測は履歴として保持する。今回変更したのは文書のみで、ビルド設定・既存exe・配布ZIPは未改修・未検証。次回対象改修で単独exe、共通フッターとUI_TEXT、メタデータを調査・修正し、共通出荷ゲートを満たしてから出荷する。
 
 ## 派生物一覧
 

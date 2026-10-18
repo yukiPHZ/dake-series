@@ -6,6 +6,22 @@
 
 README.md、DAKE_META、release_body.md、booth_product.txt、Store表示などは、このファイルから派生するビューです。
 
+## DAKE共通仕様への準拠
+
+このアプリはDAKEシリーズ共通仕様に準拠する。
+
+参照：repoルートの `00_core/DAKE_COMMON_SPEC.md`（通常の `01_apps/<app>/ORIGINAL.md` からは `../../00_core/DAKE_COMMON_SPEC.md`）。
+
+Windowsデスクトップアプリの場合：
+
+- exe単独配布・単独起動必須。
+- 正式フッター：しまりす不動産 ｜ © Yukihiko Kikuta・PEAKHEADZ
+- UI_TEXTによる文言一元管理。
+- 共通アイコンの使用。
+- 次回の実装・再ビルド・正式出荷時に適合を確認する。未改修の既存成果物を検証済みにしない。
+
+詳細規則は共通正本を参照し、個別の実測結果・不一致・固有仕様だけを本書へ記録する。非exe成果物にはWindows配布規則を強制しない。
+
 ## 基本情報
 
 - app_id:

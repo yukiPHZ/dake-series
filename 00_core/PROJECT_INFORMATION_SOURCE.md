@@ -20,7 +20,16 @@ DAKEシリーズの真の正本は `ORIGINAL.md` である。
 
 `ORIGINAL.md` は、対象アプリ、Pack、商品、販売表示の最後に信じる場所である。
 
-矛盾がある場合は `ORIGINAL.md` を優先する。
+派生ビューとの矛盾は `ORIGINAL.md` を優先する。シリーズ共通必須規則は `DAKE_COMMON_SPEC.md` が正本であり、個別ORIGINALで緩和しない。
+
+2026-10-18のWindows単独exe・共通フッター改定は、次回実装・再ビルド・再出荷へ適用する。作業入口はrepoルートの `AGENTS.md`。既存成果物の改修・実機検証・再出荷は未実施であり、旧Releaseの適合を保証するものではない。
+
+### 改定時点の実装差分（未改修・read-only確認）
+
+- `DAKE_PDF_SplitOne/build.bat` は `--onedir`。SplitOne / SplitSelectの `main.py` は旧クレジットのまま。次回対象改修で配布方式とUI_TEXTを共通規則へ合わせる。
+- `DAKE_PDF_SplitSelect/build.bat` は既に `--onefile`、ORIGINALにはv1.0.2の単独配布記録がある。今回は再ビルド・実機再検証していない。
+- `tools/generate_version_info.py` はCompanyNameと著作権に旧定義が残る。次回の承認された実装工程でPEAKHEADZ / Yukihiko Kikutaのメタデータ方針へ整合させ、UIフッターとは分けて確認する。
+- 出荷ツールのonedir対応や既存Releaseは互換・履歴として維持している。全アプリの実装・成果物を適合監査したわけではなく、上記以外も次回対象作業で調べる。
 
 ## 派生ビュー
 

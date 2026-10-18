@@ -67,6 +67,8 @@ DAKEシリーズ全体で参照する共通仕様ファイル置き場です。
 
 ## 読む順番
 
+各作業はrepoルートの `AGENTS.md` を入口にする。以下は補助経路であり、Windowsアプリ作業で必読の個別ORIGINAL・共通仕様・build・UI_TEXT・Releaseの確認を省略しない。2026-10-18改定の単独exe・フッター要件は `DAKE_COMMON_SPEC.md`、出荷判定は `DAKE_RELEASE_FLOW.md` を参照する。
+
 1. 新規アプリを作る: `DAKE_COMMON_SPEC.md` → `DAKE_APP_TEMPLATE.md` → `DAKE_UI_GUIDE.md` → `DAKE_BUILD_RULE.md`
 2. 既存アプリをレビューする: `DAKE_REVIEW_CHECKLIST.md` → `DAKE_UI_TEXT_RULE.md` → `DAKE_SCREENSHOT_RULE.md`
 3. 公開作業をする: `DAKE_ORIGINAL_RULE.md` → 対象の `ORIGINAL.md` → `DAKE_RELEASE_FLOW.md` → `DAKE_GIT_RULE.md` → 各アプリの `README.md`

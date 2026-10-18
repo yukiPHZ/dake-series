@@ -1,5 +1,7 @@
 # DAKE_APP_TEMPLATE
 
+新規・次回改修時は `DAKE_COMMON_SPEC.md` を継承する。Windows配布は単独exe必須。具体的なビルドと出荷判定は `DAKE_BUILD_RULE.md` / `DAKE_RELEASE_FLOW.md` を参照する。
+
 ## 正式出荷素材テンプレ
 
 新規アプリは、GitHub ReleaseだけでなくBOOTH readyとdakeapp.com掲載までを前提にします。
@@ -7,6 +9,7 @@
 ```text
 01_apps/
   DAKE_Category_Function/
+    ORIGINAL.md             # 個別仕様の正本。共通仕様は参照で継承
     README.md
     release_body.md
     build.bat
@@ -62,7 +65,7 @@
 ```python
 APP_NAME = "Dakeアプリ名"
 WINDOW_TITLE = "短いウインドウタイトル"
-COPYRIGHT = "© 2026 しまりす不動産 / Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "しまりす不動産 ｜ © Yukihiko Kikuta・PEAKHEADZ"
 
 UI_TEXT = {
     "main_title": "何をするか",
@@ -157,7 +160,7 @@ dist/
 1. フォルダを作る。
 2. `main.py` に単機能UIを実装する。
 3. `build.bat` を作る。
-4. READMEに `DAKE_META` と `RELEASE_BODY` を書く。
+4. ORIGINALを整え、READMEに派生ビューの `DAKE_META` と `RELEASE_BODY` を置く。文言定義例は `DAKE_UI_TEXT_RULE.md` と同期する。
 5. buildする。
 6. 起動確認する。
 7. `release_body.md` を生成する。
