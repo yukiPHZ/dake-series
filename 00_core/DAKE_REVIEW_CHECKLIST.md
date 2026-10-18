@@ -1,5 +1,12 @@
 # DAKE_REVIEW_CHECKLIST
 
+## 次回改修・再出荷の共通仕様確認
+
+- [ ] 対象ORIGINALと `DAKE_COMMON_SPEC.md` / `DAKE_BUILD_RULE.md` / `DAKE_UI_TEXT_RULE.md` / `DAKE_RELEASE_FLOW.md` を確認した。
+- [ ] 個別正本の共通必須規則との矛盾を解消し、対象実装の不一致を修正範囲へ含めた。
+- [ ] Windows exeは `DAKE_RELEASE_FLOW.md` の「Windows単独exe出荷ゲート」を全項目検証した（単独起動・主要機能、隣接runtime不要、非開発PC、ZIP、正式フッター、旧クレジットなし、メタデータ）。
+- [ ] 過去のRelease・計測記録と新規検証を区別した。文書更新だけでは実機適合済みと扱っていない。
+
 ## DAKE正式出荷ライン
 
 - [ ] `ORIGINAL.md` がある場合は真の正本として整っている。
@@ -96,7 +103,7 @@ DAKEアプリ横断レビュー用チェックリストです。
 
 - [ ] DAKE共通コピーがある。
 - [ ] `戸建買取査定` と `Instagram` リンクが必要に応じてある。
-- [ ] コピーライトがある。
+- [ ] コピーライトは共通仕様の正式文字列と完全一致し、UI_TEXTで一元管理されている。
 - [ ] フッターが主操作を邪魔していない。
 - [ ] 狭い幅でも見切れない。
 

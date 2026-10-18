@@ -1,10 +1,21 @@
 # DAKE_RELEASE_FLOW
 
-## onedir 配布の例外
+## Windows単独exe出荷ゲート（2026-10-18以後）
 
-起動時間などの検証により PyInstaller onedir を正式採用したアプリは、`dist/<exe stem>/` 全体を一つの実行環境として扱う。`_internal` などの隣接ファイルを含め、フォルダ構造を維持した ZIP を `tools/make_booth_ready.py` で作成・検証する。EXE だけを抜き出して配布しない。
+配布仕様は `DAKE_COMMON_SPEC.md` が正本。今後の新規ビルド・再出荷では以下を必須確認する。非exe成果物には適用しない。
 
-GitHub Release と BOOTH には同じ検証済み ZIP を添付し、SHA-256 と ZIP 展開後のファイル配置・起動を確認する。Launcher の標準配置は `dist/<exe stem>/<exe_name>` とし、既存の `dist/<exe_name>` および利用者指定の EXE パスも引き続き扱う。Store やサイトにはローカルの EXE 位置を公開ダウンロード URL として転記しない。
+- [ ] PyInstallerは原則onefileで生成し、exeだけを空の別フォルダへコピーして起動・主要機能を確認した。
+- [ ] `_internal` 等の隣接runtime・必須リソース、開発環境、利用者による追加インストールへ依存していない。
+- [ ] 開発PC以外のWindowsでも追加環境構築なしで動作を確認した。
+- [ ] 配布ZIPを展開し、exeのみを取り出して同じ検証を行った。README・ライセンス資料は実行時の必須依存ではない。
+- [ ] UIフッターが共通仕様の正式文字列と完全一致し、狭幅で見切れず、旧クレジットがUIに残っていない。
+- [ ] WindowsメタデータはCompanyName=PEAKHEADZ、個人制作者・著作権者=Yukihiko Kikutaの既定方針に一致する。画面フッターと別項目として確認した。
+
+検証環境、対象source commit、exe/ZIPのSHA-256、結果・未確認事項を出荷レポートに残す。未実施をPASSにしない。不適合なら出荷保留とし、onedirへ自動切替しない。単なる調査・文書更新では、このゲートを実施したと記載しない。
+
+旧onedir配布例外は今後の正式方式として失効する。以前のReleaseがruntimeフォルダを必要とした事実、過去のZIP・Launcher対応・計測値は履歴として残す。今回それらを削除・差し替え・再出荷しない。既存ツールのonedir対応を利用して新規則を迂回しない。
+
+GitHub ReleaseとBOOTHの配布物整合・SHA-256検証、Storeやサイトへローカルexeパスを公開URLとして転記しない規則は維持する。
 
 ## DAKE正式出荷ライン
 

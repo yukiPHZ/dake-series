@@ -1,5 +1,19 @@
 # DAKE_COMMON_SPEC
 
+## Windows exe共通必須規則（2026-10-18改定）
+
+本節と「共通フッター」をシリーズ共通規則の正本とする。新規開発・次回改修・再ビルド・再出荷から適用する。個別ORIGINALは固有仕様を管理し、この必須規則を緩和しない。過去Release・技術検証の記録は履歴として残し、新要件への適合済みとは扱わない。
+
+- exeを1つ置いてダブルクリックするだけで使える、単独配布・単独起動・単独機能成立を必須とする。
+- Python等の開発環境、追加ライブラリの手動インストール、`_internal` 等の隣接ランタイムや必須リソースの配置を利用者へ要求しない。
+- PyInstallerは原則 `--onefile`。起動速度改善を理由に `--onedir` へ変更することは禁止。旧onedir許容規則は今後の正式出荷について失効する。
+- 必要なライブラリ・アイコン等は可能な限りexe内部へ同梱し、必須リソースを隣接ファイル依存にしない。通常のWindows内部ライブラリと実行時の一時展開は許容する。
+- ZIP配布でも、展開後にexeだけを取り出して動作すること。README・ライセンス資料は同梱できるが、実行時の必須依存にしない。ライセンス上の配布義務は別途守る。
+- 単独動作を犠牲にしない範囲で起動速度を最適化する。技術的に満たせなければonedirへ自動変更せず、出荷を保留して原因・代案を報告する。
+- 本規則はWindows exeの配布仕様。Webサイト等、exeを配布しない成果物には適用しない。
+
+実装方法は [DAKE_BUILD_RULE.md](DAKE_BUILD_RULE.md)、出荷判定は [DAKE_RELEASE_FLOW.md](DAKE_RELEASE_FLOW.md)、文言定義は [DAKE_UI_TEXT_RULE.md](DAKE_UI_TEXT_RULE.md) を参照する。
+
 ## DAKE正式出荷ライン
 
 DAKEシリーズの正式出荷は、GitHub Release公開だけでは完了としません。
@@ -20,7 +34,7 @@ booth_product.txt
 ↓
 build
 ↓
-dist/*.exe または dist/<exe stem>/<exe_name> と runtime 一式
+dist/*.exe（単独動作確認済み）
 ↓
 GitHub Release
 ↓
@@ -59,7 +73,7 @@ Cloudflare反映確認
 - `assets/booth_thumbnail.jpg`
 - `booth_product.txt`（通常は `booth_ready/booth_product.txt`）
 - `booth_ready/`
-- `dist/*.exe` または検証済み onedir runtime 一式
+- `dist/*.exe`（Windows単独exeゲートを満たすもの）
 - GitHub Release
 - BOOTH ready
 - BOOTH掲載または掲載準備
@@ -164,7 +178,7 @@ README / DAKE_META / release_body / booth_product を直接編集する場合は
 
 ## UI_TEXT
 
-- 画面表示の日本語は `UI_TEXT` に集約する。
+- 日本語・英語を含む全UI文言は `UI_TEXT` に集約する。
 - `APP_NAME`、`WINDOW_TITLE`、`COPYRIGHT` を上部に定義する。
 - UI部品の `text="..."` 直書きは避ける。
 - エラーメッセージ、ステータス、ボタン、フッター文言も `UI_TEXT` 管理にする。
@@ -178,7 +192,15 @@ README / DAKE_META / release_body / booth_product を直接編集する場合は
 - `止まらない、迷わない、すぐ終わる。`
 - `戸建買取査定`
 - `Instagram`
-- `© 2026 しまりす不動産 / Vibe-Coded by Yukihiko Kikuta`
+- コピーライトの正式文字列（空白・区切り・全半角も固定）:
+
+```text
+しまりす不動産 ｜ © Yukihiko Kikuta・PEAKHEADZ
+```
+
+`Vibe-Coded` / `Vibe Coding` 等の旧クレジット、`by Yukihiko Kikuta` 単独表記、年号の追加は新しい共通フッターに採用しない。しまりす不動産はDAKEの発想の原点として残す。PEAKHEADZを上位ブランドとし、DAKEとしまりす不動産はその傘下の並列ブランドとして扱う。
+
+シリーズ名・キャッチコピー・既存フッターリンク・共通アイコン・配色・UI設計は変更しない。Windowsファイルプロパティは画面内フッターと別管理とし、CompanyNameはPEAKHEADZ、個人制作者・著作権者はYukihiko Kikutaの既定方針を維持する。
 
 ルール:
 

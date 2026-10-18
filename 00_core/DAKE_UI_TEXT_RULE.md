@@ -2,6 +2,8 @@
 
 DAKEアプリのUI文言管理ルールです。
 
+日本語・英語を含む全UI文言を対象とする。UTF-8と直書き禁止の規則を継続する。
+
 ## 目的
 
 - 日本語UIを横断レビューしやすくする。
@@ -13,11 +15,12 @@ DAKEアプリのUI文言管理ルールです。
 ```python
 APP_NAME = "Dakeアプリ名"
 WINDOW_TITLE = "短いタイトル"
-COPYRIGHT = "© 2026 しまりす不動産 / Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "しまりす不動産 ｜ © Yukihiko Kikuta・PEAKHEADZ"
 
 UI_TEXT = {
     "main_title": "主見出し",
     "main_description": "短い説明",
+    "footer_copyright": COPYRIGHT,
 }
 ```
 
@@ -60,15 +63,12 @@ messagebox.showerror(UI_TEXT["error_title"], UI_TEXT["error_message"])
 
 ## COPYRIGHT
 
-基本:
-
-```python
-COPYRIGHT = "© 2026 しまりす不動産 / Vibe-Coded by Yukihiko Kikuta"
-```
+正式文字列の正本は `DAKE_COMMON_SPEC.md` の「共通フッター」。上記はその実装定義例であり、別仕様として管理しない。
 
 ルール:
 
-- フッター表示の正本として使う。
+- アプリ内は `COPYRIGHT` に1回だけ定義し、`UI_TEXT["footer_copyright"] = COPYRIGHT` で参照する。既存キーは可能な限り維持する。
+- 全角・半角・空白・区切り・年号なしを含め、共通仕様と完全一致させる。Windowsファイルプロパティの著作権定義とは別管理にする。
 - 複数箇所に同じ文字列を直書きしない。
 
 ## レビュー基準

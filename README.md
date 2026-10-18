@@ -17,6 +17,8 @@ Built around the idea:
 
 ## Principles
 
+開発作業は [AGENTS.md](AGENTS.md) から開始します。シリーズ共通の必須仕様は [00_core/DAKE_COMMON_SPEC.md](00_core/DAKE_COMMON_SPEC.md)、個別仕様は各アプリのORIGINALが正本です。Windows単独exe・共通フッターの2026-10-18改定は次回改修・再ビルド・再出荷へ適用し、この文書更新では既存exeを改修・検証・再出荷していません。
+
 - one app = one job
 - fast to launch
 - easy to understand
@@ -155,7 +157,7 @@ OIKAWAは、必要な記憶が静かに側へ戻ってくる場所です。QPSC�
 
 ---
 
-© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta
+しまりす不動産 ｜ © Yukihiko Kikuta・PEAKHEADZ
 
 ## QPSC通常運用 / Phase 22
 

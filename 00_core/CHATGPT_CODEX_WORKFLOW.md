@@ -165,6 +165,10 @@ Human Review用exeは通常repoの対象アプリ `dist` へ固定配置し、�
 
 ## Codex作業前の確認
 
+最初にrepoルートの `AGENTS.md` を確認する。Windowsアプリの新規開発・改修・ビルド・出荷では、対象ORIGINAL、`DAKE_COMMON_SPEC.md`、`DAKE_BUILD_RULE.md`、`DAKE_UI_TEXT_RULE.md`、`DAKE_RELEASE_FLOW.md`、その他の関係仕様を必ず読む。
+
+シリーズ必須規則は00_core、固有仕様は対象ORIGINAL、公開情報は派生ビューとして分担する。個別正本の優先を理由に共通必須規則を緩和しない。次回改修では配布依存・フッター等の実装不一致を修正範囲に含め、未確認は未確認と報告する。調査・文書作業だけならビルド・出荷しない。
+
 Codexは作業前に必要に応じて以下を確認する。
 
 - ORIGINAL.md
@@ -208,7 +212,7 @@ DAKEシリーズでは、`ORIGINAL.md` を真の正本として扱います。Co
 5. `booth_product.txt`
 6. 関連仕様ファイル
 
-存在しないファイルがある場合のみ次へ進みます。`ORIGINAL.md` が存在する対象では、矛盾があれば必ず `ORIGINAL.md` を優先します。
+存在しないファイルがある場合のみ次へ進みます。`ORIGINAL.md` が存在する対象では、派生ビューとの矛盾は `ORIGINAL.md` を優先します。00_coreのシリーズ必須規則とは責務を分け、個別正本による緩和はしません。
 
 優先順位は次の通りです。
 
