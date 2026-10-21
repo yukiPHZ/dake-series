@@ -168,5 +168,7 @@ Desktopの `DakePDF_SplitSelect_Phase2_Test_20261022` はEXE単体テスト／Hu
 - `../../tools/generate_version_info.py`（既定互換の任意metadata overrideのみ）
 
 対象ファイルだけをstageする。build/dist/spec/venv/cache/テストPDF/EXE/evidenceはcommitしない。
-専用ブランチのcommit/push後にcleanとPR OPENを再確認し、結果はPRと最終報告へ記録する。正本側の既存dirty状態は維持。
+実装commit `ba26afb53932f66f74dcdea4fdab581659325a3e` を指定ブランチへpushし、専用worktreeの `git status --porcelain=v1` が空であることを確認した。
+PR [#56](https://github.com/yukiPHZ/dake-series/pull/56) はDraft / OPEN、base=`main`、mergedAt=nullを確認。最終EXEのGUI未確認ゲートを本文にも明記している。
+この結果を追記する文書のみのcommit後もclean・PR head一致を再確認する。正本側の既存dirty状態は維持。
 main merge、Release、BOOTH、Stripe、Store、dakeapp.com、Cloudflare、本番配布物の更新は行わない。
