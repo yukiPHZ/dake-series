@@ -604,3 +604,13 @@ build、dist、spec、設定ファイル、個人データ、ソース一式を�
 - Issue #19の出荷順序と安全ゲートに従い、main、GitHub Release、BOOTH、dakeapp.com、Store、決済、Cloudflareを正式出荷します。
 - GitHub Release、BOOTH、Stripe等のURLは作成前に推測せず、公開後の実URLだけを本正本へ書き戻します。
 - 名前変更、Undo、PDFium排他、wheel、refreshの既存挙動を不要に変更しません。
+
+<!-- social-video-studio-canonical-v1 -->
+
+## 動画制作・素材管理の正本
+
+動画制作・収録素材・本人採用状態・制作履歴の正本は **Social Video Studio** です。製品仕様はこのrepoの既存正本、投稿・予約・公開結果はPublisherを参照します。
+
+Studio検索用の製品識別子：`dake_pdf_overview_rename`。
+
+ローカルで同じ作業フォルダ配下にStudioを置き、`../../../social-video-studio/VIDEO_REGISTRY.md`、`../../../social-video-studio/registry/catalog.html`、`../../../social-video-studio/registry/videos.json` を参照してください。中央StudioのGitHub remoteは未設定のため、GitHub上の中央リンクは未設定です。製品repoへ動画や制作履歴を複製しません。

@@ -250,3 +250,13 @@ OIKAWAは「頑張れ」と言いません。ただ、まだ残っている線�
 BRAINZは記録そのものではありません。熱が戻れるように、Slack断片、Codexログ、ChatGPT export、note、README、Git、実務メモ、BORINEF断片を正本として残す母艦です。
 
 QPSCの救いは、忘れてもいい、でも戻れる、という構造にあります。
+
+<!-- social-video-studio-canonical-v1 -->
+
+## 動画制作・素材管理
+
+動画制作・収録素材・本人採用状態・制作履歴の正本は **Social Video Studio** です。製品仕様はこのrepoの既存正本、投稿・予約・公開結果はPublisherを参照します。
+
+Studio検索用の製品識別子：`dake_pdf_merge`、`dake_pdf_extract`、`dake_pdf_overview_rename`、`dake_pdf_split_select`、`dake_pdf_split_one`。
+
+ローカルで同じ作業フォルダ配下にStudioを置き、`../social-video-studio/VIDEO_REGISTRY.md`、`../social-video-studio/registry/catalog.html`、`../social-video-studio/registry/videos.json` を参照してください。中央StudioのGitHub remoteは未設定のため、GitHub上の中央リンクは未設定です。製品repoへ動画や制作履歴を複製しません。
