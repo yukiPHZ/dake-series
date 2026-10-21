@@ -92,9 +92,9 @@ class LifecycleTests(unittest.TestCase):
         self.max_queue = 0
         self.requests = []
         request = self.app.render_worker.request
-        def record_request(generation, request_id, pages):
+        def record_request(generation, request_id, pages, box=None):
             self.requests.append(tuple(pages))
-            request(generation, request_id, pages)
+            request(generation, request_id, pages, box)
         self.app.render_worker.request = record_request
 
     def tearDown(self):
@@ -109,7 +109,7 @@ class LifecycleTests(unittest.TestCase):
         if self.app._poll_job:
             self.app.after_cancel(self.app._poll_job)
         if self.app.thumbnail_viewport._redraw_job:
-            self.app.after_cancel(self.app.thumbnail_viewport._redraw_job)
+            self.app.thumbnail_viewport.after_cancel(self.app.thumbnail_viewport._redraw_job)
         self.app.destroy()
 
     def spin(self, predicate, timeout=15):
