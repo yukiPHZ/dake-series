@@ -40,7 +40,8 @@ def escape(value: object) -> str:
     return str(value).replace("\\", "\\\\").replace("'", "\\'")
 
 
-def build_version_info(meta: dict[str, Any]) -> str:
+def build_version_info(meta: dict[str, Any], company_name: str = COMPANY_NAME,
+                       legal_copyright: str = COPYRIGHT) -> str:
     display_name = str(meta.get("display_name") or meta.get("site_title") or meta.get("launcher_title") or "DAKE")
     file_description = str(meta.get("site_title") or meta.get("launcher_title") or display_name)
     exe_name = str(meta.get("exe_name") or f"{display_name}.exe")
@@ -48,11 +49,11 @@ def build_version_info(meta: dict[str, Any]) -> str:
     filevers = version_tuple(version)
     productvers = filevers
     strings = {
-        "CompanyName": COMPANY_NAME,
+        "CompanyName": company_name,
         "FileDescription": file_description,
         "FileVersion": version,
         "InternalName": Path(exe_name).stem,
-        "LegalCopyright": COPYRIGHT,
+        "LegalCopyright": legal_copyright,
         "OriginalFilename": exe_name,
         "ProductName": display_name,
         "ProductVersion": version,
@@ -91,6 +92,8 @@ def main() -> int:
     parser.add_argument("--app", "--app-dir", dest="app", required=True, help="DAKE app directory")
     parser.add_argument("--out", default="version_info.txt", help="output version info path")
     parser.add_argument("--print-summary", action="store_true")
+    parser.add_argument("--company-name", help="override company for this build only")
+    parser.add_argument("--legal-copyright", help="override copyright for this build only")
     args = parser.parse_args()
 
     app_dir = Path(args.app).resolve()
@@ -98,7 +101,9 @@ def main() -> int:
     if not out_path.is_absolute():
         out_path = app_dir / out_path
     meta = read_meta(app_dir)
-    out_path.write_text(build_version_info(meta), encoding="utf-8")
+    content = build_version_info(meta, args.company_name or COMPANY_NAME,
+                                 args.legal_copyright or COPYRIGHT)
+    out_path.write_text(content, encoding="utf-8")
     if args.print_summary:
         print(f"generated: {out_path}")
         print(f"product: {meta.get('display_name', '')}")
