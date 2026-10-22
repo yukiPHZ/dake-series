@@ -1,0 +1,6 @@
+DakeFolder_OverviewRename v1.0.0
+Runtime dependencies and bundled license texts:
+pypdfium2 5.13.0
+Pillow 12.3.0
+tkinterdnd2 0.4.3
+See third_party_licenses. Python and Tcl/Tk are bundled by PyInstaller.

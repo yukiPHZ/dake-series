@@ -1,0 +1,5 @@
+pypdfium2>=4.30,<6
+Pillow>=10,<13
+tkinterdnd2>=0.4,<0.5
+PyInstaller>=6.10,<7
+pytest>=8,<10
