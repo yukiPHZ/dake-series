@@ -2,12 +2,14 @@
 
 PyInstallerと `build.bat` の共通ルールです。
 
+build方式、依存、PyInstaller、DLL / runtime、packaging、Windowsメタデータを変更する時だけ参照します。通常の文言修正・販売情報変更では毎回読みません。
+
 ## 基本方針
 
 配布要件の正本は [DAKE_COMMON_SPEC.md](DAKE_COMMON_SPEC.md) の「Windows exe共通必須規則」。本書はそのビルド・検証手順を扱う。
 
 - Windows向けexeを `dist` に出力する。
-- Windows配布は1アプリ1exeの単独動作を必須にする。高速化のための `--onedir` 化は禁止。条件を満たせない場合は出荷保留とし、原因・代案を報告する。
+- Windows配布は1アプリ1exeの単独動作を基本にする。高速化のためだけの `--onedir` 化は禁止。条件を満たせない場合は原因・代案を報告する。
 - exe名はREADMEの `DAKE_META.exe_name` と一致させる。
 - build成果物はRelease配布用であり、Git管理対象にしない。
 
@@ -95,9 +97,11 @@ build前に削除または整理するもの:
 - exeが起動する。
 - 共通アイコンが表示される。
 - 画面が文字化けしていない。
-- 起動直後スクリーンショットが撮れる。
-- 空のフォルダへexeだけをコピーして起動し、主要機能まで確認する。開発PC以外の、Python等の追加環境構築がないWindowsでも確認する。
-- `_internal`、Python/DLL/ライセンス/アイコン等の隣接フォルダ・ファイルなしで成立する。ZIP配布では展開後のexeだけでも同じ確認を行う。
+- 生成された配布exeで主要機能が成立する。
+- UIの公開表示が変わった場合だけ、必要に応じてスクリーンショットを更新する。
+- 空フォルダ、ZIP展開後、非開発Windowsでの重複確認は、PyInstaller方式、Python依存、DLL / runtime、packaging構成を変更した場合だけ行う。
+- `_internal`、Python/DLL/アイコン等の必須隣接runtimeなしで成立する。ライセンス上必要な通知資料の同梱は実行時依存と区別する。
 - 必要な実行時リソースはexe内に収める。追加依存が必要なら同梱方法を検討し、利用者の手動配置を解決策にしない。
-- WindowsメタデータのCompanyNameはPEAKHEADZ、個人制作者・著作権者はYukihiko Kikuta。画面フッターの文字列をファイルプロパティへ機械的に流用しない。
-- 出荷判定と実測証跡は `DAKE_RELEASE_FLOW.md` のWindows単独exeゲートへ記録する。
+- Windowsメタデータは `tools/generate_version_info.py` 等でbuild時に自動付与する。ProductName=`シンプルそれDAKE`、FileDescription=各アプリの日本語機能名、CompanyName=`PEAKHEADZ`、Copyright=`© Yukihiko Kikuta / PEAKHEADZ`、FileVersion / ProductVersion、OriginalFilenameを基本とする。
+- メタデータを人間の毎回手入力・毎回目視ゲートにしない。生成方法を変更した時に確認する。
+- SHIP判定は `DAKE_RELEASE_FLOW.md` を参照する。

@@ -1,70 +1,40 @@
 # DAKE_GIT_RULE
 
-DAKEシリーズのGit運用と除外ルールです。
+Git除外、成果物、履歴の扱いを変える時だけ参照します。
 
-## 基本方針
+## 基本
 
-- Gitで管理する主要素材は、ソース、仕様、`ORIGINAL.md`、README公開ビュー、スクリーンショット。
-- アプリの真の正本は `ORIGINAL.md`。未導入の既存アプリではREADMEを暫定参照する。
-- exeはGitに入れず、GitHub Releaseで配布する。
-- build成果物は再生成できるものとして扱う。
-- 個人設定やローカル環境依存ファイルを入れない。
+- 個別アプリの正本は `ORIGINAL.md`。README等は派生ビュー。
+- ソース、仕様、必要な公開ビューをGitで管理する。
+- exeは通常commitせず、GitHub Release成果物として扱う。
+- 既存のユーザー変更・未追跡ファイルを戻す、削除する、stashする、混在commitすることは禁止。
+- 対象ファイルだけをstageし、`git add .` を安易に使わない。
 
-## 除外するもの
-
-`.gitignore` に含める基本:
+## 通常の除外
 
 ```gitignore
-# Python
 __pycache__/
 *.pyc
-
-# Build
 build/
 dist/
 *.spec
-
-# Executables
 *.exe
-
-# Local config
 *_config.json
 *.local.json
-
-# OS
 Thumbs.db
 desktop.ini
 ```
 
-## Gitに入れるもの
+## commit前
 
-- `main.py`
-- `build.bat`
-- `requirements.txt` 必要な場合
-- `README.md`
-- `release_body.md`
-- `.gitignore`
-- `assets/screenshot.webp`
-- `00_core/*.md`
-- `02_assets/dake_icon.ico`
+- 対象外の差分が含まれていない。
+- build / dist / exe / ローカル設定 / 秘密情報が含まれていない。
+- 変更が影響する派生ビューだけを更新している。
+- スクリーンショットはUIの公開表示が変わった場合だけ更新している。
 
-## Release配布物
+## Releaseと履歴
 
-- `dist/<exe_name>.exe` はGitHub Releaseへ添付する。
-- Release説明文は `release_body.md` を使う。
-- Release作成後、READMEの `DAKE_META.release_url` を更新する。`ORIGINAL.md` 導入済みアプリでは、正本へ戻すべき公開情報か確認する。
-
-## commit前確認
-
-- 不要な `dist/` や `build/` が含まれていない。
-- `*.exe` が含まれていない。
-- 個人情報や環境依存パスが入っていない。
-- READMEの `DAKE_META` が壊れていない。
-- `release_body.md` が `ORIGINAL.md` 由来、または移行前READMEの `RELEASE_BODY` と一致している。
-- `assets/screenshot.webp` が最新。
-
-## ブランチと作業
-
-- 横断作業は変更範囲が広くなるため、commit前に対象ファイル一覧を確認する。
-- 既存のユーザー変更を戻さない。
-- 仕様更新とアプリ実装更新は、可能ならcommitを分ける。
+- GitHub ReleaseはSHIP成果物の公開先。
+- 過去Releaseは原則保持し、問題時は直前Releaseへ戻す。
+- 専用バックアップ工程を追加しない。
+- commit、push、GitHub Releaseは別権限として扱う。

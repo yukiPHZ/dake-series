@@ -1,88 +1,56 @@
 # DAKE_UI_TEXT_RULE
 
-DAKEアプリのUI文言管理ルールです。
+UI文言または共通フッターを変更する時だけ参照します。日本語・英語を含む画面文言は `UI_TEXT` へ集約し、UTF-8で管理します。
 
-日本語・英語を含む全UI文言を対象とする。UTF-8と直書き禁止の規則を継続する。
-
-## 目的
-
-- 日本語UIを横断レビューしやすくする。
-- 文字化けや表記ゆれを早く見つける。
-- アプリごとの画面文言を1か所で確認できるようにする。
-
-## 必須定義
+## 基本定義
 
 ```python
 APP_NAME = "Dakeアプリ名"
 WINDOW_TITLE = "短いタイトル"
-COPYRIGHT = "しまりす不動産 ｜ © Yukihiko Kikuta・PEAKHEADZ"
+KAITORI_APP_ID = "pdf_merge"
+KAITORI_URL = f"https://dakeapp.com/go/kaitori?app={KAITORI_APP_ID}"
 
 UI_TEXT = {
     "main_title": "主見出し",
     "main_description": "短い説明",
-    "footer_copyright": COPYRIGHT,
+    "footer_kaitori": "戸建買取査定",
+    "footer_author": "by Yukihiko Kikuta",
 }
 ```
 
+`KAITORI_APP_ID` はアプリごとの安定した英小文字・数字・アンダースコア識別子にします。実際の査定ページURLをexeへ固定せず、DAKE側の恒久入口を使います。
+
+## 共通フッター
+
+表示は次を基本とします。
+
+```text
+戸建買取査定 ｜ by Yukihiko Kikuta
+```
+
+- `戸建買取査定` だけを `KAITORI_URL` へのリンクにする。
+- 区切りの `｜` と `by Yukihiko Kikuta` はリンクにしない。
+- Instagram、長いコピーライト、Vibe-Coded、しまりす不動産の長いブランド表記、不要な外部リンクを新仕様へ追加しない。
+- フッターを主操作より目立たせない。
+- 既存全アプリを一括変更せず、次回更新対象から移行する。
+
+戸建買取査定は株式会社さくら都市の業務であり、同社の基準・手続きに基づいて対応します。「しまりす不動産が戸建を買い取る」と読める表現を使いません。
+
 ## UI_TEXTに入れるもの
 
-- ヘッダー文言。
-- ボタン文言。
-- ラベル文言。
-- プレースホルダー。
-- ステータス。
-- エラーメッセージ。
-- ダイアログタイトル。
-- ダイアログ本文。
-- フッター文言。
-- ファイル名テンプレート。
-- PDF出力用の固定文言。
+- 見出し、説明、ボタン、ラベル
+- プレースホルダー、状態、エラー
+- ダイアログ、フッター
+- 出力名等の固定文言
 
-## 直書き禁止
+画面部品へ同じ文字列を複数回直書きしません。
 
-避ける例:
+## レビュー
 
-```python
-tk.Label(root, text="PDFを追加してください")
-messagebox.showerror("エラー", "処理できませんでした")
-```
-
-推奨:
-
-```python
-tk.Label(root, text=UI_TEXT["drop_hint"])
-messagebox.showerror(UI_TEXT["error_title"], UI_TEXT["error_message"])
-```
-
-## APP_NAMEとWINDOW_TITLE
-
-- `APP_NAME` は正式表示名。
-- `WINDOW_TITLE` はウインドウタイトル用の短い名前。
-- 画面内でアプリ名を繰り返しすぎない。
-- ランチャーやサイト用の名前はREADMEの `DAKE_META` で管理する。
-
-## COPYRIGHT
-
-正式文字列の正本は `DAKE_COMMON_SPEC.md` の「共通フッター」。上記はその実装定義例であり、別仕様として管理しない。
-
-ルール:
-
-- アプリ内は `COPYRIGHT` に1回だけ定義し、`UI_TEXT["footer_copyright"] = COPYRIGHT` で参照する。既存キーは可能な限り維持する。
-- 全角・半角・空白・区切り・年号なしを含め、共通仕様と完全一致させる。Windowsファイルプロパティの著作権定義とは別管理にする。
-- 複数箇所に同じ文字列を直書きしない。
-
-## レビュー基準
-
-- `UI_TEXT` を見れば画面文言が追える。
-- 日本語が自然で短い。
+- 日本語が短く自然で、文字化けがない。
 - ボタンは動詞中心。
-- エラーは責めない表現にする。
-- ステータスは短く、現在状態が分かる。
-- 文字化けがない。
+- エラーは原因と次の行動が短く分かる。
+- `by Yukihiko Kikuta` が非リンク。
+- アプリ本体から利用状況やファイル情報を送信していない。
 
-## 文字化け対策
-
-- ファイルはUTF-8で保存する。
-- PowerShellで日本語を生成する場合はUTF-8出力を明示する。
-- `????`、`�`、不自然な mojibake を検出したら修正する。
-- build後exeの画面でも確認する。
+WindowsファイルプロパティはUI文言と別管理です。定義は `DAKE_COMMON_SPEC.md`、生成方法は必要時に `DAKE_BUILD_RULE.md` を参照します。

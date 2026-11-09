@@ -1,192 +1,50 @@
 # DAKE_REVIEW_CHECKLIST
 
-## 次回改修・再出荷の共通仕様確認
+通常作業で毎回読む必須文書ではありません。完了前に、変更したレイヤーの項目だけを使います。
 
-- [ ] 対象ORIGINALと `DAKE_COMMON_SPEC.md` / `DAKE_BUILD_RULE.md` / `DAKE_UI_TEXT_RULE.md` / `DAKE_RELEASE_FLOW.md` を確認した。
-- [ ] 個別正本の共通必須規則との矛盾を解消し、対象実装の不一致を修正範囲へ含めた。
-- [ ] Windows exeは `DAKE_RELEASE_FLOW.md` の「Windows単独exe出荷ゲート」を全項目検証した（単独起動・主要機能、隣接runtime不要、非開発PC、ZIP、正式フッター、旧クレジットなし、メタデータ）。
-- [ ] 過去のRelease・計測記録と新規検証を区別した。文書更新だけでは実機適合済みと扱っていない。
+## 共通
 
-## DAKE正式出荷ライン
+- [ ] 対象アプリの判断は `ORIGINAL.md` を正本として行った。
+- [ ] 変更が影響する派生ビューだけを更新した。
+- [ ] 依頼外のレイヤー、既存ユーザー変更、未追跡ファイルへ触れていない。
+- [ ] 未確認をPASSにしていない。
 
-- [ ] `ORIGINAL.md` がある場合は真の正本として整っている。
-- [ ] `ORIGINAL.md` 未導入の既存アプリでは `README.md` を暫定参照できる。
-- [ ] `README.md` はGitHub公開用ビューとして整っている。
-- [ ] `release_body.md` が `ORIGINAL.md` 由来、または移行前READMEの `RELEASE_BODY` と一致している。
-- [ ] `assets/screenshot.webp` がある。
-- [ ] `assets/booth_thumbnail.jpg` がある。
-- [ ] `booth_ready/booth_product.txt` がある。
-- [ ] `booth_ready/` がある。
-- [ ] buildが成功している。
-- [ ] `dist/*.exe` が生成されている。
-- [ ] GitHub Releaseが作成され、exeが添付されている。
-- [ ] Releaseにexeが添付済み。
-- [ ] READMEの `DAKE_META.release_url` が更新されている。
-- [ ] BOOTH ready素材が揃っている。
-- [ ] BOOTH掲載準備が完了している。
-- [ ] BOOTH公開後のURL欄が保持されている。
-- [ ] dakeapp.com掲載に必要な項目が `ORIGINAL.md` 由来、または移行前README / DAKE_METAから読める。
-- [ ] dakeapp.comに表示されている。
-- [ ] `tools/store/sync_store_to_site.py` を実行している。
-- [ ] `store_products.generated.json` が再生成・検証されている。
-- [ ] dake-store-siteへgenerated JSONが同期されている。
-- [ ] store.dakeapp.comの商品詳細ページが表示されている。
-- [ ] `payment_status` を確認している。
-- [ ] Stripe Payment Link有無とBOOTH導線有無を確認している。
-- [ ] Stripe Secret / APIキー / Webhook Secretを公開repoへ入れていない。
-- [ ] Cloudflare反映確認済み。
-- [ ] GitHub Releaseのみで出荷完了と扱っていない。
+## SHIP
 
-GitHub Release公開のみでは正式出荷完了とはしません。
-BOOTH ready、BOOTH、dakeapp.com、store.dakeapp.com、Cloudflare反映確認まで含めて確認します。
+- [ ] buildが成功した。
+- [ ] 生成された配布exeが起動した。
+- [ ] 主機能が成立した。
+- [ ] データ破壊等の重大リスクがない。
+- [ ] 対象差分だけをcommit / pushした（依頼された場合）。
+- [ ] GitHub Releaseが完了した（依頼された場合）。
+- [ ] packaging・依存・runtime変更時だけ、開発環境依存を除いた確認を追加した。
 
+BOOTH、画像、Store、Stripe、Cloudflare、SNSはSHIPチェックへ入れません。
 
+## UI変更時だけ
 
-## Store出荷チェック
+- [ ] 表示崩れ・文字化けがない。
+- [ ] 基本フッターは `戸建買取査定 ｜ by Yukihiko Kikuta`。
+- [ ] `戸建買取査定` だけがDAKE恒久入口へのリンク。
+- [ ] `by Yukihiko Kikuta` は非リンク。
+- [ ] Instagram、長いコピーライト、Vibe-Coded、不要な外部リンクを新仕様へ入れていない。
+- [ ] 公開表示へ影響する場合だけスクリーンショットを更新した。
 
-- [ ] Storeは正本ではなく、`ORIGINAL.md` 由来の派生ビューとして扱っている。
-- [ ] `python tools/store/sync_store_to_site.py` を実行した。
-- [ ] items件数、type別件数、`payment_status` 件数を確認した。
-- [ ] `source_policy` と `do_not_edit: true` を確認した。
-- [ ] `shimarisu_pack` が必要に応じて含まれている。
-- [ ] store.dakeapp.comの商品詳細URLを確認した。
-- [ ] `stripe_ready` / `booth_only` / `preparing` / `not_for_sale` の状態が実態と一致している。
-- [ ] Stripe Secret、APIキー、Webhook Secretを扱っていない。
-- [ ] 完了報告にStore同期結果、商品詳細URL、`payment_status`、Cloudflare Pages反映確認を含めた。
+## DISTRIBUTION作業時だけ
 
-## BOOTH素材
+- [ ] 対象のBOOTH / dakeapp.com / Storeだけを確認した。
+- [ ] `DISTRIBUTION = COMPLETE / PARTIAL / PENDING` を独立して記録した。
+- [ ] generatedファイルを手編集していない。
+- [ ] 公開操作は明示依頼の範囲内。
 
-- [ ] `assets/booth_thumbnail.jpg` がある。
-- [ ] `booth_ready/booth_thumbnail.jpg` がある。
-- [ ] `booth_ready/screenshot.jpg` がある。
-- [ ] `booth_ready/README.txt` がある。
-- [ ] `booth_ready/注意事項.txt` がある。
-- [ ] `booth_ready/booth_product.txt` がある。
-- [ ] `booth_ready/booth_product.txt` に `# URL` 欄がある。
-- [ ] BOOTH用zipはGit管理対象に含めていない。
+## COMMERCE作業時だけ
 
-DAKEアプリ横断レビュー用チェックリストです。
+- [ ] `COMMERCE = READY / PENDING / NOT_REQUIRED` を独立して記録した。
+- [ ] Stripe Secret、APIキー、Webhook Secretをrepoや生成物へ入れていない。
+- [ ] live操作・決済変更は明示依頼の範囲内。
 
-## 基本
+## 完了
 
-- [ ] アプリの目的が1つに絞られている。
-- [ ] 起動直後に用途が分かる。
-- [ ] 主操作が迷わず見つかる。
-- [ ] 処理中・完了・失敗が分かる。
-- [ ] 元ファイルを不用意に上書きしない。
-
-## UTF-8と文字化け
-
-- [ ] `main.py`、README、release_bodyがUTF-8で保存されている。
-- [ ] 日本語が `????` や `�` になっていない。
-- [ ] コンソールやPowerShell経由の生成で文字化けしていない。
-
-## UI_TEXT
-
-- [ ] `APP_NAME` がある。
-- [ ] `WINDOW_TITLE` がある。
-- [ ] `COPYRIGHT` がある。
-- [ ] 画面文言が `UI_TEXT` に集約されている。
-- [ ] ボタン、ラベル、ステータス、エラー文が直書きされていない。
-
-## UI
-
-- [ ] フォントがWindows日本語表示に向いている。
-- [ ] 色がDAKEらしく控えめ。
-- [ ] 主ボタンが目立つ。
-- [ ] 補助ボタンが主ボタンより目立たない。
-- [ ] 入力欄とラベルの関係が分かる。
-- [ ] 狭い画面で崩れない。
-- [ ] スクロールが必要な画面で操作不能にならない。
-
-## フッター
-
-- [ ] DAKE共通コピーがある。
-- [ ] `戸建買取査定` と `Instagram` リンクが必要に応じてある。
-- [ ] コピーライトは共通仕様の正式文字列と完全一致し、UI_TEXTで一元管理されている。
-- [ ] フッターが主操作を邪魔していない。
-- [ ] 狭い幅でも見切れない。
-
-## アイコン
-
-- [ ] `02_assets/dake_icon.ico` を参照している。
-- [ ] `build.bat` の `--icon` が共通アイコンを指している。
-- [ ] 個別アイコンを作っていない。
-
-## build
-
-- [ ] `build.bat` がある。
-- [ ] build前に `build/`、`dist/`、`*.spec` を整理する。
-- [ ] PyInstallerの `--onefile` を使う。
-- [ ] GUIアプリは `--noconsole` を使う。
-- [ ] exe名がREADMEの `DAKE_META.exe_name` と一致する。
-- [ ] hidden-importやcollect-dataが必要なライブラリを指定している。
-
-## README
-
-- [ ] `DAKE_META` がある。
-- [ ] `DAKE_META` がJSONとして読める。
-- [ ] `DAKE_META.app_type` がある。
-- [ ] `DAKE_META.completion_goal` がある。
-- [ ] `status` / `app_type` / `completion_goal` の組み合わせが実態と一致している。
-- [ ] `formal_release` 以外のアプリを市場向け未完了レーンに入れていない。
-- [ ] `folder_name` が実フォルダ名と一致する。
-- [ ] `exe_name` がdist内exeと一致する。
-- [ ] `release_url` は未確定なら空文字。
-- [ ] `screenshot_path` は `assets/screenshot.webp`。
-- [ ] `status` が現状と一致する。
-
-## Release本文
-
-- [ ] READMEに `RELEASE_BODY` がある。
-- [ ] 3〜5行の箇条書きになっている。
-- [ ] 長すぎない。
-- [ ] `release_body.md` と一致している。
-
-## スクリーンショット
-
-- [ ] `assets/screenshot.webp` がある。
-- [ ] 起動直後のアプリウインドウだけを撮っている。
-- [ ] WebP形式。
-- [ ] 横幅1200px以内。
-- [ ] 引き延ばしていない。
-
-## Git除外
-
-- [ ] `build/` は除外。
-- [ ] `dist/` は除外。
-- [ ] `*.spec` は除外。
-- [ ] `*.exe` はGit管理しない。
-- [ ] `__pycache__/` と `*.pyc` は除外。
-- [ ] 個人設定ファイルは除外。
-
-## 起動確認
-
-- [ ] `python main.py` またはexeで起動できる。
-- [ ] 初期画面が表示される。
-- [ ] 閉じられる。
-- [ ] 主要操作で例外が出ない。
-
-## 正式出荷ライン v2
-
-- [ ] 通常出荷候補は `status: available` のみに限定している。
-- [ ] `frozen` / `draft` / `experimental` / `private` は通常不足扱いにしていない。
-- [ ] `available` 以外で `show_in_launcher: true` になっていない。
-- [ ] `available` 以外で `show_on_site: true` になっていない。
-- [ ] BOOTH公開後、`booth_ready/booth_product.txt` の `# URL` にBOOTH URLを戻している。
-- [ ] BOOTH URL未記入のままCLOSED扱いしていない。
-- [ ] dakeapp.com掲載とCloudflare反映確認まで終えている。
-
-
-## Formal Shipping Line v3
-
-- [ ] Normal shipping candidates are limited to `status: available`.
-- [ ] `frozen` / `draft` / `experimental` / `private` / `internal` are not counted as normal missing assets.
-- [ ] `internal` is treated as an operations or management tool, excluded from Release / BOOTH / dakeapp.com / Launcher listing.
-- [ ] Non-available apps do not have `show_in_launcher: true`.
-- [ ] Non-available apps do not have `show_on_site: true`.
-- [ ] Apps are not treated as CLOSED while the BOOTH URL is missing.
-- [ ] Available apps have actual `dist/*.exe` launch confirmation.
-- [ ] Prefer `dist/*.exe --launch-check` for launch confirmation.
-- [ ] If `--launch-check` is not implemented, perform only a short GUI smoke launch.
-- [ ] New apps implement `--launch-check` without file conversion, sending, publishing, browser automation, or external side effects.
+- [ ] 変更内容に応じた最小テストを実施した。
+- [ ] SHIP / DISTRIBUTION / COMMERCEを混同せず報告した。
+- [ ] final `git status` を確認した。

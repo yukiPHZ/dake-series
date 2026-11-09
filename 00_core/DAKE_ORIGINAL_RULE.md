@@ -112,26 +112,11 @@ Storeは可能な限り `ORIGINAL.md` 由来の情報を読む。
 
 ## 10. Codex作業時の基本ルール
 
-Codexは作業前に、原則として以下の順で確認する。
+通常作業で最初に読むものは、repoルートの `AGENTS.md`、`DAKE_COMMON_SPEC.md`、対象の `ORIGINAL.md` の3つだけとする。
 
-```text
-1. ORIGINAL.md
-2. README.md
-3. DAKE_META
-4. release_body.md
-5. booth_product.txt
-6. 関連仕様ファイル
-```
+README、DAKE_META、release_body、booth_product、Store表示は作業開始時に全件確認しない。ORIGINALの変更が影響する派生ビューだけを確認・更新する。
 
-優先順位は必ず以下とする。
-
-```text
-ORIGINAL.md
-↓
-その他の派生ファイル
-```
-
-`ORIGINAL.md` が存在しない既存対象では、過渡期ルールとしてREADMEを暫定参照してよい。
+`ORIGINAL.md` が存在しない既存対象はLegacyとして維持し、次回その対象を修正・出荷する時だけREADMEを暫定参照して段階移行する。
 
 ## 11. 派生ビューの基本対応
 

@@ -356,7 +356,7 @@ def make_readme_txt(meta: dict[str, Any], sources: list[SourceApp]) -> str:
 PEAKHEADZ
 https://peakheadz.com
 
-Vibe-Coded by Yukihiko Kikuta
+by Yukihiko Kikuta
 """
 
 
@@ -406,7 +406,7 @@ Windows向けです。大切なファイルは事前にバックアップして�
 本ソフトウェアの利用によって発生した損害について、作者は責任を負いません。
 
 # コピーライト
-PEAKHEADZ / Vibe-Coded by Yukihiko Kikuta
+© Yukihiko Kikuta / PEAKHEADZ
 
 # タグ
 {tag_text(meta)}

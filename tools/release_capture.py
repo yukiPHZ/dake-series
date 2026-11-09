@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-"""Capture DAKE formal release evidence.
+"""Capture DAKE SHIP evidence.
 
-This tool adds the "出荷確認動画 / 動作証跡" part of the DAKE formal shipping
-line. The video is not YouTube content production. It is local release evidence
-created while confirming the app can launch and its main operation was checked.
+SHIP is complete after the built distribution launches, its main operation is
+confirmed, and the GitHub Release exists. Screenshots, video, BOOTH, dakeapp.com,
+and Cloudflare checks are optional DISTRIBUTION evidence and never block SHIP.
 
 Windows app recording is handled with ffmpeg desktop capture. pywinauto is used
 only as an optional focus helper when it is installed. Playwright is not assumed
@@ -39,6 +39,13 @@ RELEASE_DIR_NAME = "release_artifacts"
 DEMO_MP4 = "demo.mp4"
 DEMO_WEBM = "demo.webm"
 SHIPPING_STATUS = "available"
+SHIP_REQUIRED_CHECKS = {
+    "ORIGINAL / DAKE_META",
+    "アプリ起動確認",
+    "主要操作の確認",
+    "build / dist 生成",
+    "GitHub Release",
+}
 
 
 @dataclass
@@ -311,6 +318,14 @@ def file_state(path: Path, label: str) -> StepState:
     return StepState(path.exists(), rel(path, path.parent.parent) if path.exists() else f"{label} missing")
 
 
+def ship_failures(checks: dict[str, StepState]) -> list[str]:
+    return [
+        f"{name}: {state.detail}"
+        for name, state in checks.items()
+        if name in SHIP_REQUIRED_CHECKS and not state.ok
+    ]
+
+
 
 def build_release_record(outcome: CaptureOutcome, args: argparse.Namespace) -> dict[str, Any]:
     app_dir = outcome.app_dir
@@ -341,6 +356,9 @@ def build_release_record(outcome: CaptureOutcome, args: argparse.Namespace) -> d
         "social_release_path": str(meta.get("social_release_path") or f"{RELEASE_DIR_NAME}/social_release.json"),
         "created_at": now_iso(),
         "stage": outcome.stage,
+        "ship_status": "complete" if outcome.stage == "ship_complete" else "pending",
+        "distribution_status": "not_evaluated",
+        "commerce_status": "not_evaluated",
         "reason": outcome.reason,
         "evidence_name": "出荷確認動画",
         "evidence_kind": "動作証跡",
@@ -465,8 +483,8 @@ def capture_app(app_dir: Path, args: argparse.Namespace) -> CaptureOutcome:
         detail = "not requested"
         outcome.checks["Cloudflare本番反映確認"] = StepState(not args.require_cloudflare, detail)
 
-    failed = [f"{name}: {state.detail}" for name, state in outcome.checks.items() if not state.ok]
-    outcome.stage = "complete" if not failed else "failed"
+    failed = ship_failures(outcome.checks)
+    outcome.stage = "ship_complete" if not failed else "ship_failed"
     outcome.reason = "; ".join(failed)
     outcome.release_record = build_release_record(outcome, args)
     write_json(release_dir / "release.json", outcome.release_record)
@@ -475,7 +493,7 @@ def capture_app(app_dir: Path, args: argparse.Namespace) -> CaptureOutcome:
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Capture DAKE release evidence video and release.json.")
+    parser = argparse.ArgumentParser(description="Capture DAKE SHIP evidence and optional distribution evidence.")
     parser.add_argument("--app", action="append", help="app folder, app_key, or display_name")
     parser.add_argument("--all", action="store_true", help="process all DAKE apps")
     parser.add_argument("--only-available", action="store_true", help="with --all, process only status: available")
@@ -495,7 +513,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--verify-cloudflare", action="store_true")
     parser.add_argument("--require-cloudflare", action="store_true")
     parser.add_argument("--cloudflare-timeout", type=float, default=10.0)
-    parser.add_argument("--fail-on-incomplete", action="store_true")
+    parser.add_argument("--fail-on-incomplete", action="store_true", help="fail only when SHIP checks are incomplete")
     return parser.parse_args(argv)
 
 
@@ -507,7 +525,7 @@ def main(argv: list[str] | None = None) -> int:
     outcomes = [capture_app(app_dir, args) for app_dir in targets]
     for outcome in outcomes:
         print(f"{outcome.app_dir.name}: {outcome.stage} {outcome.reason}")
-    if args.fail_on_incomplete and any(outcome.stage != "complete" for outcome in outcomes):
+    if args.fail_on_incomplete and any(outcome.stage != "ship_complete" for outcome in outcomes):
         return 1
     return 0
 

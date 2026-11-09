@@ -402,9 +402,9 @@ generated だけを直しても、次回生成で消える。
 
 ## Store同期フロー
 
-### 正式出荷時のStore確認
+### DISTRIBUTION / COMMERCE作業時のStore確認
 
-DAKE正式出荷時は、Store同期フローを実行し、store.dakeapp.comの商品詳細URL、`payment_status`、Stripe Payment Link有無、BOOTH導線有無を確認する。
+Storeまたは決済の変更を依頼された時だけStore同期フローを実行し、store.dakeapp.comの商品詳細URL、`payment_status`、Stripe Payment Link有無、BOOTH導線有無を確認する。SHIP作業では実行しない。
 
 
 

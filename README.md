@@ -17,7 +17,7 @@ Built around the idea:
 
 ## Principles
 
-開発作業は [AGENTS.md](AGENTS.md) から開始します。シリーズ共通の必須仕様は [00_core/DAKE_COMMON_SPEC.md](00_core/DAKE_COMMON_SPEC.md)、個別仕様は各アプリのORIGINALが正本です。Windows単独exe・共通フッターの2026-10-18改定は次回改修・再ビルド・再出荷へ適用し、この文書更新では既存exeを改修・検証・再出荷していません。
+開発作業は [AGENTS.md](AGENTS.md) から開始します。通常の初期読込はAGENTS、[共通仕様](00_core/DAKE_COMMON_SPEC.md)、対象アプリのORIGINALの3つです。個別仕様はORIGINALを正本とし、README等の派生ビューは影響するものだけ更新します。出荷はSHIP / DISTRIBUTION / COMMERCEを分け、既存アプリは次回更新時に段階移行します。
 
 - one app = one job
 - fast to launch

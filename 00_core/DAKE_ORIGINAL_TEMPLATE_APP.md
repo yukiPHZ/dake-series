@@ -15,10 +15,11 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 Windowsデスクトップアプリの場合：
 
 - exe単独配布・単独起動必須。
-- 正式フッター：しまりす不動産 ｜ © Yukihiko Kikuta・PEAKHEADZ
+- 基本フッター：戸建買取査定 ｜ by Yukihiko Kikuta（査定だけリンク、作者名は非リンク）
+- 査定リンク：`https://dakeapp.com/go/kaitori?app=<app_id>`
 - UI_TEXTによる文言一元管理。
 - 共通アイコンの使用。
-- 次回の実装・再ビルド・正式出荷時に適合を確認する。未改修の既存成果物を検証済みにしない。
+- 次回の実装・再ビルド・SHIP時に適合を確認する。未改修の既存成果物を検証済みにしない。
 
 詳細規則は共通正本を参照し、個別の実測結果・不一致・固有仕様だけを本書へ記録する。非exe成果物にはWindows配布規則を強制しない。
 
@@ -267,7 +268,7 @@ zipや配布物へ何を入れるかを書く。
 
 ## スクリーンショット・画像方針
 
-正式出荷画像の方針を書く。
+UIまたはDISTRIBUTION変更時に必要な派生画像の方針を書く。
 
 - assets/screenshot.webp:
 - assets/screenshot.jpg:

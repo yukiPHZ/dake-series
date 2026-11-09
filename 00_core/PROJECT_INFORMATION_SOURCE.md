@@ -12,7 +12,7 @@ DAKEシリーズは、`ORIGINAL.md` を真の正本とする運用へ移行し�
 
 README、DAKE_META、release_body、booth_product、Store表示は派生ビューである。
 
-Storeは公開済みであり、Stripe Payment Link、BOOTH導線、Store同期フローを含む正式出荷先として扱う。
+Storeは公開済みの販売ビューであり、DISTRIBUTION / COMMERCEとしてSHIPと独立して扱う。
 
 ## 正本
 
@@ -22,13 +22,13 @@ DAKEシリーズの真の正本は `ORIGINAL.md` である。
 
 派生ビューとの矛盾は `ORIGINAL.md` を優先する。シリーズ共通必須規則は `DAKE_COMMON_SPEC.md` が正本であり、個別ORIGINALで緩和しない。
 
-2026-10-18のWindows単独exe・共通フッター改定は、次回実装・再ビルド・再出荷へ適用する。作業入口はrepoルートの `AGENTS.md`。既存成果物の改修・実機検証・再出荷は未実施であり、旧Releaseの適合を保証するものではない。
+共通仕様は新規アプリと次回更新対象へ段階適用する。作業入口はrepoルートの `AGENTS.md`。既存成果物の改修・実機検証・再出荷は一括実施せず、旧Releaseの新仕様適合を保証するものではない。
 
 ### 改定時点の実装差分（未改修・read-only確認）
 
 - `DAKE_PDF_SplitOne/build.bat` は `--onedir`。SplitOne / SplitSelectの `main.py` は旧クレジットのまま。次回対象改修で配布方式とUI_TEXTを共通規則へ合わせる。
 - `DAKE_PDF_SplitSelect/build.bat` は既に `--onefile`、ORIGINALにはv1.0.2の単独配布記録がある。今回は再ビルド・実機再検証していない。
-- `tools/generate_version_info.py` はCompanyNameと著作権に旧定義が残る。次回の承認された実装工程でPEAKHEADZ / Yukihiko Kikutaのメタデータ方針へ整合させ、UIフッターとは分けて確認する。
+- `tools/generate_version_info.py` はPEAKHEADZ / Yukihiko KikutaのWindowsメタデータをbuild時に自動生成する。UIフッターとは分けて扱う。
 - 出荷ツールのonedir対応や既存Releaseは互換・履歴として維持している。全アプリの実装・成果物を適合監査したわけではなく、上記以外も次回対象作業で調べる。
 
 ## 派生ビュー
@@ -57,7 +57,7 @@ generatedファイルは正本ではない。
 
 正本ではない。
 
-ただし、DAKE正式出荷先の一つである。
+ただし、DISTRIBUTIONの販売ビューの一つである。
 
 Store側で商品名、価格、説明文、Stripe Payment Link、BOOTH URLを直接編集しない。
 
@@ -73,16 +73,11 @@ store.dakeapp.com
 
 ## 出荷定義
 
-DAKE正式出荷には、次を含める。
+- SHIP: ORIGINAL確認、build、生成exeの主要動作、必要なGit作業、GitHub Release。GitHub Release完了で `SHIP = COMPLETE`。
+- DISTRIBUTION: BOOTH、dakeapp.com、store.dakeapp.com。`COMPLETE / PARTIAL / PENDING`。
+- COMMERCE: Stripe、Payment Link、`payment_status`、checkout。`READY / PENDING / NOT_REQUIRED`。
 
-- GitHub Release
-- BOOTH
-- dakeapp.com
-- store.dakeapp.com
-
-GitHub Releaseだけでは正式出荷完了としない。
-
-正本から派生ビューが生成または整合され、必要な出荷先へ届いている状態を正式出荷とする。
+DISTRIBUTION / COMMERCEの未完了はSHIPをPENDINGへ戻さない。「正式出荷」は全レイヤー完了の総称として使わない。
 
 ## Store同期
 
@@ -132,17 +127,9 @@ Stripe Payment Linkを追加・変更する場合は、対象商品の `ORIGINAL
 
 ## Codex標準確認順
 
-Codexは対象アプリ、サイト、Packの作業前に、原則として次の順で確認する。
+通常作業では、repoルートの `AGENTS.md`、`DAKE_COMMON_SPEC.md`、対象の `ORIGINAL.md` の3つだけを最初に読む。
 
-1. `ORIGINAL.md`
-2. `README.md`
-3. `DAKE_META`
-4. `release_body.md`
-5. `booth_product.txt`
-
-`ORIGINAL.md` が存在しない既存対象では、移行完了までREADMEを暫定参照してよい。
-
-ただし、今後の移行対象であれば `ORIGINAL.md` 作成を提案する。
+README、DAKE_META、release_body、booth_product、Storeは派生ビューであり、変更が影響する時だけ確認・更新する。`ORIGINAL.md` が存在しない既存対象は、次回その対象を修正・出荷する時だけREADMEを暫定参照して段階移行する。
 
 ## SHIMARISU
 

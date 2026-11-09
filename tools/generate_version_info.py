@@ -6,8 +6,9 @@ import re
 from pathlib import Path
 from typing import Any
 
-COMPANY_NAME = "\u3057\u307e\u308a\u3059\u4e0d\u52d5\u7523"
-COPYRIGHT = "\u00a9 2026 \u3057\u307e\u308a\u3059\u4e0d\u52d5\u7523 \u2014 Vibe-Coded by Yukihiko Kikuta"
+COMPANY_NAME = "PEAKHEADZ"
+COPYRIGHT = "\u00a9 Yukihiko Kikuta / PEAKHEADZ"
+PRODUCT_NAME = "\u30b7\u30f3\u30d7\u30eb\u305d\u308cDAKE"
 DEFAULT_VERSION = "1.0.0"
 
 
@@ -54,7 +55,7 @@ def build_version_info(meta: dict[str, Any]) -> str:
         "InternalName": Path(exe_name).stem,
         "LegalCopyright": COPYRIGHT,
         "OriginalFilename": exe_name,
-        "ProductName": display_name,
+        "ProductName": PRODUCT_NAME,
         "ProductVersion": version,
     }
     string_lines = "\n".join(
