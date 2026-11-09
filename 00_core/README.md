@@ -1,44 +1,12 @@
 # DAKE 00_core
 
-## DAKE正式出荷ライン
+## SHIP / DISTRIBUTION / COMMERCE
 
-DAKEの正式出荷は、GitHub Release公開だけでは完了としません。
-ORIGINAL.md真の正本、README公開ビュー、スクリーンショット、BOOTH販売素材、dakeapp.com掲載までを1本の出荷ラインとして扱います。
+- SHIP: build、生成exeの主要動作、必要なGit作業、GitHub Release。GitHub Release完了で `SHIP = COMPLETE`。
+- DISTRIBUTION: BOOTH、dakeapp.com、store.dakeapp.com。`COMPLETE / PARTIAL / PENDING`。
+- COMMERCE: Stripe、Payment Link、`payment_status`、checkout。`READY / PENDING / NOT_REQUIRED`。
 
-```text
-ORIGINAL.md
-↓
-README.md
-↓
-release_body.md
-↓
-assets/screenshot.webp
-↓
-assets/booth_thumbnail.jpg
-↓
-booth_product.txt
-↓
-build
-↓
-dist/*.exe
-↓
-GitHub Release
-↓
-BOOTH ready
-↓
-BOOTH
-↓
-dakeapp.com
-↓
-Cloudflare反映確認
-↓
-正式出荷完了
-```
-
-GitHub Release公開のみでは正式出荷完了とはしません。
-DAKEでは、ユーザーが一覧で見つけ、スクショで理解し、BOOTHまたはdakeapp.comから迷わず取得できる状態までを正式出荷とします。
-
-詳細は `DAKE_RELEASE_FLOW.md`、画像ルールは `DAKE_SCREENSHOT_RULE.md`、棚卸しは `DAKE_REVIEW_CHECKLIST.md` を参照します。
+BOOTH、Store、Stripe、Cloudflare、SNSはSHIP完了条件ではありません。詳細は `DAKE_RELEASE_FLOW.md` を参照します。
 
 DAKEシリーズ全体で参照する共通仕様ファイル置き場です。
 
@@ -49,15 +17,15 @@ DAKEシリーズ全体で参照する共通仕様ファイル置き場です。
 | ファイル | 役割 |
 | --- | --- |
 | `DAKE_SOURCE_OF_TRUTH_ENGINE_V02.md` | `ORIGINAL.md` を中心に、変換・利用・販売・運用までを含めた正本主義エンジン v0.2 の上位思想です。 |
-| `PROJECT_INFORMATION_SOURCE.md` | Phase 1〜13後のDAKEプロジェクト正式運用状態をまとめた情報源です。ORIGINAL、Store、Stripe、出荷、Codex確認順の現在地を確認します。 |
+| `PROJECT_INFORMATION_SOURCE.md` | DAKEプロジェクトの現在の運用状態とLegacy境界を確認します。 |
 | `DAKE_ORIGINAL_RULE.md` | `ORIGINAL.md` を真の正本とし、README / DAKE_META / release_body / booth_product / Store表示を派生ビューとして扱うルールです。 |
 | `DAKE_ORIGINAL_TEMPLATE_APP.md` | DAKEアプリへ `ORIGINAL.md` を導入するためのテンプレートです。 |
 | `DAKE_COMMON_SPEC.md` | DAKEシリーズの最上位共通仕様。迷ったら最初に読む正本です。 |
 | `DAKE_UI_GUIDE.md` | 見た目、操作感、初期表示、余白、ボタン、フッターの基準です。 |
-| `DAKE_RELEASE_FLOW.md` | buildからGitHub Release、BOOTH、dakeapp.com、Cloudflare反映確認までの公開手順です。 |
+| `DAKE_RELEASE_FLOW.md` | SHIP / DISTRIBUTION / COMMERCEの独立した手順です。 |
 | `DAKE_SCREENSHOT_RULE.md` | `assets/screenshot.webp` と `assets/booth_thumbnail.jpg` の作成・品質ルールです。 |
 | `DAKE_BOOTH_REGISTER_SPEC.md` | BOOTH登録最適化、DakeBOOTHアシスト、自動化境界、booth_ready完成定義です。 |
-| `DAKE_REVIEW_CHECKLIST.md` | 横断レビュー時に見るチェックリストです。 |
+| `DAKE_REVIEW_CHECKLIST.md` | 変更したレイヤーだけに使う短い確認表です。 |
 | `DAKE_BUILD_RULE.md` | PyInstaller、`build.bat`、exe名、hidden-importのルールです。 |
 | `DAKE_APP_TEMPLATE.md` | 新規アプリ作成時の基本フォルダ構成と最小テンプレです。 |
 | `DAKE_UI_TEXT_RULE.md` | `APP_NAME`、`WINDOW_TITLE`、`COPYRIGHT`、`UI_TEXT` の運用ルールです。 |
@@ -67,12 +35,7 @@ DAKEシリーズ全体で参照する共通仕様ファイル置き場です。
 
 ## 読む順番
 
-各作業はrepoルートの `AGENTS.md` を入口にする。以下は補助経路であり、Windowsアプリ作業で必読の個別ORIGINAL・共通仕様・build・UI_TEXT・Releaseの確認を省略しない。2026-10-18改定の単独exe・フッター要件は `DAKE_COMMON_SPEC.md`、出荷判定は `DAKE_RELEASE_FLOW.md` を参照する。
-
-1. 新規アプリを作る: `DAKE_COMMON_SPEC.md` → `DAKE_APP_TEMPLATE.md` → `DAKE_UI_GUIDE.md` → `DAKE_BUILD_RULE.md`
-2. 既存アプリをレビューする: `DAKE_REVIEW_CHECKLIST.md` → `DAKE_UI_TEXT_RULE.md` → `DAKE_SCREENSHOT_RULE.md`
-3. 公開作業をする: `DAKE_ORIGINAL_RULE.md` → 対象の `ORIGINAL.md` → `DAKE_RELEASE_FLOW.md` → `DAKE_GIT_RULE.md` → 各アプリの `README.md`
-4. 判断に迷ったとき: `DAKE_COMMON_SPEC.md` を優先する
+通常は `AGENTS.md`、`DAKE_COMMON_SPEC.md`、対象ORIGINALの3ファイルだけを読む。その他はAGENTSの条件付きルートに従い、対象作業が発生した時だけ参照する。
 
 ## 正本の考え方
 
@@ -89,7 +52,7 @@ DAKEシリーズ全体で参照する共通仕様ファイル置き場です。
 
 ## BOOTH登録
 
-- BOOTH登録はDAKE正式出荷ラインの一部です。
+- BOOTH登録はDISTRIBUTION作業です。SHIPとは独立します。
 - `booth_product.txt`、`booth_ready/`、`assets/booth_thumbnail.jpg` は必須素材として扱います。
 - DakeBOOTHアシストは登録補助用です。
 - Playwrightは入力補助に使用できますが、最終公開と販売開始は人間が確認して行います。
@@ -106,22 +69,22 @@ DAKEシリーズ全体で参照する共通仕様ファイル置き場です。
 
 ## DAKE Status Model v3
 
-`DAKE_META.status` controls whether an app enters the formal shipping line.
+`DAKE_META.status` は既存の公開候補フィルタとして残します。
 
-- `available`: formal shipping candidate. Release / BOOTH / dakeapp.com target.
-- `draft`: work in progress. Excluded from formal shipping.
-- `experimental`: exploratory app. Excluded from formal shipping. `show_in_launcher` and `show_on_site` should be false.
-- `frozen`: preserved but inactive. Excluded from formal shipping. Existing assets are not treated as missing.
-- `private`: personal or non-public app. Excluded from formal shipping.
+- `available`: public candidate. SHIP / DISTRIBUTIONの対象になり得る。
+- `draft`: work in progress.
+- `experimental`: exploratory app. `show_in_launcher` and `show_on_site` should be false.
+- `frozen`: preserved but inactive.
+- `private`: personal or non-public app.
 - `internal`: operations or management tool. Excluded from normal distribution, BOOTH, dakeapp.com, and Launcher listing.
 
-Only `available` apps are normal formal shipping check targets.
+`available` であっても、依頼されていないDISTRIBUTION / COMMERCEへ自動的に進めない。
 
 ## DAKE_META Role Model
 
 DAKE app README files also carry role and completion metadata:
 
 - `app_type`: role classification such as `market`, `qpcs`, `personal`, `frozen`, or `archived`.
-- `completion_goal`: the correct done condition such as `formal_release`, `local_ready`, `system_ready`, `reference_ready`, or `frozen_closed`.
+- `completion_goal`: Legacy互換値を含む完了目標。既存の `formal_release` は新しいSHIP定義を上書きしない。
 
-Dashboards should read these fields from README instead of assuming every app must reach BOOTH / dakeapp.com formal release. Market apps use `formal_release`; QPCS / BRAINZ / Dashboard / Wake apps generally use `system_ready` or `reference_ready`.
+Dashboards should read these fields without assuming that every app must reach BOOTH / dakeapp.com. SHIP / DISTRIBUTION / COMMERCEは別状態として扱う。

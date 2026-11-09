@@ -1,291 +1,67 @@
 # ChatGPT / Codex Workflow
 
-## 基本思想
-
-チャットは記憶庫ではなく、作業机として扱う。
-
-完了した作業は、ORIGINAL.md・README・Git・レポート・成果物に反映し、チャット自体は必要に応じてアーカイブする。
-
 ## 役割
 
-### ChatGPT
+- ChatGPT: 相談、設計、判断整理。
+- Codex: 依頼範囲の調査、実装、検証、Git作業。
+- 人間: 最終判断、外部公開、販売・決済に関する承認。
+- `ORIGINAL.md`: 対象アプリ・商品の真の正本。
+- Git: 変更履歴と直前Releaseへ戻るための履歴。
 
-- 思考
-- 相談
-- 設計
-- 判断
-- Codex指示書作成
-- 作業方針整理
+チャットは作業机であり正本ではありません。長大な棚卸しレポートを通常工程にしません。
 
-### Codex
+## 作業開始
 
-- 実装
-- 修正
-- 調査
-- 棚卸し
-- commit
-- push
-- レポート作成
+通常は次の3つだけを読みます。
 
-### ORIGINAL.md / README
+1. repoルートの `AGENTS.md`
+2. `00_core/DAKE_COMMON_SPEC.md`
+3. 対象アプリの `ORIGINAL.md`
 
-- `ORIGINAL.md`: 現在の仕様、思想、状態をまとめる真の正本
-- `README.md`: GitHub公開用ビュー
-- `DAKE_META`: Launcher / サイト / 管理ツール向けの機械利用ビュー
-- `release_body.md` / `booth_product.txt`: Release / BOOTH向けの派生ビュー
-- `store_products.generated.json` / `store.dakeapp.com`: Store向けの生成データと販売ビュー
+対象作業が発生した時だけ、AGENTSのルーティングに従ってbuild、UI、Git、画像、BOOTH、Store、Stripe等の仕様を追加で読みます。
 
-### Git
+README、DAKE_META、release_body、booth_product、Store、generated JSONは派生ビューです。作業開始時にすべて読まず、ORIGINALの変更が影響するものだけ確認・更新します。
 
-- 変更履歴
-- 実装履歴
-- 復元可能性
-- commit単位の記録
+## 実行
 
-### current_status_review
+1. 対象repo、対象アプリ、依頼レイヤーを確認する。
+2. 既存の未commit変更・未追跡ファイルを保護する。
+3. 依頼範囲だけを最小差分で変更する。
+4. 変更内容に応じた確認だけを行う。
+5. 対象差分とfinal `git status` を確認する。
 
-現在地を見失った時に作成する棚卸しレポート。
+`git add .` を安易に使わず、既存変更を戻す・削除する・stashする・混在commitしません。
 
-使うタイミング:
+## レイヤー
 
-- 作業が多方面に広がった時
-- 何が終わっているかわからなくなった時
-- 大きな出荷作業後
-- 新しいフェーズへ移る前
+- SHIP: build、生成exeの主要動作、必要なGit作業、GitHub Release。
+- DISTRIBUTION: BOOTH、dakeapp.com、store.dakeapp.com。
+- COMMERCE: Stripe、Payment Link、`payment_status`、checkout。
 
-保存先:
+SHIP依頼からDISTRIBUTION / COMMERCEへ進みません。販売情報だけの変更でアプリを再buildしません。Stripe変更でBOOTHやスクリーンショットを再確認しません。
 
-```text
-tools/reports/current_status_review_YYYYMMDD.md
-```
+既存のStore / StripeツールはDISTRIBUTION / COMMERCE支援として残します。ファイル名に `release` が含まれていてもSHIP判定ツールとして扱いません。
 
-## 新チャット運用
+## 外部操作
 
-原則:
+commit、push、GitHub Release、BOOTH公開、Store公開、Stripe live操作、Cloudflare反映、SNS投稿、価格変更、送信、削除は別の操作です。ユーザーの依頼に含まれない操作を実行しません。
 
-1テーマ1チャットを推奨する。
+公開結果は実際に確認できた状態だけを報告し、未確認を完了扱いしません。
 
-ただし、横断作業も可能。
-その場合は、毎回以下を明示する。
+## 一時作業場所
 
-- 対象repo
-- 対象フォルダ
-- 作業目的
-- やってよいこと
-- やってはいけないこと
-- commit / push の有無
+正式なrepoは `C:\Users\yukiz\devlop\DAKE_series` です。一時worktreeが必要な場合だけ `C:\Users\yukiz\devlop\_worktrees\` を使い、未commit・未push・Human Review待ちの必要作業を勝手に削除しません。
 
+通常の小修正に一時worktree、専用バックアップ、追加レポートを必須化しません。
 
+## 完了報告
 
-## Store反映作業
+次だけを簡潔に報告します。
 
-DAKE正式出荷でStoreへ反映する場合、Codexは `DAKE_series` で以下を実行して同期する。
-
-```powershell
-python tools\store\sync_store_to_site.py
-```
-
-Storeは正本ではない。商品情報をStore側で手編集せず、必要な変更は各商品の `ORIGINAL.md` へ戻す。
-
-完了報告では、Store商品詳細URL、`payment_status`、Stripe Payment Link有無、BOOTH導線有無、dake-store-site同期結果、Cloudflare Pages反映確認を報告する。
-
-
-## ローカル作業ルートと一時worktreeの片付け
-
-### 正式なローカル開発ルート
-
-Windows上の正式なローカル開発ルートは次とする。
-
-```text
-C:\Users\yukiz\devlop
-```
-
-DAKEシリーズの正式なローカルrepoは次を基準とする。
-
-```text
-C:\Users\yukiz\devlop\DAKE_series
-```
-
-Codexは、正式成果物・最新の通常作業状態・出荷用ローカル成果物を、最終的にこの配下へ集約する。
-
-### 一時worktree / 一時作業コピー
-
-競合回避、隔離検証が必要な場合は `C:\Users\yukiz\devlop\_worktrees\` 配下を使う。利用者指定の開発ルート外へ、無断で作業場所・恒久的な成果物置き場を増やさない。OS・ツール内部の一時ディレクトリはこれと区別する。
-
-ただし、それらは**一時作業場所であり正式な保存先ではない**。
-
-例:
-
-- ソース分離: `C:\Users\yukiz\devlop\_worktrees\...`
-- Human Review用データ・証跡: `C:\Users\yukiz\devlop\_review\...`
-
-Human Review用exeは通常repoの対象アプリ `dist` へ固定配置し、ユーザーに別worktreeを探させない。DakePDF俯瞰名前変更は `C:\Users\yukiz\devlop\DAKE_series\01_apps\DAKE_PDF_OverviewRename\dist\DakePDF_OverviewRename.exe` とする。既存版を退避し、実行中のexeを上書きせず、候補ZIP展開exeとSHA-256を照合する。隣接する `build-info.txt` に未公開候補、source commit、build日時、exe/ZIP SHA-256、実ビルドパスを記録する。成果物配置はmain反映ではなく、通常repoへソースを無断コピーしない。
-
-### 完了時の必須片付け
-
-一時worktree / 一時作業コピーを使用した作業は、次をすべて満たして初めて完了とする。
-
-1. 必要な変更がcommit済み
-2. 必要なcommitがpush済み
-3. PR / merge等、指定されたGit工程が完了
-4. 正式成果物が必要な場合、`C:\Users\yukiz\devlop` 配下の正式repo / 正式成果物置き場へ同期済み
-5. 同期後のファイル内容・SHA-256等を必要に応じて再確認
-6. 一時worktreeに未commit・未pushの必要変更がないことを確認
-7. 一時worktree / 一時コピーを削除（未merge・Human Review待ちなど必要な作業場所は理由を記録して保持）
-8. Git worktreeを使用した場合は `git worktree remove` と `git worktree prune` を適切に実施
-9. 一時build / dist / ZIP / venv / synthetic fixture等も、今後必要なものを除き削除
-
-**完成物を一時フォルダに置きっぱなしにしない。**
-
-### 削除時の安全条件
-
-- 未commit / 未push / 未mergeの必要作業が残っている一時worktreeは削除しない
-- BOOTH等への手動アップロード待ち成果物は、先に正式ローカルルートへコピー・検証してから一時場所を削除する
-- ユーザー作成ファイル、他repo、他プロジェクトのフォルダを巻き込んで削除しない
-- 削除対象を明示できない状態で一括削除しない
-
-### 完了報告
-
-一時worktree等を使用した場合、Codexの完了報告へ次を含める。
-
-- 一時作業場所
-- 正式ルートへ同期した成果物
-- 一時場所を削除したか
-- `git worktree list` / `git status` 等で残存・未反映がないこと
-
-## アーカイブ基準
-
-以下を満たしたチャットはアーカイブ候補。
-
-- ORIGINAL.mdまたはREADMEに反映済み
-- Git commit済み
-- push済み
-- 必要なレポートが保存済み
-- 次にやることが別テーマになった
-
-## Codex作業前の確認
-
-最初にrepoルートの `AGENTS.md` を確認する。Windowsアプリの新規開発・改修・ビルド・出荷では、対象ORIGINAL、`DAKE_COMMON_SPEC.md`、`DAKE_BUILD_RULE.md`、`DAKE_UI_TEXT_RULE.md`、`DAKE_RELEASE_FLOW.md`、その他の関係仕様を必ず読む。
-
-シリーズ必須規則は00_core、固有仕様は対象ORIGINAL、公開情報は派生ビューとして分担する。個別正本の優先を理由に共通必須規則を緩和しない。次回改修では配布依存・フッター等の実装不一致を修正範囲に含め、未確認は未確認と報告する。調査・文書作業だけならビルド・出荷しない。
-
-Codexは作業前に必要に応じて以下を確認する。
-
-- ORIGINAL.md
-- README.md
-- DAKE_META
-- release_body.md
-- booth_product.txt
-- store_products.generated.json
-- tools/reports/current_status_review_*.md
-- git status
-- git log --oneline -5
-
-## 禁止事項
-
-- チャットだけを正本にしない
-- 完了報告だけで終わらせない
-- ORIGINAL.md、README、Gitに反映しないまま記憶に頼らない
-- 対象repo不明のまま作業しない
-- git add . を安易に使わない
-
-## 運用まとめ
-
-ChatGPTは考える場所。
-Codexは動かす場所。
-ORIGINAL.mdは真の正本。
-READMEはGitHub公開用ビュー。
-Gitは履歴。
-status_reviewは現在地。
-チャットは作業机。
-
-終わったら片付ける。
-
-## Codex標準作業ルール v2
-
-DAKEシリーズでは、`ORIGINAL.md` を真の正本として扱います。CodexはREADME正本時代の前提で作業せず、対象アプリ・サイト・Packの作業前に、原則として次の順で確認します。
-
-1. `ORIGINAL.md`
-2. `README.md`
-3. `DAKE_META`
-4. `release_body.md`
-5. `booth_product.txt`
-6. 関連仕様ファイル
-
-存在しないファイルがある場合のみ次へ進みます。`ORIGINAL.md` が存在する対象では、派生ビューとの矛盾は `ORIGINAL.md` を優先します。00_coreのシリーズ必須規則とは責務を分け、個別正本による緩和はしません。
-
-優先順位は次の通りです。
-
-```text
-ORIGINAL.md
-↓
-README.md
-↓
-DAKE_META
-↓
-release_body.md
-↓
-booth_product.txt
-```
-
-`README.md` はGitHub公開ビューであり、真の正本ではありません。READMEにしか存在しない重要情報を見つけた場合は、その情報を `ORIGINAL.md` へ戻すべきか確認します。
-
-派生ビューの位置づけは次の通りです。
-
-- `README.md` = GitHub公開ビュー
-- `DAKE_META` = Launcher / サイト / 管理ツール向け機械利用ビュー
-- `release_body.md` = GitHub Releaseビュー
-- `booth_product.txt` = BOOTH登録ビュー
-- `store.dakeapp.com` = 販売ビュー
-
-上記はすべて派生物であり、正本ではありません。Store側で商品名、価格、説明文、Stripe Payment Link、BOOTH URLを直接編集しません。
-
-正式出荷時は、次の順で確認します。
-
-```text
-ORIGINAL.md確認
-↓
-README整合確認
-↓
-release_body整合確認
-↓
-booth_product整合確認
-↓
-Store generated JSON更新
-↓
-Store同期
-↓
-GitHub Release
-↓
-BOOTH
-↓
-dakeapp.com
-↓
-store.dakeapp.com
-↓
-出荷完了
-```
-
-Store確認では、次を標準項目とします。
-
-- `store_products.generated.json` 更新確認
-- Store同期確認
-- Store商品詳細URL確認
-- `payment_status` 確認
-- Stripe導線確認
-- BOOTH導線確認
-- Cloudflare反映確認
-
-Codexの完了報告には、正式出荷・Store反映が関係する場合、次を含めます。
-
-- `ORIGINAL.md` 確認有無
-- README / release_body / booth_product 整合確認
-- Store同期結果
-- Store商品詳細URL
-- `payment_status`
-- Stripe導線
-- BOOTH導線
-- Cloudflare反映確認
-- final git status
-
-過渡期ルールとして、`ORIGINAL.md` がまだ存在しない既存アプリでは `README.md` を暫定参照してよいものとします。ただし、今後の移行対象であれば `ORIGINAL.md` 作成を提案します。
+1. 主要変更ファイル
+2. 統合・降格したルール
+3. SHIP / DISTRIBUTION / COMMERCEの状態
+4. 実施テスト
+5. 触らなかったもの
+6. 残る明確な課題
+7. final `git status`

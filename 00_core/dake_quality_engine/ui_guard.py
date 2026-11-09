@@ -6,8 +6,8 @@ from pathlib import Path
 
 JAPANESE_RE = r"ぁ-んァ-ン一-龥ー"
 DIRECT_TEXT_RE = re.compile(r"\btext\s*=\s*([\"'])(?P<text>[^\"']*[" + JAPANESE_RE + r"][^\"']*)\1")
-CONSTANTS = ("APP_NAME", "WINDOW_TITLE", "COPYRIGHT", "UI_TEXT")
-FOOTER_KEYS = (
+CONSTANTS = ("APP_NAME", "WINDOW_TITLE", "UI_TEXT")
+LEGACY_FOOTER_KEYS = (
     "footer_left",
     "footer_caption",
     "footer_link_1",
@@ -15,6 +15,7 @@ FOOTER_KEYS = (
     "footer_separator",
     "footer_copyright",
 )
+CURRENT_FOOTER_KEYS = ("footer_kaitori", "footer_author")
 
 
 @dataclass(frozen=True)
@@ -30,8 +31,16 @@ def check_source(source: str) -> list[UiGuardIssue]:
         if not re.search(rf"^\s*{re.escape(name)}\s*=", source, re.MULTILINE):
             issues.append(UiGuardIssue("WARN", f"{name} is not defined"))
 
-    for key in FOOTER_KEYS:
-        if key not in source:
+    uses_current_footer = any(key in source for key in CURRENT_FOOTER_KEYS)
+    uses_legacy_footer = any(key in source for key in LEGACY_FOOTER_KEYS)
+    if uses_current_footer:
+        for key in CURRENT_FOOTER_KEYS:
+            if key not in source:
+                issues.append(UiGuardIssue("WARN", f"UI_TEXT footer key missing: {key}"))
+        if not re.search(r"^\s*KAITORI_URL\s*=", source, re.MULTILINE):
+            issues.append(UiGuardIssue("WARN", "KAITORI_URL is not defined"))
+    elif not uses_legacy_footer:
+        for key in CURRENT_FOOTER_KEYS:
             issues.append(UiGuardIssue("WARN", f"UI_TEXT footer key missing: {key}"))
 
     lines = source.splitlines()

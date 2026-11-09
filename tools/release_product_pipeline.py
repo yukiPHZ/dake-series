@@ -1,3 +1,9 @@
+"""Legacy-named DISTRIBUTION / COMMERCE pipeline.
+
+This tool does not build an app, validate its main function, create a GitHub
+Release, or decide SHIP completion.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -12,7 +18,7 @@ from store.release_pipeline_core import (
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Inspect and advance the DAKE product release pipeline one product at a time.",
+        description="Inspect and advance the DAKE DISTRIBUTION / COMMERCE pipeline one product at a time.",
     )
     add_common_args(parser)
     return parser.parse_args()
@@ -40,7 +46,7 @@ def main() -> int:
             print(f"product_id: {status['product_id']}")
             print(f"current_stage: {status['current_stage']}")
             print(f"next_action: {status['next_action'] or 'none'}")
-            print(f"next_formal_action: {status.get('next_formal_action') or 'none'}")
+            print(f"next_legacy_action: {status.get('next_formal_action') or 'none'}")
         return 0 if status["current_stage"] not in {"SOURCE_INVALID", "INCONSISTENT"} else 1
 
     result = pipeline.advance(args.product_id)

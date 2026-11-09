@@ -1,4 +1,4 @@
-"""Generate BOOTH-ready assets for the DAKE formal shipping line.
+"""Generate BOOTH-ready assets for the DAKE DISTRIBUTION layer.
 
 DAKE formal shipping includes README metadata, release_body.md,
 assets/screenshot.webp, assets/booth_thumbnail.jpg, booth_product.txt,
@@ -227,7 +227,7 @@ def make_readme_txt(title: str, description: str, features: list[str]) -> str:
 PEAKHEADZ
 https://peakheadz.com
 
-Vibe-Coded by Yukihiko Kikuta
+by Yukihiko Kikuta
 """
 
 

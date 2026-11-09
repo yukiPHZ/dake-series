@@ -1,28 +1,37 @@
-# DAKE Series: Codex作業規則
+# DAKE Series: Codex作業入口
 
-## 作業前の必読
+## 通常作業で最初に読むもの
 
-1. 対象アプリの `ORIGINAL.md`。
-2. `00_core/DAKE_COMMON_SPEC.md`（シリーズ共通必須規則の正本）。
-3. `00_core/DAKE_BUILD_RULE.md`。
-4. `00_core/DAKE_UI_TEXT_RULE.md`。
-5. `00_core/DAKE_RELEASE_FLOW.md`。
-6. 対象作業に関係するその他の共通仕様、対象README・派生ビュー。
+原則、次の3つだけを読む。
 
-ORIGINALがない既存対象はREADMEを暫定参照し、正本作成の必要性を確認する。個別仕様はORIGINAL、シリーズ必須規則は00_coreで管理する。共通必須規則と個別正本が矛盾したら、旧仕様を無断採用せず、共通規則に合わせて個別文書との整合を取る。
+1. この `AGENTS.md`
+2. `00_core/DAKE_COMMON_SPEC.md`
+3. 対象アプリの `ORIGINAL.md`
 
-## 新規開発・改修・再ビルド・再出荷
+`ORIGINAL.md` がないLegacyアプリは、次回そのアプリを修正・出荷する時だけREADMEを暫定参照し、新仕様へ段階移行する。README、DAKE_META、release_body、booth_product、Store、generated JSONは派生ビューであり、作業開始時に全件確認しない。変更が影響するビューだけを確認・更新する。
 
-- Windows exeは単独配布・単独起動必須。PyInstallerは原則 `--onefile`。起動高速化のための `--onedir` 化は不可。満たせなければ出荷を保留し、原因・代案を報告する。
-- 変更対象アプリの実装を調べ、共通仕様との差分（配布依存・フッター・UI_TEXT等）を修正対象に含める。共通仕様の全文を個別ORIGINALへ複製しない。
-- フッター正式文字列は `00_core/DAKE_COMMON_SPEC.md`、定義方法は `00_core/DAKE_UI_TEXT_RULE.md` に従う。共通アイコン・既存リンク・キャッチコピー・配色を勝手に変えない。
-- 出荷前に `00_core/DAKE_RELEASE_FLOW.md` と `00_core/DAKE_REVIEW_CHECKLIST.md` のWindows単独exeゲートを実施する。未検証はPASSにしない。
-- 過去Releaseや計測値は履歴として保持する。新規則制定だけで既存成果物の適合済み・差し替え済みと扱わない。
-- 調査・文書作業だけなら、不要なビルド・GUI起動・成果物生成・出荷を行わない。Web等の非exe成果物にWindows配布規則を強制しない。
+## 条件付き参照
 
-## Gitと作業範囲
+- build方式、依存、PyInstaller、Windowsメタデータを変える: `DAKE_BUILD_RULE.md`
+- SHIP、GitHub Release、出荷判定: `DAKE_RELEASE_FLOW.md`
+- UI文言・共通フッターそのものを変える: `DAKE_UI_TEXT_RULE.md` / `DAKE_UI_GUIDE.md`
+- Git除外・成果物の扱いを変える: `DAKE_GIT_RULE.md`
+- アイコンを変える: `DAKE_ICON_RULE.md`
+- UI変更で画像更新が必要: `DAKE_SCREENSHOT_RULE.md`
+- BOOTH作業: `DAKE_BOOTH_REGISTER_SPEC.md`
+- Store作業: `DAKE_STORE_OPERATION_RULE.md` / `DAKE_STORE_GENERATED_SPEC.md`
+- Stripe・決済作業: `tools/commerce/` と対象Commerce仕様
 
-- 正式ルートは `C:\Users\yukiz\devlop\DAKE_series`。作業前後にbranch・mainとの差分・`git status` を確認する。
-- 未commit変更・未追跡ファイルを勝手に戻す、削除する、stashする、commitへ混ぜることは禁止。
-- 指定範囲だけ編集し、対象ファイルのみstageする。`git add .` を安易に使わない。
-- commit / push / PR / main merge / Release / Productionは別の権限。依頼に含まれない公開や他repo編集をしない。
+関連しない仕様を「念のため」一括読込・一括更新しない。
+
+## 作業境界
+
+- 依頼されたレイヤーだけを扱う。SHIP依頼からBOOTH、Store、Stripe、Cloudflare、SNS、販売文章、価格、画像生成へ自動的に進まない。
+- 公開、送信、決済作成・変更、BOOTH公開、価格変更、外部登録、削除は、人間の明示依頼なしに実行しない。
+- 未commit変更、未追跡ファイル、過去Release、既存設定を勝手に戻す・削除・stash・混在commitしない。
+- 新機能、全面リファクタリング、新しい状態管理・DB・CI・監査・承認・バックアップ・ログ基盤を理由なく追加しない。削除・統合・単純化を優先する。
+- `commit`、`push`、GitHub Release、販売・公開は別権限。依頼範囲を越えない。
+
+## 完了時
+
+変更内容に応じた最小テストを行い、対象差分とfinal `git status` を確認する。未確認をPASSにせず、SHIP / DISTRIBUTION / COMMERCEを混ぜずに報告する。

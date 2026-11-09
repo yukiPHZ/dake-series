@@ -205,33 +205,27 @@ AIは補助脳であり、正本の所有者ではない。
 
 Codexは最初に正本を見る。
 
-順番は固定する。
+通常作業の入口は3つに絞る。
 
 ```text
-ORIGINAL.md
-↓
-README
-↓
-DAKE_META
-↓
-release_body
-↓
-booth_product
+AGENTS.md
+DAKE_COMMON_SPEC.md
+対象の ORIGINAL.md
 ```
 
-矛盾した場合、`ORIGINAL.md` を優先する。
+README、DAKE_META、release_body、booth_product、Storeは派生ビューであり、変更が影響する時だけ確認・更新する。矛盾した場合は `ORIGINAL.md` を優先する。
 
 ---
 
 ## 13. 出荷
 
-DAKEシリーズの正式出荷とは、GitHubへ置くことではない。
+DAKEの出荷は3レイヤーに分ける。
 
-BOOTHへ登録することでもない。
+- SHIP: アプリ本体を完成し、GitHub Releaseへ公開する。完了後はBOOTHやStoreの未完了で戻さない。
+- DISTRIBUTION: BOOTH、dakeapp.com、store.dakeapp.comへの掲載。
+- COMMERCE: Stripe、Payment Link、決済確認。
 
-Storeへ載せることでもない。
-
-正式出荷とは、正本から派生物が生成され、必要な出荷先へ届いている状態である。
+「正式出荷」を全レイヤー完了の総称として使わない。
 
 ---
 

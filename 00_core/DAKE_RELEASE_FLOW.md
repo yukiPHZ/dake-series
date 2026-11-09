@@ -1,304 +1,106 @@
 # DAKE_RELEASE_FLOW
 
-## Windows単独exe出荷ゲート（2026-10-18以後）
+SHIP / DISTRIBUTION / COMMERCEを別々に扱うための最小フローです。共通原則は `DAKE_COMMON_SPEC.md` を正本とします。
 
-配布仕様は `DAKE_COMMON_SPEC.md` が正本。今後の新規ビルド・再出荷では以下を必須確認する。非exe成果物には適用しない。
-
-- [ ] PyInstallerは原則onefileで生成し、exeだけを空の別フォルダへコピーして起動・主要機能を確認した。
-- [ ] `_internal` 等の隣接runtime・必須リソース、開発環境、利用者による追加インストールへ依存していない。
-- [ ] 開発PC以外のWindowsでも追加環境構築なしで動作を確認した。
-- [ ] 配布ZIPを展開し、exeのみを取り出して同じ検証を行った。README・ライセンス資料は実行時の必須依存ではない。
-- [ ] UIフッターが共通仕様の正式文字列と完全一致し、狭幅で見切れず、旧クレジットがUIに残っていない。
-- [ ] WindowsメタデータはCompanyName=PEAKHEADZ、個人制作者・著作権者=Yukihiko Kikutaの既定方針に一致する。画面フッターと別項目として確認した。
-
-検証環境、対象source commit、exe/ZIPのSHA-256、結果・未確認事項を出荷レポートに残す。未実施をPASSにしない。不適合なら出荷保留とし、onedirへ自動切替しない。単なる調査・文書更新では、このゲートを実施したと記載しない。
-
-旧onedir配布例外は今後の正式方式として失効する。以前のReleaseがruntimeフォルダを必要とした事実、過去のZIP・Launcher対応・計測値は履歴として残す。今回それらを削除・差し替え・再出荷しない。既存ツールのonedir対応を利用して新規則を迂回しない。
-
-GitHub ReleaseとBOOTHの配布物整合・SHA-256検証、Storeやサイトへローカルexeパスを公開URLとして転記しない規則は維持する。
-
-## DAKE正式出荷ライン
-
-DAKEの正式出荷ラインは以下で固定します。
+## 1. SHIP
 
 ```text
-ORIGINAL.md
+対象ORIGINALを確認
 ↓
-README.md
-↓
-release_body.md
-↓
-assets/screenshot.webp
-↓
-assets/booth_thumbnail.jpg
-↓
-booth_product.txt
+変更を実装
 ↓
 build
 ↓
-dist/*.exe
+生成された配布exeで起動・主要機能確認
 ↓
-GitHub Release
+対象差分だけcommit / push
 ↓
-BOOTH ready
+GitHub Releaseへ成果物を公開
 ↓
-BOOTH
-↓
-dakeapp.com
-↓
-store_products.generated.json 再生成
-↓
-dake-store-site 同期
-↓
-store.dakeapp.com 商品詳細確認
-↓
-payment_status 確認
-↓
-Cloudflare反映確認
-↓
-正式出荷完了
+SHIP = COMPLETE
 ```
 
-GitHub Release公開のみでは正式出荷完了とはしません。
-以下が揃って初めて正式出荷とします。
+GitHub Releaseが完了すればSHIPは完了です。DISTRIBUTION / COMMERCEが未完了でもSHIPをPENDINGへ戻しません。
 
-- `ORIGINAL.md` が最新（未導入の既存アプリでは `README.md` を暫定参照）
-- `README.md` がGitHub公開用ビューとして最新
-- `release_body.md` が最新
-- `assets/screenshot.webp` が存在する
-- `assets/booth_thumbnail.jpg` が存在する
-- `booth_product.txt` が存在する
-- `booth_ready/` が生成されている
-- `dist/*.exe` が生成されている
-- GitHub Release が作成され、exeが添付されている
-- README の `DAKE_META.release_url` が派生ビューとして更新済み
-- BOOTH掲載準備が完了している
-- dakeapp.com に反映されている
-- `tools/store/sync_store_to_site.py` で `store_products.generated.json` を再生成し、dake-store-siteへ同期している
-- store.dakeapp.comの商品詳細ページを確認している
-- `payment_status`（`stripe_ready` / `booth_only` / `preparing` / `not_for_sale`）を確認している
-- Cloudflare反映確認済み
+### SHIP停止条件
 
-上記が揃って初めて「正式出荷完了」とします。
-GitHub Release作成のみで出荷完了と報告しません。
+原則、次だけです。
 
-## Codex出荷テンプレ必須項目
+1. build失敗
+2. exeが起動しない
+3. 主機能が成立しない
+4. データ破壊等の重大リスクが確認された
 
-今後のCodex出荷指示では、以下を必ず確認対象に含めます。
+BOOTH未登録、スクリーンショット未更新、Store未同期、Stripe未確認、Cloudflare未確認、SNS未投稿、販売説明文未更新はSHIP停止条件ではありません。
 
-- `assets/screenshot.webp` を生成・確認する。
-- `assets/booth_thumbnail.jpg` を生成・確認する。
-- `booth_ready/booth_product.txt` を生成・確認する。
-- `booth_ready/` を生成・確認する。
-- `dist/*.exe` をGitHub Releaseへ添付する。
-- READMEの `DAKE_META.release_url` をRelease作成後に更新する。
-- README / DAKE_META / release_body / booth_product を直接編集する場合は、`ORIGINAL.md` に戻すべき一次情報かを確認する。
-- dakeapp.com掲載に必要な `display_name`、`site_title`、`site_description`、`update_summary`、`release_url`、`screenshot_path` を確認する。
-- dakeapp.com反映後、Cloudflare上の本番URLで200、スクショ、Releaseリンクを確認する。
-- Store反映時は `tools/store/sync_store_to_site.py` を実行し、`store_products.generated.json` 再生成、dake-store-site同期、store.dakeapp.com商品詳細、`payment_status` を確認する。
+### SHIPの確認量
 
-BOOTH登録最適化の正本は `DAKE_BOOTH_REGISTER_SPEC.md` です。
-DakeBOOTHアシストは登録入力補助に使えますが、公開ボタンは押さず、最終公開は人間が確認します。
+- 通常の小修正: build、生成exeの主要動作、GitHub Release。
+- packaging・PyInstaller・依存・DLL・runtime変更: 開発環境依存を除いたWindows確認を追加。
+- UI変更: 必要な表示確認。公開画像へ影響する場合だけスクリーンショット更新。
+- 文書・仕様だけの変更: build、GUI、Releaseを実施したと扱わない。
 
-DAKEアプリ完成後の公開手順です。
+通常は生成された配布exeを一度確認します。空フォルダ、ZIP展開後、別PCで同じ操作を重ねるのはpackaging関連変更時だけです。
 
-## 前提
+GitHub Releaseの過去版は原則保持します。patch / minor / majorは `DAKE_COMMON_SPEC.md` の簡潔な定義に従います。
 
-- GitHub Release本体の編集は、明示された公開作業時だけ行う。
-- Release説明文の元情報は `ORIGINAL.md`。
-- `ORIGINAL.md` 未導入の既存アプリでは、各アプリREADMEの `RELEASE_BODY` を暫定参照する。
-- `release_body.md` はGitHub Releaseへ貼るための派生ビュー。
-- `release_url` はRelease作成後にREADMEへ後入れする。
+## 2. DISTRIBUTION
 
-## 1. 完成確認
+対象:
 
-- `main.py` が起動する。
-- `build.bat` が通る。
-- `dist/<exe_name>.exe` が生成される。
-- 共通アイコンが反映される。
-- 文字化けがない。
-- UI_TEXT管理が守られている。
-- 起動直後の画面が整っている。
+- BOOTH
+- dakeapp.com
+- store.dakeapp.com
 
-## 2. README整備
+状態:
 
-各アプリREADMEはGitHub公開用ビューとして以下を置く:
+- `DISTRIBUTION = COMPLETE`
+- `DISTRIBUTION = PARTIAL`
+- `DISTRIBUTION = PENDING`
 
-- `DAKE_META`
-- `RELEASE_BODY`
-- 必要な使い方、仕様、注意事項
+販売・配布先への掲載を依頼された時だけ、影響する派生ビューと対象サービスを確認します。BOOTH、Store、Cloudflareの未完了はSHIPへ影響させません。
 
-`DAKE_META.status`:
+## 3. COMMERCE
 
-- `available`: exe、README、screenshotが揃っている。
-- `missing_exe`: dist内exeがない。
-- `build_failed`: buildまたは起動、スクショ取得に失敗した。
+対象:
 
-## 3. release_body.md生成
+- Stripe
+- Payment Link
+- `payment_status`
+- checkout確認
 
-- `ORIGINAL.md` のRelease用情報を優先する。未導入アプリではREADMEの `RELEASE_BODY` を読み取る。
-- 各アプリフォルダ直下に `release_body.md` を生成する。
-- 3〜5行の箇条書きにする。
-- 長い説明は書かない。
+状態:
 
-## 4. スクリーンショット作成
+- `COMMERCE = READY`
+- `COMMERCE = PENDING`
+- `COMMERCE = NOT_REQUIRED`
 
-- `dist` 内exeを起動する。
-- 起動直後のアプリウインドウだけを撮る。
-- `assets/screenshot.webp` に保存する。
-- 横幅1200pxを超える場合だけ縮小する。
-- 引き延ばしは禁止。
+無料アプリや決済不要対象では `NOT_REQUIRED` が正常です。Stripe live操作、決済作成・変更は人間の明示依頼と個別確認なしに実行しません。
 
-詳細は `DAKE_SCREENSHOT_RULE.md` を参照する。
+## 4. 正本と派生ビュー
 
-## 5. Git確認
+判断は対象の `ORIGINAL.md` で行います。README、DAKE_META、release_body、booth_product、Store、generated JSONは、今回の変更が影響するものだけ更新します。
 
-- ソース、README、release_body、screenshotを確認する。
-- `build/`、`dist/`、`*.spec`、`*.exe` は原則Gitに含めない。
-- GitHub Releaseへ添付するexeは、Git管理ではなくRelease成果物として扱う。
+GitHub Release作業ならrelease bodyと成果物を確認します。BOOTH作業でない時にbooth_productやサムネイルを更新せず、Store作業でない時にgenerated JSONやCloudflareを確認しません。
 
-## 6. GitHubへpush
+## 5. 既存ツールの責務
 
-- 変更内容を確認する。
-- 必要なファイルだけcommitする。
-- GitHubへpushする。
-- Release作成前にREADMEやスクショの最終状態を確認する。
+- `tools/release_capture.py`: SHIPの起動・主要機能・GitHub Release証跡。画像・BOOTH・サイト・動画は任意情報で、SHIP停止条件にしない。
+- `tools/release_product_pipeline.py`: 既存のDISTRIBUTION / COMMERCE支援パイプライン。SHIP完了を判定しない。
+- `tools/release_product.py` / `tools/finalize_product_release.py` / `tools/commerce/`: COMMERCE専用。
+- `tools/store/`: DISTRIBUTION / COMMERCE専用。
+- `tools/make_booth_ready.py` / `tools/record_booth_registration.py`: DISTRIBUTION専用。
 
-## 7. GitHub Release作成
+既存の `release` / `formal_release` というファイル名・互換フィールドは直ちに全改名しません。これらはLegacy名であり、新しいSHIP定義を上書きしません。
 
-Releaseごとに確認する項目:
+## 6. Codexの境界
 
-- 対象アプリ名。
-- 添付するexe。
-- `release_body.md` の内容。
-- バージョンまたは日付。
-- 既存Releaseとの重複。
-
-Release説明欄には `release_body.md` を貼る。
-
-## 8. exe添付
-
-- `dist/<exe_name>.exe` を添付する。
-- 添付後、ダウンロードできることを確認する。
-- 必要ならexe名とReleaseタイトルを揃える。
-
-## 9. release_url後入れ
-
-Release作成後:
-
-- 各アプリREADMEの `DAKE_META.release_url` にRelease URLを入れる。
-- `ORIGINAL.md` 導入済みアプリでは、Release URLや公開状態が正本へ戻すべき情報か確認する。
-- `update_summary` に公開内容を短く反映する。
-- `status` は問題なければ `available` のままにする。
-
-## 10. dakeapp.com反映
-
-- READMEの `DAKE_META` を機械利用ビューとして読み込む。
-- `site_title`、`site_description`、`release_url`、`screenshot_path` を反映する。
-- `show_on_site: true` のアプリだけ掲載する。
-- スクリーンショットは `assets/screenshot.webp` を使う。
-
-## 11. Cloudflare反映確認
-
-- `git push` 後、dakeapp.com本番URLの反映を確認する。
-- `/apps/`、`/update/`、`/sitemap.xml`、対象アプリ詳細ページが200で返ることを確認する。
-- 対象アプリ詳細ページにRelease URL、説明文、スクリーンショットが反映されていることを確認する。
-- Cloudflare反映確認まで終わってから、正式出荷完了として報告する。
-
-## 公開前の最終チェック
-
-- Release本文が短い。
-- exeが対象アプリのもの。
-- スクリーンショットが最新。
-- READMEの `exe_name` と添付exeが一致。
-- `release_url` はRelease作成後に更新されている。
-- BOOTH ready素材が生成済み。
-- dakeapp.comに表示されている。
-- Cloudflare反映確認済み。
-- GitHub Releaseのみで出荷完了と扱っていない。
-
-## 正式出荷ライン v2
-
-通常出荷候補は `DAKE_META.status: available` のアプリのみに限定する。
-
-以下の状態は通常出荷チェックから除外し、別枠で扱う。
-
-- `frozen`
-- `draft`
-- `experimental`
-- `private`
-
-BOOTH公開後は `booth_ready/booth_product.txt` の `# URL` 欄へBOOTH URLを戻す。
-BOOTH URL未記入のままCLOSED扱いしない。
-
-`show_in_launcher` / `show_on_site` は `available` の公開対象にのみ true を付ける。
-`frozen`、`draft`、`experimental`、`private` が true を持つ場合は、出荷ライン上の矛盾として点検する。
-
-
-## Formal Shipping Line v3
-
-Normal shipping candidates are limited to `DAKE_META.status: available`.
-
-Excluded statuses:
-
-- `frozen`
-- `draft`
-- `experimental`
-- `private`
-- `internal`
-
-`internal` means an operations or management tool. It is excluded from normal distribution, BOOTH, dakeapp.com, and Launcher listing.
-`show_in_launcher` and `show_on_site` should be true only for public `available` apps.
-If a non-available app has either flag set to true, treat it as a formal shipping line conflict.
-
-### v3 exe launch check
-
-For `status: available` apps, the actual `dist/*.exe` launch check is required before treating the app as ready for release.
-
-Priority:
-
-1. Run `dist/*.exe --launch-check`.
-2. If `--launch-check` is not implemented yet, run a short GUI smoke launch and close it.
-
-New DAKE apps should implement `--launch-check` by default. The command must only verify launchability, return quickly, and exit with code `0` on success. It must not run file conversion, publishing, sending, browser automation, BOOTH operations, or other external side effects. Failures should exit with code `1` and a short stderr message.
-
-
-## DAKE正式出荷定義 v2（Store対応）
-
-今後のDAKE正式出荷は、GitHub Release、BOOTH、dakeapp.comに加えて、store.dakeapp.comへの掲載・同期・本番確認までを含める。
-
-Storeは正本ではない。真の正本は各商品の `ORIGINAL.md` である。
+依頼されたレイヤーだけを実施します。例えばSHIP依頼なら、必要な権限がある範囲でSHIPを完了し、
 
 ```text
-ORIGINAL.md
-↓
-store_products.generated.json
-↓
-dake-store-site
-↓
-store.dakeapp.com
+SHIP = COMPLETE
+DISTRIBUTION = PENDING
+COMMERCE = NOT_REQUIRED または PENDING
 ```
 
-正式出荷時は以下を確認する。
-
-1. `ORIGINAL.md` 更新。
-2. `README.md` / `DAKE_META` / `release_body.md` / `booth_product.txt` の整合確認。
-3. GitHub Release URL確認。
-4. BOOTH URLまたはBOOTH導線確認。
-5. dakeapp.com掲載URL確認。
-6. `python tools/store/sync_store_to_site.py` によるStore generated JSON再生成・同期。
-7. store.dakeapp.comの商品詳細URL確認。
-8. `payment_status` 確認。
-9. Stripe Payment Link有無、BOOTH導線有無、準備中表示確認。
-10. Cloudflare Pages反映確認。
-
-`payment_status` の扱い:
-
-- `stripe_ready`: Stripe Payment Linkあり。
-- `booth_only`: BOOTH導線のみ。
-- `preparing`: 準備中。
-- `not_for_sale`: 販売対象外。
-
-Stripe Secret、APIキー、Webhook Secretは、公開repo、generated JSON、Store JavaScriptへ絶対に入れない。
-
-Codexの正式出荷完了報告には、store.dakeapp.com商品詳細URL、`payment_status`、Stripe Payment Link有無、BOOTH導線有無、Store同期結果、Cloudflare Pages反映確認を含める。
+のように分けて報告します。完全性や念のためを理由に他レイヤーへ進みません。

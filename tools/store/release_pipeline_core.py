@@ -1,3 +1,9 @@
+"""Legacy-named Store / Stripe pipeline for DISTRIBUTION and COMMERCE only.
+
+Internal stage and compatibility field names containing release or
+formal_release do not represent the DAKE SHIP layer.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -781,6 +787,8 @@ class ReleasePipeline:
 
         return {
             "product_id": product_id,
+            "pipeline_layer": "distribution_commerce",
+            "ship_status": "not_evaluated",
             "product_type": source.product_type,
             "source_original": source.source_original,
             "title": source.title,
@@ -798,6 +806,7 @@ class ReleasePipeline:
             "commerce_status": commerce_status,
             "social_status": formal_social_status,
             "formal_release_status": formal_release_status,
+            "formal_release_status_scope": "legacy_distribution_commerce_compatibility",
             "checks": checks,
             "errors": errors,
             "warnings": warnings,
@@ -873,7 +882,8 @@ def render_status_markdown(status: dict[str, Any]) -> str:
 - current_stage: {status.get('current_stage')}
 - commerce_status: {status.get('commerce_status')}
 - social_status: {status.get('social_status')}
-- formal_release_status: {status.get('formal_release_status')}
+- legacy_formal_release_status: {status.get('formal_release_status')}
+- formal_release_status_scope: {status.get('formal_release_status_scope')}
 - payment_status: {status.get('payment_status')}
 - stripe_payment_link: {status.get('stripe_payment_link')}
 - next_action: {status.get('next_action') or 'none'}
@@ -899,7 +909,7 @@ def print_status(status: dict[str, Any]) -> None:
     print(f"current_stage: {status.get('current_stage')}")
     print(f"commerce_status: {status.get('commerce_status')}")
     print(f"social_status: {status.get('social_status')}")
-    print(f"formal_release_status: {status.get('formal_release_status')}")
+    print(f"legacy_formal_release_status: {status.get('formal_release_status')}")
     print(f"payment_status: {status.get('payment_status')}")
     print(f"stripe_payment_link: {status.get('stripe_payment_link')}")
     print(f"booth_url: {status.get('booth_url', 'unknown')}")

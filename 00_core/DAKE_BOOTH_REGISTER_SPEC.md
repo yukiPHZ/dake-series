@@ -2,11 +2,11 @@
 
 ## 目的
 
-BOOTH登録作業を、DAKE正式出荷ラインの一部として標準化する。
-BOOTHは単なる後作業ではなく、ユーザーが触れる状態へ届けるための正式工程とする。
+BOOTH登録作業を、DISTRIBUTION工程として標準化する。
+BOOTHは販売・配布先の一つであり、SHIPとは独立して扱う。
 
 GitHub Releaseは配布物公開、BOOTH登録はユーザーが見つけて理解し取得できる状態へ近づける工程です。
-DAKEでは、BOOTH readyとBOOTH登録確認までを正式出荷ラインに含める。
+BOOTH readyとBOOTH登録確認は `DISTRIBUTION` の状態へ反映する。未完了でも、GitHub Releaseまで完了したSHIPをPENDINGへ戻さない。
 
 ## 情報源とビュー
 

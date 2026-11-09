@@ -1,6 +1,8 @@
 # DAKE_SCREENSHOT_RULE
 
-## 正式出荷画像の役割
+この仕様は、UI変更やDISTRIBUTION作業で公開画像の更新が必要な時だけ参照する。スクリーンショットやBOOTHサムネイルの未更新はSHIP停止条件ではない。
+
+## DISTRIBUTION画像の役割
 
 ### assets/screenshot.webp
 
@@ -24,7 +26,7 @@
 - 実務中の自然状態を優先する。
 - 横幅1200px超のみ縮小する。
 - 引き延ばしは禁止する。
-- DAKE正式出荷物として必ず保持する。
+- README、Release、dakeapp.com等で使用する場合に保持する。UIに影響しない小修正では毎回更新しない。
 
 ### assets/booth_thumbnail.jpg
 
@@ -52,8 +54,10 @@
 - BOOTH向けに最適化する。
 - `assets/screenshot.webp` と `assets/screenshot.jpg` は削除しない。
 
-`assets/screenshot.webp` と `assets/booth_thumbnail.jpg` は、どちらもDAKE正式出荷物です。
+`assets/screenshot.webp` と `assets/booth_thumbnail.jpg` は派生ビュー用画像です。
 `screenshot.webp` は実際に動く感、`booth_thumbnail.jpg` は一覧で止まる感を担当します。
+
+`booth_thumbnail.jpg` はBOOTH向けDISTRIBUTION素材であり、BOOTH作業を依頼された時だけ確認・更新します。
 
 アプリ画面スクリーンショットの作成ルールです。
 
@@ -84,7 +88,7 @@
 - 横幅1200pxへの引き延ばしは禁止。
 - トリミングでウインドウ枠や重要なUIを欠けさせない。
 
-## 失敗時
+## 更新が必要な場合の失敗時
 
 exeがない場合:
 
@@ -99,6 +103,8 @@ exeがない場合:
 ```
 
 READMEに短く原因を残す。
+
+画像更新に失敗しても、build・主要機能・GitHub Releaseが成立したSHIPをPENDINGへ戻さない。DISTRIBUTIONまたは画像更新を未完了として分けて報告する。
 
 ## 撮影前のUI確認
 
