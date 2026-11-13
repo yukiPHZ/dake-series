@@ -26,6 +26,7 @@
 
 ## 作業境界
 
+- DAKEシリーズと関連開発の作業ファイル、テスト資材、バックアップ、ビルド作業場所は原則 `C:\Users\yukiz\devlop\` 配下に限定する。Codex判断でDesktop、Documents、Downloads、ユーザーフォルダ直下等へ永続的な作業フォルダを作らない。OSやライブラリの標準TEMP利用は除く。
 - 依頼されたレイヤーだけを扱う。SHIP依頼からBOOTH、Store、Stripe、Cloudflare、SNS、販売文章、価格、画像生成へ自動的に進まない。
 - 公開、送信、決済作成・変更、BOOTH公開、価格変更、外部登録、削除は、人間の明示依頼なしに実行しない。
 - 未commit変更、未追跡ファイル、過去Release、既存設定を勝手に戻す・削除・stash・混在commitしない。

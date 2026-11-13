@@ -27,6 +27,13 @@ build、UI、Git、アイコン、スクリーンショット、BOOTH、Store、
 - `ORIGINAL.md` がないLegacyアプリは、次回そのアプリを修正・出荷する時に新仕様へ段階移行する。全アプリ一括移行はしない。
 - generatedファイルは手編集しない。
 
+## ローカル作業場所
+
+- DAKEシリーズと関連開発の作業ファイル、フォルダ、一時成果物、テスト資材、バックアップ、ビルド作業場所は原則 `C:\Users\yukiz\devlop\` 配下に置く。
+- Codex判断でDesktop、Documents、Downloads、`C:\temp`、`C:\work`、ユーザーフォルダ直下等へ永続的な開発用ファイルやフォルダを作らない。
+- 一時処理は可能な限り対象プロジェクト配下に限定する。OSやライブラリが内部利用する標準TEMP領域は除く。
+- 既存の `devlop` 外ファイルは、明示指示なしに移動、削除、整理しない。
+
 ## SHIP / DISTRIBUTION / COMMERCE
 
 ### SHIP
@@ -148,6 +155,7 @@ build時に可能な限り自動付与します。
 
 - `build/`、`dist/`、`*.spec`、`*.exe`、`*_config.json`、`__pycache__/`、`*.pyc` は通常commitしない。
 - exeは通常GitHub Release成果物として扱う。
+- 別PCでの確認が必要なexeは、通常commitへ含めず、実機確認用GitHub PrereleaseのAssetとしてダウンロード可能にする。実機確認用Releaseは正式出荷・SHIP完了と区別する。
 - 既存のユーザー変更・未追跡ファイルを戻す、削除する、混在commitすることは禁止。
 - patch = バグ修正・小変更、minor = 後方互換の機能追加・比較的大きな改善、major = 互換性を壊す変更。
 - 過去のGitHub Releaseは原則保持し、問題時は直前Releaseへ戻す。専用バックアップ工程を追加しない。

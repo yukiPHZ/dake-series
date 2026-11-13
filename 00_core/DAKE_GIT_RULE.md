@@ -4,9 +4,11 @@ Git除外、成果物、履歴の扱いを変える時だけ参照します。
 
 ## 基本
 
+- DAKE関連のローカル作業場所は原則 `C:\Users\yukiz\devlop\` 配下とし、Codex判断でその外側へ永続的な開発用ファイルやフォルダを作らない。OSやライブラリの標準TEMP利用は除く。
 - 個別アプリの正本は `ORIGINAL.md`。README等は派生ビュー。
 - ソース、仕様、必要な公開ビューをGitで管理する。
 - exeは通常commitせず、GitHub Release成果物として扱う。
+- 別PCで実機確認するexeも通常commitへ含めず、テスト版と明示したGitHub PrereleaseのAssetとして扱う。
 - 既存のユーザー変更・未追跡ファイルを戻す、削除する、stashする、混在commitすることは禁止。
 - 対象ファイルだけをstageし、`git add .` を安易に使わない。
 

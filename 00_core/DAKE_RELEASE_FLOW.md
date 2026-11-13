@@ -60,6 +60,16 @@ GitHub Releaseの過去版は原則保持します。patch / minor / majorは `D
 
 販売・配布先への掲載を依頼された時だけ、影響する派生ビューと対象サービスを確認します。BOOTH、Store、Cloudflareの未完了はSHIPへ影響させません。
 
+## 実機確認用Release
+
+開発環境とは別のWindows PCで確認が必要な場合、正式出荷前でもGitHub PrereleaseへexeをAsset登録できます。
+
+- Release名とタグで実機確認用テスト版と分かるようにする。既存バージョンの次patchを基準に、例として `DAKE_App_v1.0.1-test.1` のようなprereleaseタグを使う。
+- 通常commitへ `build/`、`dist/`、`*.spec`、`*.exe` を含めない。
+- Release Assetはローカルbuildした対象exeだけとし、対象commitとSHA-256を記録する。
+- 作成後にRelease URL、tag、Prerelease状態、Asset名、Assetサイズをread-backし、必要に応じてAssetを対象プロジェクト配下へ再ダウンロードしてSHA-256を照合する。
+- 実機確認用Releaseの作成だけでSHIP完了または正式出荷完了とは扱わない。実機結果を別途確認してから正式出荷工程へ進む。
+
 ## 3. COMMERCE
 
 対象:
