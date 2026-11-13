@@ -11,7 +11,7 @@ APP_KEY = "DAKE_Yukiz_KadouChu"
 APP_NAME = "Dakeユキズ稼働中"
 WINDOW_TITLE = "ユキズ稼働中"
 EXE_NAME = "DakeYukiz_KadouChu.exe"
-COPYRIGHT = "© 2026 しまリス不動産 / Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 
 DEFAULT_CONFIG = {
     "whisper_model": "base",

@@ -32,7 +32,7 @@ except ImportError:
 
 APP_NAME = "PDF分割Select"
 WINDOW_TITLE = "PDF分割Select"
-COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 
 UI_TEXT = {
     "button_add_pdf": "PDF追加",

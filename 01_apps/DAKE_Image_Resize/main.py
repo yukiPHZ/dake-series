@@ -28,7 +28,7 @@ except ImportError:
 
 APP_NAME = "画像リサイズ"
 WINDOW_TITLE = "画像リサイズ"
-COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 
 UI_TEXT = {
     "main_title": "画像をリサイズする",

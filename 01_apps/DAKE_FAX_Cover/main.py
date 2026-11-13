@@ -40,7 +40,7 @@ except Exception as exc:
 
 APP_NAME = "DakeFAX送付状"
 WINDOW_TITLE = "FAX送付状"
-COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 
 UI_TEXT = {
     "brand_series": "シンプルそれDAKEシリーズ",

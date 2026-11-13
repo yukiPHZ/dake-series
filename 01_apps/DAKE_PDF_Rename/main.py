@@ -31,7 +31,7 @@ except Exception:
 
 APP_NAME = "DakePDFファイル名整理"
 WINDOW_TITLE = "DakePDFファイル名整理"
-COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 
 UI_TEXT = {
     "main_title": "PDFのファイル名に足す",

@@ -37,7 +37,7 @@ build.bat
 ## DAKEシリーズ表記
 
 シンプルそれDAKEシリーズ  
-© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta
+© 2026 Yukihiko Kikuta
 
 ## DAKE_META
 

@@ -13,7 +13,7 @@ from ctypes import wintypes
 
 APP_NAME = "Dakeマジでメモ"
 WINDOW_TITLE = "Dakeマジでメモ"
-COPYRIGHT = "© 2026 しまりす不動産 / Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 
 UI_TEXT = {
     "main_title": "メモを置く",

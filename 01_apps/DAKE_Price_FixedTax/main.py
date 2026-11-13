@@ -13,7 +13,7 @@ from typing import Any, Dict, Optional, Tuple
 
 APP_NAME = "Dake固都税計算"
 WINDOW_TITLE = "固都税計算"
-COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 
 UI_TEXT = {
     "main_title": "固定資産税・都市計画税を概算する",

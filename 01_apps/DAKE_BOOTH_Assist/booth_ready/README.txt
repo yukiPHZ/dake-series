@@ -12,4 +12,4 @@ BOOTH登録に必要な商品情報と素材を確認し、開いているBOOTH�
 PEAKHEADZ
 https://peakheadz.com
 
-Vibe-Coded by Yukihiko Kikuta
+by Yukihiko Kikuta

@@ -74,7 +74,7 @@ UI_TEXT = {
 }
 ```
 
-`戸建買取査定` だけを `KAITORI_URL` へリンクし、`by Yukihiko Kikuta` は非リンクにします。Instagram、長いコピーライト、Vibe-Coded、不要な外部リンクを新仕様へ入れません。
+`戸建買取査定` だけを `KAITORI_URL` へリンクし、`by Yukihiko Kikuta` は非リンクにします。Instagram、長いコピーライト、旧AI開発クレジット、不要な外部リンクを新仕様へ入れません。
 
 `screenshot_path` は `assets/screenshot.webp` を基本としますが、UIの公開表示が変わらない修正では毎回再生成しません。BOOTH素材はDISTRIBUTION作業時だけ生成します。
 

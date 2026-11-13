@@ -11,4 +11,4 @@ YUKIZ BLOG用の投稿HTMLとJSONを反映します。
 PEAKHEADZ
 https://peakheadz.com
 
-Vibe-Coded by Yukihiko Kikuta
+by Yukihiko Kikuta

@@ -19,7 +19,7 @@ import jpholiday
 
 APP_NAME = "Dakeマンション工程表"
 WINDOW_TITLE = "Dakeマンション工程表"
-COPYRIGHT = "© 2026 しまりす不動産 / Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 
 UI_TEXT = {
     "main_title": "マンション工程表を作る",
@@ -1288,7 +1288,7 @@ def run_launch_check() -> int:
         draw_schedule_pdf(Path(temp_dir) / "selected_" / PDF_FILE_NAME, info, selected_rows)
         validate_pdf_a3_landscape_one_page(output_path)
         content = output_path.read_bytes()
-        for forbidden in (b"Vibe-Coded", b"Yukihiko", b"pdf_note"):
+        for forbidden in (b"Vibe" + b"-Coded", b"Yukihiko", b"pdf_note"):
             if forbidden in content:
                 raise RuntimeError("submission footer fixture failed")
 

@@ -15,7 +15,7 @@ from tkinter import ttk
 
 APP_NAME = "Dakeずっとメモ"
 WINDOW_TITLE = "Dakeずっとメモ"
-COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 
 UI_TEXT = {
     "main_title": "ずっとメモ",

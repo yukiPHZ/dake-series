@@ -28,7 +28,7 @@ DAKEシリーズの真の正本は `ORIGINAL.md` である。
 
 - `DAKE_PDF_SplitOne/build.bat` は `--onedir`。SplitOne / SplitSelectの `main.py` は旧クレジットのまま。次回対象改修で配布方式とUI_TEXTを共通規則へ合わせる。
 - `DAKE_PDF_SplitSelect/build.bat` は既に `--onefile`、ORIGINALにはv1.0.2の単独配布記録がある。今回は再ビルド・実機再検証していない。
-- `tools/generate_version_info.py` はPEAKHEADZ / Yukihiko KikutaのWindowsメタデータをbuild時に自動生成する。UIフッターとは分けて扱う。
+- `tools/generate_version_info.py` はCompanyName=`PEAKHEADZ`、作者=`Yukihiko Kikuta`、LegalCopyright=`© 2026 Yukihiko Kikuta` のWindowsメタデータをbuild時に自動生成する。UIフッターとは分けて扱う。
 - 出荷ツールのonedir対応や既存Releaseは互換・履歴として維持している。全アプリの実装・成果物を適合監査したわけではなく、上記以外も次回対象作業で調べる。
 
 ## 派生ビュー

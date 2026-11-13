@@ -11,4 +11,4 @@ LIVA Z から 3070Ti PC を Wake / 状態確認する補助脳 GATE。
 PEAKHEADZ
 https://peakheadz.com
 
-Vibe-Coded by Yukihiko Kikuta
+by Yukihiko Kikuta

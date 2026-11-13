@@ -4,7 +4,7 @@
 
 Simple, fast, single-purpose desktop apps for real work.
 
-Vibe-coded by Yukihiko Kikuta.
+by Yukihiko Kikuta.
 
 ## Concept
 
@@ -72,6 +72,6 @@ tools/
 
 ## Copyright
 
-© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta
+© 2026 Yukihiko Kikuta
 
 Unauthorized reproduction or redistribution is prohibited.

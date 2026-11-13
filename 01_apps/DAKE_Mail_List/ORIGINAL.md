@@ -20,7 +20,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 
 ## 目的
 
-Outlookの.msgメールから、会社名・お名前・メールアドレスだけをCSVにする小さな実務ツールです。
+Outlookで選択したメールを直接、または保存済みの `.msg` メールをドラッグ＆ドロップし、会社名・お名前・メールアドレスだけをCSVにする小さな実務ツールです。
 
 ## 対象ユーザー
 
@@ -35,12 +35,16 @@ Outlookの.msgメールから、会社名・お名前・メールアドレスだ
 
 - Dakeメールリスト
 - Outlookの.msgメールをCSV化
+- Outlookで選択した複数メールの直接ドラッグ＆ドロップ
+- 保存済みの複数 `.msg` ファイルのドラッグ＆ドロップ
 - 会社名・お名前・メールアドレスだけ抽出
 - ローカル完結のWindows向けexe
 
 ## 使い方の要点
 
-既存ファイルに記載なし
+1. Outlookで1通または複数のメールを選択します。保存済みの `.msg` ファイルも使用できます。
+2. Dakeメールリストの「メールをここへドロップ」へ直接ドラッグ＆ドロップします。
+3. デスクトップ、または選択した保存先に `mail_list_YYYYMMDD_HHMMSS.csv` を保存します。
 
 ## CLI連携・外部ツール
 
@@ -52,10 +56,10 @@ Outlookの.msgメールから、会社名・お名前・メールアドレスだ
 
 ## 対応形式・非対応形式
 
-- 対応入力: 既存ファイル内の関連語: .msg, CSV, メール
-- 対応出力: 既存ファイルに記載なし
-- 非対応: 既存ファイルに記載なし
-- 注意: 形式を推測で追加しない。既存READMEまたは実装確認後に更新する。
+- 対応入力: Outlookで選択したメールのWindows OLE仮想 `.msg`、保存済みの `.msg` ファイル。どちらも複数同時ドロップに対応する。
+- 対応出力: UTF-8 with BOMのCSV。列は `会社名`、`お名前`、`メールアドレス` の3列だけとする。
+- 非対応: `.msg` 以外のファイル。対象外ファイルは処理せず、アプリを終了させない。
+- 注意: Outlook仮想ファイルはtkdndの標準一時保存を利用し、実体化された `.msg` を既存解析へ渡す。独自キャッシュや履歴保存は追加しない。
 
 ## やらないこと / 非ゴール
 
@@ -65,11 +69,12 @@ Outlookの.msgメールから、会社名・お名前・メールアドレスだ
 
 ## 設定・ログ・保存方針
 
-- Outlookから保存した `.msg` メールをドロップすると、会社名・お名前・メールアドレスだけをCSVにする小さなWindows向けアプリです。
-- 1. Outlookからメールを `.msg` 形式で保存します。
+- Outlookで選択したメールを直接、または保存済みの `.msg` メールをドロップすると、会社名・お名前・メールアドレスだけをCSVにする小さなWindows向けアプリです。
+- 1. Outlookでメールを選択するか、保存済みの `.msg` ファイルを用意します。
+- 2. Dakeメールリストへ直接ドラッグ＆ドロップします。
 - 3. デスクトップ、または選択した保存先に `mail_list_YYYYMMDD_HHMMSS.csv` を保存します。
 - CSVはUTF-8 with BOMで保存します。列は次の3列だけです。
-- "launcher_description": "Outlookから保存したメールをCSVリストにします。",
+- "launcher_description": "Outlookのメールを直接ドロップしてCSVリストにします。",
 
 ## 非破壊・上書き禁止方針
 
@@ -80,8 +85,8 @@ Outlookの.msgメールから、会社名・お名前・メールアドレスだ
 
 - display_name: Dakeメールリスト
 - site_title: Dakeメールリスト
-- site_description: Outlookの.msgメールから、会社名・お名前・メールアドレスだけをCSVにする小さな実務ツールです。
-- launcher_description: Outlookから保存したメールをCSVリストにします。
+- site_description: Outlookで選択したメール、または保存済みの.msgメールから、会社名・お名前・メールアドレスだけをCSVにする小さな実務ツールです。
+- launcher_description: Outlookのメールを直接ドロップしてCSVリストにします。
 - update_summary: Outlook .msg メールから3列CSVを作成します。
 - BOOTH紹介文: Outlookの.msgメールから、
 会社名・お名前・メールアドレスをCSVに整理します。
@@ -97,8 +102,8 @@ Outlookの.msgメールから、会社名・お名前・メールアドレスだ
 
 ## README生成用情報
 
-- 概要: Outlookの.msgメールから、会社名・お名前・メールアドレスだけをCSVにする小さな実務ツールです。
-- 使い方: 既存ファイルに記載なし
+- 概要: Outlookで選択したメールを直接、または保存済みの.msgメールをドロップし、会社名・お名前・メールアドレスだけをCSVにする小さな実務ツールです。
+- 使い方: Outlookでメールを選択するか保存済み.msgを用意し、アプリへドラッグ＆ドロップする。
 - 必要なもの: Windows環境
 - 注意: READMEへ出す内容は公開可能な情報に限定する。
 - ビルド: 既存READMEまたはbuild.batを参照。
@@ -110,9 +115,9 @@ Outlookの.msgメールから、会社名・お名前・メールアドレスだ
   "app_key": "dake_mail_list",
   "display_name": "Dakeメールリスト",
   "launcher_title": "メールリスト作成",
-  "launcher_description": "Outlookから保存したメールをCSVリストにします。",
+  "launcher_description": "Outlookのメールを直接ドロップしてCSVリストにします。",
   "site_title": "Dakeメールリスト",
-  "site_description": "Outlookの.msgメールから、会社名・お名前・メールアドレスだけをCSVにする小さな実務ツールです。",
+  "site_description": "Outlookで選択したメール、または保存済みの.msgメールから、会社名・お名前・メールアドレスだけをCSVにする小さな実務ツールです。",
   "update_summary": "Outlook .msg メールから3列CSVを作成します。",
   "folder_name": "DAKE_Mail_List",
   "exe_name": "DakeMail_List.exe",
@@ -130,7 +135,7 @@ Outlookの.msgメールから、会社名・お名前・メールアドレスだ
 ## release_body生成用情報
 
 - Dakeメールリスト
-- Outlookの.msgメールをCSV化
+- Outlookで選択したメールの直接DnDと保存済み.msgをCSV化
 - 会社名・お名前・メールアドレスだけ抽出
 - ローカル完結のWindows向けexe
 

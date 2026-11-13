@@ -18,7 +18,7 @@ from tkinter import messagebox
 
 APP_NAME = "DakeGitメモ"
 WINDOW_TITLE = "DakeGitメモ"
-COPYRIGHT = "© 2026 しまりす不動産 / Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 
 UI_TEXT = {
     "app_title": APP_NAME,

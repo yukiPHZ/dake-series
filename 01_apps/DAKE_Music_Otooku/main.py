@@ -53,7 +53,7 @@ from ui.theme import APP_USER_MODEL_ID, COLORS, FONT_CANDIDATES, WINDOW_MIN_SIZE
 
 APP_NAME = "音を置く"
 WINDOW_TITLE = "音を置く"
-COPYRIGHT = "© 2026 しまりす不動産 / Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 
 UI_TEXT = {
     "main_title": "音を置く",

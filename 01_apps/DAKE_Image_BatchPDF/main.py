@@ -57,7 +57,7 @@ except Exception:
 APP_NAME = "Dake画像まとめPDF"
 WINDOW_TITLE = "画像まとめPDF"
 EXE_NAME = "DakeImage_BatchPDF.exe"
-COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 
 UI_TEXT = {
     "brand_series": "シンプルそれDAKEシリーズ",

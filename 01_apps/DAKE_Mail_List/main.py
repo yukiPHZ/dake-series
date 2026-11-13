@@ -19,23 +19,29 @@ import tkinter as tk
 from tkinter import filedialog, font as tkfont, messagebox
 
 try:
-    from tkinterdnd2 import DND_FILES, TkinterDnD
+    from tkinterdnd2 import (
+        DND_FILES,
+        FileGroupDescriptor,
+        FileGroupDescriptorW,
+        TkinterDnD,
+    )
 
     ROOT_CLASS = TkinterDnD.Tk
+    DND_DROP_TYPES = (DND_FILES, FileGroupDescriptor, FileGroupDescriptorW)
     DND_READY = True
 except ImportError:
-    DND_FILES = None
+    DND_DROP_TYPES = ()
     ROOT_CLASS = tk.Tk
     DND_READY = False
 
 
 APP_NAME = "Dakeメールリスト"
 WINDOW_TITLE = APP_NAME
-COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 
 UI_TEXT = {
     "main_title": "メールをCSVにする",
-    "main_description": "Outlookから保存した .msg ファイルをここへドロップします。",
+    "main_description": "Outlookのメール、または保存済みの .msg ファイルをここへドロップします。",
     "drop_area": "メールをここへドロップ",
     "button_select_folder": "CSV保存先を選ぶ",
     "button_open_folder": "保存フォルダを開く",
@@ -638,11 +644,11 @@ class MailListApp:
             button.configure(bg=button._normal_bg)
 
     def register_drop_targets(self) -> None:
-        if not DND_READY or DND_FILES is None:
+        if not DND_READY:
             return
         for widget in (self.root, self.drop_area, self.drop_label):
             try:
-                widget.drop_target_register(DND_FILES)
+                widget.drop_target_register(*DND_DROP_TYPES)
                 widget.dnd_bind("<<Drop>>", self.handle_drop)
             except tk.TclError:
                 continue

@@ -32,7 +32,7 @@ except Exception:
 
 APP_NAME = "Dakeショート切り出し"
 WINDOW_TITLE = "Dakeショート切り出し"
-COPYRIGHT = "© 2026 しまりす不動産 / Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 
 UI_TEXT = {
     "main_title": "動画からショートを作る",

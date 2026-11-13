@@ -16,7 +16,7 @@ import tkinter as tk
 
 APP_NAME = "DAKE Alien Road"
 WINDOW_TITLE = "エイリアンロード"
-COPYRIGHT = "© 2026 しまりす不動産 / Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 
 UI_TEXT = {
     "ready_title": "エイリアンロード",

@@ -17,7 +17,7 @@ from tkinter import font as tkfont
 APP_NAME = "Dake全社員メール起動"
 WINDOW_TITLE = "Dake全社員メール起動"
 DISPLAY_NAME = "全社員メール"
-COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 
 UI_TEXT = {
     "main_title": "全社員宛メールを開く",

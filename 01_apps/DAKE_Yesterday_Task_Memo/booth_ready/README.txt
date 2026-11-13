@@ -12,4 +12,4 @@ Dake昨日タスクメモ
 PEAKHEADZ
 https://peakheadz.com
 
-Vibe-Coded by Yukihiko Kikuta
+by Yukihiko Kikuta

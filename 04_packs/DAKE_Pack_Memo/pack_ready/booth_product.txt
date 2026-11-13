@@ -66,7 +66,7 @@ Windows向けです。大切なファイルは事前にバックアップして�
 本ソフトウェアの利用によって発生した損害について、作者は責任を負いません。
 
 # コピーライト
-PEAKHEADZ / Vibe-Coded by Yukihiko Kikuta
+© 2026 Yukihiko Kikuta
 
 # タグ
 メモ

@@ -12,4 +12,4 @@ PDFを追加して、画質を保ちながらしっかり軽くします。
 PEAKHEADZ
 https://peakheadz.com
 
-Vibe-Coded by Yukihiko Kikuta
+by Yukihiko Kikuta

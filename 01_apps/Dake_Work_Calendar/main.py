@@ -20,7 +20,7 @@ from tkinter import filedialog, font as tkfont, messagebox, ttk
 
 APP_NAME = "Dake工程カレンダー"
 WINDOW_TITLE = "工程カレンダー"
-COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 
 UI_TEXT = {
     "display_name": "工程カレンダー",

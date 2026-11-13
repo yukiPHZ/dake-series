@@ -34,7 +34,7 @@ DND_IMPORT_ATTEMPTED = False
 
 APP_NAME = "DakePDF圧縮"
 WINDOW_TITLE = "DakePDF圧縮"
-COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 
 UI_TEXT = {
     "header_subtitle": "止まらない、迷わない、すぐ終わる。",

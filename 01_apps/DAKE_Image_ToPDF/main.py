@@ -32,7 +32,7 @@ except Exception:
 APP_NAME = "画像→PDF"
 WINDOW_TITLE = "画像→PDF"
 EXE_NAME = "DakeImageToPDF.exe"
-COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 FONT_NAME = "Yu Gothic UI"
 WINDOW_SIZE = "960x560"
 WINDOW_MIN_WIDTH = 960

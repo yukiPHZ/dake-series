@@ -24,7 +24,7 @@ from tkinter import messagebox, ttk
 
 APP_NAME = "DakeBOOTHアシスト"
 WINDOW_TITLE = "DakeBOOTHアシスト"
-COPYRIGHT = "© 2026 しまリス不動産 / Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 
 UI_TEXT = {
     "main_title": "BOOTH登録を補助する",

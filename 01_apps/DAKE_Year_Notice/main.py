@@ -12,7 +12,7 @@ from tkinter import font as tkfont
 
 APP_NAME = "Dake今年の注意点"
 WINDOW_TITLE = "今年の注意点"
-COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 
 UI_TEXT = {
     "main_title": "今年の注意点",

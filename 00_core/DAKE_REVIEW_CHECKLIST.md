@@ -27,7 +27,7 @@ BOOTH、画像、Store、Stripe、Cloudflare、SNSはSHIPチェックへ入れ�
 - [ ] 基本フッターは `戸建買取査定 ｜ by Yukihiko Kikuta`。
 - [ ] `戸建買取査定` だけがDAKE恒久入口へのリンク。
 - [ ] `by Yukihiko Kikuta` は非リンク。
-- [ ] Instagram、長いコピーライト、Vibe-Coded、不要な外部リンクを新仕様へ入れていない。
+- [ ] Instagram、長いコピーライト、旧AI開発クレジット、不要な外部リンクを新仕様へ入れていない。
 - [ ] 公開表示へ影響する場合だけスクリーンショットを更新した。
 
 ## DISTRIBUTION作業時だけ

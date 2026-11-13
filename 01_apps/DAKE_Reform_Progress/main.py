@@ -21,7 +21,7 @@ from tkinter import filedialog, font as tkfont, messagebox, ttk
 
 APP_NAME = "Dakeリフォーム進捗管理"
 WINDOW_TITLE = "Dakeリフォーム進捗管理"
-COPYRIGHT = "© 2026 しまりす不動産 / Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 
 UI_TEXT = {
     "main_title": "リフォーム進捗カレンダーを作る",

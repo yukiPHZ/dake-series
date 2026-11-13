@@ -12,7 +12,10 @@
 シンプルそれDAKEシリーズ - しまりす不動産
 
 ■ 表記
-Vibe-Coded by Yukihiko Kikuta
+by Yukihiko Kikuta
+
+■ 公開クレジット禁止表記
+・AI開発手法や開発ツール名を製品クレジットとして前面に出さない
 
 ■ 位置づけ
 ・市場向けプロダクト
@@ -38,8 +41,15 @@ Vibe-Coded by Yukihiko Kikuta
 ・押し付けない
 
 ■ コピーライト
-© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta
+© 2026 Yukihiko Kikuta
 本ソフトウェアの無断転載・再配布を禁止します。
+
+■ Windows exeプロパティ
+・CompanyName: PEAKHEADZ
+・ProductName: 対象アプリ名
+・FileDescription: 対象アプリの日本語表示名
+・LegalCopyright: © 2026 Yukihiko Kikuta
+・Authors: Yukihiko Kikuta
 
 ■ 共通化するもの
 ・UI

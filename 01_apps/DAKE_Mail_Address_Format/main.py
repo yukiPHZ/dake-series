@@ -12,7 +12,7 @@ from tkinter import font as tkfont, messagebox
 
 APP_NAME = "Dakeメールアドレス整形"
 WINDOW_TITLE = "Dakeメールアドレス整形"
-COPYRIGHT = "© 2026 しまりす不動産 / Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 
 UI_TEXT = {
     "main_title": "Dakeメールアドレス整形",

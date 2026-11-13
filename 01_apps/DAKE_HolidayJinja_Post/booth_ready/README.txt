@@ -11,4 +11,4 @@ holiday-jinja用の投稿データをPC上で作成します。
 PEAKHEADZ
 https://peakheadz.com
 
-Vibe-Coded by Yukihiko Kikuta
+by Yukihiko Kikuta

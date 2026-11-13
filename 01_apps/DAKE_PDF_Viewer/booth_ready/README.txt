@@ -11,4 +11,4 @@ PDFを探してすぐ確認する軽量ビューワーです。
 PEAKHEADZ
 https://peakheadz.com
 
-Vibe-Coded by Yukihiko Kikuta
+by Yukihiko Kikuta

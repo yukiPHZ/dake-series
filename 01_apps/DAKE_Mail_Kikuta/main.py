@@ -12,7 +12,7 @@ import tkinter as tk
 
 APP_NAME = "Dake菊田メール"
 WINDOW_TITLE = "菊田にメール"
-COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 
 KIKUTA_MAIL_ADDRESS = "kikuta@sakuratoshi.co.jp"
 

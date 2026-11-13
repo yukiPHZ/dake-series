@@ -16,4 +16,4 @@ PDF結合、画像PDF化、画像リサイズ、A4貼り付けをまとめた書
 PEAKHEADZ
 https://peakheadz.com
 
-Vibe-Coded by Yukihiko Kikuta
+by Yukihiko Kikuta

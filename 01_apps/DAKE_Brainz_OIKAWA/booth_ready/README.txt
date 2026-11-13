@@ -12,4 +12,4 @@ BRAINZの記憶層を巡回し、熱の痕跡を静かに浮かび上がらせ�
 PEAKHEADZ
 https://peakheadz.com
 
-Vibe-Coded by Yukihiko Kikuta
+by Yukihiko Kikuta

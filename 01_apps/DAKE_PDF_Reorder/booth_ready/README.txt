@@ -11,4 +11,4 @@ PDFページ順をドラッグで並べ替えます。
 PEAKHEADZ
 https://peakheadz.com
 
-Vibe-Coded by Yukihiko Kikuta
+by Yukihiko Kikuta

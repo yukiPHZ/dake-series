@@ -7,8 +7,8 @@ from pathlib import Path
 from typing import Any
 
 COMPANY_NAME = "PEAKHEADZ"
-COPYRIGHT = "\u00a9 Yukihiko Kikuta / PEAKHEADZ"
-PRODUCT_NAME = "\u30b7\u30f3\u30d7\u30eb\u305d\u308cDAKE"
+COPYRIGHT = "\u00a9 2026 Yukihiko Kikuta"
+AUTHOR = "Yukihiko Kikuta"
 DEFAULT_VERSION = "1.0.0"
 
 
@@ -49,13 +49,14 @@ def build_version_info(meta: dict[str, Any]) -> str:
     filevers = version_tuple(version)
     productvers = filevers
     strings = {
+        "Authors": AUTHOR,
         "CompanyName": COMPANY_NAME,
         "FileDescription": file_description,
         "FileVersion": version,
         "InternalName": Path(exe_name).stem,
         "LegalCopyright": COPYRIGHT,
         "OriginalFilename": exe_name,
-        "ProductName": PRODUCT_NAME,
+        "ProductName": display_name,
         "ProductVersion": version,
     }
     string_lines = "\n".join(

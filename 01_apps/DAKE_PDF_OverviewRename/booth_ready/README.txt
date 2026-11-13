@@ -22,4 +22,4 @@ PDFを開いて、閉じて、名前を変える。その往復をなくしま�
 PEAKHEADZ
 https://peakheadz.com
 
-Vibe-Coded by Yukihiko Kikuta
+by Yukihiko Kikuta

@@ -24,7 +24,7 @@ from tkinter import messagebox
 
 APP_NAME = "DakeApproveBrainz"
 WINDOW_TITLE = "承認Brainz"
-COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 
 SERVER_HOST = "0.0.0.0"
 DEFAULT_PORT = 8765

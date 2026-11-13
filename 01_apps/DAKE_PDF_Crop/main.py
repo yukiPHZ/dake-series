@@ -43,7 +43,7 @@ WINDOW_TITLE = "DakePDFトリミング"
 DISPLAY_NAME = "PDFトリミング"
 INTERNAL_FOLDER_NAME = "DAKE_PDF_Crop"
 EXE_NAME = "DakePDF_Crop.exe"
-COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 COMMON_ICON_RELATIVE = Path("..") / ".." / "02_assets" / "dake_icon.ico"
 COMMON_ICON_FILENAME = "dake_icon.ico"
 

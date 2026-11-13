@@ -39,7 +39,7 @@ APP_NAME = "HEIC→JPG変換"
 WINDOW_TITLE = APP_NAME
 EXE_NAME = "DakeHEIC_JPG.exe"
 INTERNAL_NAME = "DakeHEIC_JPG"
-COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 BRAND_SERIES = "シンプルそれDAKEシリーズ"
 MAIN_DESCRIPTION = "HEIC画像をドロップするだけでJPGに変換します。"
 

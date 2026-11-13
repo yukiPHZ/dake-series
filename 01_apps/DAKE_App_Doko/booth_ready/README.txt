@@ -12,4 +12,4 @@ PC内に散らばったDAKE系アプリを探します。
 PEAKHEADZ
 https://peakheadz.com
 
-Vibe-Coded by Yukihiko Kikuta
+by Yukihiko Kikuta

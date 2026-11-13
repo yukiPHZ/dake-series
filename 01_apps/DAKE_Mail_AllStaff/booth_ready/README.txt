@@ -12,4 +12,4 @@ Dake全社員メール起動
 PEAKHEADZ
 https://peakheadz.com
 
-Vibe-Coded by Yukihiko Kikuta
+by Yukihiko Kikuta

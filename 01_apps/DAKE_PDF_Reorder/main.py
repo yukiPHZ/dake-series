@@ -50,7 +50,7 @@ WINDOW_TITLE = "PDFページ並べ替え"
 INTERNAL_FOLDER_NAME = "DAKE_PDF_Reorder"
 EXE_NAME = "DakePDF_Reorder.exe"
 CONFIG_FILE_NAME = "dake_pdf_reorder_config.json"
-COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 COMMON_ICON_RELATIVE = Path("..") / ".." / "02_assets" / "dake_icon.ico"
 COMMON_ICON_FILENAME = "dake_icon.ico"
 

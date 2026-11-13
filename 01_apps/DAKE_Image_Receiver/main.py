@@ -27,7 +27,7 @@ from werkzeug.serving import BaseWSGIServer, make_server
 
 APP_NAME = "DakeImage_Receiver"
 WINDOW_TITLE = "スマホから画像受け取るDAKE"
-COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 
 UI_TEXT = {
     "brand_series": "シンプルそれDAKEシリーズ",
@@ -73,7 +73,7 @@ UI_TEXT = {
     "footer_link_1": "戸建買取査定",
     "footer_link_2": "Instagram",
     "footer_separator": " ｜ ",
-    "footer_copyright": "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta",
+    "footer_copyright": "by Yukihiko Kikuta",
 }
 
 LINK_URLS = {

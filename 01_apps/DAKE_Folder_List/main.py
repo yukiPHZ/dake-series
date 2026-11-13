@@ -17,7 +17,7 @@ from tkinter import filedialog, font as tkfont, messagebox
 
 APP_NAME = "Dakeフォルダ一覧"
 WINDOW_TITLE = "フォルダ一覧"
-COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 
 UI_TEXT = {
     "main_title": "フォルダ構成を見る",

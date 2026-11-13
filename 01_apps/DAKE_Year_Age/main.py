@@ -16,7 +16,7 @@ from tkinter import font as tkfont
 APP_NAME = "Dake築年数"
 WINDOW_TITLE = "築年数"
 DISPLAY_NAME = "築年数"
-COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 
 UI_TEXT = {
     "main_title": "築年数を調べる",
@@ -38,7 +38,7 @@ UI_TEXT = {
     "footer_link_assessment": "戸建買取査定",
     "footer_link_instagram": "Instagram",
     "footer_separator": " ｜ ",
-    "footer_copyright": "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta",
+    "footer_copyright": "by Yukihiko Kikuta",
 }
 
 URLS = {

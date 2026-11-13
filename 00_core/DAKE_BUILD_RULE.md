@@ -102,6 +102,6 @@ build前に削除または整理するもの:
 - 空フォルダ、ZIP展開後、非開発Windowsでの重複確認は、PyInstaller方式、Python依存、DLL / runtime、packaging構成を変更した場合だけ行う。
 - `_internal`、Python/DLL/アイコン等の必須隣接runtimeなしで成立する。ライセンス上必要な通知資料の同梱は実行時依存と区別する。
 - 必要な実行時リソースはexe内に収める。追加依存が必要なら同梱方法を検討し、利用者の手動配置を解決策にしない。
-- Windowsメタデータは `tools/generate_version_info.py` 等でbuild時に自動付与する。ProductName=`シンプルそれDAKE`、FileDescription=各アプリの日本語機能名、CompanyName=`PEAKHEADZ`、Copyright=`© Yukihiko Kikuta / PEAKHEADZ`、FileVersion / ProductVersion、OriginalFilenameを基本とする。
+- Windowsメタデータは `tools/generate_version_info.py` 等でbuild時に自動付与する。ProductName=対象アプリ名、FileDescription=対象アプリの日本語表示名、CompanyName=`PEAKHEADZ`、LegalCopyright=`© 2026 Yukihiko Kikuta`、Authors=`Yukihiko Kikuta`、FileVersion / ProductVersion、OriginalFilenameを基本とする。
 - メタデータを人間の毎回手入力・毎回目視ゲートにしない。生成方法を変更した時に確認する。
 - SHIP判定は `DAKE_RELEASE_FLOW.md` を参照する。

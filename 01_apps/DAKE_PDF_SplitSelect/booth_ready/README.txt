@@ -12,4 +12,4 @@ PDFから必要ページだけを選んで保存します。
 PEAKHEADZ
 https://peakheadz.com
 
-Vibe-Coded by Yukihiko Kikuta
+by Yukihiko Kikuta

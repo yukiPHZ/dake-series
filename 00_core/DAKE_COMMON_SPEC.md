@@ -98,7 +98,8 @@ SHIPを止める条件は原則次の4つだけです。
 
 - `戸建買取査定`: リンク。
 - `by Yukihiko Kikuta`: 非リンク。
-- Instagram、長いコピーライト、Vibe-Coded表記、しまりす不動産の長いブランド表記、不要な外部リンクを新仕様へ入れない。
+- Instagram、長いコピーライト、しまりす不動産の長いブランド表記、不要な外部リンクを新仕様へ入れない。
+- AI開発手法や開発ツール名を公開クレジットへ使わない。
 - フッターは主機能より目立たせず、About画面を新設しない。
 - 既存全アプリを一括変更せず、次回更新時に移行する。
 
@@ -133,10 +134,11 @@ DAKEはlocal-firstです。アプリ本体から次を外部送信しません�
 
 build時に可能な限り自動付与します。
 
-- ProductName: `シンプルそれDAKE`
-- FileDescription: 各アプリの日本語機能名
+- ProductName: 対象アプリ名
+- FileDescription: 対象アプリの日本語表示名
 - CompanyName: `PEAKHEADZ`
-- Copyright: `© Yukihiko Kikuta / PEAKHEADZ`
+- LegalCopyright: `© 2026 Yukihiko Kikuta`
+- Authors: `Yukihiko Kikuta`
 - FileVersion / ProductVersion: `x.x.x`
 - OriginalFilename: 対象exe名
 

@@ -17,7 +17,7 @@ from PIL import Image, ImageGrab, ImageOps, ImageTk
 
 APP_NAME = "Dakeスクショ印刷"
 WINDOW_TITLE = "Dakeスクショ印刷"
-COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 
 UI_TEXT = {
     "main_title": "スクショをA4縦で印刷する",

@@ -11,4 +11,4 @@ PDFにピンクの半透明マーカーを付けます。
 PEAKHEADZ
 https://peakheadz.com
 
-Vibe-Coded by Yukihiko Kikuta
+by Yukihiko Kikuta

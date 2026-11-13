@@ -32,4 +32,4 @@ Dake画像リサイズ
 本ソフトウェアの利用によって発生した損害について、作者は責任を負いません。
 
 コピーライト
-© 2026 PEAKHEADZ / Vibe-Coded by Yukihiko Kikuta
+© 2026 Yukihiko Kikuta

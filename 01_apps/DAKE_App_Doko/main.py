@@ -55,7 +55,7 @@ from dake_quality_engine.logging import write_debug_log
 APP_KEY = "DAKE_App_Doko"
 APP_NAME = "Dakeアプリどこ"
 WINDOW_TITLE = APP_NAME
-COPYRIGHT = "© 2026 しまリス不動産 — Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 
 UI_TEXT = {
     "display_title": "アプリどこ",

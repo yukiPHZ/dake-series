@@ -11,4 +11,4 @@ PDF名の前後に任意テキストを追加します。
 PEAKHEADZ
 https://peakheadz.com
 
-Vibe-Coded by Yukihiko Kikuta
+by Yukihiko Kikuta

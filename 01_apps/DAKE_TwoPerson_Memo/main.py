@@ -18,7 +18,7 @@ from tkinter import font as tkfont
 
 APP_NAME = "Dake二人メモ"
 WINDOW_TITLE = APP_NAME
-COPYRIGHT = "© 2026 しまりす不動産 / Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 
 UI_TEXT = {
     "main_title": APP_NAME,

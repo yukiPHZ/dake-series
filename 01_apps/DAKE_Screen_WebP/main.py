@@ -25,7 +25,7 @@ except ImportError:
 
 APP_NAME = "DakeScreen_WebP"
 WINDOW_TITLE = "スクショ→WebP"
-COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 
 UI_TEXT = {
     "main_title": "スクショしてWebP保存",

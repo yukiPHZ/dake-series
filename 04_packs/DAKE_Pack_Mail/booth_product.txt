@@ -68,7 +68,7 @@ Windows
 本Packの利用により生じた損害について、作者は責任を負いません。
 
 # コピーライト
-PEAKHEADZ / Vibe-Coded by Yukihiko Kikuta
+© 2026 Yukihiko Kikuta
 
 # URL
 https://peakheadz.booth.pm/items/8457085

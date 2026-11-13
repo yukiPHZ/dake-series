@@ -26,7 +26,7 @@ except Exception:
 
 APP_NAME = "Dake貼る"
 WINDOW_TITLE = "Dake貼る"
-COPYRIGHT = "© 2026 しまりす不動産 / Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 
 UI_TEXT = {
     "brand_series": "シンプルそれDAKEシリーズ",

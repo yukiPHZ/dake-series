@@ -13,7 +13,7 @@ from tkinter import font as tkfont, messagebox
 
 APP_NAME = "Dake昨日タスクメモ"
 WINDOW_TITLE = "昨日タスクメモ"
-COPYRIGHT = "© 2026 しまりす不動産 / Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 
 UI_TEXT = {
     "main_title": "昨日を見る。今日を書く。",

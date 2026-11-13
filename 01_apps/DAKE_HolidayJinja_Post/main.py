@@ -17,7 +17,7 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 
 APP_NAME = "holiday-jinja 投稿DAKE"
 WINDOW_TITLE = "holiday-jinja 投稿DAKE"
-COPYRIGHT = "© 2026 しまりす不動産 / Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 CONFIG_NAME = "config.json"
 DEFAULT_SITE_PATH = Path("C:/Users/yukiz/devlop/holiday-jinja-site")
 PREVIEW_URL = "http://127.0.0.1:4173/"

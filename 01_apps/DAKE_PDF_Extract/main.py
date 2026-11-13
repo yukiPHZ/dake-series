@@ -51,7 +51,7 @@ except Exception:
 
 APP_NAME = "DakePDF抽出"
 WINDOW_TITLE = "PDF抽出"
-COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 
 UI_TEXT = {
     "brand_series": "シンプルそれDAKEシリーズ",
@@ -137,7 +137,7 @@ UI_TEXT = {
     "footer_link_1": "戸建買取査定",
     "footer_link_2": "Instagram",
     "footer_separator": " ｜ ",
-    "footer_copyright": "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta",
+    "footer_copyright": "by Yukihiko Kikuta",
     "launch_check_ok": "DakePDF抽出 launch-check OK",
     "process_check_ok": "DakePDF抽出 process-check OK",
     "screenshot_check_ok": "DakePDF抽出 screenshot OK",

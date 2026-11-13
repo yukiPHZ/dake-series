@@ -35,7 +35,7 @@ except Exception:
 
 APP_NAME = "Dake画像iPhoneToPC"
 WINDOW_TITLE = "iPhone画像をPCに送る"
-COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 
 UI_TEXT = {
     "brand_series": "シンプルそれDAKEシリーズ",

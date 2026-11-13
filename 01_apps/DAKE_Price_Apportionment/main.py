@@ -15,7 +15,7 @@ from tkinter import font as tkfont
 APP_NAME = "Dake価格按分"
 WINDOW_TITLE = "価格按分"
 DISPLAY_NAME = "価格按分"
-COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 
 UI_TEXT = {
     "main_heading": "売買価格を按分する",

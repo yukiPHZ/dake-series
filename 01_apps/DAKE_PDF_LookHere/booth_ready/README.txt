@@ -11,4 +11,4 @@ PDFに赤い丸と矢印を付けます。
 PEAKHEADZ
 https://peakheadz.com
 
-Vibe-Coded by Yukihiko Kikuta
+by Yukihiko Kikuta

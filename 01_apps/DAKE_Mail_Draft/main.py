@@ -33,7 +33,7 @@ from dake_quality_engine.logging import write_debug_log
 APP_KEY = "DAKE_Mail_Draft"
 APP_NAME = "Dakeメール下書き"
 WINDOW_TITLE = APP_NAME
-COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 
 UI_TEXT = {
     "display_subtitle": "CSVからOutlook下書きだけ作る",

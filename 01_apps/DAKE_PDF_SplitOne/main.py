@@ -95,7 +95,7 @@ UI_TEXT = {
     "footer_link_1": "戸建買取査定",
     "footer_link_2": "Instagram",
     "footer_separator": " ｜ ",
-    "footer_copyright": "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta",
+    "footer_copyright": "by Yukihiko Kikuta",
 }
 
 

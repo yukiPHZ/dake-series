@@ -36,6 +36,6 @@ v1.0.2ではonefile方式へ変更し、EXE単体のコピー・移動・起動�
 本ソフトウェアの利用によって発生した損害について、作者は責任を負いません。
 
 コピーライト
-© 2026 PEAKHEADZ / Vibe-Coded by Yukihiko Kikuta
+© 2026 Yukihiko Kikuta
 
 BOOTH URL: https://peakheadz.booth.pm/items/8448213

@@ -11,4 +11,4 @@ QRコード経由でiPhone写真をPCへ送ります。
 PEAKHEADZ
 https://peakheadz.com
 
-Vibe-Coded by Yukihiko Kikuta
+by Yukihiko Kikuta

@@ -28,7 +28,7 @@ except Exception:
 APP_NAME = "PDF結合"
 WINDOW_TITLE = "PDF結合"
 CONFIG_NAME = "dake_pdf_merge_config.json"
-COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 COMMON_ICON_RELATIVE = os.path.join("..", "..", "02_assets", "dake_icon.ico")
 COMMON_ICON_FILENAME = "dake_icon.ico"
 LAUNCHER_LP_URL = "https://dakeapp.com/launcher/"
