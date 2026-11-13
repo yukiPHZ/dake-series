@@ -12,6 +12,8 @@ DAKE Store は正本ではありません。
 
 Store は、各商品・各アプリの `ORIGINAL.md` から生成された `store_products.generated.json` を読む販売ビューです。
 
+Store掲載はDISTRIBUTIONです。BOOTH登録の完了やStripe準備を掲載そのものの前提条件にしません。BOOTH URLとStripe Payment Linkは、各商品で利用可能な購入導線として独立に扱います。
+
 ```text
 ORIGINAL.md
 ↓
@@ -48,6 +50,8 @@ Stripe Payment Link は販売導線であり、商品正本ではありません
 
 Payment LinkのURLを追加・変更する場合は、対象商品の `ORIGINAL.md` に戻し、`store_products.generated.json` を再生成します。
 
+StripeはCOMMERCEです。Store同期からProduct、Price、Payment Link、live API、checkout確認、`payment_status` 変更へ自動的に進みません。
+
 ## BOOTH導線の扱い
 
 `stripe_payment_link` が未設定で `booth_url` がある商品は、Store上で「BOOTHで見る」を表示します。
@@ -55,6 +59,12 @@ Payment LinkのURLを追加・変更する場合は、対象商品の `ORIGINAL.
 BOOTHは、DAKE Store MVP期間中の販売・配布導線として併用します。
 
 BOOTH側の商品説明やURLも、可能な範囲で各商品の `ORIGINAL.md` に戻します。
+
+BOOTH URLが未設定でもStore掲載データは生成できます。その場合は購入導線を「準備中」等として表示し、Store全体をPENDINGにはしません。
+
+## 同期ツールの境界
+
+`tools/store/sync_store_to_site.py` はgenerated JSON生成、Store repoへの同期、検証、次のGit手順表示までを担当します。自動commit、自動push、Cloudflare deployは行いません。公開反映は明示依頼がある場合だけ別工程で実施します。
 
 ## 購入後導線
 

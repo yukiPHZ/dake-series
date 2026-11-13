@@ -53,9 +53,9 @@ DAKEシリーズ全体で参照する共通仕様ファイル置き場です。
 ## BOOTH登録
 
 - BOOTH登録はDISTRIBUTION作業です。SHIPとは独立します。
-- `booth_product.txt`、`booth_ready/`、`assets/booth_thumbnail.jpg` は必須素材として扱います。
-- DakeBOOTHアシストは登録補助用です。
-- Playwrightは入力補助に使用できますが、最終公開と販売開始は人間が確認して行います。
+- Codexは `booth_product.txt`、`booth_ready/`、`assets/booth_thumbnail.jpg` 等の登録素材を準備し、`BOOTH_PREP = READY` で停止します。
+- DakeBOOTHアシストは人間用の登録補助アプリです。Codexは自動起動・自動操作しません。
+- BOOTHサイトの入力、画像・ZIPアップロード、登録、更新、公開、販売開始は人間が行います。
 - 詳細は `DAKE_BOOTH_REGISTER_SPEC.md` を参照します。
 
 ## CLI標準化

@@ -329,7 +329,7 @@ def test_booth_registration_pending_and_record_command() -> None:
         after = original_path.read_text(encoding="utf-8")
         assert f"booth_url: {booth_url}" in after
         assert "status: available" in after
-        assert "payment_status: booth_only" in after
+        assert "payment_status: preparing" in after
         assert "stripe_payment_link: 未設定" in after
 
 

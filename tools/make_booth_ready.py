@@ -1,34 +1,27 @@
-"""Generate BOOTH-ready assets for the DAKE DISTRIBUTION layer.
+"""Generate BOOTH registration-ready assets for the DISTRIBUTION layer.
 
-DAKE formal shipping includes README metadata, release_body.md,
-assets/screenshot.webp, assets/booth_thumbnail.jpg, booth_product.txt,
-booth_ready assets, GitHub Release, BOOTH, dakeapp.com, and Cloudflare
-verification. This tool owns the BOOTH-ready asset generation part of that
-line and must preserve manually entered BOOTH URLs in booth_product.txt.
+This tool prepares ``booth_product.txt``, images, support text, and a verified
+ZIP under ``booth_ready/``. It does not decide SHIP completion, open BOOTH,
+register or publish a product, operate DakeBOOTH Assist, or advance Store,
+Stripe, Cloudflare, or SNS work.
 
-booth_thumbnail.jpg / booth_product.txt / booth_ready/ are formal shipping
-assets. They are not optional cleanup after GitHub Release.
-The BOOTH registration source file used in practice is
-booth_ready/booth_product.txt.
-
-When --only-available is used, only DAKE_META.status == available is processed.
-Frozen, draft, experimental, private, and internal apps are skipped as
-non-shipping candidates.
+``ORIGINAL.md`` is the source of truth. README / DAKE_META are used only as a
+Legacy fallback or derived text source. Existing BOOTH URLs are preserved.
 """
 
 from __future__ import annotations
 
 import argparse
-import json
 import os
 import re
 import shutil
+import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
-from release_source_policy import metadata_line
+from release_source_policy import metadata_line, read_app_source
 from shipping_artifacts import find_exe as find_distribution_exe, write_verified_zip
 
 
@@ -89,15 +82,6 @@ def read_text(path: Path) -> str:
 def write_text(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8", newline="\n")
-
-
-def extract_meta(readme_text: str) -> dict | None:
-    match = re.search(r"(?s)## DAKE_META\s*```json\s*(\{.*?\})\s*```", readme_text)
-    if not match:
-        match = re.search(r"(?s)## DAKE_META.*?(\{.*?\})", readme_text)
-    if not match:
-        return None
-    return json.loads(match.group(1))
 
 
 def extract_release_body(readme_text: str) -> str:
@@ -239,16 +223,10 @@ def extract_booth_url(product_text: str) -> str:
 
 
 def app_meta_for_filter(app_dir: Path) -> tuple[dict | None, str]:
-    readme_path = app_dir / "README.md"
-    if not readme_path.exists():
-        return None, "missing README.md"
-    try:
-        meta = extract_meta(read_text(readme_path))
-    except json.JSONDecodeError as exc:
-        return None, f"invalid DAKE_META JSON: {exc}"
-    if meta is None:
-        return None, "missing DAKE_META"
-    return meta, str(meta.get("status") or "unknown")
+    source = read_app_source(app_dir, ROOT)
+    if not source.meta:
+        return None, source.error or "missing ORIGINAL/DAKE_META"
+    return source.meta, str(source.meta.get("status") or "unknown")
 
 
 def make_product_txt(
@@ -457,28 +435,16 @@ def find_exe(app_dir: Path, meta: dict | None) -> Path | None:
 def process_app(app_dir: Path, *, dry_run: bool = False) -> AppResult:
     result = AppResult(folder=app_dir.name)
     readme_path = app_dir / "README.md"
-    if not readme_path.exists():
-        result.missing.append("README.md")
-        result.ok = False
-        return result
-
-    readme_text = read_text(readme_path)
-    try:
-        meta = extract_meta(readme_text)
-    except json.JSONDecodeError as exc:
-        result.missing.append(f"DAKE_META invalid JSON: {exc}")
-        result.ok = False
-        meta = None
-
-    if meta is None:
-        result.missing.append("DAKE_META")
+    readme_text = read_text(readme_path) if readme_path.exists() else ""
+    source = read_app_source(app_dir, ROOT)
+    meta = source.meta
+    if not meta:
+        result.missing.append(source.error or "ORIGINAL/DAKE_META")
         result.ok = False
         return result
 
     result.status = str(meta.get("status") or "unknown")
     release_body = extract_release_body(readme_text)
-    if not release_body:
-        result.missing.append("RELEASE_BODY")
 
     release_body_path = app_dir / "release_body.md"
     if not release_body_path.exists() and release_body:
@@ -488,7 +454,7 @@ def process_app(app_dir: Path, *, dry_run: bool = False) -> AppResult:
             write_text(release_body_path, release_body + "\n")
             result.generated.append("release_body.md")
     elif not release_body_path.exists():
-        result.missing.append("release_body.md")
+        result.warnings.append("release_body.md missing; using ORIGINAL/DAKE_META description")
     else:
         existing_body = read_text(release_body_path).strip()
         if existing_body and not release_body:
@@ -531,8 +497,7 @@ def process_app(app_dir: Path, *, dry_run: bool = False) -> AppResult:
                 result.missing.append(f"screenshot.jpg conversion failed: {exc}")
                 result.ok = False
     else:
-        result.missing.append("assets/screenshot.webp")
-        result.warnings.append("screenshot.jpg not generated")
+        result.warnings.append("assets/screenshot.webp missing; existing BOOTH images will be preserved")
 
     thumbnail_source_ready = screenshot_jpg.exists() or (dry_run and screenshot_webp.exists())
     if thumbnail_source_ready:
@@ -554,9 +519,14 @@ def process_app(app_dir: Path, *, dry_run: bool = False) -> AppResult:
                 result.thumbnail_error = str(exc)
                 result.missing.append(f"booth_thumbnail.jpg generation failed: {exc}")
                 result.ok = False
+    elif thumbnail_jpg.exists() or booth_thumbnail_jpg.exists():
+        if not dry_run and thumbnail_jpg.exists() and not booth_thumbnail_jpg.exists():
+            shutil.copy2(thumbnail_jpg, booth_thumbnail_jpg)
+            result.generated.append("booth_ready/booth_thumbnail.jpg")
+        result.warnings.append("kept existing booth_thumbnail.jpg because screenshot source is unavailable")
     else:
         result.thumbnail_error = "assets/screenshot.jpg missing"
-        result.missing.append("assets/screenshot.jpg")
+        result.missing.append("booth_thumbnail.jpg source")
 
     readme_txt = booth_dir / "README.txt"
     notice_txt = booth_dir / "注意事項.txt"
@@ -566,8 +536,16 @@ def process_app(app_dir: Path, *, dry_run: bool = False) -> AppResult:
 
     exe_path = find_exe(app_dir, meta)
     if exe_path is None:
-        result.missing.append("dist/*.exe")
-        zip_name = f"{meta.get('exe_name') or app_dir.name}.zip".replace(".exe.zip", ".zip")
+        existing_zip = next(
+            (path for path in sorted(booth_dir.glob("*.zip")) if path.stat().st_size > 0 and zipfile.is_zipfile(path)),
+            None,
+        )
+        if existing_zip is not None:
+            zip_name = existing_zip.name
+            result.warnings.append("kept existing verified booth_ready ZIP; dist executable is not required for reuse")
+        else:
+            result.missing.append("dist/*.exe or existing valid booth_ready/*.zip")
+            zip_name = f"{meta.get('exe_name') or app_dir.name}.zip".replace(".exe.zip", ".zip")
     else:
         zip_name = f"{exe_path.stem}.zip"
     result.zip_name = zip_name
@@ -609,12 +587,8 @@ def process_app(app_dir: Path, *, dry_run: bool = False) -> AppResult:
                 result.missing.append(f"runtime ZIP verification failed: {exc}")
                 result.ok = False
 
-    for required in ["build.bat", ".gitignore"]:
-        if not (app_dir / required).exists():
-            result.missing.append(required)
-
-    if meta.get("release_url") == "":
-        result.warnings.append("release_url empty")
+    if not source.original_exists:
+        result.warnings.append("ORIGINAL.md missing; using Legacy README/DAKE_META fallback")
 
     if result.missing:
         result.ok = False
@@ -668,6 +642,7 @@ def main() -> int:
     print(f"zip actions: {sum(any('.zip' in item for item in r.generated) for r in results)}")
     print(f"booth_product.txt actions: {sum(r.product_updated for r in results)}")
     print(f"BOOTH URL preserved: {sum(1 for r in results if r.booth_url)}")
+    print("boundary: assets only; BOOTH registration and publication are human operations")
     print("")
     print("不足/警告:")
     for result in results:
@@ -680,18 +655,13 @@ def main() -> int:
             print(f"- {result.folder}: {'; '.join(parts)}")
 
     print("")
-    print("BOOTH初期候補:")
-    if args.app:
-        for result in results:
-            print(
-                f"- {result.folder}: {result.product_title} / {result.price}円 / "
-                f"{result.zip_name} / price_source={result.price_source}"
-            )
-        return 0
-    for name in ["DAKE_PDF_Merge", "DAKE_Sticky_Memo", "DAKE_Maji_Memo", "DAKE_Git_Memo", "DAKE_Yesterday_Task_Memo"]:
-        match = next((r for r in results if r.folder == name), None)
-        if match:
-            print(f"- {match.folder}: {match.product_title} / {match.price}円 / {match.zip_name}")
+    print("BOOTH準備結果:")
+    for result in results:
+        print(
+            f"- {result.folder}: BOOTH_PREP = {'READY' if result.ok else 'PENDING'} / "
+            f"{result.product_title} / {result.price}円 / "
+            f"{result.zip_name} / price_source={result.price_source}"
+        )
     return 0
 
 

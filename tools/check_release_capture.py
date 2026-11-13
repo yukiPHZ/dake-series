@@ -3,7 +3,8 @@
 
 The check is intentionally strict about the evidence video:
 ``release_artifacts/release.json`` must record ``video_local_path`` and that
-file must exist. A lone video file is not enough to close formal shipping.
+file must exist. This validates capture evidence only; it does not decide SHIP,
+DISTRIBUTION, COMMERCE, or BOOTH preparation completion.
 """
 
 from __future__ import annotations

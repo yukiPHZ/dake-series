@@ -1,3 +1,10 @@
+"""Generate, validate, and sync the Store derived JSON.
+
+This DISTRIBUTION helper stops after local synchronization and prints possible
+Git steps. It never commits, pushes, deploys Cloudflare, registers BOOTH, or
+performs Stripe COMMERCE operations.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -205,6 +212,7 @@ def main() -> int:
     print(f"\nStore JSON copied to: {store_json}")
     print(f"Store JSON changed: {'yes' if store_changed else 'no'}")
     print("Validation: source_policy OK, do_not_edit OK, shimarisu_pack OK, JSON OK")
+    print("Boundary: no commit, push, Cloudflare deploy, BOOTH action, or Stripe action was performed.")
     next_steps(root, store_site, source_changed, store_changed)
     return 0
 

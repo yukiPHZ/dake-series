@@ -71,13 +71,14 @@ store_index.generated.json
 Store生成対象は、原則として以下。
 
 - `status: available`
-- BOOTH登録済み
 - market系
 - Store掲載候補
 - DAKE Pack商品
 - SHIMARISU Pack商品
 
 ただし、最終的な掲載可否は各 `ORIGINAL.md` の Store表示用情報を優先する。
+
+BOOTH登録とStripe準備はStore掲載条件ではない。BOOTH URL、Stripe Payment Link、GitHub Release URLは商品ごとの購入・取得導線として個別に扱い、未設定値は `null` または `payment_status: preparing` とする。
 
 ## 除外対象
 
@@ -406,6 +407,8 @@ generated だけを直しても、次回生成で消える。
 
 Storeまたは決済の変更を依頼された時だけStore同期フローを実行し、store.dakeapp.comの商品詳細URL、`payment_status`、Stripe Payment Link有無、BOOTH導線有無を確認する。SHIP作業では実行しない。
 
+Store掲載・同期はDISTRIBUTION、Stripe操作はCOMMERCEです。Store同期からStripe Product / Price / Payment Link作成、live API、checkout確認へ自動的に進みません。BOOTHまたはStripeが未完了でも、生成可能なStore掲載データを一律PENDINGへ戻しません。
+
 
 
 Store反映時は `tools/store/sync_store_to_site.py` で generated JSON を再生成し、`dake-store-site` へ同期する。
@@ -414,20 +417,10 @@ Store反映時は `tools/store/sync_store_to_site.py` で generated JSON を再�
 
 同期スクリプトは自動commit / pushを行わない。複数repoをまたぐため、表示された差分と次のgit手順を確認してから人間がcommit / pushする。
 
+Cloudflare反映も同期スクリプトの責務外とし、明示依頼がある場合だけ別工程で実施する。
+
 `generated_at` だけの差分はStoreの商品情報差分として扱わない。
-## 今回やらないこと
 
-今回のPhase 4-6では以下を行わない。
+## 運用境界
 
-- `store_products.generated.json` の実生成
-- 生成スクリプト作成
-- `store.dakeapp.com` 構築
-- Stripe実装
-- Cloudflare Pages設定
-- 各 `ORIGINAL.md` 更新
-- README再生成
-- booth_product更新
-- pack_ready更新
-- SHIMARISU更新
-
-今回は、Store用 generated データの仕様定義のみを行う。
+同期ツールの完了状態は、generated JSON生成・Store repoへのローカル同期・検証・次のGit手順表示までです。自動commit、自動push、Cloudflare deploy、BOOTH操作、Stripe操作は行いません。
