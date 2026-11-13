@@ -18,7 +18,7 @@
 - Git除外・成果物の扱いを変える: `DAKE_GIT_RULE.md`
 - アイコンを変える: `DAKE_ICON_RULE.md`
 - UI変更で画像更新が必要: `DAKE_SCREENSHOT_RULE.md`
-- BOOTH作業: `DAKE_BOOTH_REGISTER_SPEC.md`
+- BOOTH素材準備: `DAKE_BOOTH_REGISTER_SPEC.md`（Codexは素材準備まで。登録・公開は人間）
 - Store作業: `DAKE_STORE_OPERATION_RULE.md` / `DAKE_STORE_GENERATED_SPEC.md`
 - Stripe・決済作業: `tools/commerce/` と対象Commerce仕様
 
@@ -27,7 +27,7 @@
 ## 作業境界
 
 - 依頼されたレイヤーだけを扱う。SHIP依頼からBOOTH、Store、Stripe、Cloudflare、SNS、販売文章、価格、画像生成へ自動的に進まない。
-- 公開、送信、決済作成・変更、BOOTH公開、価格変更、外部登録、削除は、人間の明示依頼なしに実行しない。
+- BOOTH Web UI、DakeBOOTHアシストの起動・操作、商品登録・更新・公開はCodexの責務外。公開、送信、決済作成・変更、価格変更、外部登録、削除は、人間の明示依頼なしに実行しない。
 - 未commit変更、未追跡ファイル、過去Release、既存設定を勝手に戻す・削除・stash・混在commitしない。
 - 新機能、全面リファクタリング、新しい状態管理・DB・CI・監査・承認・バックアップ・ログ基盤を理由なく追加しない。削除・統合・単純化を優先する。
 - `commit`、`push`、GitHub Release、販売・公開は別権限。依頼範囲を越えない。

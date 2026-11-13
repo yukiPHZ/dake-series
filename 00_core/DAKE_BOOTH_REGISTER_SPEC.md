@@ -1,147 +1,104 @@
-# DAKE BOOTH登録最適化仕様
+# DAKE BOOTH準備仕様
 
-## 目的
+## 一文での責務
 
-BOOTH登録作業を、DISTRIBUTION工程として標準化する。
-BOOTHは販売・配布先の一つであり、SHIPとは独立して扱う。
+Codexは売る準備まで。BOOTH登録は人間。
 
-GitHub Releaseは配布物公開、BOOTH登録はユーザーが見つけて理解し取得できる状態へ近づける工程です。
-BOOTH readyとBOOTH登録確認は `DISTRIBUTION` の状態へ反映する。未完了でも、GitHub Releaseまで完了したSHIPをPENDINGへ戻さない。
+BOOTHはDISTRIBUTIONの一導線であり、SHIP、dakeapp.com、Store、Stripeとは独立して扱います。
 
-## 情報源とビュー
+## 基本フロー
 
-BOOTH登録の真の正本は `ORIGINAL.md` です。
-ただし、`ORIGINAL.md` 未導入の既存アプリでは、移行までREADME由来の情報を暫定参照します。
-BOOTH登録に使う派生ビューは以下。
+```text
+ORIGINAL.md
+↓
+BOOTH登録素材を生成・確認
+↓
+booth_ready/
+↓
+BOOTH_PREP = READY
+↓
+Codex STOP
+↓
+DakeBOOTHアシスト
+↓
+人間確認
+↓
+人間がBOOTH登録・公開
+```
 
-- `ORIGINAL.md`
-- `README.md`
-- `release_body.md`
-- `booth_product.txt`（通常は `booth_ready/booth_product.txt`）
-- `assets/screenshot.webp`
-- `assets/booth_thumbnail.jpg`
-- `booth_ready/`
+## Codexが行うこと
 
-## booth_product.txt の推奨構成
+- 対象商品の `ORIGINAL.md` を正本として読む。
+- `booth_product.txt` を生成・更新する。
+- `booth_thumbnail.jpg` を生成する。
+- 必要なスクリーンショットを参照する。
+- 配布ZIPを準備する。
+- `booth_ready/` に登録素材をまとめる。
+- 登録に不足している素材を報告する。
 
-以下の項目を標準化する。
+正常な準備完了状態は `BOOTH_PREP = READY` です。BOOTH URLは準備完了条件ではありません。
+
+## Codexが行わないこと
+
+- BOOTHサイトを開く。
+- Playwrightその他のブラウザ自動化でBOOTHを操作する。
+- 商品登録画面へ入力する。
+- 商品画像・ZIPをアップロードする。
+- 商品登録・更新・公開・販売開始を行う。
+- BOOTHのログイン状態を操作する。
+- DakeBOOTHアシストを自動起動・自動操作する。
+
+これらはすべて人間操作です。BOOTH登録作業をCodex workflowへ組み込みません。
+
+## 正本と派生ビュー
+
+- 正本: `ORIGINAL.md`
+- 派生ビュー: README、DAKE_META、`release_body.md`、`booth_product.txt`、画像、ZIP、`booth_ready/`
+
+LegacyアプリでORIGINALが未導入の場合だけREADMEを暫定参照します。変更が影響する派生ビューだけを更新します。
+
+## booth_ready完成条件
+
+人間がDakeBOOTHアシストで登録するため、原則として次を揃えます。
+
+- `booth_product.txt`
+- `booth_thumbnail.jpg`
+- 配布ZIP
+- `README.txt` または `注意事項.txt`
+- 必要な場合のみ `screenshot.webp` / `screenshot.jpg`
+
+GitHub Release、BOOTH URL、SNS、Buffer、動画、Release capture、Cloudflare、Store、Stripeは `BOOTH_PREP` の完了条件にしません。
+
+## booth_product.txt
+
+基本項目:
 
 - 商品名
 - 価格
 - 説明文
 - タグ
-- GitHub Release URL
-- BOOTH URL
+- GitHub Release URL（存在する場合）
 - 商品画像
-- 配布zip
+- 配布ZIP
 - 注意事項
 - 更新区分: NEW / UPDATE
+- BOOTH URL（人間の登録後のみ）
 
-Markdown見出し形式を基本とする。
-将来形式として以下のキー形式も許可する。
+BOOTH URLが未設定ならNEW候補、登録済みならUPDATE候補として人間へ示せますが、Codexが登録・更新を実行する意味ではありません。
 
-```text
-TITLE=
-PRICE=
-DESCRIPTION=
-TAGS=
-URL=
-GITHUB_RELEASE=
-ZIP_PATH=
-THUMBNAIL_PATH=
-SCREENSHOT_PATH=
-MODE=
-```
+## サムネイル
 
-## BOOTH登録補助方針
-
-DakeBOOTHアシストは Playwright を使って入力補助する。
-ただし、公開ボタンは押さない。
-最終確認と公開判断は人間が行う。
-
-## 自動化の境界
-
-やること:
-
-- 商品情報の読み取り
-- BOOTH登録画面を開く
-- 入力補助
-- 商品画像選択補助
-- zip選択補助
-- コピー補助
-- `booth_ready/` 確認
-
-やらないこと:
-
-- 自動公開
-- 自動販売開始
-- ログイン情報保存
-- 決済情報操作
-- 売上情報取得
-- BOOTH内部APIへの直接アクセス
-- 無確認の既存商品更新
-
-## booth_ready 完成定義
-
-`booth_ready/` に以下が揃っていること。
-
-- 配布zip
-- `booth_thumbnail.jpg`
-- `booth_product.txt`
-- `README.txt` または `注意事項.txt`
-- 必要に応じて `screenshot.webp` または `screenshot.jpg`
-
-zipはBOOTHへアップロードする作品ファイルです。
-Git管理には含めず、必要時にローカルで生成する。
-
-## サムネ仕様
-
-- 1200x1200
-- JPG
+- 1200x1200 JPG
 - 小サイズでも用途が分かる
-- DAKE共通空気感
-- 過剰演出禁止
-- 実務道具感を優先
+- DAKE共通の軽い空気感
+- 過剰演出を避け、実務道具感を優先する
 
-`assets/screenshot.webp` は実際に動く感、`assets/booth_thumbnail.jpg` は一覧で止まる感を担当する。
+## 登録後のURL記録
 
-## NEW / UPDATE
+人間が登録を完了し、`https://peakheadz.booth.pm/items/<数字>` を取得した後だけ正本へ記録します。
 
-新規登録と既存更新は分ける。
-
-- NEW: 新規商品登録
-- UPDATE: zip差し替え、説明文更新、画像差し替え
-
-`booth_product.txt` に BOOTH URL が未登録なら NEW 候補。
-BOOTH URL が登録済みなら UPDATE 候補として扱う。
-
-## 点検チェック
-
-各アプリについて以下を確認する。
-
-- `README.md` がある
-- `DAKE_META` がある
-- `release_body.md` がある
-- `assets/screenshot.webp` がある
-- `assets/booth_thumbnail.jpg` がある
-- `booth_product.txt` がある
-- `booth_ready/` がある
-- `booth_ready/` に zip がある
-- `build.bat` が共通アイコンを参照している
-- `main.py` で `root.iconbitmap` が共通アイコンを参照している、または安全に設定されている
-
-## 不足時の扱い
-
-- `release_body.md` がない場合は、`ORIGINAL.md` のRelease用情報から生成する。未導入アプリではREADMEの `RELEASE_BODY` から暫定生成する。
-- `booth_product.txt` がない場合は、`ORIGINAL.md` のBOOTH用情報から生成する。未導入アプリではREADMEの `DAKE_META` と `RELEASE_BODY` から暫定生成する。
-- `assets/booth_thumbnail.jpg` がない場合は、`tools/make_booth_ready.py` で生成する。
-- `assets/screenshot.webp` がない場合は、自動撮影できる場合のみ作成し、難しい場合は要スクショとして止める。
-- `booth_ready/` がない場合は、`tools/make_booth_ready.py` の既存仕様に従って生成する。
-- zipがない場合は、`dist/*.exe` があればBOOTH ready用zipを生成し、exeがなければ要buildとして扱う。
+`tools/record_booth_registration.py` はBOOTH登録ツールではありません。ユーザーがURLを明示し「記録して」と依頼した場合だけ、登録済みURLを `ORIGINAL.md` の `booth_url` へ記録します。商品状態、決済状態、Stripe情報を同時変更しません。
 
 ## DakeBOOTHアシスト
 
-Playwrightは入力補助に使用する。
-公開操作、販売開始、既存商品の無確認更新はしない。
-
-ローカルプロファイルを使う場合は `playwright_profile/` をGit管理に含めない。
+DakeBOOTHアシストは人間用の登録補助アプリです。アプリ内部に入力補助機能があっても、Codexの通常責務とは分離します。最終確認、登録、公開、販売開始は人間が行います。

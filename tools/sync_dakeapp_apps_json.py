@@ -2,7 +2,8 @@
 """Generate and sync dakeapp.com app data from DAKE_series.
 
 apps.json is a derived view. Do not edit the site copy manually; update
-ORIGINAL.md first, then run this tool.
+ORIGINAL.md first, then run this tool. BOOTH registration is not a prerequisite.
+This tool does not commit, push, deploy, or perform BOOTH / Store / Stripe work.
 """
 
 from __future__ import annotations
@@ -137,6 +138,7 @@ def main() -> int:
     print(f"meta_derivative_mismatch: {mismatches}")
     print(f"source: {source_json} changed={source_changed}")
     print(f"site: {site_json} changed={site_changed}")
+    print("No commit, push, or deploy was performed.")
     return 0
 
 

@@ -62,6 +62,14 @@ SHIPを止める条件は原則次の4つだけです。
 
 状態は `COMPLETE` / `PARTIAL` / `PENDING` とし、SHIPと独立して記録します。
 
+3導線は相互に独立します。
+
+- BOOTH: Codexは `booth_ready/` と登録素材を準備し、`BOOTH_PREP = READY` で停止する。DakeBOOTHアシストを使った登録・公開は人間が行う。
+- dakeapp.com: ORIGINAL由来の掲載データを生成・同期する。BOOTH登録を前提条件にしない。
+- store.dakeapp.com: ORIGINAL由来の `store_products.generated.json` を生成・同期する。Store掲載とBOOTH・Stripeの購入導線を同一工程にしない。
+
+一つの導線が未完了でも、他の導線をPENDINGへ戻しません。
+
 ### COMMERCE
 
 決済関連です。Stripe、Payment Link、`payment_status`、checkout確認を扱います。
@@ -154,6 +162,8 @@ build時に可能な限り自動付与します。
 
 Codexは依頼されたレイヤーの外へ自動的に進みません。SHIP依頼からBOOTH、Store、Stripe、Cloudflare、SNS、販売文章、価格、画像生成へ進まないでください。
 
-公開、送信、決済作成・変更、Stripe live操作、BOOTH公開、価格変更、外部登録、削除は、人間の明示依頼なしに実行しません。
+CodexはBOOTHサイトを開かず、Playwright等で登録画面を操作せず、DakeBOOTHアシストを自動起動・自動操作しません。BOOTH登録・更新・公開・販売開始は人間が行います。
+
+公開、送信、決済作成・変更、Stripe live操作、価格変更、外部登録、削除は、人間の明示依頼なしに実行しません。
 
 新しい状態管理、DB、manifest、CI、自動監査、多段承認、バックアップ、ログ基盤を理由なく追加しません。既存構造の削除・統合・単純化を優先します。

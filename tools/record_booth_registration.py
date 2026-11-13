@@ -17,10 +17,15 @@ class SafetyStop(RuntimeError):
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Record a BOOTH product URL back to a DAKE ORIGINAL.md.")
+    parser = argparse.ArgumentParser(
+        description=(
+            "Record an already human-registered BOOTH product URL in ORIGINAL.md. "
+            "This tool does not register, update, or publish a BOOTH product."
+        )
+    )
     parser.add_argument("product_id", help="DAKE product id")
     parser.add_argument("--booth-url", required=True, help="BOOTH product URL, for example https://peakheadz.booth.pm/items/1234567")
-    parser.add_argument("--apply", action="store_true", help="Write the BOOTH URL and status fields to ORIGINAL.md.")
+    parser.add_argument("--apply", action="store_true", help="Write only the BOOTH URL to ORIGINAL.md.")
     parser.add_argument("--confirm-product-id", default="", help="Must match product_id when --apply is used.")
     parser.add_argument("--confirmation-text", default="", help="Must be RECORD BOOTH REGISTRATION <product_id> when --apply is used.")
     return parser.parse_args()
@@ -81,9 +86,6 @@ def find_duplicate_url(pipeline: ReleasePipeline, product_id: str, booth_url: st
 
 def build_updated_original(text: str, booth_url: str) -> str:
     updated, _ = replace_metadata_line(text, "booth_url", booth_url)
-    updated, _ = replace_metadata_line(updated, "status", "available")
-    updated, _ = replace_metadata_line(updated, "payment_status", "booth_only")
-    updated, _ = replace_metadata_line(updated, "distribution", "BOOTH / manual private download", required=False)
     return updated
 
 
@@ -103,24 +105,17 @@ def main() -> int:
         source = sources.get(args.product_id)
         if source is None:
             raise SafetyStop(f"Product id not found: {args.product_id}")
-        if source.product_type != "pack":
-            raise SafetyStop("BOOTH registration recording is currently limited to pack products")
         duplicate_owner = find_duplicate_url(pipeline, args.product_id, booth_url)
         if duplicate_owner:
             raise SafetyStop(f"booth_url is already used by {duplicate_owner}")
         current_booth_url = metadata_value(source.text, "booth_url")
         if current_booth_url and not unset(current_booth_url):
             raise SafetyStop("ORIGINAL.md already has a BOOTH URL; refusing to overwrite")
-        if metadata_value(source.text, "payment_status") != "preparing":
-            raise SafetyStop("payment_status must be preparing before BOOTH registration is recorded")
-        if not unset(metadata_value(source.text, "stripe_payment_link")):
-            raise SafetyStop("stripe_payment_link must remain unset before this BOOTH registration step")
-
         updated = build_updated_original(source.text, booth_url)
         print(f"product_id={args.product_id}")
         print(f"booth_url={booth_url}")
-        print("status_after=available")
-        print("payment_status_after=booth_only")
+        print("updated_field=booth_url")
+        print("status/payment/stripe=unchanged")
         print(f"source_original={source.source_original}")
         print(f"apply={args.apply}")
 
@@ -135,10 +130,6 @@ def main() -> int:
         verified = source.path.read_text(encoding="utf-8")
         if metadata_value(verified, "booth_url") != booth_url:
             raise SafetyStop("post-apply booth_url verification failed")
-        if metadata_value(verified, "status") != "available":
-            raise SafetyStop("post-apply status verification failed")
-        if metadata_value(verified, "payment_status") != "booth_only":
-            raise SafetyStop("post-apply payment_status verification failed")
         print("applied=True")
         return 0
     except SafetyStop as exc:
