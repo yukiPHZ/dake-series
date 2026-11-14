@@ -26,6 +26,18 @@ store.dakeapp.com
 
 いつでも `ORIGINAL.md` から再生成できる状態にする。
 
+generated JSONに存在することと公開Storeへ掲載されることは同義ではない。診断・同期確認のため `booth_only`、`preparing`、`free_download`、`not_for_sale` を保持してよい。
+
+公開Storeの一覧・商品詳細は、次をすべて満たすitemだけを対象にする。
+
+```text
+status == available
+AND payment_status == stripe_ready
+AND stripe_payment_link が存在する
+```
+
+BOOTH URL、GitHub Release URL、`download_url` はStore掲載条件ではない。
+
 ## 正本と生成物の関係
 
 ```text
@@ -145,7 +157,7 @@ MVPの推奨構造。
 | `generated_at` | yes | 生成日時。ISO 8601形式、原則Asia/Tokyoのオフセット付き。 |
 | `source_policy` | yes | `ORIGINAL.md` が正本であり、このJSONが手編集禁止の生成物であることを示す文。 |
 | `schema_version` | yes | generated JSON構造のバージョン。 |
-| `items` | yes | Storeに表示する商品配列。 |
+| `items` | yes | Store派生データの商品配列。公開対象外の商品を診断用に含めてよい。 |
 | `id` | yes | 商品ID。単品アプリは app_id、Packは pack_id を優先。 |
 | `type` | yes | `app` / `pack` / `shimarisu_pack` などの商品種別。 |
 | `source_repo` | yes | 正本があるrepoまたは母艦。例: `DAKE_series`, `SHIMARISU`。 |
@@ -221,12 +233,7 @@ asset
 }
 ```
 
-人間向け表示では、Store側で `null` を以下のような表示へ変換してよい。
-
-- 準備中
-- BOOTHで見る
-- GitHub Releaseで見る
-- 近日追加
+公開Storeは、Stripe-ready条件を満たさないitemやPayment Linkが `null` のitemを表示しない。BOOTHやGitHub Releaseへの代替ボタンへ変換しない。
 
 `"未確定"` 文字列は、人間用Markdownでは許容するが、generated JSONでは機械処理しやすい `null` を優先する。
 
@@ -259,13 +266,13 @@ Stripe Payment Link は、Store静的MVPで使える販売導線として genera
 }
 ```
 
-`stripe_payment_link` が `null` の場合、Store側はStripe購入ボタンを出してはいけない。
+`stripe_payment_link` が `null` の場合、そのitemは公開Store商品ではない。
 
 Stripe Secret Key、Webhook Secret、APIキーは、generated JSON、静的HTML、JavaScript、`ORIGINAL.md` に含めない。
 
 ### payment_status
 
-`payment_status` は、Store UI の購入導線を安全に出し分けるための状態値である。
+`payment_status` はCommerce状態と公開可否を安全に判定するための状態値である。公開Storeが扱うのは `stripe_ready` だけで、その他は診断・同期確認用に保持できる。
 
 ```text
 stripe_ready
@@ -311,7 +318,7 @@ MVPでは `download_url` は未確定でよい。
 
 `ORIGINAL.md` の Store表示用情報でダウンロード導線が未確定の場合、generated 側も `null` にする。
 
-Store表示では、`download_type` と `download_url` の組み合わせで導線を決める。
+`download_type` と `download_url` は派生データとして保持できるが、公開Storeの掲載条件や購入代替導線には使わない。
 
 例:
 
@@ -322,7 +329,7 @@ Store表示では、`download_type` と `download_url` の組み合わせで導�
 }
 ```
 
-`download_url` が `null` の場合、Store側は購入ボタンやダウンロードボタンを出さず、準備中または外部導線を表示する。
+公開Storeは `download_url` の有無にかかわらず、Stripe-ready条件だけで掲載を判定する。
 
 ## 画像の扱い
 
@@ -404,7 +411,7 @@ generated だけを直しても、次回生成で消える。
 
 ### DISTRIBUTION / COMMERCE作業時のStore確認
 
-Storeまたは決済の変更を依頼された時だけStore同期フローを実行し、store.dakeapp.comの商品詳細URL、`payment_status`、Stripe Payment Link有無、BOOTH導線有無を確認する。SHIP作業では実行しない。
+Store同期を依頼された時だけDISTRIBUTIONとして同期フローを実行し、公開対象が `status == available`、`payment_status == stripe_ready`、Payment Linkありに限定されることを確認する。SHIP作業では実行しない。
 
 
 
@@ -413,6 +420,8 @@ Store反映時は `tools/store/sync_store_to_site.py` で generated JSON を再�
 この同期スクリプトは、`ORIGINAL.md` 由来の `store_products.generated.json` を検証し、`source_policy`、`do_not_edit: true`、`shimarisu_pack` の存在、件数、`payment_status` 件数を確認する。
 
 同期スクリプトは自動commit / pushを行わない。複数repoをまたぐため、表示された差分と次のgit手順を確認してから人間がcommit / pushする。
+
+同期スクリプトはStripe APIを呼ばず、COMMERCEへ自動的に進まない。Stripe Payment Link作成は先に独立したCOMMERCEで完了させる。
 
 `generated_at` だけの差分はStoreの商品情報差分として扱わない。
 ## 今回やらないこと
