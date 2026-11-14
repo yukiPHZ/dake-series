@@ -68,8 +68,9 @@ def test_readme_meta_matches_original_and_has_formal_release_flags() -> None:
     )
     assert meta["show_in_launcher"] is True
     assert meta["show_on_site"] is True
-    assert main.APP_VERSION == meta["version"]
-    assert main.WINDOW_TITLE == f"{main.APP_NAME} v{main.APP_VERSION}"
+    assert meta["version"] == "1.0.2"  # published view must not pre-announce RC
+    assert main.APP_VERSION == "1.0.3"
+    assert main.WINDOW_TITLE == f"{main.APP_NAME} v{main.APP_VERSION} RC1"
 
 
 def test_release_body_matches_readme_derived_view() -> None:
@@ -110,6 +111,10 @@ def test_wheel_license_file_set_is_complete() -> None:
     }
     assert ready_actual == EXPECTED_LICENSE_FILES
     assert all((ready_root / relative).read_bytes() == (root / relative).read_bytes() for relative in actual)
+    for relative in ("tkinterdnd2-0.4.3/LICENSE", "tkdnd/license.terms"):
+        assert (APP_DIR / "third_party_licenses" / relative).read_bytes() == (
+            APP_DIR / "booth_ready" / "third_party_licenses" / relative
+        ).read_bytes()
 
 
 def test_release_images_follow_dake_dimensions() -> None:

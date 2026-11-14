@@ -526,6 +526,7 @@ def _success_test_app() -> OverviewRenameApp:
     app._sync_status = Mock()
     app._sync_controls = Mock()
     app._style_card = Mock()
+    app._pending_ids = set()
     return app
 
 
@@ -539,6 +540,9 @@ def test_rename_success_uses_separate_non_modal_feedback(tmp_path: Path) -> None
     plan = RenamePlan(tmp_path, (RenameEntry(original_snapshot, renamed_path),))
     record = UndoRecord(tmp_path, (UndoEntry(original_path, renamed_snapshot),))
     card = SimpleNamespace(
+        identifier=0,
+        pending=False,
+        unneeded=False,
         snapshot=original_snapshot,
         original_name=original_path.name,
         variable=FakeVariable(original_path.stem),

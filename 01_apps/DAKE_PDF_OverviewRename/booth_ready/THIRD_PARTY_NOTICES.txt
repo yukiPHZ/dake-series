@@ -6,6 +6,7 @@ Windows配布版は、PDFの表示に次の配布物を使用します。
 - PDFium 153.0.7999.0
 - PDFium origin: pdfium-binaries
 - PDFium feature flags: なし
+- tkinterdnd2 0.4.3 / tkdnd（フォルダのドラッグ＆ドロップ）
 
 ライセンス文書は、ビルド環境へインストールされた
 `pypdfium2-5.13.0.dist-info/licenses` の License-File 全19件を、内容を変更せず
@@ -39,3 +40,8 @@ Official sources checked during release preparation:
 - https://pdfium.googlesource.com/pdfium/+/main/LICENSE
 
 各文書の条件は同梱した原文を参照してください。
+
+tkinterdnd2 のMITライセンス原文は
+`third_party_licenses/tkinterdnd2-0.4.3/LICENSE` に収録しています。
+同梱されるTkDNDバイナリの原ライセンスは
+`third_party_licenses/tkdnd/license.terms` に収録しています。
