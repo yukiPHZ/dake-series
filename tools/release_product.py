@@ -61,12 +61,15 @@ def main() -> int:
     if not args.product_id:
         print("usage: python tools\\release_product.py <product_id> [--apply-live]")
         return 2
+    if args.execute_live:
+        print("COMMERCE: STOPPED - --execute-live is legacy; use --apply-live")
+        return 1
     try:
         payload, plan = build_dry_run_plan(args.product_id)
         print_plan(plan)
         if not plan["ready"]:
             return 1
-        if not (args.apply_live or args.execute_live):
+        if not args.apply_live:
             return 0
         result = execute_live(payload)
         print_result(result)

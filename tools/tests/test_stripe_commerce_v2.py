@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
-from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -11,7 +10,9 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "tools"))
 
+import release_product  # noqa: E402
 from tools.commerce import stripe_commerce_v2 as commerce  # noqa: E402
 from tools.store.stripe_release_core import sha256_payload  # noqa: E402
 
@@ -368,3 +369,48 @@ def test_selectors_cover_create_reuse_and_ambiguity() -> None:
     expected_price = {**data["price_payload"], "product": "prod_x"}
     price, action = commerce.select_price([], "prod_x", expected_price)
     assert price is None and action == "created"
+
+
+def cli_plan() -> tuple[dict[str, Any], dict[str, Any]]:
+    return payload(), {
+        "title": "Example App",
+        "amount": 300,
+        "currency": "jpy",
+        "ready": True,
+        "errors": [],
+    }
+
+
+def test_apply_live_is_the_live_intent(monkeypatch: pytest.MonkeyPatch) -> None:
+    called: list[str] = []
+    monkeypatch.setattr(sys, "argv", ["release_product.py", "example_app", "--apply-live"])
+    monkeypatch.setattr(release_product, "build_dry_run_plan", lambda _: cli_plan())
+    monkeypatch.setattr(
+        release_product,
+        "execute_live",
+        lambda _: called.append("live") or {
+            "title": "Example App",
+            "amount": 300,
+            "currency": "jpy",
+            "actions": {"product": "reused", "price": "reused", "payment_link": "reused", "original": "unchanged"},
+        },
+    )
+    assert release_product.main() == 0
+    assert called == ["live"]
+
+
+def test_execute_live_legacy_flag_stops_before_plan_or_live(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+    monkeypatch.setattr(sys, "argv", ["release_product.py", "example_app", "--execute-live"])
+    monkeypatch.setattr(release_product, "build_dry_run_plan", lambda _: (_ for _ in ()).throw(AssertionError("plan started")))
+    monkeypatch.setattr(release_product, "execute_live", lambda _: (_ for _ in ()).throw(AssertionError("live started")))
+    assert release_product.main() == 1
+    assert "--execute-live is legacy; use --apply-live" in capsys.readouterr().out
+
+
+def test_cli_default_remains_dry_run(monkeypatch: pytest.MonkeyPatch) -> None:
+    called: list[str] = []
+    monkeypatch.setattr(sys, "argv", ["release_product.py", "example_app"])
+    monkeypatch.setattr(release_product, "build_dry_run_plan", lambda _: cli_plan())
+    monkeypatch.setattr(release_product, "execute_live", lambda _: called.append("live"))
+    assert release_product.main() == 0
+    assert called == []
