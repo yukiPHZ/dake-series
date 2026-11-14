@@ -38,6 +38,10 @@ PACK_TAX_CODE_CANDIDATE = "txcd_10202003"
 JST = timezone(timedelta(hours=9))
 SECRET_PATTERN = re.compile(r"sk_(?:test|live)_[A-Za-z0-9]{16,}|whsec_[A-Za-z0-9]{16,}")
 CHECKOUT_NOTICE_MAX_LENGTH = 1200
+DESKTOP_PRIVATE_R2_METHOD = "stripe_session_private_r2"
+DESKTOP_DOWNLOAD_REDIRECT_URL = (
+    "https://store.dakeapp.com/download/?session_id={CHECKOUT_SESSION_ID}"
+)
 MANUAL_DELIVERY_CHECKOUT_NOTICE = (
     "本商品は自動ダウンロードではありません。"
     "決済確認後、購入時に入力されたメールアドレス宛に、"
@@ -246,6 +250,37 @@ def build_checkout_submit_message(original_text: str, purchase_delivery_method: 
     return message, errors
 
 
+def app_delivery_config(original_text: str, product_id: str) -> dict[str, Any]:
+    method = metadata_line(original_text, "purchase_delivery_method")
+    ready = metadata_line(original_text, "purchase_delivery_ready").lower()
+    object_key = metadata_line(original_text, "delivery_object_key")
+    if not method:
+        return {
+            "method": "",
+            "ready": "not_applicable",
+            "object_key": "",
+            "after_completion_url": None,
+            "errors": [],
+        }
+
+    errors: list[str] = []
+    expected_key = f"desktop/{product_id}/current.zip"
+    if method != DESKTOP_PRIVATE_R2_METHOD:
+        errors.append(f"{product_id}: unsupported app purchase_delivery_method: {method}")
+    if ready != "yes":
+        errors.append(f"{product_id}: purchase_delivery_ready must be yes")
+    if object_key != expected_key:
+        errors.append(f"{product_id}: delivery_object_key must be {expected_key}")
+
+    return {
+        "method": method,
+        "ready": "yes" if not errors else "no",
+        "object_key": object_key,
+        "after_completion_url": DESKTOP_DOWNLOAD_REDIRECT_URL if not errors else None,
+        "errors": errors,
+    }
+
+
 def discover_originals() -> list[Path]:
     return list((ROOT / "01_apps").glob("**/ORIGINAL.md")) + list((ROOT / "04_packs").glob("**/ORIGINAL.md"))
 
@@ -437,6 +472,7 @@ def base_payload(
     tax_code_candidate: str,
     purchase_delivery_method: str,
     checkout_submit_message: str = "",
+    after_completion_url: str | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     metadata = {
         "dake_item_id": product_id,
@@ -474,7 +510,7 @@ def base_payload(
                 metadata=metadata,
                 checkout_notice=checkout_submit_message,
                 fulfillment_mode=fulfillment_mode,
-                after_completion_url=None,
+                after_completion_url=after_completion_url,
             ),
             product_placeholder=PRODUCT_PLACEHOLDER,
             price_placeholder=PRICE_PLACEHOLDER,
@@ -631,6 +667,8 @@ def build_app_release(context: dict[str, Any]) -> dict[str, Any]:
     source_original = context["source_original"]
     rollout = row_map(ROLLOUT_REVIEW_CSV).get(product_id, {})
     errors = validate_payment_state(product_id, item)
+    delivery = app_delivery_config(context["original_text"], product_id)
+    errors.extend(delivery["errors"])
     title = item.get("title") or rollout.get("stripe_product_name") or rollout.get("title") or product_id
     price = int_price(item.get("price") or rollout.get("price"))
     currency = currency_jpy(item.get("currency") or rollout.get("currency") or "JPY")
@@ -659,8 +697,9 @@ def build_app_release(context: dict[str, Any]) -> dict[str, Any]:
         booth_url=booth_url,
         github_release_url=github_release_url,
         tax_code_candidate=tax_code,
-        purchase_delivery_method="",
+        purchase_delivery_method=delivery["method"],
         checkout_submit_message="",
+        after_completion_url=delivery["after_completion_url"],
     )
     data = {
         "mode": "dry-run",
@@ -676,8 +715,9 @@ def build_app_release(context: dict[str, Any]) -> dict[str, Any]:
         "tax_candidate_review": "operator_confirmation_required",
         "payment_status_before": item.get("payment_status"),
         "stripe_payment_link_before": item.get("stripe_payment_link"),
-        "purchase_delivery_ready": "not_applicable",
-        "purchase_delivery_method": "",
+        "purchase_delivery_ready": delivery["ready"],
+        "purchase_delivery_method": delivery["method"],
+        "delivery_object_key": delivery["object_key"],
         "distribution_file": "",
         "distribution_path": "",
         "distribution_file_size": None,

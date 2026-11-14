@@ -58,3 +58,17 @@ python tools\release_product.py <product_id> --apply-live
 - `check_stripe_pack2_manual_delivery_ready.py`
 
 Legacy toolは履歴互換のため残しますが、通常フローへgateやartifactを持ち込みません。
+
+## Desktop private delivery
+
+単品Desktop DAKEは、購入後即時配送を有効にする商品だけ `ORIGINAL.md` に次の最小フィールドを持てます。
+
+```text
+purchase_delivery_method: stripe_session_private_r2
+purchase_delivery_ready: yes
+delivery_object_key: desktop/<product_id>/current.zip
+```
+
+3項目が完全一致する場合だけ、Commerce dry-run payloadへ `https://store.dakeapp.com/download/?session_id={CHECKOUT_SESSION_ID}` のPayment Link redirectを含めます。`delivery_object_key` はStripe metadataやStore generated JSONへ渡しません。全商品への一括追加はせず、R2 private objectとStore側Functionの準備が確認できた商品だけ正本で有効化します。
+
+決済後はStoreのPages FunctionがCheckout Sessionをserver-sideで取得し、live、paid、Payment Linkの `metadata.dake_item_id`、配送対象Desktop許可表、private R2 objectの存在を確認してからZIPを返します。Stripe SecretはCloudflare Secret、ZIPはprivate R2 bindingだけに置きます。Packの `manual_email_private_download` は変更しません。
