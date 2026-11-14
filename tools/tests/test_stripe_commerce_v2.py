@@ -14,7 +14,13 @@ sys.path.insert(0, str(ROOT / "tools"))
 
 import release_product  # noqa: E402
 from tools.commerce import stripe_commerce_v2 as commerce  # noqa: E402
-from tools.store.stripe_release_core import sha256_payload  # noqa: E402
+from tools.store.stripe_release_core import (  # noqa: E402
+    DESKTOP_DOWNLOAD_REDIRECT_URL,
+    app_delivery_config,
+    base_payload,
+    build_app_release,
+    sha256_payload,
+)
 
 
 class Page(list):
@@ -161,6 +167,96 @@ def payload(product_id: str = "example_app") -> dict[str, Any]:
         "live_api_called": "no",
         "errors": [],
     }
+
+
+def test_desktop_private_delivery_adds_canonical_redirect() -> None:
+    original = """
+- purchase_delivery_method: stripe_session_private_r2
+- purchase_delivery_ready: yes
+- delivery_object_key: desktop/DAKE_Mail_Draft/current.zip
+"""
+    delivery = app_delivery_config(original, "DAKE_Mail_Draft")
+    assert delivery == {
+        "method": "stripe_session_private_r2",
+        "ready": "yes",
+        "object_key": "desktop/DAKE_Mail_Draft/current.zip",
+        "after_completion_url": DESKTOP_DOWNLOAD_REDIRECT_URL,
+        "errors": [],
+    }
+
+    _, _, payment_link = base_payload(
+        product_id="DAKE_Mail_Draft",
+        product_type="app",
+        title="Dakeメール下書き",
+        description="メール下書きを作るDesktop DAKE。",
+        price=300,
+        currency="jpy",
+        source_original="01_apps/DAKE_Mail_Draft/ORIGINAL.md",
+        booth_url="",
+        github_release_url="",
+        tax_code_candidate="txcd_10202003",
+        purchase_delivery_method=delivery["method"],
+        after_completion_url=delivery["after_completion_url"],
+    )
+    assert payment_link["after_completion"] == {
+        "type": "redirect",
+        "redirect": {"url": DESKTOP_DOWNLOAD_REDIRECT_URL},
+    }
+    assert payment_link["metadata"]["dake_item_id"] == "DAKE_Mail_Draft"
+    assert "delivery_object_key" not in json.dumps(payment_link)
+
+
+@pytest.mark.parametrize(
+    ("ready", "object_key"),
+    [
+        ("no", "desktop/DAKE_Mail_Draft/current.zip"),
+        ("yes", "desktop/other/current.zip"),
+        ("yes", "../private.zip"),
+    ],
+)
+def test_desktop_private_delivery_stops_when_not_exact(ready: str, object_key: str) -> None:
+    original = f"""
+- purchase_delivery_method: stripe_session_private_r2
+- purchase_delivery_ready: {ready}
+- delivery_object_key: {object_key}
+"""
+    delivery = app_delivery_config(original, "DAKE_Mail_Draft")
+    assert delivery["ready"] == "no"
+    assert delivery["after_completion_url"] is None
+    assert delivery["errors"]
+
+
+def test_app_without_private_delivery_keeps_existing_payment_link_payload() -> None:
+    delivery = app_delivery_config("# ORIGINAL\n", "example_app")
+    assert delivery["ready"] == "not_applicable"
+    assert delivery["after_completion_url"] is None
+
+
+def test_app_release_payload_uses_original_delivery_fields() -> None:
+    product_id = "DAKE_Mail_Draft"
+    result = build_app_release(
+        {
+            "product_id": product_id,
+            "source_original": f"01_apps/{product_id}/ORIGINAL.md",
+            "original_text": """
+- purchase_delivery_method: stripe_session_private_r2
+- purchase_delivery_ready: yes
+- delivery_object_key: desktop/DAKE_Mail_Draft/current.zip
+""",
+            "item": {
+                "title": "Dakeメール下書き",
+                "description": "メール下書きを作るDesktop DAKE。",
+                "price": 300,
+                "currency": "JPY",
+                "payment_status": "booth_only",
+                "stripe_payment_link": "",
+            },
+        }
+    )
+    assert result["ready_for_live_execution"] == "yes"
+    assert result["purchase_delivery_method"] == "stripe_session_private_r2"
+    assert result["delivery_object_key"] == "desktop/DAKE_Mail_Draft/current.zip"
+    assert result["payment_link_payload"]["after_completion"]["redirect"]["url"] == DESKTOP_DOWNLOAD_REDIRECT_URL
 
 
 def prepare_root(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, data: dict[str, Any]) -> Path:
