@@ -474,7 +474,7 @@ def base_payload(
     checkout_submit_message: str = "",
     after_completion_url: str | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
-    metadata = {
+    product_metadata = {
         "dake_item_id": product_id,
         "dake_type": product_type,
         "source_repo": "DAKE_series",
@@ -483,10 +483,16 @@ def base_payload(
         "booth_url": booth_url,
     }
     if github_release_url:
-        metadata["github_release_url"] = github_release_url
+        product_metadata["github_release_url"] = github_release_url
+
+    payment_metadata = {
+        "dake_item_id": product_id,
+        "dake_type": product_type,
+        "source_original": source_original,
+    }
     if purchase_delivery_method:
-        metadata["purchase_delivery_method"] = purchase_delivery_method
-        metadata["delivery_policy"] = purchase_delivery_method
+        payment_metadata["purchase_delivery_method"] = purchase_delivery_method
+        payment_metadata["delivery_policy"] = purchase_delivery_method
 
     if product_type == "pack":
         product_kind = "pack_one_time_manual_delivery"
@@ -507,10 +513,11 @@ def base_payload(
                 price_model="one_time",
                 tax_code=tax_code_candidate,
                 quantity=1,
-                metadata=metadata,
+                metadata=product_metadata,
                 checkout_notice=checkout_submit_message,
                 fulfillment_mode=fulfillment_mode,
                 after_completion_url=after_completion_url,
+                payment_metadata=payment_metadata,
             ),
             product_placeholder=PRODUCT_PLACEHOLDER,
             price_placeholder=PRICE_PLACEHOLDER,

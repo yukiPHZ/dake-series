@@ -22,6 +22,7 @@ PRODUCT_PLACEHOLDER = "__PRODUCT_ID_FROM_LIVE_PRODUCT__"
 PRICE_PLACEHOLDER = "__PRICE_ID_FROM_LIVE_PRICE__"
 SECRET_PATTERN = re.compile(r"sk_(?:test|live)_[A-Za-z0-9]{16,}|whsec_[A-Za-z0-9]{16,}")
 PRIVATE_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0", "::1"}
+FULFILLMENT_METADATA_KEYS = {"purchase_delivery_method", "delivery_policy"}
 
 
 class CommerceSafetyStop(RuntimeError):
@@ -43,6 +44,7 @@ class CommerceProductSpec:
     checkout_notice: str = ""
     fulfillment_mode: str = ""
     after_completion_url: str | None = None
+    payment_metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -94,7 +96,10 @@ def metadata_strings(metadata: dict[str, Any]) -> dict[str, str]:
 
 
 def payment_metadata_for(spec: CommerceProductSpec) -> dict[str, str]:
-    product_metadata = metadata_strings(spec.metadata)
+    metadata = {
+        **metadata_strings(spec.metadata),
+        **metadata_strings(spec.payment_metadata),
+    }
     keys = (
         "dake_item_id",
         "dake_type",
@@ -102,7 +107,7 @@ def payment_metadata_for(spec: CommerceProductSpec) -> dict[str, str]:
         "purchase_delivery_method",
         "delivery_policy",
     )
-    payment_metadata = {key: product_metadata[key] for key in keys if product_metadata.get(key)}
+    payment_metadata = {key: metadata[key] for key in keys if metadata.get(key)}
     if payment_metadata:
         return payment_metadata
     return {
@@ -130,7 +135,7 @@ def validate_spec(spec: CommerceProductSpec) -> None:
         raise CommerceSafetyStop("commerce v1 supports quantity=1 only")
     if len(spec.checkout_notice) > CHECKOUT_NOTICE_MAX_LENGTH:
         raise CommerceSafetyStop("checkout notice length overflow")
-    if contains_secret_like_value(spec.metadata):
+    if contains_secret_like_value(spec.metadata) or contains_secret_like_value(spec.payment_metadata):
         raise CommerceSafetyStop("secret-like metadata is not allowed")
     if spec.after_completion_url:
         if is_private_or_local_url(spec.after_completion_url):
@@ -146,7 +151,11 @@ def build_stripe_payment_link_payloads(
     price_placeholder: str = PRICE_PLACEHOLDER,
 ) -> StripePaymentLinkPayloads:
     validate_spec(spec)
-    product_metadata = metadata_strings(spec.metadata)
+    product_metadata = {
+        key: value
+        for key, value in metadata_strings(spec.metadata).items()
+        if key not in FULFILLMENT_METADATA_KEYS
+    }
     payment_metadata = payment_metadata_for(spec)
 
     product_payload = {
