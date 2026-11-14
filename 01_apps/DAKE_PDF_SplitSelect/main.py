@@ -32,7 +32,7 @@ except ImportError:
 
 APP_NAME = "PDF分割Select"
 WINDOW_TITLE = "PDF分割Select"
-COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "しまりす不動産 ｜ © Yukihiko Kikuta・PEAKHEADZ"
 
 UI_TEXT = {
     "button_add_pdf": "PDF追加",
@@ -96,7 +96,17 @@ UI_TEXT = {
     "footer_right_prefix": "戸建買取査定",
     "footer_right_separator": " ｜ ",
     "footer_right_instagram": "Instagram",
-    "footer_right_suffix": COPYRIGHT,
+    "footer_copyright": COPYRIGHT,
+    "thumbnail_size": "表示サイズ",
+    "size_small": "小",
+    "size_standard": "標準",
+    "size_large": "大",
+    "size_extra": "特大",
+    "preview_title": "ページプレビュー — P.{page}",
+    "preview_loading": "プレビュー読み込み中",
+    "preview_error": "プレビューできません。{reason}",
+    "preview_hint": "ホイールで拡大・縮小 ｜ ドラッグで移動 ｜ Escで閉じる",
+    "preview_zoom": "プレビュー倍率 {percent}%",
     "main_title": "PDFのページを選んで保存する",
     "main_description": "必要なページだけ選んで、1つのPDFにまとめます。",
     "window_minimum_size": "1100x720",
@@ -142,14 +152,18 @@ COLORS = {
 
 THUMBNAIL_WIDTH = 152
 THUMBNAIL_HEIGHT = 214
-CARD_WIDTH = 176
-CARD_HEIGHT = 264
 CARD_GAP_X = 20
 CARD_GAP_Y = 20
 CANVAS_PADDING_X = 16
 CANVAS_PADDING_Y = 16
 SHIFT_MASK = 0x0001
 THUMBNAIL_CACHE_LIMIT = 96
+THUMBNAIL_CACHE_BYTES = 64 * 1024 * 1024
+CONTROL_MASK = 0x0004
+THUMBNAIL_SIZES = {
+    "small": (108, 152), "standard": (152, 214),
+    "large": (228, 321), "extra": (304, 428),
+}
 
 
 def pick_font_family(root: tk.Misc) -> str:
@@ -449,14 +463,23 @@ def build_drop_error_message(error: object) -> str:
 
 
 class ThumbnailViewport(ttk.Frame):
-    def __init__(self, master, request_thumbnail_callback, toggle_page_callback, document_ready_callback=None):
+    def __init__(self, master, request_thumbnail_callback, toggle_page_callback, document_ready_callback=None,
+                 preview_callback=None):
         super().__init__(master, style="Surface.TFrame")
         self.request_thumbnail_callback = request_thumbnail_callback
         self.toggle_page_callback = toggle_page_callback
         self.document_ready_callback = document_ready_callback
+        self.preview_callback = preview_callback
+        self.size_key = "standard"
+        self.thumb_width, self.thumb_height = THUMBNAIL_SIZES[self.size_key]
+        self.card_width, self.card_height = self.thumb_width + 24, self.thumb_height + 50
+        self._layout_anchor = None
+        self._size_anchor = None
+        self.cache_bytes = 0
         self.page_count = 0
         self.columns = 1
         self.thumbnail_cache = OrderedDict()
+        self._size_cache = OrderedDict()
         self.visible_pages: tuple[int, ...] = ()
         self.nearby_pages: tuple[int, ...] = ()
         self.selected_pages: set[int] = set()
@@ -486,6 +509,34 @@ class ThumbnailViewport(ttk.Frame):
         self.canvas.bind("<Configure>", self._on_configure)
         self.canvas.bind("<MouseWheel>", self._on_mousewheel)
         self.canvas.bind("<Button-1>", self._on_click)
+        self.canvas.bind("<Control-Button-1>", self._on_preview)
+        self.canvas.bind("<Button-3>", self._on_preview)
+
+    def _capture_anchor(self):
+        y = max(0, self.canvas.canvasy(0) - CANVAS_PADDING_Y)
+        row_height = self.card_height + CARD_GAP_Y
+        row = int((y + 1) // row_height)
+        offset = max(0, y - row * row_height)
+        return min(row * self.columns, max(0, self.page_count - 1)), offset / row_height
+
+    def set_size(self, key):
+        if key == self.size_key:
+            return
+        if self._layout_anchor is None:
+            self._layout_anchor = self._size_anchor or self._capture_anchor()
+        self._size_anchor = self._layout_anchor
+        old_key = self.size_key
+        self.size_key = key
+        self.thumb_width, self.thumb_height = THUMBNAIL_SIZES[key]
+        self.card_width, self.card_height = self.thumb_width + 24, self.thumb_height + 50
+        for page, image in self.thumbnail_cache.items():
+            self._size_cache[(old_key, page)] = image
+        # All sizes share the same count/byte budget, including inactive images.
+        self.thumbnail_cache.clear()
+        for cache_key in list(self._size_cache):
+            if cache_key[0] == key:
+                self.thumbnail_cache[cache_key[1]] = self._size_cache.pop(cache_key)
+        self._schedule_redraw()
 
     def reset(self, message: Optional[str] = None) -> None:
         if self._redraw_job is not None:
@@ -494,6 +545,10 @@ class ThumbnailViewport(ttk.Frame):
         self.page_count = 0
         self.columns = 1
         self.thumbnail_cache.clear()
+        self.cache_bytes = 0
+        self._size_cache.clear()
+        self._layout_anchor = None
+        self._size_anchor = None
         self.visible_pages = ()
         self.nearby_pages = ()
         self.selected_pages.clear()
@@ -507,6 +562,8 @@ class ThumbnailViewport(ttk.Frame):
     def set_document(self, page_count: int) -> None:
         self.page_count = page_count
         self.thumbnail_cache.clear()
+        self._size_cache.clear()
+        self.cache_bytes = 0
         self.visible_pages = ()
         self.nearby_pages = ()
         self.selected_pages.clear()
@@ -519,17 +576,28 @@ class ThumbnailViewport(ttk.Frame):
         self._schedule_redraw()
 
     def set_thumbnail(self, page_index: int, photo_image: tk.PhotoImage) -> None:
+        previous = self.thumbnail_cache.get(page_index)
+        if previous is not None:
+            self.cache_bytes -= previous.width() * previous.height() * 4
         self.thumbnail_cache[page_index] = photo_image
+        self.cache_bytes += photo_image.width() * photo_image.height() * 4
         self.thumbnail_cache.move_to_end(page_index)
-        while len(self.thumbnail_cache) > THUMBNAIL_CACHE_LIMIT:
+        while (len(self.thumbnail_cache) + len(self._size_cache) > THUMBNAIL_CACHE_LIMIT
+               or self.cache_bytes > THUMBNAIL_CACHE_BYTES):
+            if self._size_cache:
+                _, removed = self._size_cache.popitem(last=False)
+                self.cache_bytes -= removed.width() * removed.height() * 4
+                continue
             # Visible images stay alive while older offscreen images are evicted.
             victim = next((page for page in self.thumbnail_cache if page not in self.visible_pages), None)
             if victim is None:
                 victim = next(iter(self.thumbnail_cache))
-            del self.thumbnail_cache[victim]
+            removed = self.thumbnail_cache.pop(victim)
+            self.cache_bytes -= removed.width() * removed.height() * 4
         self._schedule_redraw()
 
     def _on_scrollbar(self, *args) -> None:
+        self._size_anchor = None
         self.canvas.yview(*args)
         self._schedule_redraw()
 
@@ -538,14 +606,19 @@ class ThumbnailViewport(ttk.Frame):
         if event.delta:
             delta = -1 * int(event.delta / 120)
         if delta:
+            self._size_anchor = None
             self.canvas.yview_scroll(delta, "units")
             self._schedule_redraw()
         return "break"
 
     def _on_configure(self, _event) -> None:
+        if self.page_count and self._layout_anchor is None:
+            self._layout_anchor = self._capture_anchor()
         self._schedule_redraw()
 
     def _on_click(self, event) -> None:
+        if event.state & CONTROL_MASK:
+            return self._on_preview(event)
         if self.page_count == 0:
             return
         canvas_x = self.canvas.canvasx(event.x)
@@ -555,25 +628,31 @@ class ThumbnailViewport(ttk.Frame):
             return
         self.toggle_page_callback(index + 1, bool(event.state & SHIFT_MASK))
 
+    def _on_preview(self, event):
+        index = self._page_index_from_point(self.canvas.canvasx(event.x), self.canvas.canvasy(event.y))
+        if index is not None and self.preview_callback is not None:
+            self.preview_callback(index)
+        return "break"
+
     def _page_index_from_point(self, x: float, y: float) -> Optional[int]:
         if self.page_count == 0:
             return None
 
-        content_width = max(self.canvas.winfo_width(), CARD_WIDTH + (CANVAS_PADDING_X * 2))
+        content_width = max(self.canvas.winfo_width(), self.card_width + (CANVAS_PADDING_X * 2))
         self.columns = self._compute_columns(content_width)
         x -= CANVAS_PADDING_X
         y -= CANVAS_PADDING_Y
         if x < 0 or y < 0:
             return None
 
-        column = int(x // (CARD_WIDTH + CARD_GAP_X))
-        row = int(y // (CARD_HEIGHT + CARD_GAP_Y))
+        column = int(x // (self.card_width + CARD_GAP_X))
+        row = int(y // (self.card_height + CARD_GAP_Y))
         if column < 0 or column >= self.columns:
             return None
 
-        local_x = x - (column * (CARD_WIDTH + CARD_GAP_X))
-        local_y = y - (row * (CARD_HEIGHT + CARD_GAP_Y))
-        if local_x > CARD_WIDTH or local_y > CARD_HEIGHT:
+        local_x = x - (column * (self.card_width + CARD_GAP_X))
+        local_y = y - (row * (self.card_height + CARD_GAP_Y))
+        if local_x > self.card_width or local_y > self.card_height:
             return None
 
         index = row * self.columns + column
@@ -582,8 +661,8 @@ class ThumbnailViewport(ttk.Frame):
         return index
 
     def _compute_columns(self, canvas_width: int) -> int:
-        usable_width = max(canvas_width - (CANVAS_PADDING_X * 2), CARD_WIDTH)
-        return max(1, (usable_width + CARD_GAP_X) // (CARD_WIDTH + CARD_GAP_X))
+        usable_width = max(canvas_width - (CANVAS_PADDING_X * 2), self.card_width)
+        return max(1, (usable_width + CARD_GAP_X) // (self.card_width + CARD_GAP_X))
 
     def _schedule_redraw(self) -> None:
         if self._redraw_job is None:
@@ -597,17 +676,22 @@ class ThumbnailViewport(ttk.Frame):
             self._draw_empty_state()
             return
 
-        canvas_width = max(self.canvas.winfo_width(), CARD_WIDTH + (CANVAS_PADDING_X * 2))
-        canvas_height = max(self.canvas.winfo_height(), CARD_HEIGHT)
+        canvas_width = max(self.canvas.winfo_width(), self.card_width + (CANVAS_PADDING_X * 2))
+        canvas_height = max(self.canvas.winfo_height(), self.card_height)
         self.columns = self._compute_columns(canvas_width)
         rows = (self.page_count + self.columns - 1) // self.columns
-        total_width = (self.columns * CARD_WIDTH) + ((self.columns - 1) * CARD_GAP_X) + (CANVAS_PADDING_X * 2)
-        total_height = (rows * CARD_HEIGHT) + ((rows - 1) * CARD_GAP_Y) + (CANVAS_PADDING_Y * 2)
+        total_width = (self.columns * self.card_width) + ((self.columns - 1) * CARD_GAP_X) + (CANVAS_PADDING_X * 2)
+        total_height = (rows * self.card_height) + ((rows - 1) * CARD_GAP_Y) + (CANVAS_PADDING_Y * 2)
         self.canvas.configure(scrollregion=(0, 0, total_width, total_height))
+        if self._layout_anchor is not None:
+            page, offset = self._layout_anchor
+            top = CANVAS_PADDING_Y + (page // self.columns + offset) * (self.card_height + CARD_GAP_Y)
+            self.canvas.yview_moveto(top / total_height)
+            self._layout_anchor = None
 
         y0 = self.canvas.canvasy(0)
         y1 = y0 + canvas_height
-        row_height = CARD_HEIGHT + CARD_GAP_Y
+        row_height = self.card_height + CARD_GAP_Y
         start_row = max(0, int((y0 - CANVAS_PADDING_Y) // row_height))
         end_row = min(rows - 1, int((y1 - CANVAS_PADDING_Y) // row_height))
 
@@ -653,10 +737,10 @@ class ThumbnailViewport(ttk.Frame):
     def _draw_page_card(self, page_index: int) -> None:
         row = page_index // self.columns
         column = page_index % self.columns
-        x1 = CANVAS_PADDING_X + (column * (CARD_WIDTH + CARD_GAP_X))
-        y1 = CANVAS_PADDING_Y + (row * (CARD_HEIGHT + CARD_GAP_Y))
-        x2 = x1 + CARD_WIDTH
-        y2 = y1 + CARD_HEIGHT
+        x1 = CANVAS_PADDING_X + (column * (self.card_width + CARD_GAP_X))
+        y1 = CANVAS_PADDING_Y + (row * (self.card_height + CARD_GAP_Y))
+        x2 = x1 + self.card_width
+        y2 = y1 + self.card_height
         is_selected = (page_index + 1) in self.selected_pages
 
         border_color = COLORS["accent_border"] if is_selected else COLORS["border"]
@@ -673,8 +757,8 @@ class ThumbnailViewport(ttk.Frame):
         )
         preview_x1 = x1 + 12
         preview_y1 = y1 + 12
-        preview_x2 = preview_x1 + THUMBNAIL_WIDTH
-        preview_y2 = preview_y1 + THUMBNAIL_HEIGHT
+        preview_x2 = preview_x1 + self.thumb_width
+        preview_y2 = preview_y1 + self.thumb_height
 
         self.canvas.create_rectangle(
             preview_x1,
@@ -694,7 +778,7 @@ class ThumbnailViewport(ttk.Frame):
                 text=UI_TEXT["label_thumbnail_loading"],
                 fill=COLORS["muted"],
                 font=(self.winfo_toplevel().font_family, 10),
-                width=THUMBNAIL_WIDTH - 20,
+                width=self.thumb_width - 20,
                 justify="center",
             )
         else:
@@ -744,6 +828,8 @@ class DakePdfSplitSelectApp(BASE_WINDOW):
         self.queue_events: queue.Queue = queue.Queue(maxsize=32)
         self.render_generation = 0
         self.render_request_id = 0
+        self.preview_request_id = 0
+        self.preview = None
         self._thumbnail_demand = None
         self._closing = False
         self._poll_job = None
@@ -794,6 +880,8 @@ class DakePdfSplitSelectApp(BASE_WINDOW):
         style.configure(".", background=COLORS["bg"], foreground=COLORS["text"], font=base_font)
         style.configure("App.TFrame", background=COLORS["bg"])
         style.configure("Surface.TFrame", background=COLORS["panel"], relief="flat")
+        style.configure("Size.TRadiobutton", background=COLORS["panel"], font=(self.font_family, 9))
+        style.map("Size.TRadiobutton", background=[("active", COLORS["panel"])])
         style.configure("Status.TFrame", background=COLORS["panel"])
         style.configure("Footer.TFrame", background=COLORS["panel"])
         style.configure(
@@ -1028,15 +1116,24 @@ class DakePdfSplitSelectApp(BASE_WINDOW):
         thumbnail_frame = ttk.Frame(body_frame, style="Surface.TFrame", padding=16)
         thumbnail_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 16))
         thumbnail_frame.columnconfigure(0, weight=1)
-        thumbnail_frame.rowconfigure(0, weight=1)
+        thumbnail_frame.rowconfigure(1, weight=1)
+        size_bar = ttk.Frame(thumbnail_frame, style="Surface.TFrame")
+        size_bar.grid(row=0, column=0, sticky="ew", pady=(0, 12))
+        ttk.Label(size_bar, text=UI_TEXT["thumbnail_size"], style="PanelHint.TLabel").pack(side="left", padx=(0, 8))
+        self.thumbnail_size_var = tk.StringVar(value="standard")
+        for key in THUMBNAIL_SIZES:
+            ttk.Radiobutton(size_bar, text=UI_TEXT[f"size_{key}"], value=key,
+                            variable=self.thumbnail_size_var, command=self._change_thumbnail_size,
+                            style="Size.TRadiobutton", takefocus=False).pack(side="left", padx=4)
 
         self.thumbnail_viewport = ThumbnailViewport(
             thumbnail_frame,
             request_thumbnail_callback=self._request_thumbnail,
             toggle_page_callback=self._toggle_thumbnail_page,
             document_ready_callback=self._on_thumbnail_view_ready,
+            preview_callback=self._open_preview,
         )
-        self.thumbnail_viewport.grid(row=0, column=0, sticky="nsew")
+        self.thumbnail_viewport.grid(row=1, column=0, sticky="nsew")
 
         control_frame = ttk.Frame(body_frame, style="Surface.TFrame", padding=20)
         control_frame.grid(row=0, column=1, sticky="ns")
@@ -1145,7 +1242,7 @@ class DakePdfSplitSelectApp(BASE_WINDOW):
             ("sep1", UI_TEXT["footer_right_separator"], False),
             ("instagram", UI_TEXT["footer_right_instagram"], True),
             ("sep2", UI_TEXT["footer_right_separator"], False),
-            ("copyright", UI_TEXT["footer_right_suffix"], False),
+            ("copyright", UI_TEXT["footer_copyright"], False),
         ]
 
         column = 0
@@ -1185,6 +1282,7 @@ class DakePdfSplitSelectApp(BASE_WINDOW):
         if self.is_processing or self._closing:
             return
         self._closing = True
+        self._close_preview()
         self.render_generation += 1
         self.render_worker.stop()
         if self._poll_job is not None:
@@ -1329,6 +1427,7 @@ class DakePdfSplitSelectApp(BASE_WINDOW):
     def refresh_all(self) -> None:
         if self.is_processing or self._closing:
             return
+        self._close_preview()
         self.render_generation += 1
         self.render_worker.reset(self.render_generation)
         self.current_pdf_path = None
@@ -1380,6 +1479,7 @@ class DakePdfSplitSelectApp(BASE_WINDOW):
     def _load_pdf_async(self, path: str, keep_current_selection: bool = False) -> None:
         if self.is_processing or self._closing:
             return
+        self._close_preview()
         target_path = Path(path)
         self.render_generation += 1
         generation = self.render_generation
@@ -1412,7 +1512,8 @@ class DakePdfSplitSelectApp(BASE_WINDOW):
     def _request_thumbnail(self, visible_pages, nearby_pages) -> None:
         if not self.pdf_path or self.thumbnail_error_message:
             return
-        demand = (visible_pages, nearby_pages)
+        vp = self.thumbnail_viewport
+        demand = (visible_pages, nearby_pages, vp.size_key)
         if demand == self._thumbnail_demand:
             return
         self._thumbnail_demand = demand
@@ -1420,7 +1521,29 @@ class DakePdfSplitSelectApp(BASE_WINDOW):
         cache = self.thumbnail_viewport.thumbnail_cache
         pages = [page for page in visible_pages + nearby_pages if page not in cache]
         self.queued_thumbnail_pages = set(pages)
-        self.render_worker.request(self.render_generation, self.render_request_id, pages)
+        self.render_worker.request(self.render_generation, self.render_request_id, pages,
+                                   (vp.thumb_width, vp.thumb_height))
+
+    def _change_thumbnail_size(self):
+        if self.thumbnail_size_var.get() == self.thumbnail_viewport.size_key:
+            return
+        self.render_request_id += 1
+        self.render_worker.request(self.render_generation, self.render_request_id, [])
+        self._thumbnail_demand = None
+        self.thumbnail_viewport.set_size(self.thumbnail_size_var.get())
+
+    def _open_preview(self, page_index):
+        if self.is_processing or self._closing or not 0 <= page_index < self.page_count:
+            return
+        if self.preview is None:
+            from page_preview import PagePreview
+            self.preview = PagePreview(self, UI_TEXT, COLORS, get_common_icon_path().resolve())
+        self.preview.open(page_index)
+
+    def _close_preview(self):
+        if self.preview is not None:
+            self.preview.close()
+            self.preview = None
 
     def _toggle_thumbnail_page(self, page_number: int, shift_pressed: bool = False) -> None:
         if self.is_processing or not 1 <= page_number <= self.page_count:
@@ -1538,10 +1661,18 @@ class DakePdfSplitSelectApp(BASE_WINDOW):
             except queue.Empty:
                 break
             self._handle_worker_event(event)
+        try:
+            self._handle_worker_event(self.render_worker.preview_results.get_nowait())
+        except queue.Empty:
+            pass
         self._poll_job = self.after(20, self._poll_worker_events)
 
     def _handle_worker_event(self, event) -> None:
         event_type = event[0]
+        if event_type in ("preview_ready", "preview_failed"):
+            if self.preview is not None:
+                self.preview.accept(event)
+            return
 
         if event_type == "pdf_loaded":
             _, generation, path, page_count = event

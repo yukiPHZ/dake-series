@@ -33,7 +33,7 @@ if not exist "%ENTRY_FILE%" goto :entry_missing
 call :run "%PYTHON_EXE%" %PYTHON_ARGS% -m pip install -r requirements.txt
 if errorlevel 1 goto :fail
 
-call :run "%PYTHON_EXE%" %PYTHON_ARGS% ..\..\tools\generate_version_info.py --app-dir . --out version_info.txt
+call :run "%PYTHON_EXE%" %PYTHON_ARGS% ..\..\tools\generate_version_info.py --app-dir . --out version_info.txt --company-name PEAKHEADZ --legal-copyright "Copyright Yukihiko Kikuta"
 if errorlevel 1 goto :fail
 
 rem The installed pypdfium2 hook collects the PDFium binary; keep the DnD collect.
