@@ -109,6 +109,10 @@ def main() -> int:
         assert payload["secret_read"] == "no"
         assert payload["live_api_called"] == "no"
         assert "dake_item_id" in payload["product_payload"]["metadata"]
+        assert "purchase_delivery_method" not in payload["product_payload"]["metadata"]
+        assert "delivery_policy" not in payload["product_payload"]["metadata"]
+        assert payload["payment_link_payload"]["metadata"]["purchase_delivery_method"] == "manual_email_private_download"
+        assert payload["payment_link_payload"]["payment_intent_data"]["metadata"]["delivery_policy"] == "manual_email_private_download"
         print("synthetic_pack_scaling=passed")
         return 0
     finally:

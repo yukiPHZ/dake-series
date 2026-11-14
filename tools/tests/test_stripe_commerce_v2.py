@@ -300,6 +300,9 @@ def add_link(fake: FakeStripe, data: dict[str, Any], price_id: str, object_id: s
         "metadata": dict(data["payment_link_payload"]["metadata"]),
         "payment_intent_data": dict(data["payment_link_payload"]["payment_intent_data"]),
     }
+    for key in ("custom_text", "after_completion"):
+        if key in data["payment_link_payload"]:
+            value[key] = data["payment_link_payload"][key]
     fake.links[object_id] = value
     fake.link_lines[object_id] = [{"price": price_id, "quantity": 1}]
     return value
@@ -397,6 +400,85 @@ def test_exact_payment_link_reused(monkeypatch: pytest.MonkeyPatch, tmp_path: Pa
     result, _ = run_live(monkeypatch, tmp_path, fake, data)
     assert result["actions"]["payment_link"] == "reused"
     assert "PaymentLink.create" not in fake.api_calls
+
+
+def test_mail_draft_private_delivery_reuses_product_and_price_and_replaces_old_link(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    product_id = "DAKE_Mail_Draft"
+    data = build_app_release(
+        {
+            "product_id": product_id,
+            "source_original": f"01_apps/{product_id}/ORIGINAL.md",
+            "original_text": """
+- purchase_delivery_method: stripe_session_private_r2
+- purchase_delivery_ready: yes
+- delivery_object_key: desktop/DAKE_Mail_Draft/current.zip
+""",
+            "item": {
+                "title": "Dakeメール下書き",
+                "description": "メール下書きを作るDesktop DAKE。",
+                "price": 300,
+                "currency": "JPY",
+                "payment_status": "stripe_ready",
+                "stripe_payment_link": "https://buy.stripe.com/old_mail_draft",
+            },
+        }
+    )
+    assert "purchase_delivery_method" not in data["product_payload"]["metadata"]
+    assert "delivery_policy" not in data["product_payload"]["metadata"]
+
+    fake = FakeStripe()
+    add_product(fake, data, "prod_mail_draft")
+    add_price(fake, data, "prod_mail_draft", "price_mail_draft_300")
+    old_link = {
+        "id": "plink_old_mail_draft",
+        "url": "https://buy.stripe.com/old_mail_draft",
+        "active": True,
+        "livemode": True,
+        "metadata": {
+            "dake_item_id": product_id,
+            "dake_type": "app",
+            "source_original": f"01_apps/{product_id}/ORIGINAL.md",
+        },
+        "payment_intent_data": {"metadata": {"dake_item_id": product_id}},
+    }
+    fake.links[old_link["id"]] = old_link
+    fake.link_lines[old_link["id"]] = [{"price": "price_mail_draft_300", "quantity": 1}]
+
+    expected_link = {
+        **data["payment_link_payload"],
+        "line_items": [{"price": "price_mail_draft_300", "quantity": 1}],
+    }
+    candidate, candidate_action = commerce.select_payment_link(
+        [(old_link, fake.link_lines[old_link["id"]])],
+        "price_mail_draft_300",
+        expected_link,
+    )
+    assert candidate is None
+    assert candidate_action == "created"
+
+    result, _ = run_live(monkeypatch, tmp_path, fake, data)
+    assert result["actions"]["product"] == "reused"
+    assert result["actions"]["price"] == "reused"
+    assert result["actions"]["payment_link"] == "created"
+    assert "Product.create" not in fake.api_calls
+    assert "Price.create" not in fake.api_calls
+    assert fake.links[old_link["id"]] == old_link
+
+    new_link = fake.links[result["payment_link_id"]]
+    assert new_link["metadata"]["purchase_delivery_method"] == "stripe_session_private_r2"
+    assert new_link["payment_intent_data"]["metadata"]["delivery_policy"] == "stripe_session_private_r2"
+    assert new_link["after_completion"] == {
+        "type": "redirect",
+        "redirect": {"url": DESKTOP_DOWNLOAD_REDIRECT_URL},
+    }
+
+    before_rerun = len(fake.links)
+    second = commerce.execute_live(data, stripe_client=fake, secret_key="sk_live_fixture_1234567890")
+    assert second["actions"]["payment_link"] == "reused"
+    assert len(fake.links) == before_rerun
 
 
 def test_multiple_exact_payment_links_stop(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

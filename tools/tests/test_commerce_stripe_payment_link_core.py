@@ -74,6 +74,29 @@ def test_supported_product_modes() -> None:
     assert redirected.payment_link_payload["after_completion"]["type"] == "redirect"
 
 
+def test_fulfillment_metadata_is_payment_only() -> None:
+    payloads = build_stripe_payment_link_payloads(
+        spec(
+            metadata={
+                **spec().metadata,
+                "purchase_delivery_method": "legacy_value",
+                "delivery_policy": "legacy_value",
+            },
+            payment_metadata={
+                "dake_item_id": "generic_item",
+                "dake_type": "digital_product",
+                "source_original": "fixtures/ORIGINAL.md",
+                "purchase_delivery_method": "stripe_session_private_r2",
+                "delivery_policy": "stripe_session_private_r2",
+            },
+        )
+    )
+    assert "purchase_delivery_method" not in payloads.product_payload["metadata"]
+    assert "delivery_policy" not in payloads.product_payload["metadata"]
+    assert payloads.payment_link_payload["metadata"]["purchase_delivery_method"] == "stripe_session_private_r2"
+    assert payloads.payment_link_payload["payment_intent_data"]["metadata"] == payloads.payment_link_payload["metadata"]
+
+
 def test_rejections() -> None:
     must_stop("unsupported_in_commerce_v1", price_model="recurring")
     must_stop("amount must be", amount=0)
@@ -81,6 +104,10 @@ def test_rejections() -> None:
     must_stop("tax_code is required", tax_code="")
     must_stop("checkout notice length overflow", checkout_notice="x" * 1201)
     must_stop("secret-like metadata", metadata={"dake_item_id": "x", "key": "sk_live_1234567890abcdef"})
+    must_stop(
+        "secret-like metadata",
+        payment_metadata={"dake_item_id": "x", "key": "sk_live_1234567890abcdef"},
+    )
     must_stop(
         "private URL exposure",
         product_kind="web_service_one_time_redirect",
@@ -100,6 +127,7 @@ def test_idempotency_stability() -> None:
 def main() -> int:
     tests = [
         test_supported_product_modes,
+        test_fulfillment_metadata_is_payment_only,
         test_rejections,
         test_idempotency_stability,
     ]
