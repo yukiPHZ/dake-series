@@ -157,7 +157,7 @@ OIKAWAは、必要な記憶が静かに側へ戻ってくる場所です。QPSC�
 
 ---
 
-しまりす不動産 ｜ © Yukihiko Kikuta・PEAKHEADZ
+DAKE tools by Yukihiko Kikuta / PEAKHEADZ
 
 ## QPSC通常運用 / Phase 22
 
