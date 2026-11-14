@@ -2,9 +2,9 @@
 
 ## 目的
 
-DAKE Store の購入後導線、ダウンロード案内、サポート、返金、BOOTH併用の運用方針を定義する。
+DAKE Store の公開条件、購入後導線、サポート、返金の運用方針を定義する。
 
-このルールは、静的 Store + Stripe Payment Link + BOOTH 併用の MVP 運用を安全に続けるためのものです。
+StoreはStripeで購入可能な商品だけを静かに置く販売棚です。BOOTHは独立した別販売経路です。
 
 ## Storeの位置づけ
 
@@ -24,19 +24,29 @@ store.dakeapp.com
 
 商品情報、価格、販売文、注意事項、サポート方針などの正本化すべき情報は、必要に応じて `ORIGINAL.md` または共通ルールへ戻します。
 
+公開Storeの一覧・商品詳細に表示できる条件は次の3つすべてです。
+
+```text
+status == available
+AND payment_status == stripe_ready
+AND stripe_payment_link が存在する
+```
+
+generated JSONに存在すること自体は公開条件ではありません。`booth_only`、`preparing`、`free_download`、`not_for_sale` は公開Storeへ表示しません。
+
 ## 正本と販売ビューの関係
 
 - `ORIGINAL.md`: 真の正本
 - `store_products.generated.json`: Store表示用の生成データ。手編集禁止
 - `store.dakeapp.com`: 販売ビュー
 - Stripe Payment Link: 決済導線
-- BOOTH: 併用する販売・配布導線
+- BOOTH: Storeとは独立した別販売経路
 
 Store側だけに商品正本を作りません。
 
 ## 決済方式
 
-MVPでは Stripe Payment Link を優先します。
+公開Storeの決済基盤はStripe Payment Linkです。
 
 Stripe Checkout API、Pages Functions、Webhook、Cloudflare R2、購入後自動URL発行は後続Phaseで検討します。
 
@@ -44,7 +54,7 @@ Stripe Secret Key、Webhook Secret、APIキーは、静的Store、generated JSON
 
 ## Stripe Payment Linkの扱い
 
-`stripe_payment_link` がある商品は、Store上で「Stripeで購入」を表示します。
+`payment_status == stripe_ready` かつ `stripe_payment_link` がある商品だけをStoreへ公開し、購入ボタン「購入する」のリンク先に使います。
 
 Stripe Payment Link は販売導線であり、商品正本ではありません。
 
@@ -54,9 +64,7 @@ StripeはCOMMERCEです。Store同期からProduct、Price、Payment Link、live
 
 ## BOOTH導線の扱い
 
-`stripe_payment_link` が未設定で `booth_url` がある商品は、Store上で「BOOTHで見る」を表示します。
-
-BOOTHは、DAKE Store MVP期間中の販売・配布導線として併用します。
+BOOTHは独立した別販売経路です。`booth_url` があってもStripe-readyでない商品をStoreへ公開せず、Store上の購入代替ボタンにも使いません。
 
 BOOTH側の商品説明やURLも、可能な範囲で各商品の `ORIGINAL.md` に戻します。
 
@@ -78,19 +86,11 @@ MVPでは、Stripe Payment Link購入後の自動ダウンロード発行は未�
 https://store.dakeapp.com/product/?id=DAKE_Time_AdvancedTimer
 ```
 
-購入者には、商品詳細、GitHub Release、BOOTH、または商品ごとの案内に従ってもらいます。
+購入者には、Stripe決済または商品固有の購入後案内に従ってもらいます。
 
 ## ダウンロード導線
 
-MVPでは、以下を優先します。
-
-1. GitHub Release
-2. BOOTH
-3. Store購入後URL（未実装）
-
-`download_url` が未確定の商品は、`null` のまま扱います。
-
-表示側では、必要に応じて「準備中」「BOOTHで見る」「GitHub Release」などへ変換します。
+`download_url`、GitHub Release、BOOTH URLはStore掲載条件でも購入代替導線でもありません。購入後downloadの仕組みは今回変更しません。
 
 ## 問い合わせ先
 
@@ -126,11 +126,17 @@ StripeまたはBOOTHの仕組みに従う必要がある場合は、各サービ
 
 税務・法務・不動産判断に関わる内容は、必要に応じて専門家へ確認してください。
 
-## download_url未確定商品の扱い
+## レイヤー分離
 
-`download_url` が未確定でも、BOOTH URL、GitHub Release URL、Stripe Payment Linkがある場合は販売・案内を継続できます。
+Stripe Payment Linkの作成と `payment_status = stripe_ready` への更新はCOMMERCEです。generated JSONの生成、Store repoへの同期、公開確認はDISTRIBUTIONです。
 
-ただし、購入者が迷わないように、商品詳細ページや販売文で現在の配布導線を明確にします。
+```text
+COMMERCE
+↓
+DISTRIBUTION
+```
+
+`sync_store_to_site.py` はgenerated JSON生成・同期・検証・次のGit手順表示だけを担当し、Stripe APIを呼びません。
 
 ## 今後の拡張
 
