@@ -1,3 +1,5 @@
+"""Optional/Legacy Checkout smoke-review recorder, not a Commerce gate."""
+
 from __future__ import annotations
 
 import argparse

@@ -290,7 +290,7 @@ def parse_original_item(path: Path) -> dict[str, Any]:
             "description": "",
         }
 
-    product_id = path.parent.name
+    product_id = metadata_line(text, "app_id") or path.parent.name
     return {
         "id": product_id,
         "type": "app",
@@ -397,12 +397,12 @@ def validate_payment_state(product_id: str, item: dict[str, Any]) -> list[str]:
     payment_link = str(item.get("stripe_payment_link") or "")
     if is_unset_value(payment_link):
         payment_link = ""
-    if status == "stripe_ready" or payment_link:
-        errors.append(f"{product_id}: already stripe_ready or has a Stripe Payment Link")
-    if status not in {"booth_only", "preparing", ""}:
+    if status not in {"booth_only", "preparing", "stripe_ready", ""}:
         errors.append(f"{product_id}: unsupported payment_status before release: {status}")
-    if status == "preparing":
-        errors.append(f"{product_id}: payment_status is preparing")
+    if status == "stripe_ready" and not payment_link:
+        errors.append(f"{product_id}: payment_status is stripe_ready but Stripe Payment Link is missing")
+    if payment_link and status != "stripe_ready":
+        errors.append(f"{product_id}: Stripe Payment Link exists but payment_status is not stripe_ready")
     return errors
 
 
@@ -543,8 +543,6 @@ def build_pack_release(context: dict[str, Any]) -> dict[str, Any]:
         price = 0
     if currency != "jpy":
         errors.append(f"{product_id}: currency must be JPY")
-    if not booth_url:
-        errors.append(f"{product_id}: booth_url is missing")
     if not zip_exists:
         errors.append(f"{product_id}: Pack ZIP is missing")
     if expected_size is not None and zip_size != expected_size:
@@ -633,33 +631,22 @@ def build_app_release(context: dict[str, Any]) -> dict[str, Any]:
     source_original = context["source_original"]
     rollout = row_map(ROLLOUT_REVIEW_CSV).get(product_id, {})
     errors = validate_payment_state(product_id, item)
-    title = rollout.get("stripe_product_name") or rollout.get("title") or item.get("title") or product_id
+    title = item.get("title") or rollout.get("stripe_product_name") or rollout.get("title") or product_id
     price = int_price(item.get("price") or rollout.get("price"))
     currency = currency_jpy(item.get("currency") or rollout.get("currency") or "JPY")
     booth_url = str(item.get("booth_url") or rollout.get("booth_url") or "")
     github_release_url = str(item.get("github_release_url") or rollout.get("github_release_url") or "")
-    tax_code = rollout.get("tax_code_candidate") or ""
-    if not rollout:
-        errors.append(f"{product_id}: missing rollout review row")
-    if rollout and not (
-        rollout.get("review_result") == "create"
-        and rollout.get("creation_method") == "api_candidate"
-        and rollout.get("price_check") == "price_ok"
-        and rollout.get("metadata_ready") == "yes"
-    ):
-        errors.append(f"{product_id}: rollout review row is not an API creation candidate")
+    tax_code = (
+        metadata_line(context["original_text"], "tax_code")
+        or metadata_line(context["original_text"], "tax_code_candidate")
+        or rollout.get("tax_code_candidate")
+        or PACK_TAX_CODE_CANDIDATE
+    )
     if price is None:
         errors.append(f"{product_id}: price is missing or invalid")
         price = 0
     if currency != "jpy":
         errors.append(f"{product_id}: currency must be JPY")
-    if not booth_url:
-        errors.append(f"{product_id}: booth_url is missing")
-    if not github_release_url:
-        errors.append(f"{product_id}: github_release_url is missing")
-    if not tax_code:
-        errors.append(f"{product_id}: tax_code_candidate is missing")
-
     description = clean_description(item.get("description"), f"{title} / {item.get('category') or ''}")
     product_payload, price_payload, payment_link_payload = base_payload(
         product_id=product_id,

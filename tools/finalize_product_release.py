@@ -1,3 +1,9 @@
+"""Legacy two-phase finalize compatibility tool.
+
+Normal Commerce writes verified Stripe results to ORIGINAL.md in
+tools/release_product.py and does not require this second approval.
+"""
+
 from __future__ import annotations
 
 import argparse

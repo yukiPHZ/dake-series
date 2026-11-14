@@ -1,10 +1,9 @@
-"""Legacy-compatible DISTRIBUTION / COMMERCE status pipeline.
+"""Legacy-compatible DISTRIBUTION / COMMERCE stage-machine CLI.
 
-This tool does not build an app, validate its main function, create a GitHub
-Release, or decide SHIP completion. Normal sales preparation uses the BOOTH,
-dakeapp, and Store tools independently and stops before external registration,
-publication, or Commerce operations. Cross-layer automatic ``advance`` is
-disabled unless the explicit Legacy compatibility flag is supplied.
+Normal Stripe Commerce uses tools/release_product.py. This tool does not build
+an app, create a GitHub Release, or decide SHIP completion. Cross-layer
+automatic ``advance`` stays disabled unless the explicit Legacy compatibility
+flag is supplied.
 """
 
 from __future__ import annotations

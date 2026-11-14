@@ -17,7 +17,7 @@ Built around the idea:
 
 ## Principles
 
-開発作業は [AGENTS.md](AGENTS.md) から開始します。通常の初期読込はAGENTS、[共通仕様](00_core/DAKE_COMMON_SPEC.md)、対象アプリのORIGINALの3つです。個別仕様はORIGINALを正本とし、README等の派生ビューは影響するものだけ更新します。出荷はSHIP / DISTRIBUTION / COMMERCEを分け、既存アプリは次回更新時に段階移行します。
+開発作業は [AGENTS.md](AGENTS.md) から開始します。通常の初期読込はAGENTS、[共通仕様](00_core/DAKE_COMMON_SPEC.md)、対象アプリのORIGINALの3つです。個別仕様はORIGINALを正本とし、README等の派生ビューは影響するものだけ更新します。出荷はSHIP / DISTRIBUTION / COMMERCEを分け、既存アプリは次回更新時に段階移行します。通常のStripe決済作業は [Commerceルール](00_core/DAKE_COMMERCE_RULE.md) と `tools/release_product.py` を入口にし、旧大型release pipelineは通常入口にしません。
 
 - one app = one job
 - fast to launch

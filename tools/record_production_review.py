@@ -1,3 +1,5 @@
+"""Legacy Store production-review recorder owned by DISTRIBUTION, not Commerce."""
+
 from __future__ import annotations
 
 import argparse

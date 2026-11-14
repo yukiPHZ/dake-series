@@ -1,5 +1,7 @@
 # Stripe Commerce v1 Closeout
 
+> Historical v1 closeout record. The current normal flow is `00_core/DAKE_COMMERCE_RULE.md` plus `tools/release_product.py`; this report does not define current Commerce gates.
+
 Generated: 2026-06-16
 
 ## Current Architecture
