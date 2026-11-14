@@ -20,7 +20,7 @@
 - UI変更で画像更新が必要: `DAKE_SCREENSHOT_RULE.md`
 - BOOTH作業: `DAKE_BOOTH_REGISTER_SPEC.md`
 - Store作業: `DAKE_STORE_OPERATION_RULE.md` / `DAKE_STORE_GENERATED_SPEC.md`
-- Stripe・決済作業: `tools/commerce/` と対象Commerce仕様
+- Stripe・決済作業: `00_core/DAKE_COMMERCE_RULE.md` と `tools/release_product.py`
 
 関連しない仕様を「念のため」一括読込・一括更新しない。
 
@@ -29,6 +29,7 @@
 - DAKEシリーズと関連開発の作業ファイル、テスト資材、バックアップ、ビルド作業場所は原則 `C:\Users\yukiz\devlop\` 配下に限定する。Codex判断でDesktop、Documents、Downloads、ユーザーフォルダ直下等へ永続的な作業フォルダを作らない。OSやライブラリの標準TEMP利用は除く。
 - 依頼されたレイヤーだけを扱う。SHIP依頼からBOOTH、Store、Stripe、Cloudflare、SNS、販売文章、価格、画像生成へ自動的に進まない。
 - 公開、送信、決済作成・変更、BOOTH公開、価格変更、外部登録、削除は、人間の明示依頼なしに実行しない。
+- Stripe live操作は `--apply-live` 自体を1回の明示intentとして扱う。Codexはユーザーからlive実行を明示されない限り実行しない。通常CommerceはStripeだけで完了し、Checkout review、Store production review、Store同期、SHIP、BOOTH、Cloudflare、SNS、Bufferを必須gateまたは自動後続にしない。
 - 未commit変更、未追跡ファイル、過去Release、既存設定を勝手に戻す・削除・stash・混在commitしない。
 - 新機能、全面リファクタリング、新しい状態管理・DB・CI・監査・承認・バックアップ・ログ基盤を理由なく追加しない。削除・統合・単純化を優先する。
 - `commit`、`push`、GitHub Release、販売・公開は別権限。依頼範囲を越えない。

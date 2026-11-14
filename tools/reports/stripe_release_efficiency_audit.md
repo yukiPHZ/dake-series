@@ -1,5 +1,7 @@
 # Stripe Release Efficiency Audit
 
+> Historical Commerce v1 audit. The normal flow is now defined by `00_core/DAKE_COMMERCE_RULE.md`; the pipeline, Checkout review, Finalize, Store review, and social stages below are Legacy compatibility, not normal Commerce gates.
+
 Generated: 2026-06-16
 
 ## Current Flow

@@ -1,7 +1,8 @@
-"""Legacy-named DISTRIBUTION / COMMERCE pipeline.
+"""Legacy DISTRIBUTION / Commerce stage-machine CLI.
 
-This tool does not build an app, validate its main function, create a GitHub
-Release, or decide SHIP completion.
+Do not use this as the normal Stripe Commerce entrypoint. Use
+tools/release_product.py instead. It does not build an app, validate its main
+function, create a GitHub Release, or decide SHIP completion.
 """
 
 from __future__ import annotations

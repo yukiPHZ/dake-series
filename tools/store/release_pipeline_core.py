@@ -1,7 +1,7 @@
-"""Legacy-named Store / Stripe pipeline for DISTRIBUTION and COMMERCE only.
+"""Legacy compatibility stage machine; not the normal Commerce entrypoint.
 
-Internal stage and compatibility field names containing release or
-formal_release do not represent the DAKE SHIP layer.
+It retains historical DISTRIBUTION, Store, review, and social stages. Normal
+Stripe Commerce uses tools/release_product.py and DAKE_COMMERCE_RULE.md.
 """
 
 from __future__ import annotations

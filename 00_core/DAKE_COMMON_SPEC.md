@@ -71,7 +71,11 @@ SHIPを止める条件は原則次の4つだけです。
 
 ### COMMERCE
 
-決済関連です。Stripe、Payment Link、`payment_status`、checkout確認を扱います。
+Stripe決済だけを扱います。通常入口と安全規則は `00_core/DAKE_COMMERCE_RULE.md` に集約します。
+
+通常フローは、`ORIGINAL.md`検証、dry-run、人間の `--apply-live` 明示、Product / Price / Payment Linkの作成または完全一致再利用、Stripe API read-back、同一処理内のORIGINAL書き戻しです。read-back成功後に `stripe_payment_link` と `payment_status = stripe_ready` が一致すれば `COMMERCE = READY` です。
+
+Checkout目視は必要時のsmoke check、Store本番確認はDISTRIBUTION側です。どちらも通常Commerceの必須gateではありません。旧 `release_product_pipeline.py` の大型stage machine、Finalize、Checkout review、production review、pilot / rollout toolはLegacy互換として残せますが、通常入口にしません。
 
 状態は `READY` / `PENDING` / `NOT_REQUIRED` とします。無料アプリや決済不要対象の `NOT_REQUIRED` は正常状態です。
 
