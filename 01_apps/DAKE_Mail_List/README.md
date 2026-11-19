@@ -1,11 +1,11 @@
 # Dakeメールリスト
 
-Outlookから保存した `.msg` メールをドロップすると、会社名・お名前・メールアドレスだけをCSVにする小さなWindows向けアプリです。
+Outlookで選択したメールを直接、または保存済みの `.msg` メールをドロップすると、会社名・お名前・メールアドレスだけをCSVにする小さなWindows向けアプリです。
 
 ## 使い方
 
-1. Outlookからメールを `.msg` 形式で保存します。
-2. `Dakeメールリスト` に `.msg` ファイルをドロップします。
+1. Outlookで1通または複数のメールを選択します。保存済みの `.msg` ファイルも使用できます。
+2. `Dakeメールリスト` の「メールをここへドロップ」へ直接ドラッグ＆ドロップします。
 3. デスクトップ、または選択した保存先に `mail_list_YYYYMMDD_HHMMSS.csv` を保存します。
 
 CSVはUTF-8 with BOMで保存します。列は次の3列だけです。
@@ -17,19 +17,22 @@ CSVはUTF-8 with BOMで保存します。列は次の3列だけです。
 ## 仕様
 
 - 複数の `.msg` ファイルをまとめてドロップできます
+- Outlookで選択した複数メールをWindows native OLEで直接ドロップできます
 - `.msg` 以外は無視します
 - メールアドレスはFrom情報を優先し、取れない場合だけ本文から最初のメールアドレスを拾います
 - お名前はFrom表示名から取得します
 - 会社名は本文末尾の署名らしき行から、株式会社・有限会社・合同会社などを含む行だけを控えめに拾います
 - 不明な項目は空欄にします
-- Outlook本体、外部通信、AI送信は使いません
+- Outlook COM/API、外部通信、AI送信は使いません
+- Outlook仮想メールの一時 `.msg` は標準ランタイムTEMPへ保存し、処理後に削除します
+- 実機確認用の最小診断は `%TEMP%\DakeMail_List_ole_dnd.log` で確認できます。本文・アドレス・氏名・会社名・件名全文は記録しません
 
 ## 依存ライブラリ
 
 - extract-msg
-- tkinterdnd2
+- pywin32
 
-`extract-msg` はOutlook `.msg` から送信者・件名・本文などを抽出するPythonライブラリです。PyPI上のメタ情報ではGPLライセンス、Python 3.8以上が案内されています。exe配布時は `extract-msg` と同梱依存ライブラリのライセンス条件を確認してください。
+`extract-msg` はOutlook `.msg` を解析し、`pywin32` はWindows native OLEの `IDropTarget`、`CF_HDROP`、`FileGroupDescriptorW`、`FileContents` を扱います。
 
 ## ビルド
 
@@ -65,9 +68,9 @@ GitHubからダウンロードしたWindows向けexeは、初回起動時にWind
   "app_key": "dake_mail_list",
   "display_name": "Dakeメールリスト",
   "launcher_title": "メールリスト作成",
-  "launcher_description": "Outlookから保存したメールをCSVリストにします。",
+  "launcher_description": "Outlookのメールを直接ドロップしてCSVリストにします。",
   "site_title": "Dakeメールリスト",
-  "site_description": "Outlookの.msgメールから、会社名・お名前・メールアドレスだけをCSVにする小さな実務ツールです。",
+  "site_description": "Outlookで選択したメール、または保存済みの.msgメールから、会社名・お名前・メールアドレスだけをCSVにする小さな実務ツールです。",
   "update_summary": "Outlook .msg メールから3列CSVを作成します。",
   "folder_name": "DAKE_Mail_List",
   "exe_name": "DakeMail_List.exe",
@@ -85,6 +88,6 @@ GitHubからダウンロードしたWindows向けexeは、初回起動時にWind
 ## RELEASE_BODY
 
 - Dakeメールリスト
-- Outlookの.msgメールをCSV化
+- Outlookで選択したメールの直接DnDと保存済み.msgをCSV化
 - 会社名・お名前・メールアドレスだけ抽出
 - ローカル完結のWindows向けexe

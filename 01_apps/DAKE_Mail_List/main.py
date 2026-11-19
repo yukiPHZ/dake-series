@@ -18,24 +18,18 @@ from pathlib import Path
 import tkinter as tk
 from tkinter import filedialog, font as tkfont, messagebox
 
-try:
-    from tkinterdnd2 import DND_FILES, TkinterDnD
+import pythoncom
 
-    ROOT_CLASS = TkinterDnD.Tk
-    DND_READY = True
-except ImportError:
-    DND_FILES = None
-    ROOT_CLASS = tk.Tk
-    DND_READY = False
+from native_ole_drop import NativeOleDropRegistration
 
 
 APP_NAME = "Dakeメールリスト"
 WINDOW_TITLE = APP_NAME
-COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 
 UI_TEXT = {
     "main_title": "メールをCSVにする",
-    "main_description": "Outlookから保存した .msg ファイルをここへドロップします。",
+    "main_description": "Outlookのメール、または保存済みの .msg ファイルをここへドロップします。",
     "drop_area": "メールをここへドロップ",
     "button_select_folder": "CSV保存先を選ぶ",
     "button_open_folder": "保存フォルダを開く",
@@ -46,7 +40,7 @@ UI_TEXT = {
     "dialog_folder_title": "CSV保存先を選ぶ",
     "dialog_error_title": "確認してください",
     "dialog_drop_error": ".msg ファイルをドロップしてください。",
-    "dialog_dependency_error": "ドラッグ＆ドロップ用ライブラリを読み込めませんでした。requirements.txt を確認してください。",
+    "dialog_dependency_error": "Windowsのドラッグ＆ドロップを初期化できませんでした。",
     "dialog_open_error": "保存フォルダを開けませんでした。",
     "footer_left": "シンプルそれDAKEシリーズ",
     "footer_caption": "止まらない、迷わない、すぐ終わる。",
@@ -446,14 +440,13 @@ class MailListApp:
         self.processing = False
         self.last_output_folder = self.save_folder
         self.status_var = tk.StringVar(value=UI_TEXT["status_idle"])
+        self.ole_drop_registration: NativeOleDropRegistration | None = None
 
         apply_window_icon(self.root)
         self.build_ui()
         self.register_drop_targets()
+        self.root.protocol("WM_DELETE_WINDOW", self.handle_close)
         self.root.after(QUEUE_POLL_INTERVAL_MS, self.poll_queue)
-
-        if not DND_READY:
-            self.set_status("status_error", is_error=True)
 
     def build_ui(self) -> None:
         outer = tk.Frame(self.root, bg=COLORS["base_bg"])
@@ -638,14 +631,25 @@ class MailListApp:
             button.configure(bg=button._normal_bg)
 
     def register_drop_targets(self) -> None:
-        if not DND_READY or DND_FILES is None:
-            return
-        for widget in (self.root, self.drop_area, self.drop_label):
-            try:
-                widget.drop_target_register(DND_FILES)
-                widget.dnd_bind("<<Drop>>", self.handle_drop)
-            except tk.TclError:
-                continue
+        self.root.update_idletasks()
+        try:
+            self.ole_drop_registration = NativeOleDropRegistration(
+                widgets=(self.root, self.drop_area, self.drop_label),
+                on_drop=self.handle_native_drop,
+                is_busy=lambda: self.processing,
+                on_error=self.handle_native_drop_error,
+            )
+        except Exception:
+            self.ole_drop_registration = None
+            self.set_status("status_error", is_error=True)
+            self.root.after_idle(self.show_dependency_error)
+
+    def show_dependency_error(self) -> None:
+        messagebox.showerror(
+            UI_TEXT["dialog_error_title"],
+            UI_TEXT["dialog_dependency_error"],
+            parent=self.root,
+        )
 
     def set_status(self, status_key: str, is_error: bool = False) -> None:
         self.status_var.set(UI_TEXT[status_key])
@@ -687,37 +691,52 @@ class MailListApp:
                 parent=self.root,
             )
 
-    def handle_drop(self, event) -> None:
+    def handle_native_drop(self, raw_paths: list[str], cleanup: object | None) -> bool:
         if self.processing:
-            return
-        raw_paths = list(self.root.tk.splitlist(event.data))
+            return False
         if not any(Path(path).suffix.lower() == ".msg" for path in raw_paths):
             self.set_status("status_error", is_error=True)
-            messagebox.showwarning(
-                UI_TEXT["dialog_error_title"],
-                UI_TEXT["dialog_drop_error"],
-                parent=self.root,
-            )
-            return
-        self.start_processing(raw_paths)
+            self.root.after_idle(self.show_drop_warning)
+            return False
+        self.start_processing(raw_paths, cleanup)
+        return True
 
-    def start_processing(self, raw_paths: list[str]) -> None:
+    def handle_native_drop_error(self) -> None:
+        self.set_status("status_error", is_error=True)
+
+    def show_drop_warning(self) -> None:
+        messagebox.showwarning(
+            UI_TEXT["dialog_error_title"],
+            UI_TEXT["dialog_drop_error"],
+            parent=self.root,
+        )
+
+    def start_processing(self, raw_paths: list[str], cleanup: object | None = None) -> None:
         self.set_processing(True)
         self.set_status("status_loading")
         worker = threading.Thread(
             target=self.process_worker,
-            args=(raw_paths, self.save_folder),
+            args=(raw_paths, self.save_folder, cleanup),
             daemon=True,
         )
         worker.start()
 
-    def process_worker(self, raw_paths: list[str], save_folder: Path) -> None:
+    def process_worker(
+        self,
+        raw_paths: list[str],
+        save_folder: Path,
+        cleanup: object | None,
+    ) -> None:
         try:
             result = process_msg_files(raw_paths, save_folder)
         except Exception:
             self.event_queue.put({"type": "error"})
-            return
-        self.event_queue.put({"type": "done", "result": result})
+        else:
+            self.event_queue.put({"type": "done", "result": result})
+        finally:
+            cleanup_method = getattr(cleanup, "cleanup", None)
+            if callable(cleanup_method):
+                cleanup_method()
 
     def poll_queue(self) -> None:
         try:
@@ -742,14 +761,29 @@ class MailListApp:
             self.set_status("status_saved")
             open_folder(self.last_output_folder)
 
+    def handle_close(self) -> None:
+        if self.ole_drop_registration is not None:
+            self.ole_drop_registration.revoke()
+            self.ole_drop_registration = None
+        self.root.destroy()
+
     def run(self) -> None:
-        self.root.mainloop()
+        try:
+            self.root.mainloop()
+        finally:
+            if self.ole_drop_registration is not None:
+                self.ole_drop_registration.revoke()
+                self.ole_drop_registration = None
 
 
 def main() -> None:
     set_windows_app_id()
-    root = ROOT_CLASS()
-    MailListApp(root).run()
+    pythoncom.OleInitialize()
+    try:
+        root = tk.Tk()
+        MailListApp(root).run()
+    finally:
+        ctypes.windll.ole32.OleUninitialize()
 
 
 if __name__ == "__main__":

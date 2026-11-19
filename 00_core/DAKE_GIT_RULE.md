@@ -7,6 +7,8 @@ Git除外、成果物、履歴の扱いを変える時だけ参照します。
 - 個別アプリの正本は `ORIGINAL.md`。README等は派生ビュー。
 - ソース、仕様、必要な公開ビューをGitで管理する。
 - exeは通常commitせず、GitHub Release成果物として扱う。
+- 実機確認用exeも通常commitへ含めず、明確なtestタグのGitHub Prerelease Assetとして扱う。
+- 開発用ファイル・一時成果物・build作業場所は原則 `C:\Users\yukiz\devlop\` 配下とし、標準ランタイムTEMP以外へCodex判断で永続作業フォルダを作らない。
 - 既存のユーザー変更・未追跡ファイルを戻す、削除する、stashする、混在commitすることは禁止。
 - 対象ファイルだけをstageし、`git add .` を安易に使わない。
 

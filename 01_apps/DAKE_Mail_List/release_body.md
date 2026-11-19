@@ -1,4 +1,4 @@
 - Dakeメールリスト
-- Outlookの.msgメールをCSV化
+- Outlookで選択したメールのWindows native OLE直接DnDと保存済み.msgをCSV化
 - 会社名・お名前・メールアドレスだけ抽出
 - ローカル完結のWindows向けexe
