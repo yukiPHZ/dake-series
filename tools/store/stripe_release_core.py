@@ -33,6 +33,12 @@ ARTIFACT_ROOT = ROOT / "tools" / "reports" / "release_artifacts"
 DRY_RUN_NOTICE = "DRY RUN ONLY. NO STRIPE API CALL. NO LIVE OBJECT IS CREATED."
 PRODUCT_PLACEHOLDER = "__PRODUCT_ID_FROM_LIVE_PRODUCT__"
 PRICE_PLACEHOLDER = "__PRICE_ID_FROM_LIVE_PRICE__"
+PAYMENT_LINK_METADATA_KEYS = (
+    "stripe_payment_link",
+    "Stripe Payment Link",
+    "Payment Link",
+    "Stripe URL",
+)
 STORE_PRODUCT_BASE_URL = "https://store.dakeapp.com/product/"
 PACK_TAX_CODE_CANDIDATE = "txcd_10202003"
 JST = timezone(timedelta(hours=9))
@@ -176,6 +182,17 @@ def metadata_line(text: str, key: str) -> str:
     return normalize_original_value(match.group(1)) if match else ""
 
 
+def payment_link_metadata_value(text: str) -> str:
+    values: list[str] = []
+    for key in PAYMENT_LINK_METADATA_KEYS:
+        pattern = re.compile(rf"^\s*[-*]\s*{re.escape(key)}\s*:\s*(.*?)\s*$", re.MULTILINE)
+        values.extend(normalize_original_value(match.group(1)) for match in pattern.finditer(text))
+    normalized = ["" if is_unset_value(value) else value for value in values]
+    if len(set(normalized)) > 1:
+        raise SafetyStop("ambiguous ORIGINAL.md: conflicting Payment Link metadata")
+    return normalized[0] if normalized else ""
+
+
 def json_like_value(text: str, key: str) -> str:
     pattern = re.compile(rf'"{re.escape(key)}"\s*:\s*"([^"]*)"')
     match = pattern.search(text)
@@ -307,7 +324,7 @@ def parse_original_item(path: Path) -> dict[str, Any]:
             or product_id
         )
         payment_status = metadata_line(text, "payment_status") or "booth_only"
-        stripe_payment_link = metadata_line(text, "stripe_payment_link")
+        stripe_payment_link = payment_link_metadata_value(text)
         if is_unset_value(stripe_payment_link):
             stripe_payment_link = ""
         return {
@@ -336,7 +353,7 @@ def parse_original_item(path: Path) -> dict[str, Any]:
         "currency": "JPY",
         "booth_url": metadata_line(text, "booth_url") or first_url_after(text, "BOOTH URL"),
         "github_release_url": metadata_line(text, "release_url") or first_url_after(text, "Release"),
-        "stripe_payment_link": metadata_line(text, "stripe_payment_link") or None,
+        "stripe_payment_link": payment_link_metadata_value(text) or None,
         "payment_status": metadata_line(text, "payment_status") or "",
         "description": "",
     }

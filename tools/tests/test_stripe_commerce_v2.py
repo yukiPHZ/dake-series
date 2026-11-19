@@ -14,6 +14,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 
 import release_product  # noqa: E402
 from tools.commerce import stripe_commerce_v2 as commerce  # noqa: E402
+from tools.store import generate_store_products as store_generator  # noqa: E402
 from tools.store.stripe_release_core import (  # noqa: E402
     DESKTOP_DOWNLOAD_REDIRECT_URL,
     app_delivery_config,
@@ -264,11 +265,182 @@ def prepare_root(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, data: dict[str
     monkeypatch.setattr(commerce, "ARTIFACT_ROOT", tmp_path / "tools" / "reports" / "release_artifacts")
     original = tmp_path / data["source_original"]
     original.parent.mkdir(parents=True, exist_ok=True)
-    original.write_text(
-        "# ORIGINAL\n\n- payment_status: booth_only\n- stripe_payment_link: 未設定\n",
-        encoding="utf-8",
-    )
+    lines = ["# ORIGINAL", "", f"- payment_status: {data.get('payment_status_before') or 'booth_only'}"]
+    previous_link = data.get("stripe_payment_link_before")
+    if previous_link:
+        lines.append(f"- Stripe Payment Link: {previous_link}")
+    else:
+        lines.append("- stripe_payment_link: 未設定")
+    original.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return original
+
+
+def write_original_fixture(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, text: str) -> Path:
+    monkeypatch.setattr(commerce, "ROOT", tmp_path)
+    source = Path("01_apps/DAKE_Mail_Draft/ORIGINAL.md")
+    path = tmp_path / source
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+    return path
+
+
+@pytest.mark.parametrize(
+    "key",
+    ["Stripe Payment Link", "stripe_payment_link", "Payment Link", "Stripe URL"],
+)
+def test_payment_link_compare_and_swap_replaces_legacy_key_in_place(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    key: str,
+) -> None:
+    old_url = "https://buy.stripe.com/old_mail_draft"
+    new_url = "https://buy.stripe.com/new_mail_draft"
+    path = write_original_fixture(
+        monkeypatch,
+        tmp_path,
+        f"# ORIGINAL\n\n本文URL: {old_url}\n\n- {key}: {old_url}\n- payment_status: booth_only\n",
+    )
+
+    action = commerce.update_original_atomic(
+        "01_apps/DAKE_Mail_Draft/ORIGINAL.md",
+        new_url,
+        expected_previous_link=old_url,
+    )
+
+    updated = path.read_text(encoding="utf-8")
+    assert action == "updated"
+    assert f"- {key}: {new_url}" in updated
+    assert f"本文URL: {old_url}" in updated
+    assert "- payment_status: stripe_ready" in updated
+    if key != "stripe_payment_link":
+        assert "- stripe_payment_link:" not in updated
+
+
+def test_payment_link_compare_and_swap_stops_when_original_changed(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    changed_url = "https://buy.stripe.com/changed_after_dry_run"
+    path = write_original_fixture(
+        monkeypatch,
+        tmp_path,
+        f"# ORIGINAL\n\n- Stripe Payment Link: {changed_url}\n- payment_status: stripe_ready\n",
+    )
+    before = path.read_text(encoding="utf-8")
+    with pytest.raises(commerce.SafetyStop, match="Payment Link changed since dry-run"):
+        commerce.update_original_atomic(
+            "01_apps/DAKE_Mail_Draft/ORIGINAL.md",
+            "https://buy.stripe.com/new_mail_draft",
+            expected_previous_link="https://buy.stripe.com/old_mail_draft",
+        )
+    assert path.read_text(encoding="utf-8") == before
+
+
+def test_payment_link_compare_and_swap_is_unchanged_when_current_is_new(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    new_url = "https://buy.stripe.com/new_mail_draft"
+    path = write_original_fixture(
+        monkeypatch,
+        tmp_path,
+        f"# ORIGINAL\n\n- Payment Link: {new_url}\n- payment_status: stripe_ready\n",
+    )
+    before = path.read_text(encoding="utf-8")
+    action = commerce.update_original_atomic(
+        "01_apps/DAKE_Mail_Draft/ORIGINAL.md",
+        new_url,
+        expected_previous_link="https://buy.stripe.com/old_mail_draft",
+    )
+    assert action == "unchanged"
+    assert path.read_text(encoding="utf-8") == before
+
+
+def test_payment_link_compare_and_swap_adds_canonical_key_when_missing(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    new_url = "https://buy.stripe.com/new_mail_draft"
+    path = write_original_fixture(monkeypatch, tmp_path, "# ORIGINAL\n")
+    action = commerce.update_original_atomic(
+        "01_apps/DAKE_Mail_Draft/ORIGINAL.md",
+        new_url,
+        expected_previous_link=None,
+    )
+    updated = path.read_text(encoding="utf-8")
+    assert action == "updated"
+    assert f"- stripe_payment_link: {new_url}" in updated
+    assert "- payment_status: stripe_ready" in updated
+
+
+def test_payment_link_compare_and_swap_stops_on_conflicting_metadata(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    path = write_original_fixture(
+        monkeypatch,
+        tmp_path,
+        """# ORIGINAL
+
+- Stripe Payment Link: https://buy.stripe.com/old_mail_draft
+- stripe_payment_link: https://buy.stripe.com/conflicting_mail_draft
+- payment_status: stripe_ready
+""",
+    )
+    before = path.read_text(encoding="utf-8")
+    with pytest.raises(commerce.SafetyStop, match="conflicting Payment Link metadata"):
+        commerce.update_original_atomic(
+            "01_apps/DAKE_Mail_Draft/ORIGINAL.md",
+            "https://buy.stripe.com/new_mail_draft",
+            expected_previous_link="https://buy.stripe.com/old_mail_draft",
+        )
+    assert path.read_text(encoding="utf-8") == before
+
+
+def test_store_generator_reads_replaced_legacy_payment_link(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    old_url = "https://buy.stripe.com/old_mail_draft"
+    new_url = "https://buy.stripe.com/new_mail_draft"
+    write_original_fixture(
+        monkeypatch,
+        tmp_path,
+        f"""# ORIGINAL
+
+## 基本情報
+
+- app_id: DAKE_Mail_Draft
+- title: Dakeメール下書き
+- status: available
+- price: 300円
+
+## Store表示用情報
+
+- 商品名: Dakeメール下書き
+- Stripe Payment Link: {old_url}
+""",
+    )
+    commerce.update_original_atomic(
+        "01_apps/DAKE_Mail_Draft/ORIGINAL.md",
+        new_url,
+        expected_previous_link=old_url,
+    )
+
+    generated_dir = tmp_path / "tools" / "generated"
+    report_dir = tmp_path / "tools" / "reports"
+    monkeypatch.setattr(store_generator, "ROOT", tmp_path)
+    monkeypatch.setattr(store_generator, "GENERATED_DIR", generated_dir)
+    monkeypatch.setattr(store_generator, "REPORT_DIR", report_dir)
+    monkeypatch.setattr(store_generator, "OUTPUT_JSON", generated_dir / "store_products.generated.json")
+    monkeypatch.setattr(store_generator, "OUTPUT_REPORT", report_dir / "store_report.md")
+    monkeypatch.setattr(store_generator, "SHIMARISU_ORIGINAL", tmp_path / "missing-shimarisu-original.md")
+
+    assert store_generator.main() == 0
+    generated = json.loads(store_generator.OUTPUT_JSON.read_text(encoding="utf-8"))
+    item = next(row for row in generated["items"] if row["id"] == "DAKE_Mail_Draft")
+    assert item["stripe_payment_link"] == new_url
+    assert item["payment_status"] == "stripe_ready"
 
 
 def add_product(fake: FakeStripe, data: dict[str, Any], object_id: str = "prod_existing") -> dict[str, Any]:

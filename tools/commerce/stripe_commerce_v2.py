@@ -47,6 +47,18 @@ JST = timezone(timedelta(hours=9))
 BUY_STRIPE_PREFIX = "https://buy.stripe.com/"
 PRODUCT_PLACEHOLDER = "__PRODUCT_ID_FROM_LIVE_PRODUCT__"
 PRICE_PLACEHOLDER = "__PRICE_ID_FROM_LIVE_PRICE__"
+PAYMENT_LINK_METADATA_KEYS = (
+    "stripe_payment_link",
+    "Stripe Payment Link",
+    "Payment Link",
+    "Stripe URL",
+)
+PAYMENT_LINK_UNSET_VALUES = {"", "not set", "none", "null", "-", "unset", "未設定"}
+PAYMENT_LINK_LINE_PATTERN = re.compile(
+    rf"^(?P<prefix>\s*[-*]\s*(?:{'|'.join(re.escape(key) for key in PAYMENT_LINK_METADATA_KEYS)})\s*:\s*)"
+    r"(?P<value>.*?)\s*$",
+    re.MULTILINE,
+)
 
 
 def now_jst() -> str:
@@ -296,7 +308,35 @@ def metadata_line(text: str, key: str) -> str:
     return value[1:-1].strip() if len(value) >= 2 and value.startswith("`") and value.endswith("`") else value
 
 
-def update_original_atomic(source_original: str, payment_link_url: str) -> str:
+def normalize_payment_link_value(value: Any) -> str:
+    normalized = str(value or "").strip()
+    if len(normalized) >= 2 and normalized.startswith("`") and normalized.endswith("`"):
+        normalized = normalized[1:-1].strip()
+    return "" if normalized.lower() in PAYMENT_LINK_UNSET_VALUES else normalized
+
+
+def payment_link_metadata_value(text: str) -> str:
+    values = [normalize_payment_link_value(match.group("value")) for match in PAYMENT_LINK_LINE_PATTERN.finditer(text)]
+    if len(set(values)) > 1:
+        raise SafetyStop("ambiguous ORIGINAL.md: conflicting Payment Link metadata")
+    return values[0] if values else ""
+
+
+def replace_payment_link_metadata(text: str, payment_link_url: str) -> str:
+    if PAYMENT_LINK_LINE_PATTERN.search(text):
+        return PAYMENT_LINK_LINE_PATTERN.sub(
+            lambda match: f"{match.group('prefix')}{payment_link_url}",
+            text,
+        )
+    return replace_or_append_metadata(text, "stripe_payment_link", payment_link_url)
+
+
+def update_original_atomic(
+    source_original: str,
+    payment_link_url: str,
+    *,
+    expected_previous_link: str | None = None,
+) -> str:
     if not payment_link_url.startswith(BUY_STRIPE_PREFIX) or "test_" in payment_link_url:
         raise SafetyStop("verified Payment Link URL is not a live buy.stripe.com URL")
     path = (ROOT / source_original).resolve()
@@ -306,22 +346,24 @@ def update_original_atomic(source_original: str, payment_link_url: str) -> str:
         raise SafetyStop("source ORIGINAL.md is outside the repository") from exc
     original = path.read_text(encoding="utf-8")
     current_status = metadata_line(original, "payment_status")
-    current_link = metadata_line(original, "stripe_payment_link")
-    unset = {"", "not set", "none", "null", "-", "unset", "未設定"}
-    if current_link.lower() not in unset and current_link != payment_link_url:
-        raise SafetyStop("ORIGINAL.md already contains a different Stripe Payment Link")
+    current_link = payment_link_metadata_value(original)
+    expected_link = normalize_payment_link_value(expected_previous_link)
+    if current_link not in {expected_link, payment_link_url}:
+        raise SafetyStop("ORIGINAL Payment Link changed since dry-run")
     if current_status not in {"", "booth_only", "preparing", "stripe_ready"}:
         raise SafetyStop(f"unsupported ORIGINAL.md payment_status: {current_status}")
     if current_status == "stripe_ready" and current_link == payment_link_url:
         return "unchanged"
-    updated = replace_or_append_metadata(original, "stripe_payment_link", payment_link_url)
+    updated = original if current_link == payment_link_url else replace_payment_link_metadata(original, payment_link_url)
     updated = replace_or_append_metadata(updated, "payment_status", "stripe_ready")
+    if path.read_text(encoding="utf-8") != original:
+        raise SafetyStop("ORIGINAL.md changed during write-back")
     try:
         write_text_atomic(path, updated)
         verified = path.read_text(encoding="utf-8")
         if metadata_line(verified, "payment_status") != "stripe_ready":
             raise SafetyStop("ORIGINAL.md payment_status write-back verification failed")
-        if metadata_line(verified, "stripe_payment_link") != payment_link_url:
+        if payment_link_metadata_value(verified) != payment_link_url:
             raise SafetyStop("ORIGINAL.md Payment Link write-back verification failed")
     except Exception:
         write_text_atomic(path, original)
@@ -422,7 +464,11 @@ def execute_live(payload: dict[str, Any], *, stripe_client: Any | None = None, s
         save_state(product_id, state, "stripe_verified")
 
         step = "original"
-        original_action = update_original_atomic(payload["source_original"], payment_link_url)
+        original_action = update_original_atomic(
+            payload["source_original"],
+            payment_link_url,
+            expected_previous_link=payload.get("stripe_payment_link_before"),
+        )
         state["actions"]["original"] = original_action
         save_state(product_id, state, "completed")
         result = {
