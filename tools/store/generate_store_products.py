@@ -226,6 +226,9 @@ def stripe_payment_link_from(store: dict[str, Any], booth: dict[str, Any], markd
         url_from_text(booth.get("Stripe Payment Link")),
         url_from_text(booth.get("stripe_payment_link")),
         url_from_text(metadata_line(markdown, "stripe_payment_link")),
+        url_from_text(metadata_line(markdown, "Stripe Payment Link")),
+        url_from_text(metadata_line(markdown, "Payment Link")),
+        url_from_text(metadata_line(markdown, "Stripe URL")),
     )
 
 
