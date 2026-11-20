@@ -2,19 +2,21 @@
 from __future__ import annotations
 
 import ctypes
+import os
+import queue
 import struct
 import tempfile
 import threading
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Iterable
+from typing import Iterable
 
 import pythoncom
 import win32api
 import win32clipboard
 import win32con
 import win32com.server.util
-from win32com import storagecon
 from win32com.shell import shellcon
 
 
@@ -23,11 +25,20 @@ FILE_CONTENTS = win32clipboard.RegisterClipboardFormat("FileContents")
 CONTENT_TYMEDS = (
     pythoncom.TYMED_ISTREAM,
     pythoncom.TYMED_HGLOBAL,
-    pythoncom.TYMED_ISTORAGE,
 )
 STREAM_CHUNK_SIZE = 1024 * 1024
 MAX_DESCRIPTOR_COUNT = 1000
-DIAGNOSTIC_LOG_PATH = Path(tempfile.gettempdir()) / "DakeMail_List_ole_dnd.log"
+APP_DATA_DIR = Path(
+    os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local")
+) / "PEAKHEADZ" / "DakeMailList"
+DIAGNOSTIC_LOG_PATH = APP_DATA_DIR / "logs" / "ole_dnd.log"
+
+
+@dataclass(frozen=True)
+class OleDropPayload:
+    paths: list[str]
+    cleanup: object | None = None
+    error: bool = False
 
 
 class _GUID(ctypes.Structure):
@@ -80,6 +91,7 @@ class OleDndDiagnostics:
 
     def _reset(self) -> None:
         try:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
             self.path.write_text("", encoding="utf-8")
         except OSError:
             return
@@ -104,6 +116,19 @@ def _hresult(error: BaseException) -> str:
     if not isinstance(value, int):
         return "unknown"
     return f"0x{value & 0xFFFFFFFF:08X}"
+
+
+def _exception_type(error: BaseException) -> str:
+    return type(error).__name__
+
+
+def _tymed_name(tymed: int) -> str:
+    names = {
+        pythoncom.TYMED_ISTREAM: "TYMED_ISTREAM",
+        pythoncom.TYMED_HGLOBAL: "TYMED_HGLOBAL",
+        pythoncom.TYMED_ISTORAGE: "TYMED_ISTORAGE",
+    }
+    return names.get(tymed, f"TYMED_{tymed}")
 
 
 def _clipboard_format_name(format_id: int) -> str:
@@ -137,16 +162,54 @@ def _formatetc(format_id: int, index: int, tymed: int) -> tuple[int, None, int, 
     return (format_id, None, pythoncom.DVASPECT_CONTENT, index, tymed)
 
 
-def _query_format(data_object: object, format_id: int, index: int, tymed: int) -> bool:
+def _query_format(
+    data_object: object,
+    format_id: int,
+    index: int,
+    tymed: int,
+    diagnostics: OleDndDiagnostics | None = None,
+) -> bool:
+    if diagnostics is not None:
+        diagnostics.record(
+            "query_get_data_start",
+            format=_clipboard_format_name(format_id),
+            lIndex=index,
+            tymed=_tymed_name(tymed),
+        )
     try:
         data_object.QueryGetData(_formatetc(format_id, index, tymed))
-    except Exception:
+    except Exception as error:
+        if diagnostics is not None:
+            diagnostics.record(
+                "query_get_data_result",
+                format=_clipboard_format_name(format_id),
+                lIndex=index,
+                tymed=_tymed_name(tymed),
+                supported=0,
+                hresult=_hresult(error),
+                exception=_exception_type(error),
+            )
         return False
+    if diagnostics is not None:
+        diagnostics.record(
+            "query_get_data_result",
+            format=_clipboard_format_name(format_id),
+            lIndex=index,
+            tymed=_tymed_name(tymed),
+            supported=1,
+        )
     return True
 
 
-def _supports_any_content_medium(data_object: object, index: int) -> bool:
-    return any(_query_format(data_object, FILE_CONTENTS, index, tymed) for tymed in CONTENT_TYMEDS)
+def _supports_any_content_medium(
+    data_object: object,
+    index: int,
+    diagnostics: OleDndDiagnostics | None = None,
+) -> bool:
+    return any(
+        _query_format(data_object, FILE_CONTENTS, index, tymed, diagnostics)
+        for tymed in CONTENT_TYMEDS
+    )
 
 
 def _extract_hdrop_paths(data_object: object) -> list[str]:
@@ -180,55 +243,117 @@ def _parse_file_group_descriptor_w(blob: bytes) -> list[str]:
     return filenames
 
 
-def _read_descriptor_names(data_object: object) -> list[str]:
-    medium = data_object.GetData(
-        _formatetc(FILE_GROUP_DESCRIPTOR_W, -1, pythoncom.TYMED_HGLOBAL)
-    )
+def _read_descriptor_names(
+    data_object: object,
+    diagnostics: OleDndDiagnostics,
+) -> list[str]:
+    if not _query_format(
+        data_object,
+        FILE_GROUP_DESCRIPTOR_W,
+        -1,
+        pythoncom.TYMED_HGLOBAL,
+        diagnostics,
+    ):
+        raise RuntimeError("FileGroupDescriptorW is unavailable")
+    diagnostics.record("descriptor_get_data_start")
+    try:
+        medium = data_object.GetData(
+            _formatetc(FILE_GROUP_DESCRIPTOR_W, -1, pythoncom.TYMED_HGLOBAL)
+        )
+    except Exception as error:
+        diagnostics.record(
+            "descriptor_get_data_failure",
+            hresult=_hresult(error),
+            exception=_exception_type(error),
+        )
+        raise
+    diagnostics.record("descriptor_get_data_success", tymed=_tymed_name(int(medium.tymed)))
     if medium.tymed != pythoncom.TYMED_HGLOBAL:
         raise RuntimeError("FileGroupDescriptorW did not return TYMED_HGLOBAL")
-    return _parse_file_group_descriptor_w(bytes(medium.data))
+    names = _parse_file_group_descriptor_w(bytes(medium.data))
+    diagnostics.record("descriptor_parse_success", count=len(names))
+    return names
 
 
-def _get_file_contents_medium(data_object: object, index: int):
-    last_error: BaseException | None = None
+def _get_file_contents_medium(
+    data_object: object,
+    index: int,
+    diagnostics: OleDndDiagnostics,
+):
     for tymed in CONTENT_TYMEDS:
+        if not _query_format(data_object, FILE_CONTENTS, index, tymed, diagnostics):
+            continue
+        diagnostics.record(
+            "file_contents_get_data_start",
+            lIndex=index,
+            tymed=_tymed_name(tymed),
+        )
         try:
-            return data_object.GetData(_formatetc(FILE_CONTENTS, index, tymed))
+            medium = data_object.GetData(_formatetc(FILE_CONTENTS, index, tymed))
         except Exception as error:
-            last_error = error
-    if last_error is not None:
-        raise last_error
+            diagnostics.record(
+                "file_contents_get_data_failure",
+                lIndex=index,
+                tymed=_tymed_name(tymed),
+                hresult=_hresult(error),
+                exception=_exception_type(error),
+            )
+            raise
+        actual_tymed = int(medium.tymed)
+        diagnostics.record(
+            "file_contents_get_data_success",
+            lIndex=index,
+            requested_tymed=_tymed_name(tymed),
+            actual_tymed=_tymed_name(actual_tymed),
+        )
+        if actual_tymed not in CONTENT_TYMEDS:
+            raise RuntimeError(f"Unexpected FileContents tymed={actual_tymed}")
+        return medium
+
+    storage_supported = _query_format(
+        data_object,
+        FILE_CONTENTS,
+        index,
+        pythoncom.TYMED_ISTORAGE,
+        diagnostics,
+    )
+    if storage_supported:
+        diagnostics.record("storage_deferred", lIndex=index)
     raise RuntimeError("FileContents is unavailable")
 
 
-def _write_stream(stream: object, destination: Path) -> None:
-    try:
-        stream.Seek(0, pythoncom.STREAM_SEEK_SET)
-    except Exception:
-        pass
+def _write_stream(
+    stream: object,
+    destination: Path,
+    diagnostics: OleDndDiagnostics,
+    index: int,
+) -> None:
+    diagnostics.record("stream_write_start", lIndex=index)
+    written = 0
     with destination.open("wb") as file:
         while True:
             chunk = stream.Read(STREAM_CHUNK_SIZE)
             if not chunk:
                 break
             file.write(chunk)
+            written += len(chunk)
+    diagnostics.record("stream_write_complete", lIndex=index, bytes=written)
 
 
-def _write_storage(storage: object, destination: Path) -> None:
-    mode = storagecon.STGM_CREATE | storagecon.STGM_READWRITE | storagecon.STGM_SHARE_EXCLUSIVE
-    target = pythoncom.StgCreateDocfile(str(destination), mode, 0)
-    storage.CopyTo(None, None, target)
-    target.Commit(storagecon.STGC_DEFAULT)
-
-
-def _write_medium(medium: object, destination: Path) -> int:
+def _write_medium(
+    medium: object,
+    destination: Path,
+    diagnostics: OleDndDiagnostics,
+    index: int,
+) -> int:
     tymed = int(medium.tymed)
     if tymed == pythoncom.TYMED_ISTREAM:
-        _write_stream(medium.data, destination)
+        _write_stream(medium.data, destination, diagnostics, index)
     elif tymed == pythoncom.TYMED_HGLOBAL:
-        destination.write_bytes(bytes(medium.data))
-    elif tymed == pythoncom.TYMED_ISTORAGE:
-        _write_storage(medium.data, destination)
+        diagnostics.record("hglobal_write_start", lIndex=index)
+        data = bytes(medium.data)
+        destination.write_bytes(data)
+        diagnostics.record("hglobal_write_complete", lIndex=index, bytes=len(data))
     else:
         raise RuntimeError(f"Unsupported STGMEDIUM tymed={tymed}")
     return tymed
@@ -238,7 +363,7 @@ def _extract_virtual_msg_files(
     data_object: object,
     diagnostics: OleDndDiagnostics,
 ) -> tuple[list[str], tempfile.TemporaryDirectory[str]]:
-    filenames = _read_descriptor_names(data_object)
+    filenames = _read_descriptor_names(data_object, diagnostics)
     diagnostics.record("descriptor", count=len(filenames))
     temporary_directory = tempfile.TemporaryDirectory(prefix="DakeMail_List_Outlook_")
     paths: list[str] = []
@@ -248,13 +373,22 @@ def _extract_virtual_msg_files(
             diagnostics.record("item_skipped", lIndex=index, reason="not_msg")
             continue
         destination = Path(temporary_directory.name) / f"outlook_mail_{index + 1:04d}.msg"
+        medium = None
         try:
-            medium = _get_file_contents_medium(data_object, index)
-            tymed = _write_medium(medium, destination)
+            diagnostics.record("file_contents_begin", lIndex=index)
+            medium = _get_file_contents_medium(data_object, index, diagnostics)
+            tymed = _write_medium(medium, destination, diagnostics, index)
             paths.append(str(destination))
             diagnostics.record("item_success", lIndex=index, tymed=tymed)
         except Exception as error:
-            diagnostics.record("item_failure", lIndex=index, hresult=_hresult(error))
+            diagnostics.record(
+                "item_failure",
+                lIndex=index,
+                hresult=_hresult(error),
+                exception=_exception_type(error),
+            )
+        finally:
+            medium = None
 
     if not paths:
         temporary_directory.cleanup()
@@ -268,14 +402,10 @@ class NativeOleDropTarget:
 
     def __init__(
         self,
-        on_drop: Callable[[list[str], object | None], bool],
-        is_busy: Callable[[], bool],
-        on_error: Callable[[], None],
+        drop_queue: queue.Queue[OleDropPayload],
         diagnostics: OleDndDiagnostics,
     ) -> None:
-        self._on_drop = on_drop
-        self._is_busy = is_busy
-        self._on_error = on_error
+        self._drop_queue = drop_queue
         self._diagnostics = diagnostics
         self._can_accept = False
 
@@ -287,11 +417,11 @@ class NativeOleDropTarget:
             FILE_GROUP_DESCRIPTOR_W,
             -1,
             pythoncom.TYMED_HGLOBAL,
-        ) and _supports_any_content_medium(data_object, 0)
+        ) and _supports_any_content_medium(data_object, 0, self._diagnostics)
 
     def DragEnter(self, data_object, key_state, point, effect):
         format_names = _enum_format_names(data_object)
-        self._can_accept = not self._is_busy() and self._supports_drop(data_object)
+        self._can_accept = self._supports_drop(data_object)
         self._diagnostics.record(
             "drag_enter",
             formats=",".join(format_names),
@@ -311,9 +441,6 @@ class NativeOleDropTarget:
     def Drop(self, data_object, key_state, point, effect):
         self._diagnostics.record("drop_called")
         self._can_accept = False
-        if self._is_busy():
-            self._diagnostics.record("drop_rejected", reason="busy")
-            return shellcon.DROPEFFECT_NONE
 
         cleanup: object | None = None
         try:
@@ -322,21 +449,23 @@ class NativeOleDropTarget:
                 self._diagnostics.record("hdrop", count=len(paths))
             else:
                 paths, cleanup = _extract_virtual_msg_files(data_object, self._diagnostics)
-            accepted = self._on_drop(paths, cleanup)
+            self._drop_queue.put(OleDropPayload(paths=paths, cleanup=cleanup))
+            self._diagnostics.record("queue_put", count=len(paths), error=0)
         except Exception as error:
             if cleanup is not None:
                 cleanup.cleanup()
-            self._diagnostics.record("drop_failure", hresult=_hresult(error))
-            self._on_error()
-            return shellcon.DROPEFFECT_NONE
-
-        if not accepted:
-            if cleanup is not None:
-                cleanup.cleanup()
-            self._diagnostics.record("drop_rejected", reason="no_msg")
+            self._diagnostics.record(
+                "drop_failure",
+                hresult=_hresult(error),
+                exception=_exception_type(error),
+            )
+            self._drop_queue.put(OleDropPayload(paths=[], error=True))
+            self._diagnostics.record("queue_put", count=0, error=1)
+            self._diagnostics.record("drop_end", effect="none")
             return shellcon.DROPEFFECT_NONE
 
         self._diagnostics.record("drop_success", count=len(paths))
+        self._diagnostics.record("drop_end", effect="copy")
         return shellcon.DROPEFFECT_COPY
 
 
@@ -344,12 +473,10 @@ class NativeOleDropRegistration:
     def __init__(
         self,
         widgets: Iterable[object],
-        on_drop: Callable[[list[str], object | None], bool],
-        is_busy: Callable[[], bool],
-        on_error: Callable[[], None],
+        drop_queue: queue.Queue[OleDropPayload],
     ) -> None:
         self.diagnostics = OleDndDiagnostics()
-        self._target = NativeOleDropTarget(on_drop, is_busy, on_error, self.diagnostics)
+        self._target = NativeOleDropTarget(drop_queue, self.diagnostics)
         self._com_target = win32com.server.util.wrap(
             self._target,
             pythoncom.IID_IDropTarget,

@@ -25,7 +25,8 @@ CSVはUTF-8 with BOMで保存します。列は次の3列だけです。
 - 不明な項目は空欄にします
 - Outlook COM/API、外部通信、AI送信は使いません
 - Outlook仮想メールの一時 `.msg` は標準ランタイムTEMPへ保存し、処理後に削除します
-- 実機確認用の最小診断は `%TEMP%\DakeMail_List_ole_dnd.log` で確認できます。本文・アドレス・氏名・会社名・件名全文は記録しません
+- 実機確認用の最小診断は `%LOCALAPPDATA%\PEAKHEADZ\DakeMailList\logs\ole_dnd.log` で確認できます。本文・アドレス・氏名・会社名・件名全文は記録しません
+- CSV保存先設定は `%LOCALAPPDATA%\PEAKHEADZ\DakeMailList\config.json` に保存します。exe横の旧configは必要な場合だけ新しい場所へ移行し、削除しません
 
 ## 依存ライブラリ
 

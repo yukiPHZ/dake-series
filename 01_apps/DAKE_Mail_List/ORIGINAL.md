@@ -76,7 +76,10 @@ Outlookで選択したメールを直接、または保存済みの `.msg` メ�
 - 3. デスクトップ、または選択した保存先に `mail_list_YYYYMMDD_HHMMSS.csv` を保存します。
 - CSVはUTF-8 with BOMで保存します。列は次の3列だけです。
 - Outlook仮想メールは標準ランタイムTEMP内の一時 `.msg` として既存解析へ渡し、処理後に削除する。永続キャッシュ・履歴は作らない。
-- 実機確認用の最小診断は `%TEMP%\DakeMail_List_ole_dnd.log` に上書き保存し、本文・アドレス・氏名・会社名・件名全文を記録しない。
+- 実機確認用の最小診断は `%LOCALAPPDATA%\PEAKHEADZ\DakeMailList\logs\ole_dnd.log` に起動時上書き保存し、本文・アドレス・氏名・会社名・件名全文を記録しない。
+- CSV保存先設定は `%LOCALAPPDATA%\PEAKHEADZ\DakeMailList\config.json` に `save_folder` だけを保存する。exe横の旧 `Dake_Mail_List_config.json` は新configが未作成の場合だけ一度読み取り、新しい保存先へ移行する。旧ファイルは削除しない。
+- native OLE `Drop()` 内では仮想 `.msg` の実体化とthread-safe queueへの投入だけを行い、Tkinter UI更新と解析worker開始はTkのpoll処理へ戻してから行う。
+- `FileContents` は `QueryGetData()` で確認後、`TYMED_ISTREAM`、次に `TYMED_HGLOBAL` の順で取得する。`TYMED_ISTORAGE` は実機で必要と判明するまで取得・`IStorage.CopyTo`を行わない。
 - "launcher_description": "Outlookのメールを直接ドロップしてCSVリストにします。",
 
 ## 非破壊・上書き禁止方針

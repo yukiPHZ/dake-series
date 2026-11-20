@@ -20,7 +20,7 @@ from tkinter import filedialog, font as tkfont, messagebox
 
 import pythoncom
 
-from native_ole_drop import NativeOleDropRegistration
+from native_ole_drop import APP_DATA_DIR, NativeOleDropRegistration, OleDropPayload
 
 
 APP_NAME = "Dakeメールリスト"
@@ -117,7 +117,26 @@ def app_base_dir() -> Path:
 
 
 def get_config_path() -> Path:
+    return APP_DATA_DIR / "config.json"
+
+
+def get_legacy_config_path() -> Path:
     return app_base_dir() / CONFIG_FILE_NAME
+
+
+def read_config_folder(config_path: Path) -> Path | None:
+    if not config_path.exists():
+        return None
+    try:
+        payload = json.loads(config_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    raw_folder = payload.get("save_folder")
+    if not raw_folder:
+        return None
+    return Path(str(raw_folder)).expanduser()
 
 
 def get_default_desktop() -> Path:
@@ -129,22 +148,18 @@ def get_default_desktop() -> Path:
 
 def load_save_folder() -> Path:
     config_path = get_config_path()
-    if not config_path.exists():
-        return get_default_desktop()
+    folder = read_config_folder(config_path)
+    if folder is None and not config_path.exists():
+        legacy_folder = read_config_folder(get_legacy_config_path())
+        if legacy_folder is not None:
+            try:
+                save_config(legacy_folder)
+            except OSError:
+                pass
+            folder = legacy_folder
 
-    try:
-        payload = json.loads(config_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+    if folder is None:
         return get_default_desktop()
-
-    if not isinstance(payload, dict):
-        return get_default_desktop()
-
-    raw_folder = payload.get("save_folder")
-    if not raw_folder:
-        return get_default_desktop()
-
-    folder = Path(str(raw_folder)).expanduser()
     if folder.exists() and folder.is_dir():
         return folder
     return get_default_desktop()
@@ -152,7 +167,9 @@ def load_save_folder() -> Path:
 
 def save_config(save_folder: Path) -> None:
     payload = {"save_folder": str(save_folder)}
-    get_config_path().write_text(
+    config_path = get_config_path()
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    config_path.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
@@ -437,6 +454,7 @@ class MailListApp:
         }
         self.save_folder = load_save_folder()
         self.event_queue: queue.Queue[dict[str, object]] = queue.Queue()
+        self.ole_drop_queue: queue.Queue[OleDropPayload] = queue.Queue()
         self.processing = False
         self.last_output_folder = self.save_folder
         self.status_var = tk.StringVar(value=UI_TEXT["status_idle"])
@@ -635,9 +653,7 @@ class MailListApp:
         try:
             self.ole_drop_registration = NativeOleDropRegistration(
                 widgets=(self.root, self.drop_area, self.drop_label),
-                on_drop=self.handle_native_drop,
-                is_busy=lambda: self.processing,
-                on_error=self.handle_native_drop_error,
+                drop_queue=self.ole_drop_queue,
             )
         except Exception:
             self.ole_drop_registration = None
@@ -701,9 +717,6 @@ class MailListApp:
         self.start_processing(raw_paths, cleanup)
         return True
 
-    def handle_native_drop_error(self) -> None:
-        self.set_status("status_error", is_error=True)
-
     def show_drop_warning(self) -> None:
         messagebox.showwarning(
             UI_TEXT["dialog_error_title"],
@@ -745,8 +758,21 @@ class MailListApp:
                 self.handle_queue_event(event)
         except queue.Empty:
             pass
+        self.poll_ole_drop_queue()
         if self.root.winfo_exists():
             self.root.after(QUEUE_POLL_INTERVAL_MS, self.poll_queue)
+
+    def poll_ole_drop_queue(self) -> None:
+        if self.processing:
+            return
+        try:
+            payload = self.ole_drop_queue.get_nowait()
+        except queue.Empty:
+            return
+        if payload.error:
+            self.set_status("status_error", is_error=True)
+            return
+        self.handle_native_drop(payload.paths, payload.cleanup)
 
     def handle_queue_event(self, event: dict[str, object]) -> None:
         if event["type"] == "error":
