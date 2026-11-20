@@ -15,7 +15,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - status: available
 - version: 1.0.0（Release URLより）
 - price: 300円
-- distribution: GitHub Release / BOOTH / dakeapp.com（Storeは未確定）
+- distribution: GitHub Release / BOOTH / dakeapp.com / DAKE Store
 - target_platform: Windows
 
 ## 目的
@@ -181,7 +181,7 @@ Windows
 下書きだけを静かに整える道具です。
 - 価格: 300円
 - 画像: assets/booth_thumbnail.jpg（存在: あり）
-- ダウンロード導線: 未確定
+- ダウンロード導線: Stripe Checkout Session検証後にprivate R2から配布（新Payment Link反映待ち）
 - サポート方針: 既存ファイルに記載なし
 - Stripe Payment Link: https://buy.stripe.com/7sY9ATcA9dAz8SAbTX0gw0a
 - Store雋ｩ螢ｲ迥ｶ諷・ stripe_ready
@@ -191,14 +191,17 @@ Windows
 - BOOTH価格案: 300円
 - BOOTH URL: https://peakheadz.booth.pm/items/8448001
 - GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_Draft_v1.0.0
-- Store販売: 未確定
+- Store販売: Stripe Payment Link（300円）
 
 ## 配布・ダウンロード方針
 
 - GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_Draft_v1.0.0
 - BOOTH: https://peakheadz.booth.pm/items/8448001
 - BOOTH配布zip: booth_ready/DakeMail_Draft.zip
-- Store配布導線: 未確定
+- Store配布導線: Stripe Checkout Session検証後にprivate R2から配布（新Payment Link反映待ち）
+- purchase_delivery_method: stripe_session_private_r2
+- purchase_delivery_ready: yes
+- delivery_object_key: desktop/DAKE_Mail_Draft/current.zip
 
 ## 免責・注意事項
 
