@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-18T07:46:22+09:00",
+  "generated_at": "2026-11-21T22:21:43+09:00",
   "source_policy": "ORIGINAL.md is the source of truth. This file is generated and must not be edited manually.",
   "schema_version": "1.0.0",
   "do_not_edit": true,
@@ -867,9 +867,9 @@
       "source_original": "01_apps/DAKE_Mail_List/ORIGINAL.md",
       "title": "Dakeメールリスト",
       "short_title": "Dakeメールリスト",
-      "version": "1.0.0（Release URLより）",
-      "catch": "Outlookの.msgメールから、会社名・お名前・メールアドレスだけをCSVにする小さな実務ツールです。",
-      "description": "Outlookの.msgメールから、\n会社名・お名前・メールアドレスをCSVに整理します。\n\n・.msg からCSV整理\n・メール送信なし\n・会社名、お名前、メールアドレスだけ抽出\n・ローカル完結\n・Windows向け\n\n集めたメールを、\n実務で扱いやすい一覧にします。",
+      "version": "1.0.1",
+      "catch": "Outlookで選択したメールを直接ドロップし、会社名・お名前・メールアドレスだけをCSVにする小さな実務ツールです。",
+      "description": "Outlookで選択したメールを直接ドロップして、\n会社名・お名前・メールアドレスをCSVに整理します。\n\n・Outlookから直接ドラッグ\n・複数メールをまとめてCSV整理\n・保存済み.msgにも対応\n・メール送信なし\n・会社名、お名前、メールアドレスだけ抽出\n・ローカル完結\n・Windows向け\n\n集めたメールを、\n実務で扱いやすい一覧にします。",
       "price": 300,
       "currency": "JPY",
       "status": "available",
@@ -890,7 +890,7 @@
       "download_type": null,
       "download_url": null,
       "booth_url": "https://peakheadz.booth.pm/items/8448014",
-      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_List_v1.0.0",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_List_v1.0.1",
       "store_url": null,
       "support_policy": null,
       "disclaimer": "- 【注意事項】\n- Windows向けアプリです\n- ご利用は自己責任でお願いいたします\n- 大切なファイルは事前にバックアップを推奨します\n- 本ソフトウェアの無断転載・再配布を禁止します\n- 環境によっては起動時にWindowsの警告が表示される場合があります\n- https://peakheadz.com",
@@ -2295,10 +2295,6 @@
   "skipped": [
     {
       "source_original": "01_apps/DAKE_Image_BatchPDF/ORIGINAL.md",
-      "reason": "status=draft"
-    },
-    {
-      "source_original": "01_apps/DAKE_PDF_Insert/ORIGINAL.md",
       "reason": "status=draft"
     }
   ]

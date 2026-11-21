@@ -20,8 +20,9 @@ CSVはUTF-8 with BOMで保存します。列は次の3列だけです。
 - Outlookで選択した複数メールをWindows native OLEで直接ドロップできます
 - `.msg` 以外は無視します
 - メールアドレスはFrom情報を優先し、取れない場合だけ本文から最初のメールアドレスを拾います
-- お名前はFrom表示名から取得します
-- 会社名は本文末尾の署名らしき行から、株式会社・有限会社・合同会社などを含む行だけを控えめに拾います
+- お名前は送信者表示名、From表示名、現在の送信者側の署名の順に取得します
+- 会社名は返信・転送履歴より前にある現在の送信者側の署名を優先します
+- HTML署名の改行や表セルを保ち、会社名・部署・役職・氏名を根拠のある範囲で分離します
 - 不明な項目は空欄にします
 - Outlook COM/API、外部通信、AI送信は使いません
 - Outlook仮想メールの一時 `.msg` は標準ランタイムTEMPへ保存し、処理後に削除します
@@ -68,14 +69,15 @@ GitHubからダウンロードしたWindows向けexeは、初回起動時にWind
 {
   "app_key": "dake_mail_list",
   "display_name": "Dakeメールリスト",
+  "version": "1.0.1",
   "launcher_title": "メールリスト作成",
   "launcher_description": "Outlookのメールを直接ドロップしてCSVリストにします。",
   "site_title": "Dakeメールリスト",
-  "site_description": "Outlookで選択したメール、または保存済みの.msgメールから、会社名・お名前・メールアドレスだけをCSVにする小さな実務ツールです。",
-  "update_summary": "Outlook .msg メールから3列CSVを作成します。",
+  "site_description": "Outlookで選択した1通または複数メールを直接ドロップし、会社名・お名前・メールアドレスだけをCSVにする小さな実務ツールです。保存済みの.msgにも対応します。",
+  "update_summary": "Outlookメールの直接ドラッグ＆ドロップと複数メール処理に対応しました。",
   "folder_name": "DAKE_Mail_List",
   "exe_name": "DakeMail_List.exe",
-  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_List_v1.0.0",
+  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_List_v1.0.1",
   "screenshot_path": "assets/screenshot.webp",
   "status": "available",
   "show_in_launcher": true,
@@ -89,6 +91,9 @@ GitHubからダウンロードしたWindows向けexeは、初回起動時にWind
 ## RELEASE_BODY
 
 - Dakeメールリスト
-- Outlookで選択したメールの直接DnDと保存済み.msgをCSV化
+- Outlookで選択した1通または複数メールを直接ドラッグ＆ドロップ
+- 保存済みの複数.msgにも対応
+- 現在の送信者側の署名を優先して会社名とお名前を抽出
 - 会社名・お名前・メールアドレスだけ抽出
+- UTF-8 BOM、3列固定のCSV
 - ローカル完結のWindows向けexe

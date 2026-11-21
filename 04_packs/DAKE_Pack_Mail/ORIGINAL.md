@@ -60,10 +60,10 @@ CSVからOutlookの個別下書きを作る
 
 ## 同梱アプリ・構成物
 
-- Dakeメールリスト (DAKE_Mail_List): Outlookの.msgメールから会社名・氏名・メールアドレスをCSV化する
+- Dakeメールリスト (DAKE_Mail_List): Outlookで選択したメールを直接ドロップし、会社名・お名前・メールアドレスをCSV化する。保存済み.msgにも対応する
   - ZIP: `DakeMail_List.zip` / 32925063 bytes / SHA256 `1012c378bb28d62b1c7fec9d50f5de966c606a9ff44a74b60e20854bfebf8bc1`
   - BOOTH: https://peakheadz.booth.pm/items/8448014
-  - GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_List_v1.0.0
+  - GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_List_v1.0.1
 - Dakeメールアドレス整形 (DAKE_Mail_Address_Format): 名前付き表記、改行、セミコロン等が混在したメールアドレスを抽出・整形する
   - ZIP: `DakeMail_Address_Format.zip` / 10106704 bytes / SHA256 `3fe241b58b95de37ae4b9d08b9fb6096e485fbf72d28d9926cb43120267d53de`
   - BOOTH: https://peakheadz.booth.pm/items/8447996

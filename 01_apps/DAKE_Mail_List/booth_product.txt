@@ -2,11 +2,12 @@
 Dakeメールリスト
 
 概要
-Outlookの.msgメールから、会社名・お名前・メールアドレスだけをCSVにする小さな実務ツールです。
+Outlookで選択した1通または複数メールを直接ドロップし、会社名・お名前・メールアドレスだけをCSVにする小さな実務ツールです。保存済みの.msgにも対応します。
 
 できること
 - Dakeメールリスト
-- Outlookの.msgメールをCSV化
+- Outlookからメールを直接ドラッグしてCSV化
+- 複数メールと保存済み.msgに対応
 - 会社名・お名前・メールアドレスだけ抽出
 - ローカル完結のWindows向けexe
 
@@ -32,6 +33,6 @@ Outlookの.msgメールから、会社名・お名前・メールアドレスだ
 本ソフトウェアの利用によって発生した損害について、作者は責任を負いません。
 
 コピーライト
-© 2026 PEAKHEADZ / Vibe-Coded by Yukihiko Kikuta
+by Yukihiko Kikuta
 
 BOOTH URL: https://peakheadz.booth.pm/items/8448014

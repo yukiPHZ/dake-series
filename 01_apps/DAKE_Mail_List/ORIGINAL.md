@@ -13,7 +13,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - short_title: Dakeメールリスト
 - category: メール
 - status: available
-- version: 1.0.0（Release URLより）
+- version: 1.0.1
 - price: 300円
 - distribution: GitHub Release / BOOTH / dakeapp.com（Storeは未確定）
 - target_platform: Windows
@@ -22,19 +22,35 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 
 Outlookで選択したメールを直接、または保存済みの `.msg` メールをドラッグ＆ドロップし、会社名・お名前・メールアドレスだけをCSVにする小さな実務ツールです。
 
+## 守るべき挙動
+
+- Outlookで選択した1通または複数メールを、アプリへ直接ドラッグ＆ドロップして処理できる。
+- 保存済みの1通または複数 `.msg` も同じドロップ領域で処理できる。
+- 出力CSVはUTF-8 with BOMで、`会社名`、`お名前`、`メールアドレス` の3列だけとする。
+- 1件の解析失敗で、ほかのメールの処理を止めない。
+- 処理はローカルで完結し、メール内容や利用履歴を外部送信しない。
+
+Outlook直接ドラッグ＆ドロップ、複数メール、CSV生成、3項目抽出は会社実機で確認済みです。
+
+## 変更してはいけない核
+
+- Outlookから直接メールを落とす操作を、保存操作や別ボタン操作へ置き換えない。
+- CSV列を追加・変更しない。
+- メールアドレスのlocal-partから氏名を推測しない。
+- Outlook COM取得ボタン、監視、履歴、名簿、CRM、AI/API、クラウド機能を追加しない。
+- 会社実機確認済みのWindows native OLE入力層は、必要な不具合修正がない限り変更しない。
+
 ## 対象ユーザー
 
-既存ファイルに明示なし
+Outlookで受信したメールから、会社名・お名前・メールアドレスの一覧を短い操作で作成したいWindows利用者。
 
 ## 解決する困りごと
 
-- Outlook .msg メールから3列CSVを作成します。
-- Outlookの.msgメールから、会社名・お名前・メールアドレスだけをCSVにする小さな実務ツールです。
+- Outlookメールを一度保存することなく、直接ドラッグして3列CSVを作成します。
+- 複数メールをまとめて処理し、手作業での転記を減らします。
 
 ## 主な機能
 
-- Dakeメールリスト
-- Outlookの.msgメールをCSV化
 - Outlookで選択した1通または複数メールの直接ドラッグ＆ドロップ
 - 保存済みの複数 `.msg` ファイルのドラッグ＆ドロップ
 - 会社名・お名前・メールアドレスだけ抽出
@@ -48,11 +64,9 @@ Outlookで選択したメールを直接、または保存済みの `.msg` メ�
 
 ## CLI連携・外部ツール
 
-- 使用する外部ツール: Outlook
-- 同梱有無: 既存ファイルに記載なし
-- PATH依存: 既存ファイルに記載なし
-- エラー時の扱い: 既存ファイルに記載なし
-- Codex作業時の注意: CLIや外部ツール情報を追加する場合は、README等の派生ビューだけでなくこのORIGINALへ戻す。
+- 使用する外部ツール: Outlook（直接ドラッグ元として利用）
+- PATH依存: なし
+- 外部AI/API/クラウド通信: なし
 
 ## 対応形式・非対応形式
 
@@ -64,17 +78,18 @@ Outlookで選択したメールを直接、または保存済みの `.msg` メ�
 
 ## やらないこと / 非ゴール
 
-- メール送信なし
-- 本ソフトウェアの無断転載・再配布を禁止します。
-- 本ソフトウェアの無断転載・再配布を禁止します
+- メール送信、受信監視、自動返信
+- Outlook COMで選択メールを取得する別ボタン
+- メール一覧、名簿、履歴、CRM、電話番号抽出
+- AI/API、クラウド解析、外部保存
+- CSV編集画面、設定画面、学習機能
 
 ## 設定・ログ・保存方針
 
-- Outlookで選択したメールを直接、または保存済みの `.msg` メールをドロップすると、会社名・お名前・メールアドレスだけをCSVにする小さなWindows向けアプリです。
-- 1. Outlookでメールを選択するか、保存済みの `.msg` ファイルを用意します。
-- 2. Dakeメールリストへ直接ドラッグ＆ドロップします。
-- 3. デスクトップ、または選択した保存先に `mail_list_YYYYMMDD_HHMMSS.csv` を保存します。
-- CSVはUTF-8 with BOMで保存します。列は次の3列だけです。
+- 主操作は、Outlookで1通または複数メールを選び、Dakeメールリストへ直接ドラッグ＆ドロップすることです。
+- 保存済みの `.msg` も補助入力として利用できます。
+- デスクトップ、または選択した保存先に `mail_list_YYYYMMDD_HHMMSS.csv` を保存します。
+- CSVはUTF-8 with BOMで保存し、列は `会社名`、`お名前`、`メールアドレス` の3列だけです。
 - Outlook仮想メールは標準ランタイムTEMP内の一時 `.msg` として既存解析へ渡し、処理後に削除する。永続キャッシュ・履歴は作らない。
 - 実機確認用の最小診断は `%LOCALAPPDATA%\PEAKHEADZ\DakeMailList\logs\ole_dnd.log` に起動時上書き保存し、本文・アドレス・氏名・会社名・件名全文を記録しない。
 - CSV保存先設定は `%LOCALAPPDATA%\PEAKHEADZ\DakeMailList\config.json` に `save_folder` だけを保存する。exe横の旧 `Dake_Mail_List_config.json` は新configが未作成の場合だけ一度読み取り、新しい保存先へ移行する。旧ファイルは削除しない。
@@ -83,7 +98,6 @@ Outlookで選択したメールを直接、または保存済みの `.msg` メ�
 - HTML本文は改行、段落、表セルの境界を保持して署名を解析し、Outlook等の引用コンテナ内は現在送信者の署名候補に含めない。
 - native OLE `Drop()` 内では仮想 `.msg` の実体化とthread-safe queueへの投入だけを行い、Tkinter UI更新と解析worker開始はTkのpoll処理へ戻してから行う。
 - `FileContents` は各アイテムの `lIndex` を指定し、`TYMED_HGLOBAL | TYMED_ISTREAM | TYMED_ISTORAGE` をまとめて要求してOutlook側に返却mediumを選択させる。返された実mediumが `IStorage` の場合は、pywin32の `IStorage.CopyTo` で一時 `.msg` のcompound storageへ保存する。
-- "launcher_description": "Outlookのメールを直接ドロップしてCSVリストにします。",
 
 ## 非破壊・上書き禁止方針
 
@@ -94,13 +108,15 @@ Outlookで選択したメールを直接、または保存済みの `.msg` メ�
 
 - display_name: Dakeメールリスト
 - site_title: Dakeメールリスト
-- site_description: Outlookで選択したメール、または保存済みの.msgメールから、会社名・お名前・メールアドレスだけをCSVにする小さな実務ツールです。
+- site_description: Outlookで選択した1通または複数メールを直接ドロップし、会社名・お名前・メールアドレスだけをCSVにする小さな実務ツールです。保存済みの.msgにも対応します。
 - launcher_description: Outlookのメールを直接ドロップしてCSVリストにします。
-- update_summary: Outlook .msg メールから3列CSVを作成します。
-- BOOTH紹介文: Outlookの.msgメールから、
+- update_summary: Outlookメールの直接ドラッグ＆ドロップと複数メール処理に対応しました。
+- BOOTH紹介文: Outlookで選択したメールを直接ドロップして、
 会社名・お名前・メールアドレスをCSVに整理します。
 
-・.msg からCSV整理
+・Outlookから直接ドラッグ
+・複数メールをまとめてCSV整理
+・保存済み.msgにも対応
 ・メール送信なし
 ・会社名、お名前、メールアドレスだけ抽出
 ・ローカル完結
@@ -111,8 +127,8 @@ Outlookで選択したメールを直接、または保存済みの `.msg` メ�
 
 ## README生成用情報
 
-- 概要: Outlookで選択したメールを直接、または保存済みの.msgメールをドロップし、会社名・お名前・メールアドレスだけをCSVにする小さな実務ツールです。
-- 使い方: Outlookでメールを選択するか保存済み.msgを用意し、アプリへドラッグ＆ドロップする。
+- 概要: Outlookで選択した1通または複数メールを直接ドロップし、会社名・お名前・メールアドレスだけをCSVにする小さな実務ツールです。保存済みの.msgにも対応します。
+- 使い方: Outlookでメールを1通または複数選択し、アプリへ直接ドラッグ＆ドロップする。保存済み.msgも同じ操作で処理できる。
 - 必要なもの: Windows環境
 - 注意: READMEへ出す内容は公開可能な情報に限定する。
 - ビルド: 既存READMEまたはbuild.batを参照。
@@ -123,14 +139,15 @@ Outlookで選択したメールを直接、または保存済みの `.msg` メ�
 {
   "app_key": "dake_mail_list",
   "display_name": "Dakeメールリスト",
+  "version": "1.0.1",
   "launcher_title": "メールリスト作成",
   "launcher_description": "Outlookのメールを直接ドロップしてCSVリストにします。",
   "site_title": "Dakeメールリスト",
-  "site_description": "Outlookで選択したメール、または保存済みの.msgメールから、会社名・お名前・メールアドレスだけをCSVにする小さな実務ツールです。",
-  "update_summary": "Outlook .msg メールから3列CSVを作成します。",
+  "site_description": "Outlookで選択した1通または複数メールを直接ドロップし、会社名・お名前・メールアドレスだけをCSVにする小さな実務ツールです。保存済みの.msgにも対応します。",
+  "update_summary": "Outlookメールの直接ドラッグ＆ドロップと複数メール処理に対応しました。",
   "folder_name": "DAKE_Mail_List",
   "exe_name": "DakeMail_List.exe",
-  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_List_v1.0.0",
+  "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_List_v1.0.1",
   "screenshot_path": "assets/screenshot.webp",
   "status": "available",
   "show_in_launcher": true,
@@ -144,18 +161,23 @@ Outlookで選択したメールを直接、または保存済みの `.msg` メ�
 ## release_body生成用情報
 
 - Dakeメールリスト
-- Outlookで選択したメールの直接DnDと保存済み.msgをCSV化
+- Outlookで選択した1通または複数メールを直接ドラッグ＆ドロップ
+- 保存済みの複数.msgにも対応
+- 現在の送信者側の署名を優先して会社名とお名前を抽出
 - 会社名・お名前・メールアドレスだけ抽出
+- UTF-8 BOM、3列固定のCSV
 - ローカル完結のWindows向けexe
 
 ## booth_product生成用情報
 
 - 商品名: Dakeメールリスト
 - 価格案: 300円
-- 商品紹介文: Outlookの.msgメールから、
+- 商品紹介文: Outlookで選択したメールを直接ドロップして、
 会社名・お名前・メールアドレスをCSVに整理します。
 
-・.msg からCSV整理
+・Outlookから直接ドラッグ
+・複数メールをまとめてCSV整理
+・保存済み.msgにも対応
 ・メール送信なし
 ・会社名、お名前、メールアドレスだけ抽出
 ・ローカル完結
@@ -175,17 +197,19 @@ Windows
 - 商品画像: assets/booth_thumbnail.jpg
 - 補助画像: assets/screenshot.jpg
 - 作品ファイル: booth_ready/DakeMail_List.zip
-- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_List_v1.0.0
+- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_List_v1.0.1
 - BOOTH URL: https://peakheadz.booth.pm/items/8448014
 
 ## Store表示用情報
 
 - 商品名: Dakeメールリスト
-- キャッチ: Outlookの.msgメールから、会社名・お名前・メールアドレスだけをCSVにする小さな実務ツールです。
-- 説明: Outlookの.msgメールから、
+- キャッチ: Outlookで選択したメールを直接ドロップし、会社名・お名前・メールアドレスだけをCSVにする小さな実務ツールです。
+- 説明: Outlookで選択したメールを直接ドロップして、
 会社名・お名前・メールアドレスをCSVに整理します。
 
-・.msg からCSV整理
+・Outlookから直接ドラッグ
+・複数メールをまとめてCSV整理
+・保存済み.msgにも対応
 ・メール送信なし
 ・会社名、お名前、メールアドレスだけ抽出
 ・ローカル完結
@@ -204,12 +228,12 @@ Windows
 
 - BOOTH価格案: 300円
 - BOOTH URL: https://peakheadz.booth.pm/items/8448014
-- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_List_v1.0.0
+- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_List_v1.0.1
 - Store販売: 未確定
 
 ## 配布・ダウンロード方針
 
-- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_List_v1.0.0
+- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_List_v1.0.1
 - BOOTH: https://peakheadz.booth.pm/items/8448014
 - BOOTH配布zip: booth_ready/DakeMail_List.zip
 - Store配布導線: 未確定
@@ -242,12 +266,13 @@ Windows
 
 現時点では未設定です。
 
-## Codex作業時の注意
+## 作業時の注意
 
-- 触ってよい: ORIGINAL.md、および明示された派生ビュー。
-- 触らない: アプリ本体、README、release_body、booth_product、booth_ready、assets、distは今回の横展開では変更しない。
+- 製品固有の正本はこのORIGINALとし、README等の派生ビューはここから整合させる。
+- PEAKHEADZ Standardの共通仕様・toolは製品配下へコピーしない。
+- `AI_CONTEXT.md` は共有generatorから生成し、直接編集しない。
 - 外部公開しない: 未確定のStore URLや未確認の販売導線を確定情報として書かない。
-- 自動操作しない: BOOTH公開、GitHub Release更新、Store公開はこのファイル作成では行わない。
+- BOOTH、Store、Stripe等は明示された作業範囲だけを扱う。
 
 ## 派生物一覧
 
