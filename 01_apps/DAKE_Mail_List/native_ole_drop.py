@@ -17,14 +17,21 @@ import win32api
 import win32clipboard
 import win32con
 import win32com.server.util
+from win32com import storagecon
 from win32com.shell import shellcon
 
 
 FILE_GROUP_DESCRIPTOR_W = win32clipboard.RegisterClipboardFormat("FileGroupDescriptorW")
 FILE_CONTENTS = win32clipboard.RegisterClipboardFormat("FileContents")
 CONTENT_TYMEDS = (
-    pythoncom.TYMED_ISTREAM,
     pythoncom.TYMED_HGLOBAL,
+    pythoncom.TYMED_ISTREAM,
+    pythoncom.TYMED_ISTORAGE,
+)
+CONTENT_TYMED_MASK = (
+    pythoncom.TYMED_HGLOBAL
+    | pythoncom.TYMED_ISTREAM
+    | pythoncom.TYMED_ISTORAGE
 )
 STREAM_CHUNK_SIZE = 1024 * 1024
 MAX_DESCRIPTOR_COUNT = 1000
@@ -128,7 +135,10 @@ def _tymed_name(tymed: int) -> str:
         pythoncom.TYMED_HGLOBAL: "TYMED_HGLOBAL",
         pythoncom.TYMED_ISTORAGE: "TYMED_ISTORAGE",
     }
-    return names.get(tymed, f"TYMED_{tymed}")
+    if tymed in names:
+        return names[tymed]
+    selected = [name for value, name in names.items() if tymed & value]
+    return "|".join(selected) if selected else f"TYMED_{tymed}"
 
 
 def _clipboard_format_name(format_id: int) -> str:
@@ -144,18 +154,26 @@ def _clipboard_format_name(format_id: int) -> str:
         return f"format_{format_id}"
 
 
-def _enum_format_names(data_object: object) -> list[str]:
-    names: list[str] = []
+def _enum_formats(data_object: object) -> list[tuple[str, int, int, int]]:
+    formats: list[tuple[str, int, int, int]] = []
     try:
         enumerator = data_object.EnumFormatEtc(pythoncom.DATADIR_GET)
         while True:
             batch = enumerator.Next(1)
             if not batch:
                 break
-            names.append(_clipboard_format_name(int(batch[0][0])))
+            formatetc = batch[0]
+            formats.append(
+                (
+                    _clipboard_format_name(int(formatetc[0])),
+                    int(formatetc[2]),
+                    int(formatetc[3]),
+                    int(formatetc[4]),
+                )
+            )
     except Exception:
-        return names
-    return names
+        return formats
+    return formats
 
 
 def _formatetc(format_id: int, index: int, tymed: int) -> tuple[int, None, int, int, int]:
@@ -206,9 +224,12 @@ def _supports_any_content_medium(
     index: int,
     diagnostics: OleDndDiagnostics | None = None,
 ) -> bool:
-    return any(
-        _query_format(data_object, FILE_CONTENTS, index, tymed, diagnostics)
-        for tymed in CONTENT_TYMEDS
+    return _query_format(
+        data_object,
+        FILE_CONTENTS,
+        index,
+        CONTENT_TYMED_MASK,
+        diagnostics,
     )
 
 
@@ -280,46 +301,43 @@ def _get_file_contents_medium(
     index: int,
     diagnostics: OleDndDiagnostics,
 ):
-    for tymed in CONTENT_TYMEDS:
-        if not _query_format(data_object, FILE_CONTENTS, index, tymed, diagnostics):
-            continue
-        diagnostics.record(
-            "file_contents_get_data_start",
-            lIndex=index,
-            tymed=_tymed_name(tymed),
-        )
-        try:
-            medium = data_object.GetData(_formatetc(FILE_CONTENTS, index, tymed))
-        except Exception as error:
-            diagnostics.record(
-                "file_contents_get_data_failure",
-                lIndex=index,
-                tymed=_tymed_name(tymed),
-                hresult=_hresult(error),
-                exception=_exception_type(error),
-            )
-            raise
-        actual_tymed = int(medium.tymed)
-        diagnostics.record(
-            "file_contents_get_data_success",
-            lIndex=index,
-            requested_tymed=_tymed_name(tymed),
-            actual_tymed=_tymed_name(actual_tymed),
-        )
-        if actual_tymed not in CONTENT_TYMEDS:
-            raise RuntimeError(f"Unexpected FileContents tymed={actual_tymed}")
-        return medium
-
-    storage_supported = _query_format(
+    if not _query_format(
         data_object,
         FILE_CONTENTS,
         index,
-        pythoncom.TYMED_ISTORAGE,
+        CONTENT_TYMED_MASK,
         diagnostics,
+    ):
+        raise RuntimeError("FileContents is unavailable")
+
+    diagnostics.record(
+        "file_contents_get_data_start",
+        lIndex=index,
+        requested_tymed=_tymed_name(CONTENT_TYMED_MASK),
     )
-    if storage_supported:
-        diagnostics.record("storage_deferred", lIndex=index)
-    raise RuntimeError("FileContents is unavailable")
+    try:
+        medium = data_object.GetData(
+            _formatetc(FILE_CONTENTS, index, CONTENT_TYMED_MASK)
+        )
+    except Exception as error:
+        diagnostics.record(
+            "file_contents_get_data_failure",
+            lIndex=index,
+            requested_tymed=_tymed_name(CONTENT_TYMED_MASK),
+            hresult=_hresult(error),
+            exception=_exception_type(error),
+        )
+        raise
+    actual_tymed = int(medium.tymed)
+    diagnostics.record(
+        "file_contents_get_data_success",
+        lIndex=index,
+        requested_tymed=_tymed_name(CONTENT_TYMED_MASK),
+        actual_tymed=_tymed_name(actual_tymed),
+    )
+    if actual_tymed not in CONTENT_TYMEDS:
+        raise RuntimeError(f"Unexpected FileContents tymed={actual_tymed}")
+    return medium
 
 
 def _write_stream(
@@ -329,6 +347,18 @@ def _write_stream(
     index: int,
 ) -> None:
     diagnostics.record("stream_write_start", lIndex=index)
+    diagnostics.record("stream_seek_start", lIndex=index)
+    try:
+        stream.Seek(0, pythoncom.STREAM_SEEK_SET)
+    except Exception as error:
+        diagnostics.record(
+            "stream_seek_failure",
+            lIndex=index,
+            hresult=_hresult(error),
+            exception=_exception_type(error),
+        )
+    else:
+        diagnostics.record("stream_seek_success", lIndex=index)
     written = 0
     with destination.open("wb") as file:
         while True:
@@ -337,7 +367,30 @@ def _write_stream(
                 break
             file.write(chunk)
             written += len(chunk)
+    if written == 0:
+        raise RuntimeError("FileContents stream was empty")
     diagnostics.record("stream_write_complete", lIndex=index, bytes=written)
+
+
+def _write_storage(
+    storage: object,
+    destination: Path,
+    diagnostics: OleDndDiagnostics,
+    index: int,
+) -> None:
+    diagnostics.record("storage_write_start", lIndex=index)
+    mode = (
+        storagecon.STGM_CREATE
+        | storagecon.STGM_READWRITE
+        | storagecon.STGM_SHARE_EXCLUSIVE
+    )
+    target = pythoncom.StgCreateDocfile(str(destination), mode, 0)
+    try:
+        storage.CopyTo(None, None, target)
+        target.Commit(storagecon.STGC_DEFAULT)
+    finally:
+        target = None
+    diagnostics.record("storage_write_complete", lIndex=index)
 
 
 def _write_medium(
@@ -354,6 +407,8 @@ def _write_medium(
         data = bytes(medium.data)
         destination.write_bytes(data)
         diagnostics.record("hglobal_write_complete", lIndex=index, bytes=len(data))
+    elif tymed == pythoncom.TYMED_ISTORAGE:
+        _write_storage(medium.data, destination, diagnostics, index)
     else:
         raise RuntimeError(f"Unsupported STGMEDIUM tymed={tymed}")
     return tymed
@@ -420,7 +475,17 @@ class NativeOleDropTarget:
         ) and _supports_any_content_medium(data_object, 0, self._diagnostics)
 
     def DragEnter(self, data_object, key_state, point, effect):
-        format_names = _enum_format_names(data_object)
+        formats = _enum_formats(data_object)
+        format_names = [item[0] for item in formats]
+        for format_name, aspect, index, tymed in formats:
+            if format_name in ("FileGroupDescriptorW", "FileContents"):
+                self._diagnostics.record(
+                    "advertised_format",
+                    format=format_name,
+                    dwAspect=aspect,
+                    lIndex=index,
+                    tymed=_tymed_name(tymed),
+                )
         self._can_accept = self._supports_drop(data_object)
         self._diagnostics.record(
             "drag_enter",

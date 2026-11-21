@@ -1,4 +1,4 @@
 - Dakeメールリスト
-- Outlook native OLE DropとTk処理を分離し、FileContents取得を安全化
+- Outlookの仮想FileContentsを複合TYMED要求で受け取り、一時.msgへ保存
 - 会社名・お名前・メールアドレスだけ抽出
 - ローカル完結のWindows向けexe

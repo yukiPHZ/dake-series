@@ -79,7 +79,7 @@ Outlookで選択したメールを直接、または保存済みの `.msg` メ�
 - 実機確認用の最小診断は `%LOCALAPPDATA%\PEAKHEADZ\DakeMailList\logs\ole_dnd.log` に起動時上書き保存し、本文・アドレス・氏名・会社名・件名全文を記録しない。
 - CSV保存先設定は `%LOCALAPPDATA%\PEAKHEADZ\DakeMailList\config.json` に `save_folder` だけを保存する。exe横の旧 `Dake_Mail_List_config.json` は新configが未作成の場合だけ一度読み取り、新しい保存先へ移行する。旧ファイルは削除しない。
 - native OLE `Drop()` 内では仮想 `.msg` の実体化とthread-safe queueへの投入だけを行い、Tkinter UI更新と解析worker開始はTkのpoll処理へ戻してから行う。
-- `FileContents` は `QueryGetData()` で確認後、`TYMED_ISTREAM`、次に `TYMED_HGLOBAL` の順で取得する。`TYMED_ISTORAGE` は実機で必要と判明するまで取得・`IStorage.CopyTo`を行わない。
+- `FileContents` は各アイテムの `lIndex` を指定し、`TYMED_HGLOBAL | TYMED_ISTREAM | TYMED_ISTORAGE` をまとめて要求してOutlook側に返却mediumを選択させる。返された実mediumが `IStorage` の場合は、pywin32の `IStorage.CopyTo` で一時 `.msg` のcompound storageへ保存する。
 - "launcher_description": "Outlookのメールを直接ドロップしてCSVリストにします。",
 
 ## 非破壊・上書き禁止方針
