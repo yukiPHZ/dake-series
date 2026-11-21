@@ -78,6 +78,9 @@ Outlookで選択したメールを直接、または保存済みの `.msg` メ�
 - Outlook仮想メールは標準ランタイムTEMP内の一時 `.msg` として既存解析へ渡し、処理後に削除する。永続キャッシュ・履歴は作らない。
 - 実機確認用の最小診断は `%LOCALAPPDATA%\PEAKHEADZ\DakeMailList\logs\ole_dnd.log` に起動時上書き保存し、本文・アドレス・氏名・会社名・件名全文を記録しない。
 - CSV保存先設定は `%LOCALAPPDATA%\PEAKHEADZ\DakeMailList\config.json` に `save_folder` だけを保存する。exe横の旧 `Dake_Mail_List_config.json` は新configが未作成の場合だけ一度読み取り、新しい保存先へ移行する。旧ファイルは削除しない。
+- お名前はMSGの送信者表示名、Fromヘッダー、現在の送信者側の署名の順に取得する。メールアドレスのlocal-partから氏名を推測せず、根拠がなければ空欄にする。
+- 会社名と署名由来のお名前は返信・転送履歴より前にある現在送信者側の署名を優先する。同一行に会社名、部署・役職、氏名がある場合は、根拠のある範囲だけを保守的に分離する。
+- HTML本文は改行、段落、表セルの境界を保持して署名を解析し、Outlook等の引用コンテナ内は現在送信者の署名候補に含めない。
 - native OLE `Drop()` 内では仮想 `.msg` の実体化とthread-safe queueへの投入だけを行い、Tkinter UI更新と解析worker開始はTkのpoll処理へ戻してから行う。
 - `FileContents` は各アイテムの `lIndex` を指定し、`TYMED_HGLOBAL | TYMED_ISTREAM | TYMED_ISTORAGE` をまとめて要求してOutlook側に返却mediumを選択させる。返された実mediumが `IStorage` の場合は、pywin32の `IStorage.CopyTo` で一時 `.msg` のcompound storageへ保存する。
 - "launcher_description": "Outlookのメールを直接ドロップしてCSVリストにします。",
