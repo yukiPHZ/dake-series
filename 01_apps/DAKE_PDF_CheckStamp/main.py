@@ -30,7 +30,7 @@ except Exception:
 
 APP_NAME = "Dake確認印"
 WINDOW_TITLE = "Dake確認印"
-COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "© Yukihiko Kikuta / PEAKHEADZ"
 
 UI_TEXT = {
     "brand_series": "シンプルそれDAKEシリーズ",
@@ -59,7 +59,7 @@ UI_TEXT = {
     "status_stamp_ready": "確認印の位置を指定しました",
     "status_processing": "保存中",
     "status_complete": "保存完了",
-    "status_error": "エラー",
+    "status_error": "内容をご確認ください",
     "notice": "この印影は社内確認・作業記録用です。電子署名・電子契約・本人性証明を目的とするものではありません。",
     "error_pdf_only": "PDFファイルを選択してください。",
     "error_no_pdf": "PDFが選択されていません。",
@@ -71,7 +71,7 @@ UI_TEXT = {
     "error_no_pages": "PDFにページがありません。",
     "complete_title": "保存完了",
     "complete_message_detail": "確認印付きPDFを保存しました。\n\n保存先：{path}",
-    "dialog_error_title": "エラー",
+    "dialog_error_title": "確認してください",
     "dialog_select_pdf_title": "PDFを選択",
     "dialog_pdf_filter_label": "PDFファイル",
     "dialog_all_filter_label": "すべてのファイル",
