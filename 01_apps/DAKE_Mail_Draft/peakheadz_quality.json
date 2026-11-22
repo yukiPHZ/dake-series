@@ -1,0 +1,64 @@
+{
+  "profile": "app",
+  "required_files": [
+    "AGENTS.md",
+    "ORIGINAL.md",
+    "README.md",
+    "STATE.md",
+    "AI_CONTEXT.md",
+    "AI_CONTEXT_SOURCES.json",
+    "main.py",
+    "build.bat",
+    "requirements.txt"
+  ],
+  "icon_paths": [
+    "../../02_assets/dake_icon.ico"
+  ],
+  "scan_paths": [
+    "main.py",
+    "README.md",
+    "build.bat",
+    "booth_ready/README.txt",
+    "booth_ready/注意事項.txt"
+  ],
+  "user_text_paths": [
+    "main.py"
+  ],
+  "required_text": [
+    {
+      "path": "main.py",
+      "text": "© Yukihiko Kikuta / PEAKHEADZ",
+      "label": "確定したCopyright"
+    },
+    {
+      "path": "build.bat",
+      "text": "--onefile",
+      "label": "onefile build"
+    },
+    {
+      "path": "build.bat",
+      "text": "--noconsole",
+      "label": "GUI build"
+    },
+    {
+      "path": "build.bat",
+      "text": "--icon=..\\..\\02_assets\\dake_icon.ico",
+      "label": "共通アイコン指定"
+    },
+    {
+      "path": "build.bat",
+      "text": "--version-file version_info.txt",
+      "label": "Windows metadata指定"
+    },
+    {
+      "path": "../../tools/generate_version_info.py",
+      "text": "COMPANY_NAME = \"PEAKHEADZ\"",
+      "label": "CompanyName"
+    },
+    {
+      "path": "../../tools/generate_version_info.py",
+      "text": "COPYRIGHT = \"\\u00a9 Yukihiko Kikuta / PEAKHEADZ\"",
+      "label": "exe Copyright"
+    }
+  ]
+}

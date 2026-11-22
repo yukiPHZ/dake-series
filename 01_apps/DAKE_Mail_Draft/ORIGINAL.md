@@ -22,6 +22,26 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 
 CSV名簿からOutlookの個別下書きを作る、送信しない実務補助ツールです。
 
+## 守るべき挙動
+
+- CSVを読み込み、会社名・名前・メールアドレスに使う列を利用者が選択できる。
+- 件名・本文テンプレートへ、会社名・名前・メールアドレスを差し込む。
+- Outlook Classicの個別メールを下書きとして保存し、自動送信しない。
+- Outlook側で生成された既定署名HTMLを可能な限り維持し、その前へ本文を挿入する。
+- ローカルファイルを複数添付でき、存在しない添付は生成前に停止する。
+- 5 / 10 / 20 / 50 / 100 / 全件の生成件数制限を維持する。
+- 生成前に先頭1件の宛先・件名・本文をプレビューする。
+- 空メール、不正形式、重複、作成成功、エラーをCSVレポートへ記録する。
+- 利用者がOutlook上で宛先・本文・添付を確認してから、自分の判断で送信する流れを維持する。
+
+## 変更してはいけない核
+
+- Outlook下書き作成補助を、自動送信・SMTP送信・営業メール配信ツールへ変えない。
+- `CreateItem`、既定署名の読込、本文挿入、`Save` による下書き保存の流れを、ブランド修正のついでに変更しない。
+- CSV列選択、テンプレート差込、添付、件数制限、プレビュー、レポートの既存挙動を崩さない。
+- CSV、テンプレート、添付、メール内容、利用履歴を外部送信しない。
+- Outlook Classicを必要とする現在の前提を、未検証の別方式へ置き換えない。
+
 ## 対象ユーザー
 
 既存ファイルに明示なし
@@ -181,7 +201,7 @@ Windows
 下書きだけを静かに整える道具です。
 - 価格: 300円
 - 画像: assets/booth_thumbnail.jpg（存在: あり）
-- ダウンロード導線: Stripe Checkout Session検証後にprivate R2から配布（新Payment Link反映待ち）
+- ダウンロード導線: Stripe Checkout Session検証後にprivate R2から即時配布
 - サポート方針: 既存ファイルに記載なし
 - Stripe Payment Link: https://buy.stripe.com/aFabJ16bL3ZZ5GobTX0gw0W
 - Store雋ｩ螢ｲ迥ｶ諷・ stripe_ready
@@ -198,7 +218,7 @@ Windows
 - GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_Draft_v1.0.0
 - BOOTH: https://peakheadz.booth.pm/items/8448001
 - BOOTH配布zip: booth_ready/DakeMail_Draft.zip
-- Store配布導線: Stripe Checkout Session検証後にprivate R2から配布（新Payment Link反映待ち）
+- Store配布導線: Stripe Checkout Session検証後にprivate R2から即時配布
 - purchase_delivery_method: stripe_session_private_r2
 - purchase_delivery_ready: yes
 - delivery_object_key: desktop/DAKE_Mail_Draft/current.zip
@@ -219,6 +239,23 @@ Windows
 - README.txt: booth_ready/README.txt（存在: あり）
 - 注意事項.txt: booth_ready/注意事項.txt（存在: あり）
 - 入れないもの: build/、dist/、*.spec、設定ファイル、個人データ、ソース一式は正式配布zipへ混ぜない。
+- 利用者向けCopyright: © Yukihiko Kikuta / PEAKHEADZ
+
+## 販売版build確認
+
+- 確認日: 2026-11-22
+- build方式: 既存 `build.bat` のPyInstaller `--onefile` / `--noconsole`
+- exe: `dist/DakeMail_Draft.exe`
+- exe size: 15,587,822 bytes
+- exe SHA256: `DD6429890AC03403463929DF8F211BB4A3D30BE19507C74CCA396219BC86DD26`
+- Windows metadata: CompanyName=`PEAKHEADZ`、FileVersion / ProductVersion=`1.0.0`、OriginalFilename=`DakeMail_Draft.exe`、LegalCopyright=`© Yukihiko Kikuta / PEAKHEADZ`
+- icon: exeから抽出した32x32 iconが共通DAKEアイコンとpixel一致
+- launch-check: PASS
+- GUI credit: `© Yukihiko Kikuta / PEAKHEADZ`
+- 販売ZIP: `booth_ready/DakeMail_Draft.zip`
+- ZIP size: 14,954,152 bytes
+- ZIP SHA256: `06DDA686FEFDB2C3950DF781ECC3323BDDDF677357F11A8DD547AD3E736DC8F5`
+- ZIP contents: `DakeMail_Draft.exe` / `README.txt` / `注意事項.txt`
 
 ## スクリーンショット・画像方針
 
