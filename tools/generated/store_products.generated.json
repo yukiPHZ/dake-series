@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-18T07:46:22+09:00",
+  "generated_at": "2026-11-22T16:49:52+09:00",
   "source_policy": "ORIGINAL.md is the source of truth. This file is generated and must not be edited manually.",
   "schema_version": "1.0.0",
   "do_not_edit": true,
@@ -232,7 +232,7 @@
       "support_policy": null,
       "disclaimer": "- 【注意事項】\n- Windows向けアプリです\n- ご利用は自己責任でお願いいたします\n- 大切なファイルは事前にバックアップを推奨します\n- 本ソフトウェアの無断転載・再配布を禁止します\n- 環境によっては起動時にWindowsの警告が表示される場合があります\n- https://peakheadz.com",
       "included_items": [],
-      "stripe_payment_link": "https://buy.stripe.com/7sY9ATcA9dAz8SAbTX0gw0a",
+      "stripe_payment_link": "https://buy.stripe.com/aFabJ16bL3ZZ5GobTX0gw0W",
       "payment_status": "stripe_ready",
       "source_kind": "original",
       "is_generated": true,
