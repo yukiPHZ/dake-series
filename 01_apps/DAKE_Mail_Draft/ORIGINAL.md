@@ -13,9 +13,9 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - short_title: Dakeメール下書き
 - category: メール
 - status: available
-- version: 1.0.0（Release URLより）
+- version: 1.0.0
 - price: 300円
-- distribution: GitHub Release / BOOTH / dakeapp.com / DAKE Store
+- distribution: DAKE Store（Stripe private delivery） / BOOTH / dakeapp.com
 - target_platform: Windows
 
 ## 目的
@@ -182,7 +182,7 @@ Windows
 - 商品画像: assets/booth_thumbnail.jpg
 - 補助画像: assets/screenshot.jpg
 - 作品ファイル: booth_ready/DakeMail_Draft.zip
-- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_Draft_v1.0.0
+- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_Draft_v1.0.0（履歴ページ。無料配布assetなし）
 - BOOTH URL: https://peakheadz.booth.pm/items/8448001
 
 ## Store表示用情報
@@ -204,24 +204,27 @@ Windows
 - ダウンロード導線: Stripe Checkout Session検証後にprivate R2から即時配布
 - サポート方針: 既存ファイルに記載なし
 - Stripe Payment Link: https://buy.stripe.com/aFabJ16bL3ZZ5GobTX0gw0W
-- Store雋ｩ螢ｲ迥ｶ諷・ stripe_ready
+- Store販売状態: stripe_ready
 
 ## 価格・販売方針
 
 - BOOTH価格案: 300円
 - BOOTH URL: https://peakheadz.booth.pm/items/8448001
-- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_Draft_v1.0.0
+- GitHub Release: 履歴ページのみ。無料配布assetは2026-11-22に終了
 - Store販売: Stripe Payment Link（300円）
 
 ## 配布・ダウンロード方針
 
-- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_Draft_v1.0.0
+- GitHub Release: 履歴ページのみ。公開無料Downloadは終了
 - BOOTH: https://peakheadz.booth.pm/items/8448001
 - BOOTH配布zip: booth_ready/DakeMail_Draft.zip
 - Store配布導線: Stripe Checkout Session検証後にprivate R2から即時配布
 - purchase_delivery_method: stripe_session_private_r2
 - purchase_delivery_ready: yes
 - delivery_object_key: desktop/DAKE_Mail_Draft/current.zip
+- 正式販売経路: DAKE StoreのStripe private-delivery Payment Link
+- GitHub無料配布: 2026-11-22終了（Release履歴とtagは維持、配布exe assetを削除）
+- 本番確認: Stripe実決済、Store redirect、private R2 download、ZIP download、exe起動を人間が確認済み
 
 ## 免責・注意事項
 
