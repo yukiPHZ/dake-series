@@ -47,6 +47,11 @@
     },
     {
       "path": "build.bat",
+      "text": "--add-data=..\\..\\02_assets\\dake_icon.ico:.",
+      "label": "frozen実行時アイコン同梱"
+    },
+    {
+      "path": "build.bat",
       "text": "--version-file version_info.txt",
       "label": "Windows metadata指定"
     },

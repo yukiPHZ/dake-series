@@ -19,6 +19,7 @@ pyinstaller ^
 --clean ^
 --paths=..\..\00_core ^
 --icon=..\..\02_assets\dake_icon.ico ^
+--add-data=..\..\02_assets\dake_icon.ico:. ^
 --version-file version_info.txt ^
 --name DakeMail_Draft ^
 main.py

@@ -6,8 +6,9 @@
 - Stripe決済後にprivate R2の `desktop/DAKE_Mail_Draft/current.zip` を配布する本番導線が稼働している。
 - 新正本主義の `common + app + 製品固有` 参照構造を適用する。
 - 利用者向けクレジットは `© Yukihiko Kikuta / PEAKHEADZ` に統一する。
-- 2026-11-22に既存build方式で販売exeを再buildし、metadata、共通icon、launch-check、実GUIを確認した。
-- 新しい3ファイル構成の販売ZIPを検証済み。SHA256は `06DDA686FEFDB2C3950DF781ECC3323BDDDF677357F11A8DD547AD3E736DC8F5`。
+- 2026-11-22に既存onefile build方式で販売exeを再buildし、metadata、launch-check、実GUIを確認した。
+- 共通icoをonefile内部へ同梱し、Explorer、GUI titlebar、Windows taskbarの実行中アイコンを実機確認した。
+- 新しい3ファイル構成の販売ZIPを検証済み。SHA256は `EEB66EFFD271B8CA847FF598153F633143097B7152BA89FA10A1AF03EB3CE94B`。
 
 ## Next
 
