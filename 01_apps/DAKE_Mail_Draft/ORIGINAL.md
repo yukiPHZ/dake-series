@@ -246,15 +246,18 @@ Windows
 - 確認日: 2026-11-22
 - build方式: 既存 `build.bat` のPyInstaller `--onefile` / `--noconsole`
 - exe: `dist/DakeMail_Draft.exe`
-- exe size: 15,587,822 bytes
-- exe SHA256: `DD6429890AC03403463929DF8F211BB4A3D30BE19507C74CCA396219BC86DD26`
+- exe size: 15,691,033 bytes
+- exe SHA256: `1F605224F4E654D8FF6470502E6F344A3745A9E8BEE7E989C07E634ACF2C068D`
 - Windows metadata: CompanyName=`PEAKHEADZ`、FileVersion / ProductVersion=`1.0.0`、OriginalFilename=`DakeMail_Draft.exe`、LegalCopyright=`© Yukihiko Kikuta / PEAKHEADZ`
-- icon: exeから抽出した32x32 iconが共通DAKEアイコンとpixel一致
+- icon: 共通icoをonefile内部へ同梱し、sourceはrepo正本、frozenはPyInstaller展開先から解決する
+- Explorer exe icon: 共通DAKEアイコンとpixel一致
+- GUI titlebar icon: 実行中exeで共通DAKEアイコンを確認
+- Windows taskbar running icon: 実行中exeで共通DAKEアイコンを確認
 - launch-check: PASS
 - GUI credit: `© Yukihiko Kikuta / PEAKHEADZ`
 - 販売ZIP: `booth_ready/DakeMail_Draft.zip`
-- ZIP size: 14,954,152 bytes
-- ZIP SHA256: `06DDA686FEFDB2C3950DF781ECC3323BDDDF677357F11A8DD547AD3E736DC8F5`
+- ZIP size: 15,057,205 bytes
+- ZIP SHA256: `EEB66EFFD271B8CA847FF598153F633143097B7152BA89FA10A1AF03EB3CE94B`
 - ZIP contents: `DakeMail_Draft.exe` / `README.txt` / `注意事項.txt`
 
 ## スクリーンショット・画像方針

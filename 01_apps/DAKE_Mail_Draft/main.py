@@ -34,6 +34,7 @@ APP_KEY = "DAKE_Mail_Draft"
 APP_NAME = "Dakeメール下書き"
 WINDOW_TITLE = APP_NAME
 COPYRIGHT = "© Yukihiko Kikuta / PEAKHEADZ"
+APP_USER_MODEL_ID = "PEAKHEADZ.DAKE.MailDraft"
 
 UI_TEXT = {
     "display_subtitle": "CSVからOutlook下書きだけ作る",
@@ -181,6 +182,24 @@ def get_app_dir() -> Path:
     return Path(__file__).resolve().parent
 
 
+def get_icon_path() -> Path:
+    if getattr(sys, "frozen", False):
+        bundle_dir = Path(getattr(sys, "_MEIPASS", Path(sys.executable).resolve().parent))
+        return bundle_dir / "dake_icon.ico"
+    return Path(__file__).resolve().parents[2] / "02_assets" / "dake_icon.ico"
+
+
+def set_windows_app_user_model_id() -> None:
+    if sys.platform != "win32":
+        return
+    try:
+        import ctypes
+
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(APP_USER_MODEL_ID)
+    except (AttributeError, OSError):
+        logging.info("Windows AppUserModelID could not be set", exc_info=True)
+
+
 APP_DIR = get_app_dir()
 DATA_DIR = APP_DIR / "data"
 LOG_DIR = APP_DIR / "logs"
@@ -188,12 +207,17 @@ OUTPUT_DIR = APP_DIR / "output"
 ATTACHMENTS_DIR = APP_DIR / "attachments"
 TEMPLATES_DIR = APP_DIR / "templates"
 SETTINGS_PATH = DATA_DIR / "settings.json"
-ICON_PATH = APP_DIR.parent.parent / "02_assets" / "dake_icon.ico"
+ICON_PATH = get_icon_path()
 
 
 def ensure_app_directories() -> None:
     for directory in (DATA_DIR, LOG_DIR, OUTPUT_DIR, ATTACHMENTS_DIR, TEMPLATES_DIR):
         directory.mkdir(parents=True, exist_ok=True)
+
+
+def ensure_runtime_icon() -> None:
+    if not ICON_PATH.is_file():
+        raise FileNotFoundError(f"runtime icon not found: {ICON_PATH}")
 
 
 ensure_app_directories()
@@ -1193,9 +1217,10 @@ def run_app() -> None:
 
 def main(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
+    set_windows_app_user_model_id()
     if "--launch-check" in args:
         return run_launch_check(
-            checks=(ensure_app_directories,),
+            checks=(ensure_app_directories, ensure_runtime_icon),
             create_window=create_launch_check_window,
             log_dir=str(LOG_DIR),
         )
