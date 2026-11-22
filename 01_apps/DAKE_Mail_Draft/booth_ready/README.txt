@@ -11,5 +11,3 @@ CSVからOutlookの個別下書きだけ作ります。
 
 PEAKHEADZ
 https://peakheadz.com
-
-Vibe-Coded by Yukihiko Kikuta

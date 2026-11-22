@@ -1,0 +1,53 @@
+{
+  "product": "Dakeメール下書き",
+  "profile": "app",
+  "standards_version": "1.0.0",
+  "sections": [
+    {
+      "output": "Purpose",
+      "source": "ORIGINAL.md",
+      "heading": "目的"
+    },
+    {
+      "output": "Must Keep",
+      "source": "ORIGINAL.md",
+      "heading": "守るべき挙動"
+    },
+    {
+      "output": "Important Rules",
+      "source": "ORIGINAL.md",
+      "heading": "変更してはいけない核"
+    },
+    {
+      "output": "Current State",
+      "source": "STATE.md",
+      "heading": "Current State"
+    },
+    {
+      "output": "Next",
+      "source": "STATE.md",
+      "heading": "Next"
+    },
+    {
+      "output": "Known Issues",
+      "source": "STATE.md",
+      "heading": "Known Issues"
+    }
+  ],
+  "quality_check_command": "python ../../../peakheadz-standards/tools/quality_check.py . --profile app",
+  "source_references": [
+    "AGENTS.md",
+    "ORIGINAL.md",
+    "STATE.md",
+    "../../00_core/DAKE_COMMON_SPEC.md",
+    "../../00_core/DAKE_BUILD_RULE.md",
+    "../../00_core/DAKE_RELEASE_FLOW.md",
+    "../../../peakheadz-standards/common/AI_WORKFLOW.md",
+    "../../../peakheadz-standards/common/UX_WRITING.md",
+    "../../../peakheadz-standards/common/BRANDING.md",
+    "../../../peakheadz-standards/app/QUALITY.md",
+    "../../../peakheadz-standards/app/RELEASE.md",
+    "../../../peakheadz-standards/app/UI.md",
+    "../../../peakheadz-standards/app/WINDOWS_APP.md"
+  ]
+}
