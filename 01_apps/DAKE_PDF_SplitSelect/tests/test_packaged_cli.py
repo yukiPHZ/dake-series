@@ -17,6 +17,26 @@ DEFAULT_EXE = APP_DIR / "dist" / "DakePDF_Split_Select.exe"
 
 
 class PackagedCliTests(unittest.TestCase):
+    def test_large_documents_and_page_order(self):
+        exe = Path(os.environ.get("DAKE_SPLITSELECT_EXE", str(DEFAULT_EXE)))
+        if not exe.is_file():
+            self.skipTest("packaged candidate not built")
+        with tempfile.TemporaryDirectory(prefix="dake-phase2-package-") as directory:
+            root = Path(directory)
+            for count in (3, 30, 100, 300):
+                source, output = root / f"input-{count}.pdf", root / f"output-{count}.pdf"
+                write_fixture(source, count)
+                before = hashlib.sha256(source.read_bytes()).hexdigest()
+                pages = [1, 3] if count == 3 else [1, 2, 3, 5, 8, 9, 10]
+                expression = "1,3" if count == 3 else "1-3,5,8-10"
+                result = subprocess.run([str(exe), "--from-shimarisu", "--inputs", str(source),
+                                         "--pages", expression, "--output", str(output), "--silent"],
+                                        cwd=exe.parent, capture_output=True, timeout=30)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                actual = [int(page.extract_text().split()[1]) for page in PdfReader(output).pages]
+                self.assertEqual(actual, pages)
+                self.assertEqual(hashlib.sha256(source.read_bytes()).hexdigest(), before)
+
     def test_nine_cli_cases(self):
         exe = Path(os.environ.get("DAKE_SPLITSELECT_EXE", str(DEFAULT_EXE)))
         if not exe.is_file():

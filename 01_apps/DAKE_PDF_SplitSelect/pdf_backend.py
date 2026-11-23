@@ -38,12 +38,14 @@ def render_page_ppm(document, index, width, height):
 class PdfRenderWorker:
     def __init__(self, events, width, height):
         self.events = events
+        self.preview_results = queue.Queue(maxsize=1)
         self.width = width
         self.height = height
         self.condition = threading.Condition()
         self.pending = deque()
         self.cancel = threading.Event()
         self.view_cancel = threading.Event()
+        self.preview_cancel = threading.Event()
         self.stopping = False
         self.closed = threading.Event()
         self.closed.set()
@@ -56,6 +58,7 @@ class PdfRenderWorker:
         with self.condition:
             self.cancel.set()
             self.view_cancel.set()
+            self.preview_cancel.set()
             self.cancel = threading.Event()
             self.view_cancel = threading.Event()
             self.pending.clear()
@@ -65,13 +68,35 @@ class PdfRenderWorker:
                 self.pending.append(("open", generation, path, self.cancel, None, None))
             self.condition.notify()
 
-    def request(self, generation, request_id, pages):
+    def request(self, generation, request_id, pages, box=None):
         with self.condition:
             self.view_cancel.set()
             self.view_cancel = threading.Event()
             self.pending = deque(task for task in self.pending if task[0] != "render")
             for page in pages:
-                self.pending.append(("render", generation, page, self.cancel, self.view_cancel, request_id))
+                self.pending.append(("render", generation, (page, box or (self.width, self.height)),
+                                     self.cancel, self.view_cancel, request_id))
+            self.condition.notify()
+
+    def cancel_preview(self):
+        with self.condition:
+            self.preview_cancel.set()
+            self.pending = deque(task for task in self.pending if task[0] != "preview")
+            try:
+                self.preview_results.get_nowait()
+            except queue.Empty:
+                pass
+
+    def request_preview(self, generation, request_id, page, box):
+        with self.condition:
+            self.preview_cancel.set()
+            self.preview_cancel = threading.Event()
+            self.pending = deque(task for task in self.pending if task[0] != "preview")
+            task = ("preview", generation, (page, box), self.cancel, self.preview_cancel, request_id)
+            # Never overtake the document open/close barrier.
+            position = next((i for i, item in enumerate(self.pending)
+                             if item[0] not in ("open", "close")), len(self.pending))
+            self.pending.insert(position, task)
             self.condition.notify()
 
     def stop(self):
@@ -79,10 +104,22 @@ class PdfRenderWorker:
             self.stopping = True
             self.cancel.set()
             self.view_cancel.set()
+            self.preview_cancel.set()
             self.pending.clear()
             self.condition.notify()
 
     def _emit(self, event, cancel, view_cancel=None):
+        if event[0] in ("preview_ready", "preview_failed"):
+            # A single high-resolution result, never 32 large rasters in the UI queue.
+            with self.condition:
+                if cancel.is_set() or (view_cancel and view_cancel.is_set()):
+                    return
+                try:
+                    self.preview_results.get_nowait()
+                except queue.Empty:
+                    pass
+                self.preview_results.put_nowait(event)
+            return
         while not cancel.is_set() and not (view_cancel and view_cancel.is_set()):
             try:
                 self.events.put(event, timeout=0.05)
@@ -129,19 +166,27 @@ class PdfRenderWorker:
                         if page_count == 0:
                             raise ValueError("PDF document contains no pages")
                         self._emit(("pdf_loaded", generation, value, page_count), cancel)
-                    elif kind == "render":
+                    elif kind in ("render", "preview"):
                         if document is None or document_generation != generation:
                             raise ValueError("PDF document is not open")
-                        ppm = self.render_page(document, value, self.width, self.height)
-                        self.rendered_count += 1
-                        self._emit(("thumbnail_ready", generation, request_id, value, ppm), cancel, view_cancel)
+                        page, box = value
+                        ppm = self.render_page(document, page, *box)
+                        if kind == "render":
+                            self.rendered_count += 1
+                        event_type = "preview_ready" if kind == "preview" else "thumbnail_ready"
+                        self._emit((event_type, generation, request_id, page, ppm), cancel, view_cancel)
+                        del ppm
                 except Exception as error:
+                    if kind == "preview":
+                        self._emit(("preview_failed", generation, request_id, value[0], str(error)),
+                                   cancel, view_cancel)
+                        continue
                     if document is not None:
                         document.close()
                         document = None
                     self.closed.set()
                     event = (("pdf_load_failed", generation, str(error)) if kind == "open" else
-                             ("thumbnail_failed", generation, request_id, value, str(error)))
+                             ("thumbnail_failed", generation, request_id, value[0], str(error)))
                     # A broken document must not generate one failure per pending page.
                     with self.condition:
                         self.pending = deque(task for task in self.pending if task[1] != generation or task[0] == "close")

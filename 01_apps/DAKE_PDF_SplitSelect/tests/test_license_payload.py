@@ -62,7 +62,7 @@ class LicensePayloadTests(unittest.TestCase):
                          (APP_DIR.parents[1] / "02_assets" / "dake_icon.ico").read_bytes())
 
     def test_no_legacy_renderer_in_source_or_distribution(self):
-        for name in ("main.py", "pdf_backend.py", "tests/test_lifecycle.py", "tests/test_packaged_cli.py"):
+        for name in ("main.py", "pdf_backend.py", "page_preview.py", "tests/test_lifecycle.py", "tests/test_packaged_cli.py"):
             text = (APP_DIR / name).read_text(encoding="utf-8")
             self.assertNotRegex(text, r"\bimport\s+fitz\b")
         self.assertNotRegex((APP_DIR / "requirements.txt").read_text(), r"(?i)pymupdf|pillow")
