@@ -39,7 +39,7 @@ echo Run pip install -r requirements.txt, then run build.bat again.
 exit /b 1
 
 :build
-%PYTHON_CMD% ..\..\tools\generate_version_info.py --app-dir . --out version_info.txt
+%PYTHON_CMD% generate_candidate_version_info.py
 if errorlevel 1 exit /b 1
 %PYINSTALLER% ^
 --onefile ^
@@ -48,6 +48,7 @@ if errorlevel 1 exit /b 1
 --name=DakePDF_OverviewRename ^
 --icon=..\..\02_assets\dake_icon.ico ^
 --version-file=version_info.txt ^
+--collect-all=tkinterdnd2 ^
 --add-data=..\..\02_assets\dake_icon.ico;. ^
 main.py
 
