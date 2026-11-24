@@ -1,0 +1,24 @@
+{
+  "mode": "dry-run",
+  "created_at": "2026-11-22T16:31:56+09:00",
+  "product_id": "DAKE_Mail_Draft",
+  "source_original": "01_apps/DAKE_Mail_Draft/ORIGINAL.md",
+  "title": "Dakeメール下書き",
+  "amount": 300,
+  "currency": "jpy",
+  "ready": true,
+  "secret_read": "no",
+  "live_api_called": "no",
+  "operations": {
+    "product": "create_if_missing_else_reuse_exact",
+    "price": "create_if_no_exact_match_else_reuse_exact",
+    "payment_link": "create_if_no_exact_match_else_reuse_exact",
+    "original": "update_only_after_verified_read_back"
+  },
+  "idempotency_keys": {
+    "product": "dake-release-product-v1-DAKE_Mail_Draft-8e245af857a4",
+    "price": "dake-release-price-v1-DAKE_Mail_Draft-4d2cbc11f52c",
+    "payment_link": "dake-release-link-v1-DAKE_Mail_Draft-0ad6dc446697"
+  },
+  "errors": []
+}

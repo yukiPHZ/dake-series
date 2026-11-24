@@ -1,0 +1,19 @@
+{
+  "mode": "live",
+  "product_id": "DAKE_Mail_Draft",
+  "source_original": "01_apps/DAKE_Mail_Draft/ORIGINAL.md",
+  "started_at": "2026-11-22T16:31:56+09:00",
+  "status": "completed",
+  "actions": {
+    "product": "reused",
+    "price": "reused",
+    "payment_link": "created",
+    "original": "updated"
+  },
+  "product_id_on_stripe": "prod_Uhd5olwlW4YDu1",
+  "price_id": "price_1TiDpOHrsJubFuDOAwQWjbQT",
+  "payment_link_id": "plink_1UeVFuHrsJubFuDOlifr47sA",
+  "payment_link_url": "https://buy.stripe.com/aFabJ16bL3ZZ5GobTX0gw0W",
+  "error": null,
+  "updated_at": "2026-11-22T16:32:11+09:00"
+}
