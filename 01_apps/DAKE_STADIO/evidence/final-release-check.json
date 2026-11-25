@@ -1,0 +1,12 @@
+{
+  "passed": true,
+  "testedRuntimeMatchesFinalArchive": true,
+  "finalDocsExactlySynced": true,
+  "exampleIncluded": true,
+  "zipBytes": 158922876,
+  "zipSha256": "a3cdadad4a9bfede148cb0dda9793eb0bc283e98b0c187e56d109b3ef9c671f2",
+  "runtimeSha256": {
+    "executable": "4b04445c2252a347b42c37cd221bdc953a38d9686adb159819b81824074b315b",
+    "appAsar": "86cdf569746248004af360efb2a88363d07e90432e8286f45cdcc6fa9e41e2e5"
+  }
+}

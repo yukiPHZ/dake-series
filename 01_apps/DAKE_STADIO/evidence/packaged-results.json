@@ -1,0 +1,23 @@
+{
+  "executable": "C:\\Users\\yukiz\\Documents\\New project\\DAKE_STADIO\\test-output\\zip-extracted-1790427164571\\DAKE_STADIO-win32-x64\\DAKE_STADIO.exe",
+  "independentWorkingDirectory": "C:\\Users\\yukiz\\Documents\\New project\\DAKE_STADIO\\test-output\\packaged-smoke-1790427173484",
+  "checks": [
+    "executable loads page from packaged app.asar",
+    "packaged Japanese interface and native bridge initialize independently",
+    "packaged sample combines raster and editable vector layers",
+    "packaged raster worker actually processes local pixels",
+    "packaged native bridge writes recoverable local data",
+    "packaged engine exports correct-size PNG",
+    "portable distribution contains editable example and required licenses",
+    "packaged renderer has no uncaught exceptions",
+    "packaged application exits successfully"
+  ],
+  "errors": [],
+  "pageUrl": "file:///C:/Users/yukiz/Documents/New%20project/DAKE_STADIO/test-output/zip-extracted-1790427164571/DAKE_STADIO-win32-x64/resources/app.asar/build/index.html",
+  "readyMs": 947,
+  "runtimeSha256": {
+    "executable": "4b04445c2252a347b42c37cd221bdc953a38d9686adb159819b81824074b315b",
+    "appAsar": "86cdf569746248004af360efb2a88363d07e90432e8286f45cdcc6fa9e41e2e5"
+  },
+  "passed": true
+}

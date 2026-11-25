@@ -1,0 +1,395 @@
+{
+  "passed": true,
+  "results": [
+    {
+      "name": "new document has clean history",
+      "passed": true
+    },
+    {
+      "name": "shape and history created",
+      "passed": true
+    },
+    {
+      "name": "shape undo",
+      "passed": true
+    },
+    {
+      "name": "shape redo preserves ID",
+      "passed": true
+    },
+    {
+      "name": "group two layers",
+      "passed": true
+    },
+    {
+      "name": "ungroup preserves layers",
+      "passed": true
+    },
+    {
+      "name": "group and ungroup preserve rendered pixels",
+      "passed": true
+    },
+    {
+      "name": "duplicate creates independent ID",
+      "passed": true
+    },
+    {
+      "name": "delete layer",
+      "passed": true
+    },
+    {
+      "name": "layer locks",
+      "passed": true
+    },
+    {
+      "name": "save reload preserves lock and transform",
+      "passed": true
+    },
+    {
+      "name": "invalid dimensions do not mutate current work",
+      "passed": true
+    },
+    {
+      "name": "failed image decode leaves current work intact",
+      "passed": true
+    },
+    {
+      "name": "remote project resources rejected",
+      "passed": true
+    },
+    {
+      "name": "remote SVG resources rejected",
+      "passed": true
+    },
+    {
+      "name": "unsupported SVG filter rejects before silent loss",
+      "passed": true
+    },
+    {
+      "name": "unsupported SVG mask rejects before silent loss",
+      "passed": true
+    },
+    {
+      "name": "unsupported SVG pattern rejects before silent loss",
+      "passed": true
+    },
+    {
+      "name": "unsupported SVG marker rejects before silent loss",
+      "passed": true
+    },
+    {
+      "name": "unsupported SVG textPath rejects before silent loss",
+      "passed": true
+    },
+    {
+      "name": "SVG imports editable path",
+      "passed": true
+    },
+    {
+      "name": "closed path first-node edit keeps other anchor fixed",
+      "passed": true
+    },
+    {
+      "name": "pen drag creates cubic handles",
+      "passed": true
+    },
+    {
+      "name": "brush changes actual embedded image pixels",
+      "passed": true
+    },
+    {
+      "name": "raster gesture is one undo step",
+      "passed": true
+    },
+    {
+      "name": "eraser changes source alpha",
+      "passed": true
+    },
+    {
+      "name": "undo restores erased raster pixels",
+      "passed": true
+    },
+    {
+      "name": "filtered stroke blocks overlapping export while worker runs",
+      "passed": true
+    },
+    {
+      "name": "filtered stroke commits changed pixels and filters in one undo step",
+      "passed": true
+    },
+    {
+      "name": "filtered stroke undo restores original pixels and filter chain",
+      "passed": true
+    },
+    {
+      "name": "failed filtered stroke rolls back source, visible pixels, filters and history",
+      "passed": true
+    },
+    {
+      "name": "worker chain output exactly matches Fabric CPU filter pixels",
+      "passed": true
+    },
+    {
+      "name": "worker-filtered project reload preserves exact rendered pixels",
+      "passed": true
+    },
+    {
+      "name": "editable adjustments survive project reload",
+      "passed": true
+    },
+    {
+      "name": "adjustment reset preserves original source pixels",
+      "passed": true
+    },
+    {
+      "name": "PNG export invariant under zoom",
+      "passed": true
+    },
+    {
+      "name": "PNG export exact document dimensions",
+      "passed": true
+    },
+    {
+      "name": "JPEG export has opaque background",
+      "passed": true
+    },
+    {
+      "name": "WebP export encodes WebP",
+      "passed": true
+    },
+    {
+      "name": "SVG export retains vector and embedded pixels without viewport or DOCTYPE",
+      "passed": true
+    },
+    {
+      "name": "rasterize produces editable image layer",
+      "passed": true
+    },
+    {
+      "name": "crop document bounds",
+      "passed": true
+    },
+    {
+      "name": "crop undo restores dimensions",
+      "passed": true
+    },
+    {
+      "name": "Electron native mouse events paint raster pixels",
+      "passed": true,
+      "pixel": [
+        0,
+        0,
+        255,
+        255
+      ]
+    },
+    {
+      "name": "Electron native mouse events erase raster alpha",
+      "passed": true,
+      "pixel": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "Electron native filtered brush stroke retains filters and one undo step",
+      "passed": true
+    },
+    {
+      "name": "Native pointer input while busy preserves selected raster layer",
+      "passed": true
+    },
+    {
+      "name": "Electron native drag events create cubic pen path",
+      "passed": true,
+      "path": [
+        [
+          "M",
+          19.86842105263157,
+          200.1315789473684
+        ],
+        [
+          "C",
+          40,
+          180,
+          89.73684210526318,
+          190.26315789473682,
+          109.86842105263158,
+          200.1315789473684
+        ]
+      ]
+    },
+    {
+      "name": "Electron native node drag edits path with one undo step",
+      "passed": true
+    },
+    {
+      "name": "12MP filtered stroke event-loop gap under500ms and one undo",
+      "passed": true
+    },
+    {
+      "name": "32MP filtered stroke event-loop gap under500ms and one undo",
+      "passed": true
+    },
+    {
+      "name": "32MP history trims within budget and undo restores pixels",
+      "passed": true
+    }
+  ],
+  "durationMs": 129,
+  "performance": {
+    "document": "2048x1536",
+    "rasterGestures": 6,
+    "gestureTimesMs": [
+      14,
+      14,
+      15,
+      14,
+      15,
+      15
+    ],
+    "undoMs": 3,
+    "exportMs": 41,
+    "maxFrameGapMs": 1007,
+    "totalMs": 5987
+  },
+  "largeImages": {
+    "workerChecks": [
+      {
+        "width": 4000,
+        "height": 3000,
+        "pixels": 12000000,
+        "worker": {
+          "elapsedMs": 294,
+          "eventLoopTicks": 27,
+          "maxEventLoopGapMs": 31
+        },
+        "referenceCpuMs": 448,
+        "reload": {
+          "elapsedMs": 297,
+          "eventLoopTicks": 24,
+          "maxEventLoopGapMs": 63
+        },
+        "busyGuardPassed": true,
+        "sourcePreserved": true,
+        "filteredStroke": {
+          "elapsedMs": 336,
+          "eventLoopTicks": 21,
+          "maxEventLoopGapMs": 74
+        },
+        "filteredStrokePassed": true
+      },
+      {
+        "width": 8000,
+        "height": 4000,
+        "pixels": 32000000,
+        "worker": {
+          "elapsedMs": 733,
+          "eventLoopTicks": 65,
+          "maxEventLoopGapMs": 97
+        },
+        "referenceCpuMs": 993,
+        "reload": {
+          "elapsedMs": 622,
+          "eventLoopTicks": 53,
+          "maxEventLoopGapMs": 97
+        },
+        "busyGuardPassed": true,
+        "sourcePreserved": true,
+        "filteredStroke": {
+          "elapsedMs": 734,
+          "eventLoopTicks": 47,
+          "maxEventLoopGapMs": 143
+        },
+        "filteredStrokePassed": true
+      }
+    ],
+    "history32MP": {
+      "sourceDataURLMiB": 3.7,
+      "states": [
+        {
+          "gesture": 1,
+          "historyStates": 4,
+          "sourceVersions": 3,
+          "estimatedHistoryMiB": 22.4,
+          "gestureMs": 168
+        },
+        {
+          "gesture": 2,
+          "historyStates": 5,
+          "sourceVersions": 4,
+          "estimatedHistoryMiB": 29.9,
+          "gestureMs": 212
+        },
+        {
+          "gesture": 3,
+          "historyStates": 6,
+          "sourceVersions": 5,
+          "estimatedHistoryMiB": 37.4,
+          "gestureMs": 227
+        },
+        {
+          "gesture": 4,
+          "historyStates": 7,
+          "sourceVersions": 6,
+          "estimatedHistoryMiB": 44.9,
+          "gestureMs": 227
+        },
+        {
+          "gesture": 5,
+          "historyStates": 8,
+          "sourceVersions": 7,
+          "estimatedHistoryMiB": 52.4,
+          "gestureMs": 226
+        },
+        {
+          "gesture": 6,
+          "historyStates": 9,
+          "sourceVersions": 8,
+          "estimatedHistoryMiB": 59.9,
+          "gestureMs": 231
+        },
+        {
+          "gesture": 7,
+          "historyStates": 10,
+          "sourceVersions": 9,
+          "estimatedHistoryMiB": 67.5,
+          "gestureMs": 230
+        },
+        {
+          "gesture": 8,
+          "historyStates": 11,
+          "sourceVersions": 10,
+          "estimatedHistoryMiB": 75,
+          "gestureMs": 236
+        },
+        {
+          "gesture": 9,
+          "historyStates": 12,
+          "sourceVersions": 11,
+          "estimatedHistoryMiB": 82.5,
+          "gestureMs": 221
+        },
+        {
+          "gesture": 10,
+          "historyStates": 13,
+          "sourceVersions": 12,
+          "estimatedHistoryMiB": 90,
+          "gestureMs": 226
+        },
+        {
+          "gesture": 11,
+          "historyStates": 13,
+          "sourceVersions": 12,
+          "estimatedHistoryMiB": 90.1,
+          "gestureMs": 168
+        }
+      ],
+      "undoChangedPixels": true,
+      "budgetMiB": 96,
+      "minimumStates": 2
+    }
+  }
+}

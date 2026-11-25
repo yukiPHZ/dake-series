@@ -1,0 +1,24 @@
+{
+  "passed": true,
+  "checks": [
+    "final app and engine sources reproduce build byte-for-byte",
+    "every bundled build desktop asset and UI_TEXT file matches workspace",
+    "static build resources match current source",
+    "app.asar contains only audited runtime files"
+  ],
+  "archive": "C:\\Users\\yukiz\\Documents\\New project\\DAKE_STADIO\\dist\\DAKE_STADIO-win32-x64\\resources\\app.asar",
+  "appAsarSha256": "86cdf569746248004af360efb2a88363d07e90432e8286f45cdcc6fa9e41e2e5",
+  "files": {
+    "build/app.js": "d0cdf217470eef3e7233a661938630b263336f405a65ff2e2228af83e7c9d332",
+    "build/index.html": "bba07a302cf174064d2764442ff221949d455bbf6d1da6f2ce929b0c62b1b19a",
+    "build/raster-worker.js": "0413b53d335317207eb0117c1cf14a85ecd9eaa2a1890d623ca5298bd29b264d",
+    "build/style.css": "da189e0e73a427ba26bb43d4178f1051525d254f5bae4ce4980c009f3336aa29",
+    "desktop/main.cjs": "f433085c4eac4a00a6f8e3cd8923fd7b69945c0b0d31dc10038cdaa0dee6e6cc",
+    "desktop/preload.cjs": "cf9b5c48d6dd61e2b05149fb6e5d2d1efc939ac0c3c607e2e056bd9835e72b5c",
+    "desktop/storage.cjs": "030106add664bb032098d30abb9ef622ff4cf289eef149567c38d531e6f5b2cf",
+    "assets/dake_icon.ico": "761adcba5e348027a705855cfa88cf19cd855cb2d3aeb0eff5282e544614a8d6",
+    "assets/screenshot.png": "45496b388005b0130afd33563d297c061f1d61e32dbdd2aa4e9fe1db363824dc",
+    "assets/THIRD_PARTY_NOTICES.txt": "7536d50bb697300916582855ffa0d0c022b9ddff16d2ef76062a18c6ca4316f1",
+    "src/ui-text.json": "0c7a63e3236bfb47b84911a8821dbbc2fcf245821d2af6952b5532b5c0f68143"
+  }
+}
