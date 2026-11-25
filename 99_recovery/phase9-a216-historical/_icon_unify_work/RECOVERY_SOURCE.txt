@@ -1,0 +1,5 @@
+Recovery source: C:\Users\yukiz\Documents\New project\_icon_unify_work
+Recovered to: DAKE_series/99_recovery/phase9-a216-historical/_icon_unify_work/
+Phase: 9-A2.16 HISTORICAL OPTIONAL (PRESERVE THEN DELETE)
+Reason: Local-only WIP icon-unify experiment implementations for 4 DAKE apps (DAKE_Image_to_PDF, DAKE_PDF_Merge, DAKE_PDF_Split_One, DAKE_PDF_Split_Select). main.py files differ from DAKE_series canonical versions and were NOT merged. Reference/comparison value for WIP implementations not integrated into current results.
+Excluded: __pycache__, .pyc cache artifacts.

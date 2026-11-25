@@ -1,0 +1,5 @@
+Recovery source: C:\Users\yukiz\Documents\New project\_display_name_work
+Recovered to: DAKE_series/99_recovery/phase9-a216-historical/_display_name_work/
+Phase: 9-A2.16 HISTORICAL OPTIONAL (PRESERVE THEN DELETE)
+Reason: Local-only WIP display-name experiment implementations for 4 DAKE apps (DAKE_Image_to_PDF, DAKE_PDF_Split_One, DAKE_PDF_Split_Select, DAKE_PDF_to_Images). main.py files differ from DAKE_series canonical versions and were NOT merged. Reference/comparison value for WIP implementations not integrated into current results.
+Excluded: __pycache__, .pyc cache artifacts.
