@@ -1,0 +1,11 @@
+{
+  "created_at": "2026-05-15T21:31:07",
+  "mood": "のんき",
+  "duration_sec": 30,
+  "seed": 418250,
+  "prompt": "gentle carefree ambient loop, soft mallet, warm room tone, simple rhythm, no vocals, no strong melody, seamless loop",
+  "model_adapter": "mock",
+  "output_path": "C:\\Users\\yukiz\\Documents\\New project\\DAKE_BGM_Loop\\outputs\\DAKE_BGM_Loop_20260515_213107_nonkina_30s_seed418250.wav",
+  "favorite": false,
+  "license_notice": "生成音声の商用利用可否は、使用モデル・素材・公開先の規約に依存します。YouTube等で公開する前に、使用モデルのライセンスを確認してください。 Commercial usability depends on the model, source material, and platform terms. Please review the model license before publishing."
+}

@@ -1,0 +1,2 @@
+"""Task tray integration."""
+
