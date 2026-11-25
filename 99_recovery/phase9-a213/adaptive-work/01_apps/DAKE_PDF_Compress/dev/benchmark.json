@@ -1,0 +1,1571 @@
+[
+  {
+    "file": "A_text.pdf",
+    "original": 35354,
+    "seconds": 0.5149999999998727,
+    "selected": {
+      "path": "LOCAL_WORK\\fixtures\\A_text_compressed_5.pdf",
+      "name": "A_lossless",
+      "size": 3322,
+      "seconds": 0.375,
+      "checks": "passed",
+      "visual": [
+        {
+          "page": 1,
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0,
+          "tile_ink_loss": 0.0
+        },
+        {
+          "page": 2,
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0,
+          "tile_ink_loss": 0.0
+        },
+        {
+          "page": 3,
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0,
+          "tile_ink_loss": 0.0
+        }
+      ],
+      "worst": {
+        "mae": 0.0,
+        "changed": 0.0,
+        "ink_loss": 0.0
+      },
+      "quality_level": "lossless",
+      "score": 0.9209423420970753,
+      "total_seconds": 0.5149999999998727
+    },
+    "profile": {
+      "pages": 3,
+      "bytes": 35354,
+      "bytes_per_page": 11784.666666666666,
+      "images": 0,
+      "image_occurrences": 0,
+      "image_page_ratio": 0.0,
+      "sampled_image_coverage": 0.0,
+      "image_modes": {
+        "color": 0,
+        "gray": 0,
+        "bitonal": 0
+      },
+      "text_chars": 5619,
+      "kind": "drawing",
+      "analysis_pages": [
+        0,
+        1,
+        2
+      ],
+      "visual_pages": [
+        0,
+        1,
+        2
+      ],
+      "interactive": false,
+      "embedded_files": 0,
+      "toc": []
+    },
+    "candidates": [
+      {
+        "name": "A_lossless",
+        "size": 3322,
+        "seconds": 0.375,
+        "checks": "passed",
+        "visual": [
+          {
+            "page": 1,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 2,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 3,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          }
+        ],
+        "worst": {
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0
+        },
+        "quality_level": "lossless",
+        "score": 0.9209423420970753
+      }
+    ],
+    "legacy": {
+      "size": 3359,
+      "seconds": 0.01499999999987267,
+      "validation": {
+        "checks": "passed",
+        "visual": [
+          {
+            "page": 1,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 2,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 3,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          }
+        ],
+        "worst": {
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0
+        },
+        "quality_level": "document"
+      }
+    }
+  },
+  {
+    "file": "B_NASA_photo.pdf",
+    "original": 338674,
+    "seconds": 1.375,
+    "selected": {
+      "path": "LOCAL_WORK\\fixtures\\B_NASA_photo_compressed_2.pdf",
+      "name": "A_lossless",
+      "size": 337831,
+      "seconds": 0.42200000000002547,
+      "checks": "passed",
+      "visual": [
+        {
+          "page": 1,
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0,
+          "tile_ink_loss": 0.0
+        },
+        {
+          "page": 2,
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0,
+          "tile_ink_loss": 0.0
+        },
+        {
+          "page": 3,
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0,
+          "tile_ink_loss": 0.0
+        }
+      ],
+      "worst": {
+        "mae": 0.0,
+        "changed": 0.0,
+        "ink_loss": 0.0
+      },
+      "quality_level": "lossless",
+      "score": 0.01738361933009321,
+      "total_seconds": 1.375
+    },
+    "profile": {
+      "pages": 3,
+      "bytes": 338674,
+      "bytes_per_page": 112891.33333333333,
+      "images": 1,
+      "image_occurrences": 3,
+      "image_page_ratio": 1.0,
+      "sampled_image_coverage": 1.0,
+      "image_modes": {
+        "color": 1,
+        "gray": 0,
+        "bitonal": 0
+      },
+      "text_chars": 0,
+      "kind": "photo",
+      "analysis_pages": [
+        0,
+        1,
+        2
+      ],
+      "visual_pages": [
+        0,
+        1,
+        2
+      ],
+      "interactive": false,
+      "embedded_files": 0,
+      "toc": []
+    },
+    "candidates": [
+      {
+        "name": "A_lossless",
+        "size": 337831,
+        "seconds": 0.42200000000002547,
+        "checks": "passed",
+        "visual": [
+          {
+            "page": 1,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 2,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 3,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          }
+        ],
+        "worst": {
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0
+        },
+        "quality_level": "lossless",
+        "score": 0.01738361933009321
+      },
+      {
+        "name": "B_balanced",
+        "size": 337825,
+        "seconds": 0.7970000000000255,
+        "checks": "passed",
+        "visual": [
+          {
+            "page": 1,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 2,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 3,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          }
+        ],
+        "worst": {
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0
+        },
+        "quality_level": "photo",
+        "score": 0.0023075854819088804
+      }
+    ],
+    "legacy": {
+      "size": 337825,
+      "seconds": 0.34400000000005093,
+      "validation": {
+        "checks": "passed",
+        "visual": [
+          {
+            "page": 1,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 2,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 3,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          }
+        ],
+        "worst": {
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0
+        },
+        "quality_level": "photo"
+      }
+    }
+  },
+  {
+    "file": "B_photo_like.pdf",
+    "original": 6484948,
+    "seconds": 6.0,
+    "selected": {
+      "path": "LOCAL_WORK\\fixtures\\B_photo_like_compressed_4.pdf",
+      "name": "B_balanced",
+      "size": 330987,
+      "seconds": 4.983999999999924,
+      "checks": "passed",
+      "visual": [
+        {
+          "page": 1,
+          "mae": 0.005476869589145482,
+          "changed": 0.0,
+          "ink_loss": 0.0,
+          "tile_ink_loss": 0.0
+        },
+        {
+          "page": 2,
+          "mae": 0.005476772573009052,
+          "changed": 0.0,
+          "ink_loss": 0.0,
+          "tile_ink_loss": 0.0
+        },
+        {
+          "page": 3,
+          "mae": 0.005476807851604117,
+          "changed": 0.0,
+          "ink_loss": 0.0,
+          "tile_ink_loss": 0.0
+        }
+      ],
+      "worst": {
+        "mae": 0.005476869589145482,
+        "changed": 0.0,
+        "ink_loss": 0.0
+      },
+      "quality_level": "photo",
+      "score": 0.9258072534796642,
+      "total_seconds": 5.985000000000127
+    },
+    "profile": {
+      "pages": 3,
+      "bytes": 6484948,
+      "bytes_per_page": 2161649.3333333335,
+      "images": 1,
+      "image_occurrences": 3,
+      "image_page_ratio": 1.0,
+      "sampled_image_coverage": 0.9444444202241443,
+      "image_modes": {
+        "color": 1,
+        "gray": 0,
+        "bitonal": 0
+      },
+      "text_chars": 57,
+      "kind": "photo",
+      "analysis_pages": [
+        0,
+        1,
+        2
+      ],
+      "visual_pages": [
+        0,
+        1,
+        2
+      ],
+      "interactive": false,
+      "embedded_files": 0,
+      "toc": []
+    },
+    "candidates": [
+      {
+        "name": "A_lossless",
+        "size": 1960125,
+        "seconds": 0.8589999999999236,
+        "checks": "passed",
+        "visual": [
+          {
+            "page": 1,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 2,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 3,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          }
+        ],
+        "worst": {
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0
+        },
+        "quality_level": "lossless",
+        "score": 0.7125276220282724
+      },
+      {
+        "name": "B_balanced",
+        "size": 330987,
+        "seconds": 4.983999999999924,
+        "checks": "passed",
+        "visual": [
+          {
+            "page": 1,
+            "mae": 0.005476869589145482,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 2,
+            "mae": 0.005476772573009052,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 3,
+            "mae": 0.005476807851604117,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          }
+        ],
+        "worst": {
+          "mae": 0.005476869589145482,
+          "changed": 0.0,
+          "ink_loss": 0.0
+        },
+        "quality_level": "photo",
+        "score": 0.9258072534796642
+      }
+    ],
+    "legacy": {
+      "size": 330987,
+      "seconds": 0.6720000000000255,
+      "validation": {
+        "checks": "passed",
+        "visual": [
+          {
+            "page": 1,
+            "mae": 0.005476869589145482,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 2,
+            "mae": 0.005476772573009052,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 3,
+            "mae": 0.005476807851604117,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          }
+        ],
+        "worst": {
+          "mae": 0.005476869589145482,
+          "changed": 0.0,
+          "ink_loss": 0.0
+        },
+        "quality_level": "photo"
+      }
+    }
+  },
+  {
+    "file": "C_bitonal.pdf",
+    "original": 3265880,
+    "seconds": 1.2179999999998472,
+    "selected": {
+      "path": "LOCAL_WORK\\fixtures\\C_bitonal_compressed_6.pdf",
+      "name": "A_lossless",
+      "size": 32889,
+      "seconds": 0.43800000000010186,
+      "checks": "passed",
+      "visual": [
+        {
+          "page": 1,
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0,
+          "tile_ink_loss": 0.0
+        },
+        {
+          "page": 2,
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0,
+          "tile_ink_loss": 0.0
+        },
+        {
+          "page": 3,
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0,
+          "tile_ink_loss": 0.0
+        }
+      ],
+      "worst": {
+        "mae": 0.0,
+        "changed": 0.0,
+        "ink_loss": 0.0
+      },
+      "quality_level": "lossless",
+      "score": 1.0048200136379781,
+      "total_seconds": 1.2179999999998472
+    },
+    "profile": {
+      "pages": 3,
+      "bytes": 3265880,
+      "bytes_per_page": 1088626.6666666667,
+      "images": 3,
+      "image_occurrences": 3,
+      "image_page_ratio": 1.0,
+      "sampled_image_coverage": 1.0,
+      "image_modes": {
+        "color": 0,
+        "gray": 0,
+        "bitonal": 3
+      },
+      "text_chars": 33,
+      "kind": "scan",
+      "analysis_pages": [
+        0,
+        1,
+        2
+      ],
+      "visual_pages": [
+        0,
+        1,
+        2
+      ],
+      "interactive": false,
+      "embedded_files": 0,
+      "toc": []
+    },
+    "candidates": [
+      {
+        "name": "A_lossless",
+        "size": 32889,
+        "seconds": 0.43800000000010186,
+        "checks": "passed",
+        "visual": [
+          {
+            "page": 1,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 2,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 3,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          }
+        ],
+        "worst": {
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0
+        },
+        "quality_level": "lossless",
+        "score": 1.0048200136379781
+      },
+      {
+        "name": "C_bitonal_fax",
+        "size": 35308,
+        "seconds": 0.6089999999999236,
+        "checks": "passed",
+        "visual": [
+          {
+            "page": 1,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 2,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 3,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          }
+        ],
+        "worst": {
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0
+        },
+        "quality_level": "lossless",
+        "score": 1.004036575063995
+      }
+    ],
+    "legacy": {
+      "size": 32901,
+      "seconds": 0.06199999999989814,
+      "validation": {
+        "checks": "passed",
+        "visual": [
+          {
+            "page": 1,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 2,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 3,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          }
+        ],
+        "worst": {
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0
+        },
+        "quality_level": "document"
+      }
+    }
+  },
+  {
+    "file": "D_color_scan.pdf",
+    "original": 26111805,
+    "seconds": 4.110000000000127,
+    "selected": {
+      "path": "LOCAL_WORK\\fixtures\\D_color_scan_compressed_4.pdf",
+      "name": "A_lossless",
+      "size": 473552,
+      "seconds": 0.6410000000000764,
+      "checks": "passed",
+      "visual": [
+        {
+          "page": 1,
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0,
+          "tile_ink_loss": 0.0
+        },
+        {
+          "page": 2,
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0,
+          "tile_ink_loss": 0.0
+        },
+        {
+          "page": 3,
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0,
+          "tile_ink_loss": 0.0
+        }
+      ],
+      "worst": {
+        "mae": 0.0,
+        "changed": 0.0,
+        "ink_loss": 0.0
+      },
+      "quality_level": "lossless",
+      "score": 0.9967041979000973,
+      "total_seconds": 4.110000000000127
+    },
+    "profile": {
+      "pages": 3,
+      "bytes": 26111805,
+      "bytes_per_page": 8703935.0,
+      "images": 1,
+      "image_occurrences": 3,
+      "image_page_ratio": 1.0,
+      "sampled_image_coverage": 0.9998539360571929,
+      "image_modes": {
+        "color": 1,
+        "gray": 0,
+        "bitonal": 0
+      },
+      "text_chars": 33,
+      "kind": "scan",
+      "analysis_pages": [
+        0,
+        1,
+        2
+      ],
+      "visual_pages": [
+        0,
+        1,
+        2
+      ],
+      "interactive": false,
+      "embedded_files": 0,
+      "toc": []
+    },
+    "candidates": [
+      {
+        "name": "A_lossless",
+        "size": 473552,
+        "seconds": 0.6410000000000764,
+        "checks": "passed",
+        "visual": [
+          {
+            "page": 1,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 2,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 3,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          }
+        ],
+        "worst": {
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0
+        },
+        "quality_level": "lossless",
+        "score": 0.9967041979000973
+      },
+      {
+        "name": "C_document",
+        "size": 574258,
+        "seconds": 3.280999999999949,
+        "checks": "passed",
+        "visual": [
+          {
+            "page": 1,
+            "mae": 0.0013851639289503043,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 2,
+            "mae": 0.0013851639289503043,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 3,
+            "mae": 0.0013851639289503043,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          }
+        ],
+        "worst": {
+          "mae": 0.0013851639289503043,
+          "changed": 0.0,
+          "ink_loss": 0.0
+        },
+        "quality_level": "document",
+        "score": 0.9716468191427446
+      }
+    ],
+    "legacy": {
+      "size": 466808,
+      "seconds": 1.219000000000051,
+      "validation": {
+        "checks": "passed",
+        "visual": [
+          {
+            "page": 1,
+            "mae": 0.0014063009279740705,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 2,
+            "mae": 0.0014063009279740705,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 3,
+            "mae": 0.0014063009279740705,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          }
+        ],
+        "worst": {
+          "mae": 0.0014063009279740705,
+          "changed": 0.0,
+          "ink_loss": 0.0
+        },
+        "quality_level": "document"
+      }
+    }
+  },
+  {
+    "file": "E_fine_drawing.pdf",
+    "original": 8707048,
+    "seconds": 1.2029999999999745,
+    "selected": {
+      "path": "LOCAL_WORK\\fixtures\\E_fine_drawing_compressed_4.pdf",
+      "name": "A_lossless",
+      "size": 251433,
+      "seconds": 0.5470000000000255,
+      "checks": "passed",
+      "visual": [
+        {
+          "page": 1,
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0,
+          "tile_ink_loss": 0.0
+        },
+        {
+          "page": 2,
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0,
+          "tile_ink_loss": 0.0
+        },
+        {
+          "page": 3,
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0,
+          "tile_ink_loss": 0.0
+        }
+      ],
+      "worst": {
+        "mae": 0.0,
+        "changed": 0.0,
+        "ink_loss": 0.0
+      },
+      "quality_level": "lossless",
+      "score": 0.9859862988220577,
+      "total_seconds": 1.2029999999999745
+    },
+    "profile": {
+      "pages": 3,
+      "bytes": 8707048,
+      "bytes_per_page": 2902349.3333333335,
+      "images": 1,
+      "image_occurrences": 3,
+      "image_page_ratio": 1.0,
+      "sampled_image_coverage": 0.9998539360571929,
+      "image_modes": {
+        "color": 1,
+        "gray": 0,
+        "bitonal": 0
+      },
+      "text_chars": 33,
+      "kind": "scan",
+      "analysis_pages": [
+        0,
+        1,
+        2
+      ],
+      "visual_pages": [
+        0,
+        1,
+        2
+      ],
+      "interactive": false,
+      "embedded_files": 0,
+      "toc": []
+    },
+    "candidates": [
+      {
+        "name": "A_lossless",
+        "size": 251433,
+        "seconds": 0.5470000000000255,
+        "checks": "passed",
+        "visual": [
+          {
+            "page": 1,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 2,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 3,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          }
+        ],
+        "worst": {
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0
+        },
+        "quality_level": "lossless",
+        "score": 0.9859862988220577
+      },
+      {
+        "name": "C_document",
+        "size": 251432,
+        "seconds": 0.5309999999999491,
+        "checks": "passed",
+        "visual": [
+          {
+            "page": 1,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 2,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 3,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          }
+        ],
+        "worst": {
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0
+        },
+        "quality_level": "document",
+        "score": 0.9709904136715451
+      }
+    ],
+    "legacy": {
+      "size": 462988,
+      "seconds": 1.375,
+      "rejected": "visual quality rejected: {'mae': 0.04899660167545242, 'changed': 0.12066904275386862, 'ink_loss': 0.9579675643505431}"
+    }
+  },
+  {
+    "file": "F_precompressed.pdf",
+    "original": 330987,
+    "seconds": 1.3910000000000764,
+    "selected": null,
+    "profile": {
+      "pages": 3,
+      "bytes": 330987,
+      "bytes_per_page": 110329.0,
+      "images": 1,
+      "image_occurrences": 3,
+      "image_page_ratio": 1.0,
+      "sampled_image_coverage": 0.9444444202241443,
+      "image_modes": {
+        "color": 1,
+        "gray": 0,
+        "bitonal": 0
+      },
+      "text_chars": 57,
+      "kind": "photo",
+      "analysis_pages": [
+        0,
+        1,
+        2
+      ],
+      "visual_pages": [
+        0,
+        1,
+        2
+      ],
+      "interactive": false,
+      "embedded_files": 0,
+      "toc": []
+    },
+    "candidates": [
+      {
+        "name": "A_lossless",
+        "size": 330987,
+        "seconds": 0.5,
+        "checks": "passed",
+        "visual": [
+          {
+            "page": 1,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 2,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 3,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          }
+        ],
+        "worst": {
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0
+        },
+        "quality_level": "lossless"
+      },
+      {
+        "name": "B_balanced",
+        "size": 330987,
+        "seconds": 0.7190000000000509,
+        "checks": "passed",
+        "visual": [
+          {
+            "page": 1,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 2,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 3,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          }
+        ],
+        "worst": {
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0
+        },
+        "quality_level": "photo"
+      }
+    ],
+    "legacy": {
+      "size": 330987,
+      "seconds": 0.45299999999997453,
+      "validation": {
+        "checks": "passed",
+        "visual": [
+          {
+            "page": 1,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 2,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 3,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          }
+        ],
+        "worst": {
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0
+        },
+        "quality_level": "photo"
+      }
+    }
+  },
+  {
+    "file": "G_60_pages.pdf",
+    "original": 65309272,
+    "seconds": 6.5779999999999745,
+    "selected": {
+      "path": "LOCAL_WORK\\fixtures\\G_60_pages_compressed_4.pdf",
+      "name": "A_lossless",
+      "size": 42404,
+      "seconds": 1.125,
+      "checks": "passed",
+      "visual": [
+        {
+          "page": 1,
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0,
+          "tile_ink_loss": 0.0
+        },
+        {
+          "page": 6,
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0,
+          "tile_ink_loss": 0.0
+        },
+        {
+          "page": 31,
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0,
+          "tile_ink_loss": 0.0
+        },
+        {
+          "page": 60,
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0,
+          "tile_ink_loss": 0.0
+        }
+      ],
+      "worst": {
+        "mae": 0.0,
+        "changed": 0.0,
+        "ink_loss": 0.0
+      },
+      "quality_level": "lossless",
+      "score": 1.014069470063148,
+      "total_seconds": 6.5779999999999745
+    },
+    "profile": {
+      "pages": 60,
+      "bytes": 65309272,
+      "bytes_per_page": 1088487.8666666667,
+      "images": 60,
+      "image_occurrences": 60,
+      "image_page_ratio": 1.0,
+      "sampled_image_coverage": 1.0,
+      "image_modes": {
+        "color": 0,
+        "gray": 0,
+        "bitonal": 60
+      },
+      "text_chars": 660,
+      "kind": "scan",
+      "analysis_pages": [
+        0,
+        5,
+        11,
+        16,
+        21,
+        27,
+        32,
+        38,
+        43,
+        48,
+        54,
+        59
+      ],
+      "visual_pages": [
+        0,
+        5,
+        30,
+        59
+      ],
+      "interactive": false,
+      "embedded_files": 0,
+      "toc": []
+    },
+    "candidates": [
+      {
+        "name": "A_lossless",
+        "size": 42404,
+        "seconds": 1.125,
+        "checks": "passed",
+        "visual": [
+          {
+            "page": 1,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 6,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 31,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 60,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          }
+        ],
+        "worst": {
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0
+        },
+        "quality_level": "lossless",
+        "score": 1.014069470063148
+      },
+      {
+        "name": "C_bitonal_fax",
+        "size": 45060,
+        "seconds": 4.905999999999949,
+        "checks": "passed",
+        "visual": [
+          {
+            "page": 1,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 6,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 31,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 60,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          }
+        ],
+        "worst": {
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0
+        },
+        "quality_level": "lossless",
+        "score": 1.0130835520244659
+      }
+    ],
+    "legacy": {
+      "size": 42632,
+      "seconds": 1.155999999999949,
+      "validation": {
+        "checks": "passed",
+        "visual": [
+          {
+            "page": 1,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 6,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 31,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 60,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          }
+        ],
+        "worst": {
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0
+        },
+        "quality_level": "document"
+      }
+    }
+  },
+  {
+    "file": "H_100_pages.pdf",
+    "original": 26160050,
+    "seconds": 2.0470000000000255,
+    "selected": {
+      "path": "LOCAL_WORK\\fixtures\\H_100_pages_compressed_4.pdf",
+      "name": "A_lossless",
+      "size": 491252,
+      "seconds": 1.530999999999949,
+      "checks": "passed",
+      "visual": [
+        {
+          "page": 1,
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0,
+          "tile_ink_loss": 0.0
+        },
+        {
+          "page": 10,
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0,
+          "tile_ink_loss": 0.0
+        },
+        {
+          "page": 51,
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0,
+          "tile_ink_loss": 0.0
+        },
+        {
+          "page": 100,
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0,
+          "tile_ink_loss": 0.0
+        }
+      ],
+      "worst": {
+        "mae": 0.0,
+        "changed": 0.0,
+        "ink_loss": 0.0
+      },
+      "quality_level": "lossless",
+      "score": 0.9958385397146604,
+      "total_seconds": 2.0470000000000255
+    },
+    "profile": {
+      "pages": 100,
+      "bytes": 26160050,
+      "bytes_per_page": 261600.5,
+      "images": 1,
+      "image_occurrences": 100,
+      "image_page_ratio": 1.0,
+      "sampled_image_coverage": 0.9998539360571929,
+      "image_modes": {
+        "color": 1,
+        "gray": 0,
+        "bitonal": 0
+      },
+      "text_chars": 1100,
+      "kind": "scan",
+      "analysis_pages": [
+        0,
+        9,
+        18,
+        27,
+        36,
+        45,
+        54,
+        63,
+        72,
+        81,
+        90,
+        99
+      ],
+      "visual_pages": [
+        0,
+        9,
+        50,
+        99
+      ],
+      "interactive": false,
+      "embedded_files": 0,
+      "toc": []
+    },
+    "candidates": [
+      {
+        "name": "A_lossless",
+        "size": 491252,
+        "seconds": 1.530999999999949,
+        "checks": "passed",
+        "visual": [
+          {
+            "page": 1,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 10,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 51,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 100,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          }
+        ],
+        "worst": {
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0
+        },
+        "quality_level": "lossless",
+        "score": 0.9958385397146604
+      },
+      {
+        "name": "C_document",
+        "skipped": "lossless already compact (<64 KiB/page, >90% reduction)"
+      }
+    ],
+    "legacy": {
+      "size": 484653,
+      "seconds": 46.1880000000001,
+      "validation": {
+        "checks": "passed",
+        "visual": [
+          {
+            "page": 1,
+            "mae": 0.0014063009279740705,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 10,
+            "mae": 0.0014063009279740705,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 51,
+            "mae": 0.0014063009279740705,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 100,
+            "mae": 0.0014063009279740705,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          }
+        ],
+        "worst": {
+          "mae": 0.0014063009279740705,
+          "changed": 0.0,
+          "ink_loss": 0.0
+        },
+        "quality_level": "document"
+      }
+    }
+  }
+]

@@ -1,0 +1,51 @@
+{
+  "limits": {
+    "photo": [
+      0.025,
+      0.12,
+      0.12
+    ],
+    "document": [
+      0.008,
+      0.045,
+      0.035
+    ],
+    "lossless": [
+      1e-05,
+      1e-05,
+      1e-05
+    ]
+  },
+  "controls": [
+    {
+      "control": "stamp",
+      "metrics": {
+        "mae": 0.00031889336771020375,
+        "changed": 0.0006818727275582004,
+        "ink_loss": 0.013304261059167006,
+        "tile_ink_loss": 1.0
+      },
+      "accepted": false
+    },
+    {
+      "control": "fine_lines",
+      "metrics": {
+        "mae": 0.002059318089449264,
+        "changed": 0.005247504099086873,
+        "ink_loss": 0.07686906389740937,
+        "tile_ink_loss": 1.0
+      },
+      "accepted": false
+    },
+    {
+      "control": "36dpi JPEG1 extreme degradation",
+      "metrics": {
+        "mae": 0.2878548762074099,
+        "changed": 0.9445236595897805,
+        "ink_loss": 0.48044446980829686,
+        "tile_ink_loss": 1.0
+      },
+      "accepted": false
+    }
+  ]
+}

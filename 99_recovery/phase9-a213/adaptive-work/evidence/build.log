@@ -1,0 +1,78 @@
+171 INFO: PyInstaller: 6.20.0, contrib hooks: 2026.7
+171 INFO: Python: 3.12.14
+203 INFO: Platform: Windows-11-10.0.26200-SP0
+203 INFO: Python environment: C:\Users\yukiz\Documents\New project\adaptive-work\.venv
+204 INFO: wrote C:\Users\yukiz\Documents\New project\adaptive-work\01_apps\DAKE_PDF_Compress\DakePDF_Compress.spec
+211 INFO: Removing temporary files and cleaning cache in C:\Users\yukiz\AppData\Local\pyinstaller
+263 INFO: Module search paths (PYTHONPATH):
+['C:\\Users\\yukiz\\Documents\\New '
+ 'project\\adaptive-work\\01_apps\\DAKE_PDF_Compress',
+ 'C:\\Users\\yukiz\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python312.zip',
+ 'C:\\Users\\yukiz\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\DLLs',
+ 'C:\\Users\\yukiz\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\Lib',
+ 'C:\\Users\\yukiz\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python',
+ 'C:\\Users\\yukiz\\Documents\\New project\\adaptive-work\\.venv',
+ 'C:\\Users\\yukiz\\Documents\\New '
+ 'project\\adaptive-work\\.venv\\Lib\\site-packages',
+ 'C:\\Users\\yukiz\\Documents\\New '
+ 'project\\adaptive-work\\01_apps\\DAKE_PDF_Compress',
+ 'C:\\Users\\yukiz\\Documents\\New project\\adaptive-work\\00_core']
+619 INFO: Appending 'datas' from .spec
+624 INFO: checking Analysis
+624 INFO: Building Analysis because Analysis-00.toc is non existent
+624 INFO: Looking for Python shared library...
+624 INFO: Using Python shared library: C:\Users\yukiz\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python312.dll
+624 INFO: Running Analysis Analysis-00.toc
+624 INFO: Target bytecode optimization level: 0
+624 INFO: Initializing module dependency graph...
+625 INFO: Initializing module graph hook caches...
+638 INFO: Analyzing modules for base_library.zip ...
+1852 INFO: Processing standard module hook 'hook-encodings.py' from 'C:\\Users\\yukiz\\Documents\\New project\\adaptive-work\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+3472 INFO: Processing standard module hook 'hook-pickle.py' from 'C:\\Users\\yukiz\\Documents\\New project\\adaptive-work\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+5154 INFO: Processing standard module hook 'hook-heapq.py' from 'C:\\Users\\yukiz\\Documents\\New project\\adaptive-work\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+5679 INFO: Caching module dependency graph...
+5728 INFO: Analyzing C:\Users\yukiz\Documents\New project\adaptive-work\01_apps\DAKE_PDF_Compress\main.py
+5815 INFO: Processing standard module hook 'hook-multiprocessing.util.py' from 'C:\\Users\\yukiz\\Documents\\New project\\adaptive-work\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+6005 INFO: Processing standard module hook 'hook-xml.py' from 'C:\\Users\\yukiz\\Documents\\New project\\adaptive-work\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+6276 INFO: Processing standard module hook 'hook-_ctypes.py' from 'C:\\Users\\yukiz\\Documents\\New project\\adaptive-work\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+6386 INFO: Processing pre-find-module-path hook 'hook-tkinter.py' from 'C:\\Users\\yukiz\\Documents\\New project\\adaptive-work\\.venv\\Lib\\site-packages\\PyInstaller\\hooks\\pre_find_module_path'
+6387 INFO: TclTkInfo: initializing cached Tcl/Tk info...
+6815 INFO: Processing standard module hook 'hook-_tkinter.py' from 'C:\\Users\\yukiz\\Documents\\New project\\adaptive-work\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+9992 INFO: Processing standard module hook 'hook-platform.py' from 'C:\\Users\\yukiz\\Documents\\New project\\adaptive-work\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+10398 INFO: Processing standard module hook 'hook-tkinterdnd2.py' from 'C:\\Users\\yukiz\\Documents\\New project\\adaptive-work\\.venv\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+10531 INFO: Processing module hooks (post-graph stage)...
+10786 INFO: Processing standard module hook 'hook-_tkinter.py' from 'C:\\Users\\yukiz\\Documents\\New project\\adaptive-work\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+10803 INFO: Performing binary vs. data reclassification (991 entries)
+10955 INFO: Looking for ctypes DLLs
+10968 INFO: Analyzing run-time hooks ...
+10970 INFO: Including run-time hook 'pyi_rth_inspect.py' from 'C:\\Users\\yukiz\\Documents\\New project\\adaptive-work\\.venv\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+10973 INFO: Including run-time hook 'pyi_rth__tkinter.py' from 'C:\\Users\\yukiz\\Documents\\New project\\adaptive-work\\.venv\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+10974 INFO: Including run-time hook 'pyi_rth_multiprocessing.py' from 'C:\\Users\\yukiz\\Documents\\New project\\adaptive-work\\.venv\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+10977 INFO: Including run-time hook 'pyi_rth_pkgutil.py' from 'C:\\Users\\yukiz\\Documents\\New project\\adaptive-work\\.venv\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+11008 INFO: Creating base_library.zip...
+11035 INFO: Looking for dynamic libraries
+11286 INFO: Extra DLL search directories (AddDllDirectory): []
+11286 INFO: Extra DLL search directories (PATH): []
+11789 INFO: Warnings written to C:\Users\yukiz\Documents\New project\adaptive-work\01_apps\DAKE_PDF_Compress\build\DakePDF_Compress\warn-DakePDF_Compress.txt
+11813 INFO: Graph cross-reference written to C:\Users\yukiz\Documents\New project\adaptive-work\01_apps\DAKE_PDF_Compress\build\DakePDF_Compress\xref-DakePDF_Compress.html
+11856 INFO: checking PYZ
+11856 INFO: Building PYZ because PYZ-00.toc is non existent
+11856 INFO: Building PYZ (ZlibArchive) C:\Users\yukiz\Documents\New project\adaptive-work\01_apps\DAKE_PDF_Compress\build\DakePDF_Compress\PYZ-00.pyz
+12277 INFO: Building PYZ (ZlibArchive) C:\Users\yukiz\Documents\New project\adaptive-work\01_apps\DAKE_PDF_Compress\build\DakePDF_Compress\PYZ-00.pyz completed successfully.
+12297 INFO: checking PKG
+12298 INFO: Building PKG because PKG-00.toc is non existent
+12298 INFO: Building PKG (CArchive) DakePDF_Compress.pkg
+19573 INFO: Building PKG (CArchive) DakePDF_Compress.pkg completed successfully.
+19590 INFO: Bootloader C:\Users\yukiz\Documents\New project\adaptive-work\.venv\Lib\site-packages\PyInstaller\bootloader\Windows-64bit-intel\runw.exe
+19590 INFO: checking EXE
+19591 INFO: Building EXE because EXE-00.toc is non existent
+19591 INFO: Building EXE from EXE-00.toc
+19594 INFO: Copying bootloader EXE to C:\Users\yukiz\Documents\New project\adaptive-work\01_apps\DAKE_PDF_Compress\dist\DakePDF_Compress.exe
+19642 INFO: Copying icon to EXE
+19677 INFO: Copying version information to EXE
+19713 INFO: Copying 0 resources to EXE
+19713 INFO: Embedding manifest in EXE
+19748 INFO: Appending PKG archive to EXE
+19815 INFO: Fixing EXE headers
+21581 INFO: Building EXE from EXE-00.toc completed successfully.
+21606 INFO: Build complete! The results are available in: C:\Users\yukiz\Documents\New project\adaptive-work\01_apps\DAKE_PDF_Compress\dist

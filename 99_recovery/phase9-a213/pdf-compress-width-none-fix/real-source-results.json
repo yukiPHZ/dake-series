@@ -1,0 +1,354 @@
+[
+  {
+    "file": "joined-640.pdf",
+    "original": 176840968,
+    "seconds": 3.3910000000000764,
+    "selected": {
+      "path": "C:\\Users\\yukiz\\Documents\\New project\\pdf-compress-width-none-fix\\real-pdf\\joined-640_compressed.pdf",
+      "name": "A_lossless",
+      "size": 2765846,
+      "seconds": 1.984000000000151,
+      "checks": "passed",
+      "visual": [
+        {
+          "page": 1,
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0,
+          "tile_ink_loss": 0.0
+        },
+        {
+          "page": 59,
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0,
+          "tile_ink_loss": 0.0
+        },
+        {
+          "page": 117,
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0,
+          "tile_ink_loss": 0.0
+        },
+        {
+          "page": 321,
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0,
+          "tile_ink_loss": 0.0
+        },
+        {
+          "page": 640,
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0,
+          "tile_ink_loss": 0.0
+        }
+      ],
+      "worst": {
+        "mae": 0.0,
+        "changed": 0.0,
+        "ink_loss": 0.0
+      },
+      "quality_level": "lossless",
+      "score": 0.9988636988227297,
+      "total_seconds": 3.3910000000000764
+    },
+    "profile": {
+      "pages": 640,
+      "bytes": 176840968,
+      "bytes_per_page": 276314.0125,
+      "images": 512,
+      "image_occurrences": 512,
+      "image_page_ratio": 0.6666666666666666,
+      "sampled_image_coverage": 0.5025008449183864,
+      "image_modes": {
+        "color": 512,
+        "gray": 0,
+        "bitonal": 0
+      },
+      "text_chars": 61376,
+      "kind": "photo",
+      "analysis_pages": [
+        0,
+        58,
+        116,
+        174,
+        232,
+        290,
+        349,
+        407,
+        465,
+        523,
+        581,
+        639
+      ],
+      "visual_pages": [
+        0,
+        58,
+        116,
+        320,
+        639
+      ],
+      "protected_pages": [],
+      "interactive": false,
+      "embedded_files": 0,
+      "toc": []
+    },
+    "candidates": [
+      {
+        "name": "A_lossless",
+        "size": 2765846,
+        "seconds": 1.984000000000151,
+        "checks": "passed",
+        "visual": [
+          {
+            "page": 1,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 59,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 117,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 321,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 640,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          }
+        ],
+        "worst": {
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0
+        },
+        "quality_level": "lossless",
+        "score": 0.9988636988227297
+      },
+      {
+        "name": "B_balanced",
+        "skipped": "lossless already compact (<64 KiB/page, >90% reduction)"
+      }
+    ]
+  },
+  {
+    "file": "photo-heavy-10.pdf",
+    "original": 3200000,
+    "seconds": 4.718999999999824,
+    "selected": {
+      "path": "C:\\Users\\yukiz\\Documents\\New project\\pdf-compress-width-none-fix\\real-pdf\\photo-heavy-10_compressed.pdf",
+      "name": "B_balanced",
+      "size": 1668484,
+      "seconds": 4.125,
+      "checks": "passed",
+      "visual": [
+        {
+          "page": 1,
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0,
+          "tile_ink_loss": 0.0
+        },
+        {
+          "page": 2,
+          "mae": 0.0007785549267965383,
+          "changed": 0.0,
+          "ink_loss": 0.0,
+          "tile_ink_loss": 0.0
+        },
+        {
+          "page": 3,
+          "mae": 0.0008176799254056569,
+          "changed": 0.0,
+          "ink_loss": 0.0,
+          "tile_ink_loss": 0.0
+        },
+        {
+          "page": 6,
+          "mae": 0.0008319647720201372,
+          "changed": 0.0,
+          "ink_loss": 0.0,
+          "tile_ink_loss": 0.0
+        },
+        {
+          "page": 10,
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0,
+          "tile_ink_loss": 0.0
+        }
+      ],
+      "worst": {
+        "mae": 0.0008319647720201372,
+        "changed": 0.0,
+        "ink_loss": 0.0
+      },
+      "quality_level": "photo",
+      "score": 0.47423964091191945,
+      "total_seconds": 4.718999999999824
+    },
+    "profile": {
+      "pages": 10,
+      "bytes": 3200000,
+      "bytes_per_page": 320000.0,
+      "images": 8,
+      "image_occurrences": 8,
+      "image_page_ratio": 0.8,
+      "sampled_image_coverage": 0.6030010139020637,
+      "image_modes": {
+        "color": 8,
+        "gray": 0,
+        "bitonal": 0
+      },
+      "text_chars": 959,
+      "kind": "photo",
+      "analysis_pages": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "visual_pages": [
+        0,
+        1,
+        2,
+        5,
+        9
+      ],
+      "protected_pages": [],
+      "interactive": false,
+      "embedded_files": 0,
+      "toc": []
+    },
+    "candidates": [
+      {
+        "name": "A_lossless",
+        "size": 2757904,
+        "seconds": 0.390999999999849,
+        "checks": "passed",
+        "visual": [
+          {
+            "page": 1,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 2,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 3,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 6,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 10,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          }
+        ],
+        "worst": {
+          "mae": 0.0,
+          "changed": 0.0,
+          "ink_loss": 0.0
+        },
+        "quality_level": "lossless",
+        "score": 0.1530572500000001
+      },
+      {
+        "name": "B_balanced",
+        "size": 1668484,
+        "seconds": 4.125,
+        "checks": "passed",
+        "visual": [
+          {
+            "page": 1,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 2,
+            "mae": 0.0007785549267965383,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 3,
+            "mae": 0.0008176799254056569,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 6,
+            "mae": 0.0008319647720201372,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          },
+          {
+            "page": 10,
+            "mae": 0.0,
+            "changed": 0.0,
+            "ink_loss": 0.0,
+            "tile_ink_loss": 0.0
+          }
+        ],
+        "worst": {
+          "mae": 0.0008319647720201372,
+          "changed": 0.0,
+          "ink_loss": 0.0
+        },
+        "quality_level": "photo",
+        "score": 0.47423964091191945
+      }
+    ]
+  }
+]
