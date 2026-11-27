@@ -8,14 +8,14 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 
 ## 基本情報
 
-- app_id: dake_pdf_rename
+- app_id: `dake_pdf_rename`
 - title: DakePDFファイル名整理
-- short_title: DakePDFファイル名整理
+- short_title: PDF名整理
 - category: PDF
 - status: available
-- version: 1.0.0（Release URLより）
+- version: 1.0.0
 - price: 500円
-- distribution: GitHub Release / BOOTH / dakeapp.com（Storeは未確定）
+- distribution: Store / BOOTH / dakeapp.com（GitHub Releaseはタグ・履歴のみ）
 - target_platform: Windows
 
 ## 目的
@@ -111,6 +111,7 @@ PDFの中身を変えず、ファイル名の前または後ろに任意テキ�
   "folder_name": "DAKE_PDF_Rename",
   "exe_name": "DakePDF_Rename.exe",
   "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Rename_v1.0.0",
+  "version": "1.0.0",
   "screenshot_path": "assets/screenshot.webp",
   "status": "available",
   "show_in_launcher": true,
@@ -168,25 +169,26 @@ Windows
 実務の流れを、
 少し静かにするための道具です。
 - 価格: 500円
-- 画像: assets/booth_thumbnail.jpg（存在: あり）
-- ダウンロード導線: 未確定
-- サポート方針: 既存ファイルに記載なし
+- 画像: assets/booth_thumbnail.jpg
+- ダウンロード導線: Stripe Checkout Session検証後にprivate R2から自動ダウンロード
+- サポート方針: `DAKE_STORE_OPERATION_RULE.md` に準拠
 - Stripe Payment Link: https://buy.stripe.com/aFa7sLgQp9kj1q85vz0gw0x
-- Store雋ｩ螢ｲ迥ｶ諷・ stripe_ready
+- Store販売状態: stripe_ready
 
 ## 価格・販売方針
 
 - BOOTH価格案: 500円
 - BOOTH URL: https://peakheadz.booth.pm/items/8448204
-- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Rename_v1.0.0
-- Store販売: 未確定
+- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Rename_v1.0.0（タグ・履歴のみ）
+- Store価格: 500円
+- Store販売方針: Stripe Payment Link + Cloudflare R2 自動配信（BOOTH並行販売）
 
 ## 配布・ダウンロード方針
 
-- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Rename_v1.0.0
+- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Rename_v1.0.0（タグ・履歴のみ）
 - BOOTH: https://peakheadz.booth.pm/items/8448204
 - BOOTH配布zip: booth_ready/DakePDF_Rename.zip
-- Store配布導線: 未確定
+- Store配布導線: store.dakeapp.com（Stripe Payment Link + private R2自動配信）
 
 ## 免責・注意事項
 

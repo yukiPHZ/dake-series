@@ -2,6 +2,12 @@
 
 SHIP / DISTRIBUTION / COMMERCEを別々に扱うための最小フローです。共通原則は `DAKE_COMMON_SPEC.md` を正本とします。
 
+## 0. 現行の正式出荷・配布方式（確定正本）
+
+- **無料配布枠**：`DakePDF結合`（`DAKE_PDF_Merge`）のみ GitHub Release に公開アセット（`.exe`）を残す（Store に同機能の応援購入版 500円 も併設）。
+- **有料アプリ・Pack**：DAKE Store（Stripe Payment Link → Cloudflare Pages Functions `/download/` の Stripe Checkout Session 検証 → プライベート Cloudflare R2 `dake-desktop-releases` の `desktop/<id>/current.zip` 自動配信）＋ BOOTH 並行販売（`booth_ready/` 生成を維持）。
+- **GitHub Releases**：有料化済みアプリ・Pack は公開アセット（`.exe` / `.zip`）を置かず、リリースタグ・リリース本文（履歴テキスト）のみ残す。
+
 ## 1. SHIP
 
 ```text
@@ -9,18 +15,18 @@ SHIP / DISTRIBUTION / COMMERCEを別々に扱うための最小フローです�
 ↓
 変更を実装
 ↓
-build
+build（単独exe・共通アイコン・VersionInfo確認）
 ↓
 生成された配布exeで起動・主要機能確認
 ↓
 対象差分だけcommit / push
 ↓
-GitHub Releaseへ成果物を公開
+GitHub Release作成（無料枠のDakePDF結合のみ公開アセット付与。有料アプリ・Packはタグとリリース本文のみ作成し、配布ZIPはR2とbooth_readyへ回す）
 ↓
 SHIP = COMPLETE
 ```
 
-GitHub Releaseが完了すればSHIPは完了です。DISTRIBUTION / COMMERCEが未完了でもSHIPをPENDINGへ戻しません。
+GitHub Release（タグ・履歴確定、無料枠は公開アセット含む）が完了すればSHIPは完了です。DISTRIBUTION / COMMERCEが未完了でもSHIPをPENDINGへ戻しません。
 
 ### 実機確認用Prerelease
 
@@ -91,9 +97,38 @@ CodexはBOOTH Web UIを操作しません。登録後のURLは、ユーザーが
 
 ORIGINAL由来の掲載用派生データを `tools/sync_dakeapp_apps_json.py` で生成・同期します。BOOTH URLがなくても、GitHub Release等の掲載情報で成立する商品は独立して掲載準備できます。自動commit / push / deployは行いません。
 
-### store.dakeapp.com
+### store.dakeapp.com（R2自動配信＋カタログ同期）
 
-ORIGINAL由来の `store_products.generated.json` を `tools/store/sync_store_to_site.py` で生成・同期・検証します。自動commit / push / deployは行いません。BOOTHとStripeは商品ごとの購入導線であり、Store掲載そのものの完了条件ではありません。
+有料アプリおよび Pack の正式配信経路は、Stripe Payment Link → Cloudflare Pages Functions（`/download/`・Stripe Checkout Session 検証）→ プライベート Cloudflare R2 バケット `dake-desktop-releases`（`desktop/<id>/current.zip`）の自動配信です。
+
+1. 配布 ZIP をプライベート R2 バケット `dake-desktop-releases` の `desktop/<id>/current.zip` へ配置（または上書き更新）する。
+2. 新規商品の場合は `dake-store-site/functions/_lib/private-download.mjs` の `DESKTOP_DELIVERIES` ホワイトリストへ登録する。
+3. ORIGINAL由来の `store_products.generated.json` を `tools/store/sync_store_to_site.py` で生成・同期・検証する（`dake-store-site` および `dakeapp-site` 両方へ同期）。自動commit / push / deployは行いません。
+
+BOOTHはStoreとは独立した並行販売経路として維持します（`booth_ready/` 生成を継続）。
+
+### アプリ新規追加・ブラッシュアップ時の掲載面更新チェックリスト（正式工程）
+
+アプリの新規追加、または既存アプリのブラッシュアップ（機能改善・UI/フッター刷新・バージョン更新）を実施した際は、以下の掲載面・同梱物を漏れなく確認・更新します。
+
+- [ ] **1. `dakeapp.com`（`dakeapp-site`）**
+  - 詳細ページ `public/apps/<slug>/index.html`（概要・FEATURES・CTA・UPDATE 欄のバージョン／更新内容）
+  - スクリーンショット `public/assets/images/apps/<slug>/screenshot-01.webp`（UI変更時は差し替え）
+  - 一覧・検索・更新情報ページ（`public/apps/index.html`、`public/update/index.html`、`tools/sync_dakeapp_apps_json.py` による `public/assets/data/apps.json` 同期、`public/assets/data/store_products.generated.json` 同期）
+  - `sitemap.xml` / `robots.txt` 再生成（新規ページ追加時は `node scripts/generate-sitemap.js`）
+- [ ] **2. `store.dakeapp.com`（`dake-store-site`）**
+  - プライベート R2 バケット `dake-desktop-releases` の `desktop/<id>/current.zip` 配置／差し替え
+  - `functions/_lib/private-download.mjs`（`DESKTOP_DELIVERIES`）の R2 配信ホワイトリスト確認・追加
+  - `tools/store/sync_store_to_site.py` による `store_products.generated.json` 再生成・同期・検証
+  - Stripe Payment Link（`dake_item_id`・`purchase_delivery_method=stripe_session_private_r2`・リダイレクト先 `/download/?session_id={CHECKOUT_SESSION_ID}`）整合確認
+- [ ] **3. Pack 同梱物更新**
+  - 対象アプリが `DAKE_Pack_Document` / `DAKE_Pack_Mail` / `SHIMARISU_Pack` 等の収録アプリに含まれるか確認
+  - 含まれる場合は各 Pack ZIP を再生成（`tools/make_pack_ready.py` / `SHIMARISU/tools/build_shimarisu_pack.py`）し、Pack 用 R2 `desktop/<pack_id>/current.zip` および BOOTH 側 Pack 配布物も更新
+- [ ] **4. BOOTH 更新（並行販売）**
+  - `tools/make_booth_ready.py` / `tools/check_booth_ready.py` で `booth_ready/`（ZIP・サムネイル・`booth_product.txt`）を生成・検証
+  - 人間が DakeBOOTHアシスト等で BOOTH 商品を登録・ファイル差し替え・更新し、必要時に `tools/record_booth_registration.py` で URL を ORIGINAL へ記録
+- [ ] **5. `peakheadz-project-index` 更新**
+  - 新規追加・公開状態変更・アーカイブ／廃止がある場合は `peakheadz-project-index` の一覧・状態記録を整合させる
 
 ### 販売準備の完了報告
 

@@ -49,8 +49,8 @@ DAKE Quality Engine は、DAKEシリーズ全体へ段階的に組み込むた�
 ## UI Guard
 
 - `ui_guard.py`
-- `text="日本語"` の直書き、`UI_TEXT` / `APP_NAME` / `WINDOW_TITLE` / `COPYRIGHT` / フッター系キー不足を簡易検出します。
-- 完全な静的解析ではなく、出荷前にすぐ使える正規表現ベースの検査です。
+- 確定正本フッター（`戸建買取査定`、`by Yukihiko Kikuta`、`https://dakeapp.com/go/kaitori?app=<app_id>`）の欠落を `FAIL` 検出します。
+- 旧フッターキー（`footer_left`、`footer_caption`、`footer_link_1`、`footer_link_2`、`footer_separator`、`footer_copyright`）、禁止表記（`Vibe-Coded`、`Instagram`、`sakurayk.notion.site`、フッター内 `しまりす不動産`）、`text="日本語"` の直書きを `FAIL` 検出します。
 
 ## Quality Checker
 
@@ -60,21 +60,14 @@ python 00_core\dake_quality_engine\quality_check.py --app 01_apps\DAKE_PDF_Merge
 
 確認するもの:
 
-- `README.md`
-- `DAKE_META`
-- `RELEASE_BODY`
-- `release_body.md`
-- `assets/screenshot.webp`
-- `assets/booth_thumbnail.jpg`
-- `booth_ready/`
-- `booth_product.txt`
-- `build.bat`
-- `main.py`
-- `dist/*.exe`
-- `release_url`
-- UI_TEXT直書き
+- `ORIGINAL.md` の存在および文字化け（置換文字 `\ufffd`・Mojibake）検知
+- `README.md` / `DAKE_META` / `RELEASE_BODY` / `release_body.md`
+- `assets/screenshot.webp` / `assets/booth_thumbnail.jpg` / `booth_ready/` / `booth_product.txt`
+- `build.bat` / `main.py` / `dist/*.exe` / `release_url`
+- アイコン検証（`.ico` の存在・収録解像度、`main.py` ウィンドウアイコン設定、`build.bat`/`.spec` の `--icon` 指定、`dist/*.exe` への PE アイコンリソース埋め込み）
+- UI Guard（新フッター必須・旧フッターキー禁止・禁止表記・UI_TEXT直書き）
 
-`NG` がある場合は exit `1`、`WARN` のみなら exit `0` です。
+`FAIL` がある場合は exit `1`、`WARN` のみなら exit `0` です。
 
 ## Factory Hook構想
 

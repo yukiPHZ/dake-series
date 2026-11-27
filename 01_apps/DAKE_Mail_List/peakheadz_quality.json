@@ -39,8 +39,18 @@
   "required_text": [
     {
       "path": "main.py",
-      "text": "COPYRIGHT = \"by Yukihiko Kikuta\"",
-      "label": "製品内作者クレジット"
+      "text": "戸建買取査定",
+      "label": "UIフッター査定リンク文言"
+    },
+    {
+      "path": "main.py",
+      "text": "by Yukihiko Kikuta",
+      "label": "UIフッター作者表記"
+    },
+    {
+      "path": "main.py",
+      "text": "https://dakeapp.com/go/kaitori?app=dake_mail_list",
+      "label": "UIフッター恒久査定URL"
     },
     {
       "path": "README.md",

@@ -44,13 +44,27 @@ generated JSONに存在すること自体は公開条件ではありません。
 
 Store側だけに商品正本を作りません。
 
-## 決済方式
+## 決済・自動配信方式（現行正式運用）
 
-公開Storeの決済基盤はStripe Payment Linkです。
+公開Storeの決済基盤は **Stripe Payment Link**、購入後配信基盤は **Cloudflare Pages Functions + プライベート Cloudflare R2（`dake-desktop-releases`）** です。
 
-Stripe Checkout API、Pages Functions、Webhook、Cloudflare R2、購入後自動URL発行は後続Phaseで検討します。
+```text
+Stripe Payment Link 決済完了
+↓
+https://store.dakeapp.com/download/?session_id={CHECKOUT_SESSION_ID}
+↓
+Cloudflare Pages Functions（/api/download-status, /api/download）
+  - STRIPE_SECRET_KEY（Cloudflare Secret）で Stripe Checkout Session / Payment Link を検証
+  - livemode=true, payment_status=paid, purchase_delivery_method=stripe_session_private_r2 を確認
+  - DESKTOP_DELIVERIES ホワイトリスト（functions/_lib/private-download.mjs）照合
+↓
+プライベート R2 バケット dake-desktop-releases（バインディング: DAKE_DESKTOP_RELEASES）
+  - desktop/<id>/current.zip をダウンロード配信
+```
 
-Stripe Secret Key、Webhook Secret、APIキーは、静的Store、generated JSON、ORIGINAL.mdに保存しません。
+- 無料配布枠は `DakePDF結合`（`DAKE_PDF_Merge`）のみとし、GitHub Release に公開アセットを残しつつ、Store には同機能の応援購入版（500円・R2自動配信）を併設する。
+- 有料アプリおよび Pack は Store（Stripe Payment Link → R2 `desktop/<id>/current.zip` 自動配信）＋ BOOTH 並行販売を正本とし、GitHub Releases には公開アセット（`.exe` / `.zip`）を置かずタグ・履歴テキストのみ残す。
+- Stripe Secret Key、Webhook Secret、APIキーは、静的Store、generated JSON、ORIGINAL.md、wrangler.toml に保存しない（`STRIPE_SECRET_KEY` は Cloudflare Secret のみ）。
 
 ## Stripe Payment Linkの扱い
 
@@ -74,23 +88,18 @@ BOOTH URLが未設定でもStore掲載データは生成できます。その場
 
 `tools/store/sync_store_to_site.py` はgenerated JSON生成、Store repoへの同期、検証、次のGit手順表示までを担当します。自動commit、自動push、Cloudflare deployは行いません。公開反映は明示依頼がある場合だけ別工程で実施します。
 
-## 購入後導線
+## 購入後導線・ダウンロード導線
 
-MVPでは、Stripe Payment Link購入後の自動ダウンロード発行は未実装です。
-
-購入後の戻り先は、商品ごとの詳細ページを基本とします。
-
-例:
+Stripe Payment Link の決済完了後は、自動的に DAKE Store のダウンロード専用ページへ遷移します。
 
 ```text
-https://store.dakeapp.com/product/?id=DAKE_Time_AdvancedTimer
+https://store.dakeapp.com/download/?session_id={CHECKOUT_SESSION_ID}
 ```
 
-購入者には、Stripe決済または商品固有の購入後案内に従ってもらいます。
-
-## ダウンロード導線
-
-`download_url`、GitHub Release、BOOTH URLはStore掲載条件でも購入代替導線でもありません。購入後downloadの仕組みは今回変更しません。
+- サーバー側（Cloudflare Pages Functions）で Stripe Checkout Session と Payment Link のメタデータ（`dake_item_id`、`purchase_delivery_method=stripe_session_private_r2`）を検証し、プライベート R2 バケット `dake-desktop-releases` の `desktop/<id>/current.zip` を直接配信します。
+- 有料商品の公開 `download_url` や GitHub Release 公開アセットは発行・掲載しません。
+- BOOTH は独立した並行販売経路として継続し、Store 上の購入代替ボタンとしては表示しません。
+- 決済完了画面を閉じた・再ダウンロードが必要になった等の個別対応は、問い合わせ窓口で決済情報を確認のうえ対応します。
 
 ## 問い合わせ先
 
@@ -140,25 +149,15 @@ DISTRIBUTION
 
 ## 今後の拡張
 
-後続Phaseで以下を検討します。
+今後のPhaseで必要に応じて以下を検討します。
 
-- Stripe Checkout API
-- Cloudflare Pages Functions
-- Webhook
-- Cloudflare R2
-- 購入後ダウンロードURL発行
-- 購入完了ページ
-- 商品ごとのライセンス表示
-- Store専用サポート導線
+- Webhook 連携や購入履歴・再ダウンロード案内メールの自動化
+- 商品ごとのライセンス・法人利用範囲表示の整備
+- Store専用サポート導線の強化
 
-## 今回やらないこと
+## 運用上の禁止事項（やらないこと）
 
-- Stripe Checkout API実装
-- Pages Functions実装
-- Webhook実装
-- Cloudflare R2連携
-- 購入後自動ダウンロードURL発行
-- 全商品Stripe化
-- Payment Link追加
-- 商品価格変更
-- Storeデザイン大幅変更
+- 静的ファイル・generated JSON・Git・ORIGINAL.md への Stripe Secret Key / APIキー / 購入者個人情報の保存
+- 有料アプリ・Pack の `.exe` / `.zip` の GitHub Release 公開アセット配置（無料配布枠 `DakePDF結合` 除く）
+- `store_products.generated.json` の手編集
+- 人間の明示依頼なしの Stripe live 決済作成・価格変更・公開操作

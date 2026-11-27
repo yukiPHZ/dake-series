@@ -13,9 +13,9 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - short_title: PDF確認印
 - category: PDF
 - status: available
-- version: 未設定（既存ファイルに明示なし）
+- version: 1.0.0
 - price: 500円
-- distribution: GitHub Release / BOOTH / dakeapp.com / Store（Storeは未確定）
+- distribution: Store / BOOTH / dakeapp.com（GitHub Releaseはタグ・履歴のみ）
 - target_platform: Windows
 
 ## 目的
@@ -146,6 +146,7 @@ PDFプレビュー上で位置を選び、名字と日付入りの確認印を1�
   "folder_name": "DAKE_PDF_CheckStamp",
   "exe_name": "Dake_Check_Stamp.exe",
   "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_CheckStamp_v1.0.0",
+  "version": "1.0.0",
   "screenshot_path": "assets/screenshot.webp",
   "status": "available",
   "show_in_launcher": true,
@@ -207,25 +208,25 @@ PDFプレビュー上で位置を選び、名字と日付入りの確認印を1�
 少し静かにするための道具です。
 - 価格: 500円
 - 画像: assets/booth_thumbnail.jpg
-- ダウンロード導線: 未確定
-- サポート方針: 未確定
+- ダウンロード導線: Stripe Checkout Session検証後にprivate R2から自動ダウンロード
+- サポート方針: `DAKE_STORE_OPERATION_RULE.md` に準拠
 - Stripe Payment Link: https://buy.stripe.com/fZu7sLfMl1RRb0I2jn0gw0s
-- Store雋ｩ螢ｲ迥ｶ諷・ stripe_ready
+- Store販売状態: stripe_ready
 
 ## 価格・販売方針
 
 - BOOTH価格案: 500円
 - BOOTH URL: https://peakheadz.booth.pm/items/8448176
-- Store価格: 未確定
-- Store販売方針: 未確定
+- Store価格: 500円
+- Store販売方針: Stripe Payment Link + Cloudflare R2 自動配信（BOOTH並行販売）
 
 ## 配布・ダウンロード方針
 
-- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_CheckStamp_v1.0.0
+- GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_CheckStamp_v1.0.0（タグ・履歴のみ）
 - BOOTH: https://peakheadz.booth.pm/items/8448176
 - dakeapp.com: show_on_site=true
 - Launcher: show_in_launcher=true
-- Store: 未確定
+- Store: store.dakeapp.com（Stripe Payment Link + private R2自動配信）
 
 ## 免責・注意事項
 

@@ -15,7 +15,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - status: available
 - version: 1.0.1
 - price: 500円
-- distribution: GitHub Release / BOOTH / dakeapp.com / Store
+- distribution: Store / BOOTH / dakeapp.com（GitHub Releaseはタグ・履歴のみ）
 - target_platform: Windows
 
 ## 目的
@@ -232,17 +232,17 @@ PDFを1ファイル追加すると、全ページを1枚ずつのPDFへ自動分
 少し静かにするための道具です。
 - 価格: 500円
 - 画像: assets/booth_thumbnail.jpg
-- ダウンロード導線: 未確定
-- サポート方針: 未確定
+- ダウンロード導線: Stripe Checkout Session検証後にprivate R2から自動ダウンロード
+- サポート方針: `DAKE_STORE_OPERATION_RULE.md` に準拠
 - Stripe Payment Link: https://buy.stripe.com/28E14ndEd7cb0m47DH0gw0z
-- Store雋ｩ螢ｲ迥ｶ諷・ stripe_ready
+- Store販売状態: stripe_ready
 
 ## 価格・販売方針
 
 - BOOTH価格案: 500円
 - BOOTH URL: https://peakheadz.booth.pm/items/8448207
-- Store価格: 未確定
-- Store販売方針: 未確定
+- Store価格: 500円
+- Store販売方針: Stripe Payment Link + Cloudflare R2 自動配信（BOOTH並行販売）
 
 ## 配布・ダウンロード方針
 
