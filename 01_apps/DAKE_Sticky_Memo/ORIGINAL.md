@@ -14,7 +14,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - category: メモ / 付箋
 - status: available
 - version: 1.0.0
-- price: 300円
+- price: 500円
 - distribution: GitHub ReleaseとBOOTHで配布する。
 - target_platform: Windows
 
@@ -99,7 +99,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 ## booth_product生成用情報
 
 - 商品名: Dake付箋メモ
-- 価格案: 300円
+- 価格案: 500円
 - 商品紹介文: 付箋を書いて、動かして、捨てられる軽量メモです。
 - 補足紹介文:
   - 付箋を追加して、その場でメモできます。
@@ -127,7 +127,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - キャッチ: 付箋を書いて、動かして、捨てられる軽量メモです。
 - キャッチ補足: 実務の流れを、少し静かにするための道具です。
 - 説明: アプリ内に付箋を作成し、自由に動かし、不要になったら消せるWindows向け軽量メモアプリです。
-- 価格: 300円
+- 価格: 500円
 - 画像: assets/booth_thumbnail.jpg / assets/screenshot.webp
 - ダウンロード導線: 未確定
 - サポート方針: 既存ファイルに記載なし
@@ -138,7 +138,7 @@ Storeは未構築のため、Store専用の商品正本は作りません。
 
 ## 価格・販売方針
 
-- BOOTH価格案: 300円
+- BOOTH価格案: 500円
 - BOOTH URL: https://peakheadz.booth.pm/items/8448263
 - GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Sticky_Memo_v1.0.0
 - Store販売: 未確定

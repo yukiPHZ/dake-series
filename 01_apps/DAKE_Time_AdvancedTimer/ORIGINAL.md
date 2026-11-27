@@ -14,7 +14,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - category: 時間 / タイマー
 - status: available
 - version: 1.0.0
-- price: 300円
+- price: 500円
 - distribution: GitHub Release / BOOTH / dakeapp.com
 - target_platform: Windows
 
@@ -103,7 +103,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 ## booth_product生成用情報
 
 - 商品名: Dakeアドバンスドタイマー
-- 価格案: 300円
+- 価格案: 500円
 - 商品紹介文: 集中時間と休憩時間をすぐに始められる静かなタイマー。
 - 補足紹介文:
   - 集中時間と休憩時間をすぐ始めるタイマー
@@ -130,7 +130,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - キャッチ: 集中時間と休憩時間をすぐに始められる静かなタイマー。
 - キャッチ補足: 実務の流れを、少し静かにするための道具です。
 - 説明: 25分集中、5分休憩、15分休憩、カスタム時間に対応したWindows向けタイマーです。
-- 価格: 300円
+- 価格: 500円
 - 画像: assets/booth_thumbnail.jpg / assets/screenshot.webp
 - ダウンロード導線: 未確定
 - サポート方針: 既存ファイルに記載なし
@@ -149,7 +149,7 @@ Storeは未構築のため、Store専用の商品正本は作りません。
 - 個別環境での完全な動作保証はしない。
 ## 価格・販売方針
 
-- BOOTH価格案: 300円
+- BOOTH価格案: 500円
 - BOOTH URL: https://peakheadz.booth.pm/items/8449210
 - GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Time_AdvancedTimer_v1.0.0
 - Store販売: 未確定

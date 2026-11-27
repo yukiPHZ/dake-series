@@ -14,7 +14,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - category: メール
 - status: available
 - version: 1.0.0
-- price: 300円
+- price: 500円
 - distribution: DAKE Store（Stripe private delivery） / BOOTH / dakeapp.com
 - target_platform: Windows
 
@@ -160,7 +160,7 @@ CSV名簿からOutlookの個別下書きを作る、送信しない実務補助�
 ## booth_product生成用情報
 
 - 商品名: Dakeメール下書き
-- 価格案: 300円
+- 価格案: 500円
 - 商品紹介文: CSV名簿から、Outlookの個別下書きを作ります。
 
 ・Outlook下書き作成のみ
@@ -199,7 +199,7 @@ Windows
 
 送信を急がず、
 下書きだけを静かに整える道具です。
-- 価格: 300円
+- 価格: 500円
 - 画像: assets/booth_thumbnail.jpg（存在: あり）
 - ダウンロード導線: Stripe Checkout Session検証後にprivate R2から即時配布
 - サポート方針: 既存ファイルに記載なし
@@ -208,7 +208,7 @@ Windows
 
 ## 価格・販売方針
 
-- BOOTH価格案: 300円
+- BOOTH価格案: 500円
 - BOOTH URL: https://peakheadz.booth.pm/items/8448001
 - GitHub Release: 履歴ページのみ。無料配布assetは2026-11-22に終了
 - Store販売: Stripe Payment Link（300円）

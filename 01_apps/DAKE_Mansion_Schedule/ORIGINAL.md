@@ -14,7 +14,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - category: 作業補助
 - status: available
 - version: 1.0.1
-- price: 500円
+- price: 980円
 - distribution: GitHub Release / BOOTH / dakeapp.com / store.dakeapp.com
 - target_platform: Windows
 
@@ -168,7 +168,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 ## booth_product生成用情報
 
 - 商品名: マンション工程表
-- 価格案: 500円
+- 価格案: 980円
 - 商品紹介文: マンション管理会社へ提出するための、リフォーム工事工程表を作成します。
 工事進捗管理ではなく、管理会社提出用の工程表作成アプリです。
 
@@ -212,7 +212,7 @@ Windows
 
 実務の流れを、
 少し静かにするための道具です。
-- 価格: 500円
+- 価格: 980円
 - 画像: assets/booth_thumbnail.jpg（存在: あり）
 - ダウンロード導線: 未確定
 - サポート方針: 既存ファイルに記載なし
@@ -221,7 +221,7 @@ Windows
 
 ## 価格・販売方針
 
-- BOOTH価格案: 500円
+- BOOTH価格案: 980円
 - BOOTH URL: https://peakheadz.booth.pm/items/8448169
 - GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mansion_Schedule_v1.0.1
 - Store販売: stripe_ready

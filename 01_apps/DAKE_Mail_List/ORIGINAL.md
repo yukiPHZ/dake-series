@@ -14,7 +14,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - category: メール
 - status: available
 - version: 1.0.1
-- price: 300円
+- price: 500円
 - distribution: GitHub Release / BOOTH / dakeapp.com（Storeは未確定）
 - target_platform: Windows
 
@@ -171,7 +171,7 @@ Outlookで受信したメールから、会社名・お名前・メールアド�
 ## booth_product生成用情報
 
 - 商品名: Dakeメールリスト
-- 価格案: 300円
+- 価格案: 500円
 - 商品紹介文: Outlookで選択したメールを直接ドロップして、
 会社名・お名前・メールアドレスをCSVに整理します。
 
@@ -217,7 +217,7 @@ Windows
 
 集めたメールを、
 実務で扱いやすい一覧にします。
-- 価格: 300円
+- 価格: 500円
 - 画像: assets/booth_thumbnail.jpg（存在: あり）
 - ダウンロード導線: 未確定
 - サポート方針: 既存ファイルに記載なし
@@ -226,7 +226,7 @@ Windows
 
 ## 価格・販売方針
 
-- BOOTH価格案: 300円
+- BOOTH価格案: 500円
 - BOOTH URL: https://peakheadz.booth.pm/items/8448014
 - GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_List_v1.0.1
 - Store販売: 未確定

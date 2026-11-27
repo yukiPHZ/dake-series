@@ -14,7 +14,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - category: 計算
 - status: available
 - version: 1.0.0（Release URLより）
-- price: 300円
+- price: 980円
 - distribution: GitHub Release / BOOTH / dakeapp.com（Storeは未確定）
 - target_platform: Windows
 
@@ -128,7 +128,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 ## booth_product生成用情報
 
 - 商品名: Dake価格按分
-- 価格案: 300円
+- 価格案: 980円
 - 商品紹介文: 売買価格を土地・建物評価額比率で参考按分します。
 
 ・不動産価格按分アプリ
@@ -163,7 +163,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 
 実務の流れを、
 少し静かにするための道具です。
-- 価格: 300円
+- 価格: 980円
 - 画像: assets/booth_thumbnail.jpg（存在: あり）
 - ダウンロード導線: 未確定
 - サポート方針: 既存ファイルに記載なし
@@ -172,7 +172,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 
 ## 価格・販売方針
 
-- BOOTH価格案: 300円
+- BOOTH価格案: 980円
 - BOOTH URL: https://peakheadz.booth.pm/items/8448222
 - GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Price_Apportionment_v1.0.0
 - Store販売: 未確定

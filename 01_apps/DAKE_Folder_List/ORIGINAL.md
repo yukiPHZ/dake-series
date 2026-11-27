@@ -14,7 +14,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - category: ファイル / 一覧
 - status: available
 - version: 1.0.0
-- price: 300円
+- price: 500円
 - distribution: GitHub ReleaseとBOOTHで配布する。
 - target_platform: Windows
 
@@ -99,7 +99,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 ## booth_product生成用情報
 
 - 商品名: Dakeフォルダ一覧
-- 価格案: 300円
+- 価格案: 500円
 - 商品紹介文: フォルダ構成とファイル一覧を表示・コピー・保存します。
 - 補足紹介文:
   - フォルダ一覧作成アプリ
@@ -126,7 +126,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - キャッチ: フォルダ構成とファイル一覧を表示・コピー・保存します。
 - キャッチ補足: 実務の流れを、少し静かにするための道具です。
 - 説明: 指定フォルダの構成、ファイル名、拡張子、サイズ、更新日時を一覧化できるWindows向けアプリです。
-- 価格: 300円
+- 価格: 500円
 - 画像: assets/booth_thumbnail.jpg / assets/screenshot.webp
 - ダウンロード導線: 未確定
 - サポート方針: 既存ファイルに記載なし
@@ -137,7 +137,7 @@ Storeは未構築のため、Store専用の商品正本は作りません。
 
 ## 価格・販売方針
 
-- BOOTH価格案: 300円
+- BOOTH価格案: 500円
 - BOOTH URL: https://peakheadz.booth.pm/items/8447591
 - GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Folder_List_v1.0.0
 - Store販売: 未確定

@@ -29,3 +29,6 @@ playwright_profile/
 # Local release evidence videos
 **/release_artifacts/*.mp4
 **/release_artifacts/*.webm
+
+# Local sync reports & temp files
+tmp/

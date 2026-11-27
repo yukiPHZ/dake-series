@@ -14,7 +14,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - category: 作業補助
 - status: available
 - version: 1.0.0（Release URLより）
-- price: 500円
+- price: 980円
 - distribution: GitHub Release / BOOTH / dakeapp.com（Storeは未確定）
 - target_platform: Windows
 
@@ -135,7 +135,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 ## booth_product生成用情報
 
 - 商品名: Dake工程カレンダー
-- 価格案: 500円
+- 価格案: 980円
 - 商品紹介文: 指定期間の日付枠をA4縦PDFに並べます。
 
 ・工程カレンダーPDF作成アプリ
@@ -171,7 +171,7 @@ Windows
 
 実務の流れを、
 少し静かにするための道具です。
-- 価格: 500円
+- 価格: 980円
 - 画像: assets/booth_thumbnail.jpg（存在: あり）
 - ダウンロード導線: 未確定
 - サポート方針: 既存ファイルに記載なし
@@ -180,7 +180,7 @@ Windows
 
 ## 価格・販売方針
 
-- BOOTH価格案: 500円
+- BOOTH価格案: 980円
 - BOOTH URL: https://peakheadz.booth.pm/items/8448282
 - GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Work_Calendar_v1.0.0
 - Store販売: 未確定

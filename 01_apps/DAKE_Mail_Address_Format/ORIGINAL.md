@@ -14,7 +14,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - category: メール
 - status: available
 - version: 未設定（既存ファイルに明示なし）
-- price: 300円
+- price: 500円
 - distribution: GitHub Release / BOOTH / dakeapp.com / Store（Storeは未確定）
 - target_platform: Windows
 
@@ -151,7 +151,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 ## booth_product生成用情報
 
 - 商品名: Dakeメールアドレス整形
-- 価格案: 300円
+- 価格案: 500円
 - 商品紹介文: 貼り付けたメールアドレスを、カンマ区切りに整えます。
 
 ・Dakeメールアドレス整形
@@ -188,7 +188,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 
 実務の流れを、
 少し静かにするための道具です。
-- 価格: 300円
+- 価格: 500円
 - 画像: assets/booth_thumbnail.jpg
 - ダウンロード導線: 未確定
 - サポート方針: 未確定
@@ -197,7 +197,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 
 ## 価格・販売方針
 
-- BOOTH価格案: 300円
+- BOOTH価格案: 500円
 - BOOTH URL: https://peakheadz.booth.pm/items/8447996
 - Store価格: 未確定
 - Store販売方針: 未確定

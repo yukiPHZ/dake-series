@@ -14,7 +14,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - category: メモ
 - status: available
 - version: 1.0.0（Release URLより）
-- price: 300円
+- price: 500円
 - distribution: GitHub Release / BOOTH / dakeapp.com（Storeは未確定）
 - target_platform: Windows
 
@@ -133,7 +133,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 ## booth_product生成用情報
 
 - 商品名: Dakeマジでメモ
-- 価格案: 300円
+- 価格案: 500円
 - 商品紹介文: 保存を気にせず、今の考えをそのまま置いておくメモです。
 
 ・保存を気にせず使える実務用メモアプリです。
@@ -169,7 +169,7 @@ Windows
 
 実務の流れを、
 少し静かにするための道具です。
-- 価格: 300円
+- 価格: 500円
 - 画像: assets/booth_thumbnail.jpg（存在: あり）
 - ダウンロード導線: 未確定
 - サポート方針: 既存ファイルに記載なし
@@ -178,7 +178,7 @@ Windows
 
 ## 価格・販売方針
 
-- BOOTH価格案: 300円
+- BOOTH価格案: 500円
 - BOOTH URL: https://peakheadz.booth.pm/items/8448021
 - GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Maji_Memo_v1.0.0
 - Store販売: 未確定
