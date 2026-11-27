@@ -12,7 +12,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - title: Dake菊田メール
 - short_title: 菊田メール
 - category: メール
-- status: available
+- status: discontinued
 - version: 未設定（既存ファイルに明示なし）
 - price: 300円
 - distribution: GitHub Release / BOOTH / dakeapp.com / Store（Storeは未確定）
@@ -136,7 +136,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
   "exe_name": "DakeKikuta_Mail.exe",
   "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_Kikuta_v1.0.0",
   "screenshot_path": "assets/screenshot.webp",
-  "status": "available",
+  "status": "discontinued",
   "show_in_launcher": true,
   "show_on_site": true,
   "app_type": "",

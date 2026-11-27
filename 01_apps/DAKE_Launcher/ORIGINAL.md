@@ -12,7 +12,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - title: Dakeランチャー
 - short_title: DAKEツール
 - category: 補助ツール
-- status: available
+- status: discontinued
 - version: 未設定（既存ファイルに明示なし）
 - price: 300円
 - distribution: GitHub Release / BOOTH / dakeapp.com / Store（Storeは未確定）
@@ -134,7 +134,7 @@ DAKEシリーズ各アプリを迷わず1クリックで起動する入口アプ
   "exe_name": "Dake_Launcher.exe",
   "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Launcher_v1.0.0",
   "screenshot_path": "assets/screenshot.webp",
-  "status": "available",
+  "status": "discontinued",
   "show_in_launcher": false,
   "show_on_site": true,
   "app_type": "",

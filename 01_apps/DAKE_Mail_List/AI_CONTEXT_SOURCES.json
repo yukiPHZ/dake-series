@@ -1,0 +1,45 @@
+{
+  "product": "Dakeメールリスト",
+  "profile": "app",
+  "standards_version": "1.0.0",
+  "sections": [
+    {
+      "output": "Purpose",
+      "source": "ORIGINAL.md",
+      "heading": "目的"
+    },
+    {
+      "output": "Must Keep",
+      "source": "ORIGINAL.md",
+      "heading": "守るべき挙動"
+    },
+    {
+      "output": "Important Rules",
+      "source": "ORIGINAL.md",
+      "heading": "変更してはいけない核"
+    },
+    {
+      "output": "Inputs and Outputs",
+      "source": "ORIGINAL.md",
+      "heading": "対応形式・非対応形式"
+    },
+    {
+      "output": "Non-goals",
+      "source": "ORIGINAL.md",
+      "heading": "やらないこと / 非ゴール"
+    }
+  ],
+  "quality_check_command": "python ../../../peakheadz-standards/tools/quality_check.py . --profile app",
+  "source_references": [
+    "ORIGINAL.md",
+    "../../AGENTS.md",
+    "../../00_core/DAKE_COMMON_SPEC.md",
+    "../../../peakheadz-standards/common/AI_WORKFLOW.md",
+    "../../../peakheadz-standards/common/UX_WRITING.md",
+    "../../../peakheadz-standards/common/BRANDING.md",
+    "../../../peakheadz-standards/app/QUALITY.md",
+    "../../../peakheadz-standards/app/UI.md",
+    "../../../peakheadz-standards/app/WINDOWS_APP.md",
+    "../../../peakheadz-standards/app/RELEASE.md"
+  ]
+}

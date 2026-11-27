@@ -30,6 +30,7 @@
 - BOOTH Web UI、DakeBOOTHアシストの起動・操作、商品登録・更新・公開はCodexの責務外。公開、送信、決済作成・変更、価格変更、外部登録、削除は、人間の明示依頼なしに実行しない。
 - Stripe live操作は `--apply-live` 自体を1回の明示intentとして扱う。Codexはユーザーからlive実行を明示されない限り実行しない。通常CommerceはStripeだけで完了し、Checkout review、Store production review、Store同期、SHIP、BOOTH、Cloudflare、SNS、Bufferを必須gateまたは自動後続にしない。
 - 未commit変更、未追跡ファイル、過去Release、既存設定を勝手に戻す・削除・stash・混在commitしない。
+- DAKEの開発用ファイル・一時成果物・テスト資材・build作業場所は原則 `C:\Users\yukiz\devlop\` 配下とする。OSやライブラリが内部利用する標準TEMPは例外とし、既存のdevlop外ファイルを勝手に移動・削除しない。
 - 新機能、全面リファクタリング、新しい状態管理・DB・CI・監査・承認・バックアップ・ログ基盤を理由なく追加しない。削除・統合・単純化を優先する。
 - `commit`、`push`、GitHub Release、販売・公開は別権限。依頼範囲を越えない。
 

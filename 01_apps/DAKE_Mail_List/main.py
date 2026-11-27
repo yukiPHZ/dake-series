@@ -14,28 +14,23 @@ from dataclasses import dataclass
 from datetime import datetime
 from email.header import decode_header, make_header
 from email.utils import parseaddr
+from html.parser import HTMLParser
 from pathlib import Path
 import tkinter as tk
 from tkinter import filedialog, font as tkfont, messagebox
 
-try:
-    from tkinterdnd2 import DND_FILES, TkinterDnD
+import pythoncom
 
-    ROOT_CLASS = TkinterDnD.Tk
-    DND_READY = True
-except ImportError:
-    DND_FILES = None
-    ROOT_CLASS = tk.Tk
-    DND_READY = False
+from native_ole_drop import APP_DATA_DIR, NativeOleDropRegistration, OleDropPayload
 
 
 APP_NAME = "Dakeメールリスト"
 WINDOW_TITLE = APP_NAME
-COPYRIGHT = "© 2026 しまりす不動産 — Vibe-Coded by Yukihiko Kikuta"
+COPYRIGHT = "by Yukihiko Kikuta"
 
 UI_TEXT = {
     "main_title": "メールをCSVにする",
-    "main_description": "Outlookから保存した .msg ファイルをここへドロップします。",
+    "main_description": "Outlookのメール、または保存済みの .msg ファイルをここへドロップします。",
     "drop_area": "メールをここへドロップ",
     "button_select_folder": "CSV保存先を選ぶ",
     "button_open_folder": "保存フォルダを開く",
@@ -46,7 +41,7 @@ UI_TEXT = {
     "dialog_folder_title": "CSV保存先を選ぶ",
     "dialog_error_title": "確認してください",
     "dialog_drop_error": ".msg ファイルをドロップしてください。",
-    "dialog_dependency_error": "ドラッグ＆ドロップ用ライブラリを読み込めませんでした。requirements.txt を確認してください。",
+    "dialog_dependency_error": "Windowsのドラッグ＆ドロップを初期化できませんでした。",
     "dialog_open_error": "保存フォルダを開けませんでした。",
     "footer_left": "シンプルそれDAKEシリーズ",
     "footer_caption": "止まらない、迷わない、すぐ終わる。",
@@ -79,9 +74,102 @@ EMAIL_RE = re.compile(
     r"(?<![\w.+-])([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})(?![\w.-])",
     re.IGNORECASE,
 )
-HTML_TAG_RE = re.compile(r"<[^>]+>")
 COMPANY_KEYWORDS = ("株式会社", "有限会社", "合同会社", "㈱", "（株）", "(株)")
 HONORIFIC_SUFFIXES = ("様", "さん", "先生")
+ROLE_WORDS = (
+    "代表取締役",
+    "代表社員",
+    "取締役",
+    "支店長",
+    "営業担当",
+    "担当者",
+    "マネージャー",
+    "社長",
+    "部長",
+    "課長",
+    "係長",
+    "主任",
+    "店長",
+    "代表",
+    "担当",
+)
+ORGANIZATION_SUFFIXES = (
+    "営業部",
+    "総務部",
+    "管理部",
+    "事業部",
+    "支店",
+    "支社",
+    "営業所",
+    "事務所",
+    "店舗",
+    "センター",
+    "グループ",
+    "チーム",
+    "部",
+    "課",
+    "室",
+    "店",
+)
+GENERIC_NAME_WORDS = (
+    "営業",
+    "総務",
+    "サポート",
+    "お問い合わせ",
+    "事務局",
+)
+HTML_BLOCK_TAGS = frozenset(
+    {
+        "address",
+        "article",
+        "br",
+        "div",
+        "footer",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "header",
+        "hr",
+        "li",
+        "p",
+        "section",
+        "table",
+        "tr",
+    }
+)
+HTML_QUOTE_MARKERS = (
+    "divrplyfwdmsg",
+    "gmail_quote",
+    "yahoo_quoted",
+    "moz-cite-prefix",
+    "protonmail_quote",
+)
+QUOTE_BOUNDARY_RE = re.compile(
+    r"^\s*(?:-{2,}\s*)?(?:original message|forwarded message|"
+    r"元のメッセージ|転送メッセージ)(?:\s*-{2,})?\s*$",
+    re.IGNORECASE,
+)
+ON_WROTE_RE = re.compile(
+    r"^(?:On\s.+\swrote:|.+(?:さん)?(?:は)?書きました[:：])$",
+    re.IGNORECASE,
+)
+QUOTE_HEADER_RE = re.compile(
+    r"^(?:From|Sent|Date|To|Cc|Subject|差出人|送信者|送信日時|送信日|宛先|件名)\s*[:：]",
+    re.IGNORECASE,
+)
+QUOTE_HEADER_START_RE = re.compile(
+    r"^(?:From|差出人|送信者)\s*[:：]",
+    re.IGNORECASE,
+)
+PERSON_TOKEN_RE = re.compile(r"^[一-龯々〆ヵヶぁ-んァ-ヶー]{1,7}$")
+HTML_CONTENT_RE = re.compile(
+    r"</?(?:html|body|div|p|br|table|tr|td|th|span|blockquote|style|script)\b",
+    re.IGNORECASE,
+)
+SIGNATURE_LINE_LIMIT = 20
 FONT_CANDIDATES = ("BIZ UDPGothic", "Yu Gothic UI", "Meiryo")
 URL_PREFIXES = ("h" "ttp://", "h" "ttps://")
 SENDER_EMAIL_KEYS = (
@@ -123,7 +211,26 @@ def app_base_dir() -> Path:
 
 
 def get_config_path() -> Path:
+    return APP_DATA_DIR / "config.json"
+
+
+def get_legacy_config_path() -> Path:
     return app_base_dir() / CONFIG_FILE_NAME
+
+
+def read_config_folder(config_path: Path) -> Path | None:
+    if not config_path.exists():
+        return None
+    try:
+        payload = json.loads(config_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    raw_folder = payload.get("save_folder")
+    if not raw_folder:
+        return None
+    return Path(str(raw_folder)).expanduser()
 
 
 def get_default_desktop() -> Path:
@@ -135,22 +242,18 @@ def get_default_desktop() -> Path:
 
 def load_save_folder() -> Path:
     config_path = get_config_path()
-    if not config_path.exists():
-        return get_default_desktop()
+    folder = read_config_folder(config_path)
+    if folder is None and not config_path.exists():
+        legacy_folder = read_config_folder(get_legacy_config_path())
+        if legacy_folder is not None:
+            try:
+                save_config(legacy_folder)
+            except OSError:
+                pass
+            folder = legacy_folder
 
-    try:
-        payload = json.loads(config_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+    if folder is None:
         return get_default_desktop()
-
-    if not isinstance(payload, dict):
-        return get_default_desktop()
-
-    raw_folder = payload.get("save_folder")
-    if not raw_folder:
-        return get_default_desktop()
-
-    folder = Path(str(raw_folder)).expanduser()
     if folder.exists() and folder.is_dir():
         return folder
     return get_default_desktop()
@@ -158,7 +261,9 @@ def load_save_folder() -> Path:
 
 def save_config(save_folder: Path) -> None:
     payload = {"save_folder": str(save_folder)}
-    get_config_path().write_text(
+    config_path = get_config_path()
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    config_path.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
@@ -228,7 +333,10 @@ def safe_text(value: object) -> str:
     if value is None:
         return ""
     if isinstance(value, bytes):
-        for encoding in ("utf-8", "cp932", "latin-1"):
+        encodings = ["utf-8-sig", "cp932", "latin-1"]
+        if value.startswith((b"\xff\xfe", b"\xfe\xff")):
+            encodings.insert(0, "utf-16")
+        for encoding in encodings:
             try:
                 return value.decode(encoding)
             except UnicodeDecodeError:
@@ -237,12 +345,77 @@ def safe_text(value: object) -> str:
     return str(value)
 
 
+class _EmailHtmlTextParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.parts: list[str] = []
+        self.ignored_depth = 0
+        self.in_quoted_history = False
+
+    def _line_break(self) -> None:
+        if self.parts and not self.parts[-1].endswith("\n"):
+            self.parts.append("\n")
+
+    def handle_starttag(self, tag: str, attrs) -> None:
+        tag = tag.lower()
+        attr_values = " ".join(
+            str(value).lower() for _, value in attrs if value is not None
+        )
+        if tag == "blockquote" or any(
+            marker in attr_values for marker in HTML_QUOTE_MARKERS
+        ):
+            self._line_break()
+            self.in_quoted_history = True
+            return
+        if self.in_quoted_history:
+            return
+        if tag in ("head", "script", "style"):
+            self.ignored_depth += 1
+            return
+        if self.ignored_depth:
+            return
+        if tag in HTML_BLOCK_TAGS:
+            self._line_break()
+        elif tag in ("td", "th") and self.parts:
+            self.parts.append("\t")
+
+    def handle_endtag(self, tag: str) -> None:
+        tag = tag.lower()
+        if tag in ("head", "script", "style") and self.ignored_depth:
+            self.ignored_depth -= 1
+            return
+        if self.in_quoted_history or self.ignored_depth:
+            return
+        if tag in HTML_BLOCK_TAGS or tag in ("td", "th"):
+            self._line_break()
+
+    def handle_data(self, data: str) -> None:
+        if not self.in_quoted_history and not self.ignored_depth:
+            self.parts.append(data)
+
+    def text(self) -> str:
+        return "".join(self.parts)
+
+
 def body_to_text(value: object) -> str:
     text = safe_text(value)
-    if "<" in text and ">" in text:
-        text = HTML_TAG_RE.sub(" ", text)
+    if HTML_CONTENT_RE.search(text):
+        parser = _EmailHtmlTextParser()
+        try:
+            parser.feed(text)
+            parser.close()
+            text = parser.text()
+        except Exception:
+            pass
     text = html.unescape(text)
-    return text.replace("\r\n", "\n").replace("\r", "\n")
+    text = text.replace("\xa0", " ")
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    lines = [line.rstrip() for line in text.split("\n")]
+    normalized: list[str] = []
+    for line in lines:
+        if line or not normalized or normalized[-1]:
+            normalized.append(line)
+    return "\n".join(normalized).strip()
 
 
 def normalize_space(value: str) -> str:
@@ -310,21 +483,208 @@ def extract_email(sender_email: str, sender_text: str, from_header: str, body: s
     return first_email_from_text(body)
 
 
-def clean_name(sender_text: str, from_header: str, email_address: str) -> str:
+def _display_names(sender_text: str, from_header: str) -> list[str]:
+    names: list[str] = []
     for candidate in (sender_text, from_header):
         decoded = decode_mime_header(candidate)
         display_name = parseaddr(decoded)[0].strip().strip("\"'")
         display_name = normalize_space(display_name)
-        if not display_name:
+        if display_name and display_name not in names:
+            names.append(display_name)
+    return names
+
+
+def _strip_honorific(value: str) -> str:
+    value = value.strip()
+    for suffix in HONORIFIC_SUFFIXES:
+        if value.endswith(suffix):
+            return value[: -len(suffix)].strip()
+    return value
+
+
+def _contains_company_keyword(value: str) -> bool:
+    return any(keyword in value for keyword in COMPANY_KEYWORDS)
+
+
+def _is_organization_or_role(value: str) -> bool:
+    compact = normalize_space(value).replace(" ", "")
+    if not compact:
+        return True
+    if compact in GENERIC_NAME_WORDS or compact in ROLE_WORDS:
+        return True
+    return any(compact.endswith(suffix) for suffix in ORGANIZATION_SUFFIXES)
+
+
+def _is_probable_signature_name(value: str) -> bool:
+    value = _strip_honorific(normalize_space(value))
+    if not value or len(value) > 20:
+        return False
+    if first_email_from_text(value) or _contains_company_keyword(value):
+        return False
+    if any(character.isdigit() for character in value):
+        return False
+    if any(character in value for character in "@:/：｜|()（）"):
+        return False
+    tokens = value.split()
+    if not 1 <= len(tokens) <= 2:
+        return False
+    if any(not PERSON_TOKEN_RE.fullmatch(token) for token in tokens):
+        return False
+    if len(tokens) == 1:
+        token = tokens[0]
+        if not re.fullmatch(r"[一-龯々〆ヵヶァ-ヶー]{2,5}", token):
+            return False
+    return not _is_organization_or_role(value)
+
+
+def _strip_trailing_roles(tokens: list[str]) -> list[str]:
+    while tokens and tokens[-1].strip("：:") in ROLE_WORDS:
+        tokens.pop()
+    return tokens
+
+
+def _labeled_name(value: str) -> str:
+    labels = "|".join(re.escape(word) for word in ROLE_WORDS + ("氏名",))
+    match = re.search(rf"(?:{labels})\s*[:：]\s*(.+)$", value)
+    if match is None:
+        return ""
+    candidate = _strip_honorific(normalize_space(match.group(1)))
+    return candidate if _is_probable_signature_name(candidate) else ""
+
+
+def split_company_and_name(line: str) -> tuple[str, str]:
+    company_line = clean_company_line(line)
+    if not company_line or not _contains_company_keyword(company_line):
+        return "", ""
+
+    labeled_name = _labeled_name(company_line)
+    if labeled_name:
+        labels = "|".join(re.escape(word) for word in ROLE_WORDS + ("氏名",))
+        label_start = re.search(
+            rf"(?:{labels})\s*[:：]",
+            company_line,
+        )
+        if label_start is not None:
+            company = clean_company_line(company_line[: label_start.start()])
+            return company, labeled_name
+
+    tokens = company_line.split()
+    for name_token_count in (2, 1):
+        if len(tokens) <= name_token_count:
             continue
+        name = " ".join(tokens[-name_token_count:])
+        company_tokens = _strip_trailing_roles(tokens[:-name_token_count].copy())
+        company = clean_company_line(" ".join(company_tokens))
+        if (
+            company
+            and _contains_company_keyword(company)
+            and _is_probable_signature_name(name)
+        ):
+            return company, _strip_honorific(name)
+    return company_line, ""
+
+
+def _signature_name_from_line(line: str) -> str:
+    value = normalize_space(line).strip("-_・｜| ")
+    if not value or _contains_company_keyword(value):
+        return ""
+    labeled_name = _labeled_name(value)
+    if labeled_name:
+        return labeled_name
+
+    tokens = value.split()
+    while tokens:
+        first = tokens[0].strip("：:")
+        if first in ROLE_WORDS or _is_organization_or_role(first):
+            tokens.pop(0)
+            continue
+        break
+    candidate = _strip_honorific(" ".join(tokens))
+    return candidate if _is_probable_signature_name(candidate) else ""
+
+
+def _is_quote_header_block(lines: list[str], index: int) -> bool:
+    if not QUOTE_HEADER_START_RE.match(normalize_space(lines[index])):
+        return False
+    header_count = 0
+    for line in lines[index : index + 6]:
+        if QUOTE_HEADER_RE.match(normalize_space(line)):
+            header_count += 1
+    return header_count >= 2
+
+
+def current_sender_text(body: str) -> str:
+    lines = body.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+    for index, raw_line in enumerate(lines):
+        line = normalize_space(raw_line)
+        if not line:
+            continue
+        if QUOTE_BOUNDARY_RE.match(line) or ON_WROTE_RE.match(line):
+            return "\n".join(lines[:index]).strip()
+        if line.startswith(">") or _is_quote_header_block(lines, index):
+            return "\n".join(lines[:index]).strip()
+        if re.fullmatch(r"[_-]{5,}", line):
+            next_index = index + 1
+            while next_index < len(lines) and not normalize_space(lines[next_index]):
+                next_index += 1
+            if next_index < len(lines) and _is_quote_header_block(lines, next_index):
+                return "\n".join(lines[:index]).strip()
+    return body.strip()
+
+
+def extract_signature_identity(body: str) -> tuple[str, str]:
+    current_body = current_sender_text(body)
+    lines = [normalize_space(line) for line in current_body.splitlines()]
+    lines = [line for line in lines if line]
+    lines = lines[-SIGNATURE_LINE_LIMIT:]
+
+    company = ""
+    name = ""
+    company_index = -1
+    for index in range(len(lines) - 1, -1, -1):
+        if not _contains_company_keyword(lines[index]):
+            continue
+        company, name = split_company_and_name(lines[index])
+        if company:
+            company_index = index
+            break
+
+    if not company or name:
+        return company, name
+
+    for distance in range(1, 5):
+        for index in (company_index + distance, company_index - distance):
+            if not 0 <= index < len(lines):
+                continue
+            name = _signature_name_from_line(lines[index])
+            if name:
+                return company, name
+    return company, ""
+
+
+def clean_name(sender_text: str, from_header: str, email_address: str) -> str:
+    for display_name in _display_names(sender_text, from_header):
         if email_address and display_name.lower() == email_address.lower():
             continue
         if first_email_from_text(display_name):
             continue
-        for suffix in HONORIFIC_SUFFIXES:
-            if display_name.endswith(suffix):
-                display_name = display_name[: -len(suffix)].strip()
-        return display_name
+        _, embedded_name = split_company_and_name(display_name)
+        if embedded_name:
+            return embedded_name
+        labeled_name = _labeled_name(display_name)
+        if labeled_name:
+            return labeled_name
+        if _contains_company_keyword(display_name) or _is_organization_or_role(display_name):
+            continue
+        return _strip_honorific(display_name)
+    return ""
+
+
+def extract_display_company(sender_text: str, from_header: str) -> str:
+    for display_name in _display_names(sender_text, from_header):
+        company, _ = split_company_and_name(display_name)
+        if company:
+            return company
     return ""
 
 
@@ -344,13 +704,29 @@ def clean_company_line(line: str) -> str:
     return line
 
 
-def extract_company(body: str) -> str:
-    lines = [normalize_space(line) for line in body.splitlines()]
-    lines = [line for line in lines if line]
-    for line in reversed(lines[-24:]):
-        if any(keyword in line for keyword in COMPANY_KEYWORDS):
-            return clean_company_line(line)
-    return ""
+def extract_contact_identity(
+    sender_text: str,
+    from_header: str,
+    email_address: str,
+    plain_body: str,
+    html_body: str,
+) -> tuple[str, str]:
+    company = ""
+    signature_name = ""
+    for body in (plain_body, html_body):
+        if not body:
+            continue
+        candidate_company, candidate_name = extract_signature_identity(body)
+        if not company and candidate_company:
+            company = candidate_company
+        if not signature_name and candidate_name:
+            signature_name = candidate_name
+        if company and signature_name:
+            break
+
+    name = clean_name(sender_text, from_header, email_address) or signature_name
+    company = company or extract_display_company(sender_text, from_header)
+    return company, name
 
 
 def open_msg_file(path: Path) -> object:
@@ -371,15 +747,22 @@ def extract_contact_from_msg(path: Path) -> ContactRow:
             SENDER_EMAIL_KEYS,
         )
         from_header = get_header_value(message, "From")
-        body = body_to_text(get_message_attr(message, ("body", "htmlBody", "html_body")))
+        plain_body = body_to_text(get_message_attr(message, ("body",)))
+        html_body = body_to_text(get_message_attr(message, ("htmlBody", "html_body")))
     finally:
         close = getattr(message, "close", None)
         if callable(close):
             close()
 
-    email_address = extract_email(sender_email, sender_text, from_header, body)
-    name = clean_name(sender_text, from_header, email_address)
-    company = extract_company(body)
+    body_for_email = plain_body or html_body
+    email_address = extract_email(sender_email, sender_text, from_header, body_for_email)
+    company, name = extract_contact_identity(
+        sender_text,
+        from_header,
+        email_address,
+        plain_body,
+        html_body,
+    )
     return ContactRow(company=company, name=name, email=email_address)
 
 
@@ -443,17 +826,17 @@ class MailListApp:
         }
         self.save_folder = load_save_folder()
         self.event_queue: queue.Queue[dict[str, object]] = queue.Queue()
+        self.ole_drop_queue: queue.Queue[OleDropPayload] = queue.Queue()
         self.processing = False
         self.last_output_folder = self.save_folder
         self.status_var = tk.StringVar(value=UI_TEXT["status_idle"])
+        self.ole_drop_registration: NativeOleDropRegistration | None = None
 
         apply_window_icon(self.root)
         self.build_ui()
         self.register_drop_targets()
+        self.root.protocol("WM_DELETE_WINDOW", self.handle_close)
         self.root.after(QUEUE_POLL_INTERVAL_MS, self.poll_queue)
-
-        if not DND_READY:
-            self.set_status("status_error", is_error=True)
 
     def build_ui(self) -> None:
         outer = tk.Frame(self.root, bg=COLORS["base_bg"])
@@ -638,14 +1021,23 @@ class MailListApp:
             button.configure(bg=button._normal_bg)
 
     def register_drop_targets(self) -> None:
-        if not DND_READY or DND_FILES is None:
-            return
-        for widget in (self.root, self.drop_area, self.drop_label):
-            try:
-                widget.drop_target_register(DND_FILES)
-                widget.dnd_bind("<<Drop>>", self.handle_drop)
-            except tk.TclError:
-                continue
+        self.root.update_idletasks()
+        try:
+            self.ole_drop_registration = NativeOleDropRegistration(
+                widgets=(self.root, self.drop_area, self.drop_label),
+                drop_queue=self.ole_drop_queue,
+            )
+        except Exception:
+            self.ole_drop_registration = None
+            self.set_status("status_error", is_error=True)
+            self.root.after_idle(self.show_dependency_error)
+
+    def show_dependency_error(self) -> None:
+        messagebox.showerror(
+            UI_TEXT["dialog_error_title"],
+            UI_TEXT["dialog_dependency_error"],
+            parent=self.root,
+        )
 
     def set_status(self, status_key: str, is_error: bool = False) -> None:
         self.status_var.set(UI_TEXT[status_key])
@@ -687,37 +1079,49 @@ class MailListApp:
                 parent=self.root,
             )
 
-    def handle_drop(self, event) -> None:
+    def handle_native_drop(self, raw_paths: list[str], cleanup: object | None) -> bool:
         if self.processing:
-            return
-        raw_paths = list(self.root.tk.splitlist(event.data))
+            return False
         if not any(Path(path).suffix.lower() == ".msg" for path in raw_paths):
             self.set_status("status_error", is_error=True)
-            messagebox.showwarning(
-                UI_TEXT["dialog_error_title"],
-                UI_TEXT["dialog_drop_error"],
-                parent=self.root,
-            )
-            return
-        self.start_processing(raw_paths)
+            self.root.after_idle(self.show_drop_warning)
+            return False
+        self.start_processing(raw_paths, cleanup)
+        return True
 
-    def start_processing(self, raw_paths: list[str]) -> None:
+    def show_drop_warning(self) -> None:
+        messagebox.showwarning(
+            UI_TEXT["dialog_error_title"],
+            UI_TEXT["dialog_drop_error"],
+            parent=self.root,
+        )
+
+    def start_processing(self, raw_paths: list[str], cleanup: object | None = None) -> None:
         self.set_processing(True)
         self.set_status("status_loading")
         worker = threading.Thread(
             target=self.process_worker,
-            args=(raw_paths, self.save_folder),
+            args=(raw_paths, self.save_folder, cleanup),
             daemon=True,
         )
         worker.start()
 
-    def process_worker(self, raw_paths: list[str], save_folder: Path) -> None:
+    def process_worker(
+        self,
+        raw_paths: list[str],
+        save_folder: Path,
+        cleanup: object | None,
+    ) -> None:
         try:
             result = process_msg_files(raw_paths, save_folder)
         except Exception:
             self.event_queue.put({"type": "error"})
-            return
-        self.event_queue.put({"type": "done", "result": result})
+        else:
+            self.event_queue.put({"type": "done", "result": result})
+        finally:
+            cleanup_method = getattr(cleanup, "cleanup", None)
+            if callable(cleanup_method):
+                cleanup_method()
 
     def poll_queue(self) -> None:
         try:
@@ -726,8 +1130,21 @@ class MailListApp:
                 self.handle_queue_event(event)
         except queue.Empty:
             pass
+        self.poll_ole_drop_queue()
         if self.root.winfo_exists():
             self.root.after(QUEUE_POLL_INTERVAL_MS, self.poll_queue)
+
+    def poll_ole_drop_queue(self) -> None:
+        if self.processing:
+            return
+        try:
+            payload = self.ole_drop_queue.get_nowait()
+        except queue.Empty:
+            return
+        if payload.error:
+            self.set_status("status_error", is_error=True)
+            return
+        self.handle_native_drop(payload.paths, payload.cleanup)
 
     def handle_queue_event(self, event: dict[str, object]) -> None:
         if event["type"] == "error":
@@ -742,14 +1159,29 @@ class MailListApp:
             self.set_status("status_saved")
             open_folder(self.last_output_folder)
 
+    def handle_close(self) -> None:
+        if self.ole_drop_registration is not None:
+            self.ole_drop_registration.revoke()
+            self.ole_drop_registration = None
+        self.root.destroy()
+
     def run(self) -> None:
-        self.root.mainloop()
+        try:
+            self.root.mainloop()
+        finally:
+            if self.ole_drop_registration is not None:
+                self.ole_drop_registration.revoke()
+                self.ole_drop_registration = None
 
 
 def main() -> None:
     set_windows_app_id()
-    root = ROOT_CLASS()
-    MailListApp(root).run()
+    pythoncom.OleInitialize()
+    try:
+        root = tk.Tk()
+        MailListApp(root).run()
+    finally:
+        ctypes.windll.ole32.OleUninitialize()
 
 
 if __name__ == "__main__":

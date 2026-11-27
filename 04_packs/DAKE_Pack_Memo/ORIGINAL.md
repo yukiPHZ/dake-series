@@ -16,7 +16,7 @@ Pack側の `ORIGINAL.md` は、複数アプリ・素材・説明・価格・zip�
 - title: DAKE メモと記録パック
 - short_title: DAKE メモと記録パック
 - category: メモ運用Pack
-- status: available
+- status: discontinued
 - version: 未設定（既存Pack情報に明示バージョンなし）
 - price: 980円
 - distribution: BOOTH / Store（Storeは未確定）
@@ -134,7 +134,7 @@ Pack側の `ORIGINAL.md` は、複数アプリ・素材・説明・価格・zip�
   "folder_name": "DAKE_Pack_Memo",
   "display_name": "DAKE メモと記録パック",
   "product_type": "pack",
-  "status": "available",
+  "status": "discontinued",
   "version": "未設定",
   "price": 980,
   "booth_url": "https://peakheadz.booth.pm/items/8449208",

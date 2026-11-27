@@ -12,7 +12,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - title: DakeAlien Road
 - short_title: DakeAlien Road
 - category: ゲーム
-- status: available
+- status: discontinued
 - version: 1.0.0（Release URLより）
 - price: 300円
 - distribution: GitHub Release / BOOTH / dakeapp.com（Storeは未確定）
@@ -106,7 +106,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
   "display_name": "DakeAlien Road",
   "folder_name": "DAKE_Game_Alien_Road",
   "exe_name": "DakeGame_AlienRoad.exe",
-  "status": "available",
+  "status": "discontinued",
   "show_in_launcher": true,
   "show_on_site": true,
   "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Game_Alien_Road_v1.0.0",

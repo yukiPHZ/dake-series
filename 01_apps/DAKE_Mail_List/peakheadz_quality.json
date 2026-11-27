@@ -1,0 +1,81 @@
+{
+  "profile": "app",
+  "required_files": [
+    "ORIGINAL.md",
+    "README.md",
+    "AI_CONTEXT.md",
+    "AI_CONTEXT_SOURCES.json",
+    "main.py",
+    "native_ole_drop.py",
+    "build.bat",
+    "requirements.txt"
+  ],
+  "icon_paths": [
+    "../../02_assets/dake_icon.ico"
+  ],
+  "scan_paths": [
+    "main.py",
+    "native_ole_drop.py",
+    "tests/test_extraction.py",
+    "README.md",
+    "release_body.md",
+    "booth_product.txt",
+    "booth_ready/README.txt",
+    "booth_ready/booth_product.txt",
+    "booth_ready/注意事項.txt",
+    "build.bat",
+    "requirements.txt",
+    "AI_CONTEXT.md"
+  ],
+  "user_text_paths": [
+    "main.py",
+    "README.md",
+    "release_body.md",
+    "booth_product.txt",
+    "booth_ready/README.txt",
+    "booth_ready/booth_product.txt",
+    "booth_ready/注意事項.txt"
+  ],
+  "required_text": [
+    {
+      "path": "main.py",
+      "text": "COPYRIGHT = \"by Yukihiko Kikuta\"",
+      "label": "製品内作者クレジット"
+    },
+    {
+      "path": "README.md",
+      "text": "\"version\": \"1.0.1\"",
+      "label": "製品version"
+    },
+    {
+      "path": "build.bat",
+      "text": "--onefile",
+      "label": "onefile build"
+    },
+    {
+      "path": "build.bat",
+      "text": "--noconsole",
+      "label": "GUI build"
+    },
+    {
+      "path": "build.bat",
+      "text": "--icon=..\\..\\02_assets\\dake_icon.ico",
+      "label": "共通アイコン指定"
+    },
+    {
+      "path": "build.bat",
+      "text": "--version-file version_info.txt",
+      "label": "Windows metadata指定"
+    },
+    {
+      "path": "../../tools/generate_version_info.py",
+      "text": "COMPANY_NAME = \"PEAKHEADZ\"",
+      "label": "CompanyName"
+    },
+    {
+      "path": "../../tools/generate_version_info.py",
+      "text": "COPYRIGHT = \"\\u00a9 Yukihiko Kikuta / PEAKHEADZ\"",
+      "label": "exe Copyright"
+    }
+  ]
+}

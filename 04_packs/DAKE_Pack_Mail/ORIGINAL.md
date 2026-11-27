@@ -60,18 +60,11 @@ CSVからOutlookの個別下書きを作る
 
 ## 同梱アプリ・構成物
 
-- Dakeメールリスト (DAKE_Mail_List): Outlookの.msgメールから会社名・氏名・メールアドレスをCSV化する
-  - ZIP: `DakeMail_List.zip` / 32925063 bytes / SHA256 `1012c378bb28d62b1c7fec9d50f5de966c606a9ff44a74b60e20854bfebf8bc1`
-  - BOOTH: https://peakheadz.booth.pm/items/8448014
-  - GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_List_v1.0.0
-- Dakeメールアドレス整形 (DAKE_Mail_Address_Format): 名前付き表記、改行、セミコロン等が混在したメールアドレスを抽出・整形する
-  - ZIP: `DakeMail_Address_Format.zip` / 10106704 bytes / SHA256 `3fe241b58b95de37ae4b9d08b9fb6096e485fbf72d28d9926cb43120267d53de`
-  - BOOTH: https://peakheadz.booth.pm/items/8447996
-  - GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_Address_Format_v1.0.0
-- Dakeメール下書き (DAKE_Mail_Draft): CSV名簿からOutlookの個別下書きを作成する
-  - ZIP: `DakeMail_Draft.zip` / 13902128 bytes / SHA256 `d6d691d890eb8d5b3fa903765f756a6e66d666400a228eebdb3135174a55724e`
-  - BOOTH: https://peakheadz.booth.pm/items/8448001
-  - GitHub Release: https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_Draft_v1.0.0
+| item | type | folder | role | original |
+|---|---|---|---|---|
+| Dakeメールリスト | app | `DAKE_Mail_List` | Outlookで選択したメールを直接ドロップし、会社名・お名前・メールアドレスをCSV化する。保存済み.msgにも対応する。 | `01_apps/DAKE_Mail_List/ORIGINAL.md` |
+| Dakeメールアドレス整形 | app | `DAKE_Mail_Address_Format` | 名前付き表記、改行、セミコロン等が混在したメールアドレスを抽出・整形する。 | `01_apps/DAKE_Mail_Address_Format/ORIGINAL.md` |
+| Dakeメール下書き | app | `DAKE_Mail_Draft` | CSV名簿からOutlookの個別下書きを作成する。 | `01_apps/DAKE_Mail_Draft/ORIGINAL.md` |
 
 ## 単品販売との差分
 
@@ -148,13 +141,27 @@ DAKE_Pack_Mail.zip
 - 商品名: DAKE メール準備パック
 - 価格: 780円
 - 商品紹介文: Outlookメールから連絡先をCSVにし、メールアドレスを使いやすい形へ整え、CSVから個別メールの下書きを作る3本をまとめました。
-- タグ: メール / Outlook / CSV / Windows / 実務 / 仕事効率化 / 下書き / ツール
+- タグ:
+  - メール
+  - Outlook
+  - CSV
+  - Windows
+  - 実務
+  - 仕事効率化
+  - 下書き
+  - ツール
 - 商品画像: assets/booth_thumbnail.jpg
 - 作品ファイル: `04_packs/DAKE_Pack_Mail/pack_ready/DAKE_Pack_Mail.zip`
 
 ## Store表示用情報
 
-Storeにはまだ掲載しない。BOOTH登録後、BOOTH URLを正本へ記録してから次工程で派生ビューを更新する。
+- 商品名: DAKE メール準備パック
+- キャッチ: 集める、整える、下書きにする。送信前までを静かにまとめるPack。
+- 説明: Outlookメールから連絡先を一覧にし、メールアドレスを整え、CSVから個別メールの下書きを作る3本をまとめたPackです。メールは自動送信しません。作成された下書きをOutlookで確認してから送信できます。
+- 価格: 780円
+- 画像: `assets/booth_thumbnail.jpg`
+- ダウンロード導線: Stripe Checkout Session検証後にprivate R2から自動ダウンロード
+- サポート方針: Windows向け・Outlook Classic前提。購入後の案内は決済完了画面に従ってください。
 
 ## 価格・販売方針
 

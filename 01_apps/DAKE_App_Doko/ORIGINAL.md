@@ -12,7 +12,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - title: アプリどこ
 - short_title: アプリどこ
 - category: 補助ツール
-- status: available
+- status: discontinued
 - version: 未設定（既存ファイルに明示なし）
 - price: 300円
 - distribution: GitHub Release / BOOTH / dakeapp.com / Store（Storeは未確定）
@@ -131,7 +131,7 @@ PC内に散らばったDAKE系アプリを探します。
   "version": "1.0.0",
   "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_App_Doko_v1.0.0",
   "screenshot_path": "assets/screenshot.webp",
-  "status": "available",
+  "status": "discontinued",
   "show_in_launcher": true,
   "show_on_site": true,
   "app_type": "",

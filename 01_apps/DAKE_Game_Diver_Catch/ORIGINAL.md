@@ -12,7 +12,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - title: Dake潜って捕る
 - short_title: Dake潜って捕る
 - category: ゲーム
-- status: available
+- status: discontinued
 - version: 1.0.0（Release URLより）
 - price: 300円
 - distribution: GitHub Release / BOOTH / dakeapp.com（Storeは未確定）
@@ -116,7 +116,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
   "exe_name": "DakeGame_Diver_Catch.exe",
   "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Game_Diver_Catch_v1.0.0",
   "screenshot_path": "assets/screenshot.webp",
-  "status": "available",
+  "status": "discontinued",
   "show_in_launcher": true,
   "show_on_site": true,
   "app_type": "market",

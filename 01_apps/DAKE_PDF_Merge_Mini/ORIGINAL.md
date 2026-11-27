@@ -12,7 +12,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - title: DakePDF結合mini
 - short_title: PDF結合mini
 - category: PDF
-- status: available
+- status: discontinued
 - version: 未設定（既存ファイルに明示なし）
 - price: 500円
 - distribution: GitHub Release / BOOTH / dakeapp.com / Store（Storeは未確定）
@@ -132,7 +132,7 @@ PDFを最大5ファイルまで選択し、表示順に1つのPDFへ結合でき
   "exe_name": "DakePDF_Merge_Mini.exe",
   "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_PDF_Merge_Mini_v1.0.0",
   "screenshot_path": "assets/screenshot.webp",
-  "status": "available",
+  "status": "discontinued",
   "show_in_launcher": true,
   "show_on_site": true,
   "app_type": "",

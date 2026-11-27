@@ -12,7 +12,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - title: BOOTHアシスト
 - short_title: BOOTHアシスト
 - category: 補助ツール
-- status: available
+- status: discontinued
 - version: 未設定（既存ファイルに明示なし）
 - price: 300円
 - distribution: GitHub Release / BOOTH / dakeapp.com / Store（Storeは未確定）
@@ -134,7 +134,7 @@ DAKEアプリのBOOTH登録作業を、商品情報の確認と開いているBO
   "exe_name": "DakeBOOTH_Assist.exe",
   "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_BOOTH_Assist_v1.0.0",
   "screenshot_path": "assets/screenshot.webp",
-  "status": "available",
+  "status": "discontinued",
   "show_in_launcher": true,
   "show_on_site": true,
   "app_type": "",

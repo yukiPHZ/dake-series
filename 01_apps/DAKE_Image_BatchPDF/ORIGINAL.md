@@ -10,13 +10,17 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 
 - app_id: `DAKE_Image_BatchPDF`
 - internal_app_name: Dake画像まとめPDF
+- title: Dake画像まとめPDF
+- short_title: 画像まとめPDF
+- version: 1.0.0
+- price: 500円
 - display_name: 画像まとめPDF
 - window_title: 画像まとめPDF
 - folder_name: `01_apps/DAKE_Image_BatchPDF/`
 - exe_name: `DakeImage_BatchPDF.exe`
 - category: 画像/PDF
 - target_platform: Windows
-- status: draft
+- status: available
 - app_type: market
 - completion_goal: formal_release
 
@@ -26,8 +30,8 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - BOOTH: 未公開
 - dakeapp.com: 未公開
 - Store: preparing
-- 価格: 未設定
-- `status`: `draft`
+- 価格: 500円
+- `status`: `available`
 - 正式公開指示があるまで、外部公開、販売登録、価格決定は行わない
 
 ## 目的
@@ -198,7 +202,7 @@ iPhone等から複数画像のみが送られてきた後の、案件フォル�
   "booth_url": "",
   "store_url": "",
   "screenshot_path": "assets/screenshot.webp",
-  "status": "draft",
+  "status": "available",
   "show_in_launcher": false,
   "show_on_site": false,
   "app_type": "market",
@@ -220,3 +224,39 @@ iPhone等から複数画像のみが送られてきた後の、案件フォル�
 - 新規独立アプリとして扱う
 - build/、dist/、*.spec、*_config.json、__pycache__/、*.pyc、exeを通常commitへ含めない
 - GitHub Release公開、BOOTH登録、dakeapp.com公開、Store登録、Stripe変更、SNS投稿は別指示まで行わない
+## booth_product生成用情報
+
+- 商品名: Dake画像まとめPDF
+- 価格案: 500円
+- 商品紹介文: 複数の画像を並べて、1ページ1枚または4枚のPDFにまとめるWindows向けDAKEアプリです。HEIC/HEIFや透明画像にも対応します。
+- タグ:
+  - PDF
+  - 画像
+  - Windows
+  - 実務
+  - ツール
+  - 仕事効率化
+  - 軽量
+  - シンプル
+- 商品画像: assets/booth_thumbnail.jpg
+- 補助画像: assets/screenshot.jpg
+- 作品ファイル: booth_ready/DakeImage_BatchPDF.zip
+
+## Store表示用情報
+
+- 商品名: Dake画像まとめPDF
+- キャッチ: 複数画像を順番どおり1つのPDFにまとめるWindows向けアプリ（1枚/4枚配置・HEIC対応）。
+- 説明: 複数の画像をドラッグ＆ドロップで追加し、順番を確認・並べ替えてから1つのA4縦PDFにまとめます。1ページ1枚・1ページ4枚（2×2固定）に対応し、iPhoneのHEIC/HEIF画像やEXIF回転・透過PNGも自動補正します。
+- 価格: 500円
+- 画像: assets/booth_thumbnail.jpg
+- ダウンロード導線: Stripe Checkout Session検証後にprivate R2から自動ダウンロード（Stripe Payment Link設定待ち）
+- Stripe Payment Link: 未設定
+- Store販売状態: preparing
+
+## 免責・注意事項
+
+- Windows向けアプリです。
+- ご利用は自己責任でお願いいたします。
+- 大切なファイルは事前にバックアップを推奨します。
+- 本ソフトウェアの無断転載・再配布を禁止します。
+- 環境によっては起動時にWindowsの警告が表示される場合があります。

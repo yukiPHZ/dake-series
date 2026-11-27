@@ -48,7 +48,7 @@ PDF結合、画像PDF化、画像リサイズ、A4貼り付けを個別に探す
 | DakePDF結合 | app | `DAKE_PDF_Merge` | 複数PDFをひとつにまとめる。 | `01_apps/DAKE_PDF_Merge/ORIGINAL.md` |
 | DakeImageToPDF | app | `DAKE_Image_ToPDF` | 画像ファイルをPDF化する。 | `01_apps/DAKE_Image_ToPDF/ORIGINAL.md` |
 | Dake画像リサイズ | app | `DAKE_Image_Resize` | 画像サイズをまとめて調整する。 | `01_apps/DAKE_Image_Resize/ORIGINAL.md` |
-| 貼る | app | `DAKE_Image_PasteA4` | 画像をA4用紙に配置して印刷しやすくする。 | 未作成（当面は `01_apps/DAKE_Image_PasteA4/README.md` を暫定参照） |
+| 貼る | app | `DAKE_Image_PasteA4` | 画像をA4用紙に配置して印刷しやすくする。 | `01_apps/DAKE_Image_PasteA4/ORIGINAL.md` |
 
 ## 単品販売との差分
 

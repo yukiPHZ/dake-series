@@ -12,7 +12,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - title: DakeImage_Receiver
 - short_title: スマホ画像受信
 - category: 画像
-- status: available
+- status: discontinued
 - version: 未設定（既存ファイルに明示なし）
 - price: 500円
 - distribution: GitHub Release / BOOTH / dakeapp.com / Store（Storeは未確定）
@@ -132,7 +132,7 @@ PCに表示したQRコードをスマホで読み取り、画像をWindows PCへ
   "exe_name": "DakeImage_Receiver.exe",
   "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Image_Receiver_v1.0.0",
   "screenshot_path": "assets/screenshot.webp",
-  "status": "available",
+  "status": "discontinued",
   "show_in_launcher": true,
   "show_on_site": true,
   "app_type": "",

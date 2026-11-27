@@ -15,38 +15,51 @@
 
 ## 参照したORIGINAL
 
-- discovered: 54
+- discovered: 57
 
 ## 生成対象件数
 
-- generated_at: 2026-06-16T12:36:55+09:00
-- items: 54
+- generated_at: 2026-11-27T18:12:12+09:00
+- items: 47
 
 ## type別件数
 
-- app: 50
-- pack: 3
+- app: 44
+- pack: 2
 - shimarisu_pack: 1
 
 ## skipped件数
 
-- skipped: 0
+- skipped: 10
+
+| source_original | reason |
+|---|---|
+| `01_apps/DAKE_App_Doko/ORIGINAL.md` | status=discontinued |
+| `01_apps/DAKE_BOOTH_Assist/ORIGINAL.md` | status=discontinued |
+| `01_apps/DAKE_Game_Alien_Road/ORIGINAL.md` | status=discontinued |
+| `01_apps/DAKE_Game_Diver_Catch/ORIGINAL.md` | status=discontinued |
+| `01_apps/DAKE_Image_Receiver/ORIGINAL.md` | status=discontinued |
+| `01_apps/DAKE_Launcher/ORIGINAL.md` | status=discontinued |
+| `01_apps/DAKE_Mail_Kikuta/ORIGINAL.md` | status=discontinued |
+| `01_apps/DAKE_PDF_Merge_Mini/ORIGINAL.md` | status=discontinued |
+| `01_apps/DAKE_Video_Shorts_Cut/ORIGINAL.md` | status=discontinued |
+| `04_packs/DAKE_Pack_Memo/ORIGINAL.md` | status=discontinued |
 
 ## payment_status別件数
 
-- stripe_ready: 53
-- booth_only: 0
+- stripe_ready: 45
+- booth_only: 1
 - preparing: 1
 - free_download: 0
 - not_for_sale: 0
 
 ## 主な未確定項目
 
-- download_url: 54
-- store_url: 54
-- support_policy: 54
-- stripe_price_id: 54
-- stripe_payment_link: 1
+- download_url: 45
+- store_url: 44
+- support_policy: 43
+- stripe_price_id: 47
+- stripe_payment_link: 2
 
 ## SHIMARISU Pack参照結果
 

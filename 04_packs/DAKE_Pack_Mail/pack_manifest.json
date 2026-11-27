@@ -16,19 +16,19 @@
       "id": "dake_mail_list",
       "folder": "DAKE_Mail_List",
       "title": "Dakeメールリスト",
-      "role": "Outlookの.msgメールから会社名・氏名・メールアドレスをCSV化する",
+      "role": "Outlookで選択したメールを直接ドロップし、会社名・お名前・メールアドレスをCSV化する。保存済み.msgにも対応する",
       "zip_name": "DakeMail_List.zip",
       "zip_size": 32925063,
       "zip_sha256": "1012c378bb28d62b1c7fec9d50f5de966c606a9ff44a74b60e20854bfebf8bc1",
       "pack_entry": "apps/DAKE_Mail_List/DakeMail_List.zip",
       "booth_url": "https://peakheadz.booth.pm/items/8448014",
-      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_List_v1.0.0",
+      "github_release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_List_v1.0.1",
       "status": "available",
       "zip_path": "01_apps/DAKE_Mail_List/booth_ready/DakeMail_List.zip",
       "source_zip": "01_apps/DAKE_Mail_List/booth_ready/DakeMail_List.zip",
       "source_zip_size": 32925063,
       "source_zip_sha256": "1012c378bb28d62b1c7fec9d50f5de966c606a9ff44a74b60e20854bfebf8bc1",
-      "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_List_v1.0.0"
+      "release_url": "https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_List_v1.0.1"
     },
     {
       "id": "DAKE_Mail_Address_Format",

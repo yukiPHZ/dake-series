@@ -12,7 +12,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - title: Dakeショート切り出し
 - short_title: Dakeショート切り出し
 - category: 動画
-- status: available
+- status: discontinued
 - version: 1.0.0（Release URLより）
 - price: 500円
 - distribution: GitHub Release / BOOTH / dakeapp.com（Storeは未確定）
@@ -117,7 +117,7 @@ MP4を入れるだけで、ショート動画候補・サムネ・タイトル�
   "app_type": "market",
   "completion_goal": "formal_release",
   "screenshot_path": "assets/screenshot.webp",
-  "status": "available",
+  "status": "discontinued",
   "show_in_launcher": true,
   "show_on_site": true,
   "demo_video_path": "release_artifacts/demo.mp4",

@@ -5,10 +5,12 @@ Dakeメールリスト
 300円
 
 # 商品紹介文
-Outlookの.msgメールから、
+Outlookで選択したメールを直接ドロップして、
 会社名・お名前・メールアドレスをCSVに整理します。
 
-・.msg からCSV整理
+・Outlookから直接ドラッグ
+・複数メールをまとめてCSV整理
+・保存済み.msgにも対応
 ・メール送信なし
 ・会社名、お名前、メールアドレスだけ抽出
 ・ローカル完結
@@ -38,7 +40,7 @@ assets/screenshot.jpg
 booth_ready/DakeMail_List.zip
 
 # GitHub Release
-https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_List_v1.0.0
+https://github.com/yukiPHZ/dake-series/releases/tag/DAKE_Mail_List_v1.0.1
 
 # DAKEシリーズ表記
 DAKEシリーズ / Dakeメールリスト

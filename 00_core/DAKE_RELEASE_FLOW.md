@@ -22,6 +22,15 @@ SHIP = COMPLETE
 
 GitHub Releaseが完了すればSHIPは完了です。DISTRIBUTION / COMMERCEが未完了でもSHIPをPENDINGへ戻しません。
 
+### 実機確認用Prerelease
+
+正式出荷前に別PCで確認が必要な場合は、`DAKE_App_v1.0.1-test.1` のようにtest版と分かるタグでGitHub Prereleaseを作成できます。
+
+- exeは通常commitへ含めず、Prerelease Assetとして公開する。
+- 対象commit、Asset名、SHA256、`isPrerelease=true` を読み戻す。
+- 公開Assetを `C:\Users\yukiz\devlop\` 配下へ再ダウンロードし、build版とSHA256を照合する。
+- 実機確認用Prereleaseの作成だけでは正式出荷または `SHIP = COMPLETE` としない。
+
 ### SHIP停止条件
 
 原則、次だけです。

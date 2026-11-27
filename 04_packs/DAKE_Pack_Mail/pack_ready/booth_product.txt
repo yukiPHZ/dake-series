@@ -25,7 +25,7 @@ Dakeメール下書きは、Windows版Microsoft Outlook Classicを使用しま�
 New Outlook / Web Outlookでは動作しない場合があります。
 
 # できること
-- Outlookの.msgメールから会社名・氏名・メールアドレスをCSV化
+- Outlookで選択したメールを直接ドロップし、会社名・お名前・メールアドレスをCSV化
 - 名前付き表記、改行、セミコロン区切りなどの宛先を抽出・整形
 - CSV名簿からOutlookの個別下書きを作成
 
