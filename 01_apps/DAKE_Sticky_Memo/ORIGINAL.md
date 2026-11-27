@@ -133,7 +133,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - サポート方針: 既存ファイルに記載なし
 
 Storeは未構築のため、Store専用の商品正本は作りません。
-- Stripe Payment Link: https://buy.stripe.com/9B65kD2Zzaon9WE0bf0gw0c
+- Stripe Payment Link: https://buy.stripe.com/6oUaEX0RrgML4Ck6zD0gw11
 - Store雋ｩ螢ｲ迥ｶ諷・ stripe_ready
 
 ## 価格・販売方針
@@ -195,3 +195,4 @@ BOOTH ready内の注意事項、または既存READMEの注意事項を元にし
 - booth_ready/README.txt: 配布zip同梱用ビュー。既存。
 - booth_ready/注意事項.txt: 配布zip同梱用ビュー。既存。
 - Store: 未構築。将来 `ORIGINAL.md` 由来の情報から生成する。
+- payment_status: stripe_ready

@@ -167,7 +167,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - 画像: assets/booth_thumbnail.jpg（存在: あり）
 - ダウンロード導線: 未確定
 - サポート方針: 既存ファイルに記載なし
-- Stripe Payment Link: https://buy.stripe.com/dRm3cvcA9543d8QcY10gw0D
+- Stripe Payment Link: https://buy.stripe.com/4gMfZh8jT1RRecU5vz0gw19
 - Store雋ｩ螢ｲ迥ｶ諷・ stripe_ready
 
 ## 価格・販売方針
@@ -239,3 +239,4 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - booth_ready/注意事項.txt: あり
 - assets/screenshot.webp: あり
 - assets/booth_thumbnail.jpg: あり
+- payment_status: stripe_ready

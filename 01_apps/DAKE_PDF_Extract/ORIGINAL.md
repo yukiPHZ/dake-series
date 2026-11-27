@@ -17,10 +17,10 @@ README.md、DAKE_META、release_body.md、booth_product.txt などの派生フ�
 - price: 500円
 - distribution: GitHub Release / BOOTH / dakeapp.com / store.dakeapp.com
 - target_platform: Windows
-- payment_status: booth_only
+- payment_status: stripe_ready
 - booth_url: https://peakheadz.booth.pm/items/8746426
 - store_url: https://store.dakeapp.com/product/?id=dake_pdf_extract
-- stripe_payment_link: 未設定
+- stripe_payment_link: https://buy.stripe.com/eVq6oH43D1RRgl20bf0gw18
 - exe_name: DakePDF_Extract.exe
 - folder_name: DAKE_PDF_Extract
 - app_user_model_id: ShimarisuFudosan.DAKE.PDFExtract
@@ -214,8 +214,8 @@ Windows
 - 画像: assets/booth_thumbnail.jpg
 - ダウンロード導線: https://peakheadz.booth.pm/items/8746426
 - サポート方針: GitHub ReleaseとBOOTHで配布します。
-- Stripe Payment Link: 未設定
-- Store販売状態: booth_only
+- Stripe Payment Link: https://buy.stripe.com/eVq6oH43D1RRgl20bf0gw18
+- Store販売状態: stripe_ready
 - Store URL: https://store.dakeapp.com/product/?id=dake_pdf_extract
 
 ## 価格・販売方針

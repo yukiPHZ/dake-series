@@ -203,9 +203,8 @@ Windows
 - 画像: assets/booth_thumbnail.jpg（存在: あり）
 - ダウンロード導線: Stripe Checkout Session検証後にprivate R2から即時配布
 - サポート方針: 既存ファイルに記載なし
-- Stripe Payment Link: https://buy.stripe.com/aFabJ16bL3ZZ5GobTX0gw0W
+- Stripe Payment Link: https://buy.stripe.com/14A6oH57H9kj9WEe250gw0Z
 - Store販売状態: stripe_ready
-
 ## 価格・販売方針
 
 - BOOTH価格案: 500円

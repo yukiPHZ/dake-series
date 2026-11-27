@@ -198,7 +198,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - 画像: assets/booth_thumbnail.jpg
 - ダウンロード導線: 未確定
 - サポート方針: 未確定
-- Stripe Payment Link: https://buy.stripe.com/3cIfZh6bL2VV5Go9LP0gw0K
+- Stripe Payment Link: https://buy.stripe.com/14A7sL7fP0NN9WEcY10gw1f
 - Store雋ｩ螢ｲ迥ｶ諷・ stripe_ready
 
 ## 価格・販売方針
@@ -292,3 +292,4 @@ Dake築年数
 
 ...
 ```
+- payment_status: stripe_ready

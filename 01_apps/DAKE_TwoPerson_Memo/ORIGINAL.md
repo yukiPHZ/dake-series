@@ -199,7 +199,7 @@ README.md、DAKE_META、release_body.md、booth_product.txt、Store表示など�
 - 画像: assets/booth_thumbnail.jpg
 - ダウンロード導線: 未確定
 - サポート方針: 未確定
-- Stripe Payment Link: https://buy.stripe.com/28EeVdas1eED1q8e250gw0I
+- Stripe Payment Link: https://buy.stripe.com/8x2fZh43D2VV9WEe250gw1d
 - Store雋ｩ螢ｲ迥ｶ諷・ stripe_ready
 
 ## 価格・販売方針
@@ -293,3 +293,4 @@ Dake二人メモ
 ・Windows向けexeです。
 ...
 ```
+- payment_status: stripe_ready

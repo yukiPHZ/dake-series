@@ -250,9 +250,8 @@ iPhone等から複数画像のみが送られてきた後の、案件フォル�
 - 価格: 500円
 - 画像: assets/booth_thumbnail.jpg
 - ダウンロード導線: Stripe Checkout Session検証後にprivate R2から自動ダウンロード（Stripe Payment Link設定待ち）
-- Stripe Payment Link: 未設定
-- Store販売状態: preparing
-
+- Stripe Payment Link: https://buy.stripe.com/8x2dR96bLfIHd8Q8HL0gw0X
+- Store販売状態: stripe_ready
 ## 免責・注意事項
 
 - Windows向けアプリです。

@@ -173,7 +173,7 @@ Windows
 - 画像: assets/booth_thumbnail.jpg（存在: あり）
 - ダウンロード導線: 未確定
 - サポート方針: 既存ファイルに記載なし
-- Stripe Payment Link: https://buy.stripe.com/4gMbJ143D2VVd8Q9LP0gw0b
+- Stripe Payment Link: https://buy.stripe.com/4gMbJ10Rr0NN2ucgad0gw10
 - Store雋ｩ螢ｲ迥ｶ諷・ stripe_ready
 
 ## 価格・販売方針
@@ -245,3 +245,4 @@ Windows
 - booth_ready/注意事項.txt: あり
 - assets/screenshot.webp: あり
 - assets/booth_thumbnail.jpg: あり
+- payment_status: stripe_ready
